@@ -15,6 +15,9 @@ db.sqlite3-journal
 media/
 staticfiles/
 logs/*.log
+# Dumps de base de données (contiennent des données personnelles réelles —
+# candidats, emails, téléphones — jamais dans l'historique Git)
+*.sql
 
 # ── Environnements virtuels ───────────────────────────────────────────────────
 venv/
