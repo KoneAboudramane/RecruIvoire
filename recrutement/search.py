@@ -1,20 +1,19 @@
-from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
 from django.db import connections
 from django.db.models import Q
 from django.db.models.expressions import RawSQL
 
 
 def fts_filter(queryset, query, vector_fields, fallback_lookups, config='french'):
-    """Recherche plein texte (PostgreSQL ou MySQL) avec fallback icontains.
+    """Recherche plein texte MySQL (FULLTEXT) avec fallback icontains.
 
     Args:
         queryset: QuerySet de base (déjà filtré par autres critères).
         query: Texte saisi par l'utilisateur.
         vector_fields: Liste de noms de champs pour la recherche plein texte.
-            Sous MySQL, cet ensemble exact de colonnes doit correspondre à un
-            index FULLTEXT existant sur le modèle (voir migrations dédiées).
+            Cet ensemble exact de colonnes doit correspondre à un index
+            FULLTEXT existant sur le modèle (voir migrations dédiées).
         fallback_lookups: Liste de lookups icontains (ex: ['titre__icontains']).
-        config: Configuration linguistique PostgreSQL (ignorée sous MySQL).
+        config: non utilisé (conservé pour compatibilité des appels existants).
 
     Returns:
         QuerySet filtré et trié par pertinence.
@@ -23,13 +22,7 @@ def fts_filter(queryset, query, vector_fields, fallback_lookups, config='french'
         return queryset
 
     vendor = connections[queryset.db].vendor
-
-    if vendor == 'postgresql':
-        qs_fts = _fts_postgresql(queryset, query, vector_fields, config)
-    elif vendor == 'mysql':
-        qs_fts = _fts_mysql(queryset, query, vector_fields)
-    else:
-        qs_fts = queryset.none()
+    qs_fts = _fts_mysql(queryset, query, vector_fields) if vendor == 'mysql' else queryset.none()
 
     if qs_fts.exists():
         return qs_fts
@@ -38,18 +31,6 @@ def fts_filter(queryset, query, vector_fields, fallback_lookups, config='french'
     for lookup in fallback_lookups:
         q_filter |= Q(**{lookup: query})
     return queryset.filter(q_filter)
-
-
-def _fts_postgresql(queryset, query, vector_fields, config):
-    vector = SearchVector(*vector_fields, config=config)
-    search_query = SearchQuery(query, config=config)
-
-    return (
-        queryset
-        .annotate(search=vector, rank=SearchRank(vector, search_query))
-        .filter(search=search_query)
-        .order_by('-rank')
-    )
 
 
 def _fts_mysql(queryset, query, vector_fields):

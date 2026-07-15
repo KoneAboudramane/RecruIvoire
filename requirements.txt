@@ -17,6 +17,12 @@ redis==4.6.0
 # paquet 100% Python (pas de compilation, pas besoin de l'extension serveur),
 # donc sans risque à installer sur un hébergement mutualisé.
 pgvector==0.4.2
+# psycopg2-binary : plus utilisé comme driver de connexion (le projet est
+# 100% MySQL désormais), mais reste nécessaire au chargement des migrations :
+# `pgvector.django` importe inconditionnellement `django.contrib.postgres.signals`
+# dans son `__init__.py`, qui importe `psycopg2` — sans lien avec une vraie
+# connexion PostgreSQL, juste pour que Python puisse charger le module.
+psycopg2-binary==2.9.12
 
 # ── Authentification & OAuth ─────────────────────────────────────────────────
 django-allauth==65.18.0
