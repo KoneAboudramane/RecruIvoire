@@ -62,6 +62,11 @@ Si le dépôt est privé, prévoir un **Personal Access Token** (PAT) GitHub —
 de passe classique ne fonctionne plus pour l'authentification HTTPS. Ce même token
 servira côté O2switch à l'étape 3.
 
+> **Fait pour ce projet** (2026-07-15) : dépôt initialisé, premier commit poussé
+> sur `https://github.com/KoneAboudramane/RecruIvoire`. Les étapes 1.1-1.3
+> ci-dessus sont donc déjà réalisées — gardées ici pour référence/si le dépôt
+> doit être reconstruit.
+
 ---
 
 ## 2. Côté O2switch — préparation cPanel
@@ -165,7 +170,7 @@ Le fichier `.env` n'est **jamais** commité (voir `.gitignore`). Deux options :
   - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID` /
     `GITHUB_CLIENT_SECRET` (recréer des identifiants OAuth avec le domaine de
     prod dans les origines autorisées — ceux du dev pointent vers `localhost`)
-  - `REDIS_HOST=localhost`, `REDIS_PORT=6379` (après activation Redis, étape 9)
+  - `REDIS_HOST=localhost`, `REDIS_PORT=6379` (après activation Redis, étape 10)
   - `SITE_URL=https://<domaine choisi>`
   - `CSRF_TRUSTED_ORIGINS=https://<domaine choisi>`
 - **Option "Setup Python App"** : l'interface propose aussi une section
@@ -196,7 +201,7 @@ Points d'attention connus (voir le reste du projet pour le détail) :
   surveiller avec l'outil **X-Ray App** (cPanel > Mesures) pendant
   l'installation et le premier chargement du modèle.
 - `celery` / `flower` : le paquet s'installera, mais **aucun worker persistant ne
-  peut tourner** sous Passenger — voir section 10 pour l'équivalent cron.
+  peut tourner** sous Passenger — voir section 11 pour l'équivalent cron.
 
 ---
 
@@ -235,7 +240,68 @@ ne lui dit pas de recharger).
 
 ---
 
-## 9. Redis (cache)
+## 9. Importer les données
+
+Deux approches possibles — à choisir selon le besoin, pas de bonne réponse unique.
+
+### 9.1 Option recommandée : réensemencer via les commandes seed du projet
+
+Le projet a déjà des management commands dédiées qui passent par l'ORM Django,
+donc **indépendantes de la version PostgreSQL** — zéro risque de compatibilité,
+contrairement à un dump SQL brut (voir 9.2). C'est l'approche à privilégier pour
+un compte de démo/soutenance :
+
+```bash
+python manage.py init_admin
+python manage.py seed_entreprises
+python manage.py seed_candidats
+python manage.py seed_candidatures
+python manage.py seed_photos_demo
+python manage.py charger_faq_initiale
+python manage.py charger_pages_statiques
+```
+
+(liste non exhaustive — voir `CLAUDE.md` et les dossiers `management/commands/`
+de `candidat/`, `entreprise/`, `referentiel/`, `contenu/` pour la liste complète)
+
+### 9.2 Option alternative : dump/restore de la base réelle
+
+Pour reprendre l'état exact de la base locale (modifications manuelles via
+l'admin, données non couvertes par les seeds).
+
+**Piège à connaître** : la base locale tourne sur **PostgreSQL 18**, celle
+d'O2switch est en **PostgreSQL 9.6** (2016). Un `pg_dump` fait avec les outils
+PG18 peut générer du SQL que PG9.6 ne sait pas relire (syntaxe plus récente) —
+risque réel mais a priori limité pour ce projet (pas d'usage direct de
+fonctionnalités PostgreSQL très récentes dans les modèles).
+
+En local, export "plain SQL" sans owner/privilèges (évite des rôles qui
+n'existent pas sur O2switch) :
+
+```powershell
+pg_dump -U postgres -h localhost --no-owner --no-privileges --format=plain -f dump_recrutement.sql recrutement_db
+```
+
+Transférer `dump_recrutement.sql` sur O2switch — **pas via Git** (trop
+volumineux, pas sa place dans l'historique) — via le **Gestionnaire de fichiers**
+cPanel ou un client FTP/SFTP. Puis, depuis le Terminal :
+
+```bash
+psql -U <user_pg_o2switch> -h localhost <nom_base_o2switch> < dump_recrutement.sql
+```
+
+Si l'import plante sur une ligne précise (syntaxe non supportée par PG9.6),
+corriger cette ligne dans le fichier `.sql` et relancer — pas la peine de tout
+recommencer depuis zéro.
+
+⚠️ Le dump ne contient **que la base de données**. Les fichiers uploadés
+(photos, logos, CV, documents KYC dans `media/`) doivent être transférés
+séparément (FTP/Gestionnaire de fichiers), puisqu'ils sont exclus de Git
+(`.gitignore`) et absents du dump SQL.
+
+---
+
+## 10. Redis (cache)
 
 **cPanel > Logiciels > Redis** (ou dans la catégorie « Outils exclusifs O2switch »)
 : activer le service. Il tourne en général sur `localhost:6379` par défaut — les
@@ -243,7 +309,7 @@ valeurs `REDIS_HOST`/`REDIS_PORT` du `.env` (étape 6) doivent correspondre.
 
 ---
 
-## 10. Tâches planifiées (remplace Celery)
+## 11. Tâches planifiées (remplace Celery)
 
 **Statut à date de rédaction : pas encore implémenté côté code** — cette section
 est le squelette à suivre une fois la bascule Celery → cron décidée (voir le
@@ -264,7 +330,7 @@ le compte.
 
 ---
 
-## 11. Vérification finale
+## 12. Vérification finale
 
 - Visiter `https://<domaine>/candidat/` et `https://<domaine>/entreprise/` — la
   page d'accueil doit se charger sans erreur 500.
