@@ -135,14 +135,51 @@ en une commande depuis le Terminal (étape 8.4).
 > généralement les bases MySQL en `utf8mb4` par défaut sur les hébergements
 > récents, mais à vérifier (`SHOW CREATE DATABASE <base>;`).
 
+> **Piège découvert en testant (2026-07-15)** : `TIME_ZONE = 'Africa/Abidjan'`
+> + `USE_TZ = True` fait planter (`ValueError: Database returned an invalid
+> datetime value`) toute page utilisant `TruncDate`/`TruncMonth`/etc. (ex.
+> `/candidat/dashboard/`) ou `date_hierarchy` dans l'admin (ex.
+> `PropositionProfil`, `NotificationRecruteur`) — Django appelle
+> `CONVERT_TZ(champ, 'UTC', 'Africa/Abidjan')` côté MySQL, qui renvoie `NULL`
+> si les tables système `mysql.time_zone*` sont vides (cas par défaut sur une
+> install MySQL fraîche, y compris testé sur WAMP local). **Vérifier d'abord**
+> si le compte O2switch a accès à `mysql_tzinfo_to_sql` via le Terminal
+> (méthode standard, charge tout le référentiel IANA) :
+> ```bash
+> mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u <user> -p mysql
+> ```
+> Si la commande n'est pas disponible ou que le compte MySQL n'a pas les
+> privilèges sur la base système `mysql` (fréquent sur mutualisé), utiliser le
+> correctif minimal appliqué en local — `Africa/Abidjan` est un fuseau fixe
+> UTC+0 sans heure d'été, donc pas besoin du référentiel complet, juste
+> enregistrer les 2 fuseaux nommés utilisés par le projet :
+> ```sql
+> INSERT INTO mysql.time_zone (Use_leap_seconds) VALUES ('N');
+> SET @tz_utc = LAST_INSERT_ID();
+> INSERT INTO mysql.time_zone_name (Name, Time_zone_id) VALUES ('UTC', @tz_utc);
+> INSERT INTO mysql.time_zone_transition_type (Time_zone_id, Transition_type_id, Offset, Is_DST, Abbreviation) VALUES (@tz_utc, 0, 0, 0, 'UTC');
+>
+> INSERT INTO mysql.time_zone (Use_leap_seconds) VALUES ('N');
+> SET @tz_abj = LAST_INSERT_ID();
+> INSERT INTO mysql.time_zone_name (Name, Time_zone_id) VALUES ('Africa/Abidjan', @tz_abj);
+> INSERT INTO mysql.time_zone_transition_type (Time_zone_id, Transition_type_id, Offset, Is_DST, Abbreviation) VALUES (@tz_abj, 0, 0, 0, 'GMT');
+> ```
+> Vérifier avec `SELECT CONVERT_TZ('2026-01-01 12:00:00','UTC','Africa/Abidjan');`
+> (doit renvoyer la même heure, pas `NULL`). Si le compte MySQL n'a
+> **aucun** accès en écriture à la base système `mysql` (cas le plus restrictif
+> possible sur mutualisé), il faudra demander à O2switch de charger le
+> référentiel côté serveur, ou revoir `USE_TZ`/`TIME_ZONE` dans
+> `settings.py` — non testé, à traiter si ce cas se présente.
+
 ---
 
 ## 5. Créer l'application Python — "Setup Python App"
 
 1. **cPanel > Logiciels > Setup Python App > Create Application**.
-2. **Python version** : choisir la version la plus proche de celle utilisée en
-   dev (aligner sur `3.13` si disponible — le projet a été développé/testé en
-   local avec Python 3.14, prendre la plus récente disponible côté O2switch).
+2. **Python version** : choisir `3.13` (version de développement/test locale
+   du projet — voir `.venv313/` à la racine, mis en place le 2026-07-15 après
+   un bug Django 5.1 incompatible avec Python 3.14). Prendre la version 3.13
+   la plus récente disponible côté O2switch.
 3. **Application root** : le dossier où le dépôt a été cloné à l'étape 3
    (ex. `recrutement`).
 4. **Application URL** : le (sous-)domaine préparé à l'étape 2.
@@ -385,6 +422,7 @@ le compte.
 | Celery → thread démon + cron | **Fait et vérifié en local** le 2026-07-15 : `.delay()` remplacé par `lancer_en_arriere_plan()`, commande `calculer_embeddings_manquants` créée pour le cron. Reste à créer l'entrée cron réelle sur cPanel (§11) |
 | pgvector → JSONField, SSE → polling | **Fait et vérifié** en local (voir historique du projet) |
 | PostgreSQL → MySQL (driver, recherche plein texte, migrations) | **Fait et vérifié en local (WAMP MySQL 8.0.21)** le 2026-07-15 : `migrate` propre, 48/48 tests, recherche FULLTEXT + scoring ATS testés avec données de démo. Reste à vérifier : version MySQL réelle sur O2switch et son `default_storage_engine` (voir §4) |
+| Test fonctionnel complet (balayage ~250 routes) | **Fait le 2026-07-15** : toutes les pages candidat/entreprise/recruteur/admin testées avec sessions authentifiées et données réelles. Un seul vrai bug trouvé : tables `mysql.time_zone*` vides cassaient `TruncDate`/`date_hierarchy` (`/candidat/dashboard/`, admin `PropositionProfil`/`NotificationRecruteur`) — corrigé en local, **à refaire sur O2switch** (voir §4, procédure `mysql_tzinfo_to_sql` ou fallback manuel) |
 
 Ce guide suppose que ces points seront retestés/complétés au fur et à mesure —
 ne pas lancer un déploiement de production tant que les 2 premières lignes du
