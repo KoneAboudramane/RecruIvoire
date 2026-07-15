@@ -1,0 +1,203 @@
+{% extends "base_public.html" %}
+{% load i18n %}
+
+{% block titre %}{% if page %}{{ page.titre }}{% else %}{% trans "Tarifs" %}{% endif %} — {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+<style>
+/* ── Mode sombre ──────────────────────────────────────────────────── */
+html.dark .tarifs-header h1 { color: #f1f5f9; }
+html.dark .tarifs-header p { color: #94a3b8; }
+html.dark .tarifs-section-h2 { color: #cbd5e1 !important; }
+html.dark .tarifs-footnote { color: #64748b !important; }
+html.dark .legal-card { background: #1e293b; border-color: #334155; box-shadow: 0 1px 6px rgba(0,0,0,.2); }
+html.dark .legal-card h3 { color: #f1f5f9; }
+html.dark .legal-card p,
+html.dark .legal-card li { color: #94a3b8; }
+html.dark .legal-card .text-gray-800 { color: #f1f5f9; }
+html.dark .legal-card .text-gray-500 { color: #94a3b8; }
+html.dark .legal-card .text-gray-400 { color: #64748b; }
+html.dark .legal-card .text-gray-600 { color: #94a3b8; }
+html.dark .legal-card .border-gray-200 { border-color: #334155; color: #94a3b8; }
+html.dark .legal-card .hover\:border-orange-400:hover { border-color: #f97316; }
+
+/* ── Mode noir ────────────────────────────────────────────────────── */
+html.noir .tarifs-header h1 { color: #f9fafb; }
+html.noir .tarifs-header p { color: #9ca3af; }
+html.noir .tarifs-section-h2 { color: #d1d5db !important; }
+html.noir .tarifs-footnote { color: #6b7280 !important; }
+html.noir .legal-card { background: #111827; border-color: #1f2937; box-shadow: 0 1px 6px rgba(0,0,0,.4); }
+html.noir .legal-card h3 { color: #f9fafb; }
+html.noir .legal-card p,
+html.noir .legal-card li { color: #9ca3af; }
+html.noir .legal-card .text-gray-800 { color: #f9fafb; }
+html.noir .legal-card .text-gray-500 { color: #9ca3af; }
+html.noir .legal-card .text-gray-400 { color: #6b7280; }
+html.noir .legal-card .text-gray-600 { color: #9ca3af; }
+html.noir .legal-card .border-gray-200 { border-color: #1f2937; color: #9ca3af; }
+html.noir .legal-card .hover\:border-orange-400:hover { border-color: #f97316; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="max-w-5xl mx-auto px-4 py-12">
+
+    <div class="tarifs-header text-center mb-12">
+        <h1 class="text-3xl lg:text-4xl font-extrabold text-gray-800 mb-3">
+            💼 {% if page %}{{ page.titre }}{% else %}{% trans "Nos tarifs" %}{% endif %}
+        </h1>
+        {% if page and page.description %}
+            <p class="text-gray-500 text-base max-w-xl mx-auto">{{ page.description }}</p>
+        {% else %}
+            <p class="text-gray-500 text-base max-w-xl mx-auto">{% trans "Des offres adaptées à chaque besoin, pour les candidats comme pour les entreprises." %}</p>
+        {% endif %}
+    </div>
+
+    <!-- ── Espace Candidat ────────────────────────────────────────────── -->
+    {% if offres_candidat %}
+    <div class="mb-12">
+        <h2 class="tarifs-section-h2 text-xl font-bold text-gray-700 mb-6 flex items-center gap-2">
+            👤 {% trans "Espace Candidat" %}
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% for offre in offres_candidat %}
+
+            {% if offre.mise_en_avant %}
+            <!-- Offre mise en avant (border orange) -->
+            <div class="legal-card bg-white rounded-2xl border-2 shadow-sm p-8 flex flex-col gap-4 relative overflow-hidden" style="border-color:#c96010;">
+                {% if offre.badge %}
+                <div class="absolute top-4 right-4">
+                    <span class="text-xs font-bold uppercase tracking-widest px-2 py-1 rounded-full text-white" style="background:#c96010;">{{ offre.badge }}</span>
+                </div>
+                {% endif %}
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-widest" style="color:#c96010;">{% trans "Offre" %}</span>
+                    <h3 class="text-2xl font-extrabold text-gray-800 mt-1">{{ offre.nom }}</h3>
+                    <p class="text-4xl font-extrabold mt-3 text-gray-800">
+                        {{ offre.prix }}
+                        {% if offre.unite %}<span class="text-lg font-normal text-gray-500">{{ offre.unite }}</span>{% endif %}
+                    </p>
+                </div>
+                <ul class="space-y-2 text-sm text-gray-600 flex-1">
+                    {% for f in offre.fonctionnalites_choisies.all %}
+                    <li class="flex items-center gap-2">✅ {{ f.texte }}</li>
+                    {% endfor %}
+                </ul>
+                {% if offre.cta_desactive %}
+                <button disabled class="block w-full text-center font-bold py-3 rounded-xl text-white opacity-60 cursor-not-allowed" style="background:#c96010;">
+                    {{ offre.cta_texte }}
+                </button>
+                {% else %}
+                <a href="{{ offre.cta_url }}" class="block text-center font-bold py-3 rounded-xl text-white hover:opacity-90 transition" style="background:#c96010;">
+                    {{ offre.cta_texte }}
+                </a>
+                {% endif %}
+            </div>
+
+            {% else %}
+            <!-- Offre standard -->
+            <div class="legal-card bg-white rounded-2xl border-2 border-gray-100 shadow-sm p-8 flex flex-col gap-4">
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-widest text-gray-400">{% trans "Offre" %}</span>
+                    <h3 class="text-2xl font-extrabold text-gray-800 mt-1">{{ offre.nom }}</h3>
+                    <p class="text-4xl font-extrabold mt-3 text-gray-800">
+                        {{ offre.prix }}
+                        {% if offre.unite %}<span class="text-lg font-normal text-gray-500">{{ offre.unite }}</span>{% endif %}
+                    </p>
+                </div>
+                <ul class="space-y-2 text-sm text-gray-600 flex-1">
+                    {% for f in offre.fonctionnalites_choisies.all %}
+                    <li class="flex items-center gap-2">✅ {{ f.texte }}</li>
+                    {% endfor %}
+                </ul>
+                {% if offre.cta_desactive %}
+                <button disabled class="block w-full text-center font-bold py-3 rounded-xl border-2 border-gray-200 text-gray-400 cursor-not-allowed">
+                    {{ offre.cta_texte }}
+                </button>
+                {% else %}
+                <a href="{{ offre.cta_url }}" class="block text-center font-bold py-3 rounded-xl border-2 border-gray-200 text-gray-700 hover:border-orange-400 hover:text-orange-600 transition">
+                    {{ offre.cta_texte }}
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Espace Entreprise ──────────────────────────────────────────── -->
+    {% if offres_entreprise %}
+    <div>
+        <h2 class="tarifs-section-h2 text-xl font-bold text-gray-700 mb-6 flex items-center gap-2">
+            🏢 {% trans "Espace Entreprise" %}
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {% for offre in offres_entreprise %}
+
+            {% if offre.mise_en_avant %}
+            <!-- Offre vedette (fond orange plein) -->
+            <div class="rounded-2xl border-2 shadow-lg p-6 flex flex-col gap-4 relative" style="background:#c96010; border-color:#c96010;">
+                {% if offre.badge %}
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span class="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-white" style="color:#c96010;">{{ offre.badge }}</span>
+                </div>
+                {% endif %}
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-widest text-white/70">{% trans "Offre" %}</span>
+                    <h3 class="text-xl font-extrabold text-white mt-1">{{ offre.nom }}</h3>
+                    <p class="text-3xl font-extrabold mt-3 text-white">{{ offre.prix }}</p>
+                </div>
+                <ul class="space-y-2 text-sm text-white/90 flex-1">
+                    {% for f in offre.fonctionnalites_choisies.all %}
+                    <li class="flex items-center gap-2">✅ {{ f.texte }}</li>
+                    {% endfor %}
+                </ul>
+                {% if offre.cta_desactive %}
+                <button disabled class="block w-full text-center font-bold py-3 rounded-xl bg-white opacity-80 cursor-not-allowed" style="color:#c96010;">
+                    {{ offre.cta_texte }}
+                </button>
+                {% else %}
+                <a href="{{ offre.cta_url }}" class="block text-center font-bold py-3 rounded-xl bg-white hover:opacity-90 transition" style="color:#c96010;">
+                    {{ offre.cta_texte }}
+                </a>
+                {% endif %}
+            </div>
+
+            {% else %}
+            <!-- Offre standard -->
+            <div class="legal-card bg-white rounded-2xl border-2 border-gray-100 shadow-sm p-6 flex flex-col gap-4">
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-widest text-gray-400">{% trans "Offre" %}</span>
+                    <h3 class="text-xl font-extrabold text-gray-800 mt-1">{{ offre.nom }}</h3>
+                    <p class="text-3xl font-extrabold mt-3 text-gray-800">{{ offre.prix }}</p>
+                </div>
+                <ul class="space-y-2 text-sm text-gray-600 flex-1">
+                    {% for f in offre.fonctionnalites_choisies.all %}
+                    <li class="flex items-center gap-2">✅ {{ f.texte }}</li>
+                    {% endfor %}
+                </ul>
+                {% if offre.cta_desactive %}
+                <button disabled class="block w-full text-center font-bold py-3 rounded-xl border-2 border-gray-200 text-gray-400 cursor-not-allowed">
+                    {{ offre.cta_texte }}
+                </button>
+                {% else %}
+                <a href="{{ offre.cta_url }}" class="block text-center font-bold py-3 rounded-xl border-2 border-gray-200 text-gray-700 hover:border-orange-400 hover:text-orange-600 transition">
+                    {{ offre.cta_texte }}
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if page and page.description %}
+    <p class="tarifs-footnote text-center text-xs text-gray-400 mt-10">{% trans "Les tarifs sont indicatifs et peuvent évoluer. Contactez-nous pour toute question." %}</p>
+    {% endif %}
+
+</div>
+{% endblock %}

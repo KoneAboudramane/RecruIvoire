@@ -1,0 +1,253 @@
+﻿{% extends "candidat/base_auth.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Nouveau mot de passe" %} — {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+<style>
+    /* ── Réinitialiser MDP — classes thème ────────────────── */
+    .reinit-page-bg      { background: linear-gradient(135deg, #FFF8F0 0%, #ffffff 55%, #F0FFF4 100%); }
+    .reinit-icon-box     { background: linear-gradient(135deg, #FFF0E0, #FFD9A8) !important; }
+    .reinit-bar-off      { background: #e5e7eb !important; }
+
+    /* ── Mode nuit (dark) ─────────────────────────────────── */
+    html.dark .reinit-page-bg  { background: linear-gradient(135deg, #0c1222 0%, #111d2e 55%, #0d1a14 100%) !important; }
+    html.dark .reinit-icon-box { background: linear-gradient(135deg, #2d1f0e, #3d2a14) !important; }
+    html.dark .reinit-bar-off  { background: #334155 !important; }
+    html.dark .text-green-600  { color: #4ade80 !important; }
+    html.dark .text-red-500    { color: #f87171 !important; }
+
+    /* ── Mode sombre (noir) ───────────────────────────────── */
+    html.noir .reinit-page-bg  { background: linear-gradient(135deg, #000 0%, #050505 55%, #020502 100%) !important; }
+    html.noir .reinit-icon-box { background: linear-gradient(135deg, #1a1000, #251500) !important; }
+    html.noir .reinit-bar-off  { background: #222 !important; }
+    html.noir .text-green-600  { color: #4ade80 !important; }
+    html.noir .text-red-500    { color: #f87171 !important; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="min-h-[85vh] flex items-center justify-center py-12 px-80 reinit-page-bg"
+     x-data="nouveauMDP()">
+
+  <div class="w-full max-w-xl">
+
+    <!-- Carte principale -->
+    <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+
+      <!-- Bande déco -->
+      <div class="h-1.5 w-full" style="background:linear-gradient(90deg,#c96010,#FFB347,#2e7d52)"></div>
+
+      <div class="p-8">
+
+        <!-- En-tête -->
+        <div class="text-center mb-8">
+          <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-5 shadow-inner reinit-icon-box">
+            <span class="text-4xl">🔐</span>
+          </div>
+          <h1 class="text-2xl font-extrabold text-gray-800 tracking-tight">{% trans "Nouveau mot de passe" %}</h1>
+          <p class="text-gray-400 text-sm mt-2">{% trans "Choisissez un mot de passe sécurisé" %}</p>
+        </div>
+
+        <form method="post" novalidate @submit.prevent="soumettre()">
+          {% csrf_token %}
+
+          <!-- ── Nouveau mot de passe ──────────────────────────────── -->
+          <div class="mb-2">
+            <label for="password1" class="block text-sm font-semibold text-gray-600 mb-2">
+              {% trans "Nouveau mot de passe" %}
+            </label>
+            <div class="relative">
+              <input
+                :type="show1 ? 'text' : 'password'"
+                name="password1"
+                id="password1"
+                x-model="mdp"
+                placeholder="••••••••"
+                autocomplete="new-password"
+                class="w-full pl-4 pr-12 py-3.5 rounded-xl border text-sm transition-all duration-300 focus:outline-none"
+                :class="mdp && force < 2
+                  ? 'border-red-300 focus:border-red-400 focus:shadow-[0_0_0_3px_rgba(239,68,68,0.12)]'
+                  : 'border-gray-200 focus:border-orange-400 focus:shadow-[0_0_0_3px_rgba(201,96,16,0.15)]'"
+              >
+              <!-- Toggle affichage -->
+              <button type="button" @click="show1 = !show1"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors rounded-lg focus:outline-none">
+                <!-- Œil ouvert -->
+                <svg x-show="!show1" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+                <!-- Œil barré -->
+                <svg x-show="show1" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- ── Indicateur de force ─────────────────────────────── -->
+          <div x-show="mdp.length > 0" class="mb-5"
+               x-transition:enter="transition ease-out duration-300"
+               x-transition:enter-start="opacity-0 -translate-y-2"
+               x-transition:enter-end="opacity-100 translate-y-0">
+
+            <!-- Barres de force -->
+            <div class="flex gap-1.5 mb-2">
+              <template x-for="i in 4" :key="i">
+                <div class="flex-1 h-1.5 rounded-full transition-all duration-500"
+                     :class="{'reinit-bar-off': i > force}"
+                     :style="i <= force ? `background: ${forceCouleur()}` : ''">
+                </div>
+              </template>
+            </div>
+
+            <!-- Label force + critères -->
+            <div class="flex items-center justify-between">
+              <p class="text-xs font-semibold transition-colors duration-300"
+                 :style="`color: ${forceCouleur()}`"
+                 x-text="forceLabel()"></p>
+              <p class="text-xs text-gray-400">{% trans "min. 8 caractères" %}</p>
+            </div>
+
+            <!-- Critères détaillés -->
+            <div class="mt-2 grid grid-cols-2 gap-1">
+              <div class="flex items-center gap-1.5 text-xs"
+                   :class="mdp.length >= 8 ? 'text-green-600' : 'text-gray-400'">
+                <span x-text="mdp.length >= 8 ? '✓' : '○'" class="font-bold"></span>
+                {% trans "8 caractères minimum" %}
+              </div>
+              <div class="flex items-center gap-1.5 text-xs"
+                   :class="/[A-Z]/.test(mdp) ? 'text-green-600' : 'text-gray-400'">
+                <span x-text="/[A-Z]/.test(mdp) ? '✓' : '○'" class="font-bold"></span>
+                {% trans "Majuscule" %}
+              </div>
+              <div class="flex items-center gap-1.5 text-xs"
+                   :class="/[0-9]/.test(mdp) ? 'text-green-600' : 'text-gray-400'">
+                <span x-text="/[0-9]/.test(mdp) ? '✓' : '○'" class="font-bold"></span>
+                {% trans "Chiffre" %}
+              </div>
+              <div class="flex items-center gap-1.5 text-xs"
+                   :class="/[^A-Za-z0-9]/.test(mdp) ? 'text-green-600' : 'text-gray-400'">
+                <span x-text="/[^A-Za-z0-9]/.test(mdp) ? '✓' : '○'" class="font-bold"></span>
+                {% trans "Caractère spécial" %}
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Confirmation ────────────────────────────────────── -->
+          <div class="mb-6">
+            <label for="password2" class="block text-sm font-semibold text-gray-600 mb-2">
+              {% trans "Confirmer le mot de passe" %}
+            </label>
+            <div class="relative">
+              <input
+                :type="show2 ? 'text' : 'password'"
+                name="password2"
+                id="password2"
+                x-model="mdp2"
+                placeholder="••••••••"
+                autocomplete="new-password"
+                class="w-full pl-4 pr-12 py-3.5 rounded-xl border text-sm transition-all duration-300 focus:outline-none"
+                :class="mdp2 && mdp !== mdp2
+                  ? 'border-red-300 focus:border-red-400 focus:shadow-[0_0_0_3px_rgba(239,68,68,0.12)]'
+                  : 'border-gray-200 focus:border-orange-400 focus:shadow-[0_0_0_3px_rgba(201,96,16,0.15)]'"
+              >
+              <button type="button" @click="show2 = !show2"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors rounded-lg focus:outline-none">
+                <svg x-show="!show2" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+                <svg x-show="show2" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Match indicator -->
+            <div x-show="mdp2.length > 0"
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 class="mt-2 flex items-center gap-1.5 text-xs font-medium"
+                 :class="mdp === mdp2 ? 'text-green-600' : 'text-red-500'">
+              <span x-text="mdp === mdp2 ? '✓' : '✗'" class="font-black"></span>
+              <span x-text="mdp === mdp2 ? 'Les mots de passe correspondent' : 'Les mots de passe ne correspondent pas'"></span>
+            </div>
+          </div>
+
+          <!-- Messages erreur Django -->
+          {% if messages %}
+            {% for msg in messages %}
+              {% if 'error' in msg.tags %}
+                <div class="mb-5 flex items-center gap-2 p-3.5 bg-red-50 border border-red-100 rounded-xl">
+                  <span class="text-red-400 text-lg">✗</span>
+                  <p class="text-xs text-red-600 font-medium">{{ msg }}</p>
+                </div>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+
+          <!-- Bouton submit -->
+          <button type="submit"
+                  :disabled="!peutSoumettre"
+                  class="w-full py-3.5 rounded-xl text-white font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2.5 shadow-md"
+                  :class="!peutSoumettre ? 'opacity-50 cursor-not-allowed shadow-none' : 'hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98]'"
+                  style="background:linear-gradient(135deg,#c96010,#e06b00)">
+            <span>{% trans "Enregistrer le nouveau mot de passe" %}</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+            </svg>
+          </button>
+        </form>
+
+      </div><!-- /p-8 -->
+    </div><!-- /card -->
+
+    <p class="text-center text-xs text-gray-400 mt-6">
+      {% trans "Vous vous souvenez de votre mot de passe ?" %}
+      <a href="{% url 'candidat:connexion' %}" class="underline hover:text-gray-600 transition-colors">{% trans "Connexion" %}</a>
+    </p>
+
+  </div>
+</div>
+
+<script>
+function nouveauMDP() {
+  return {
+    mdp:   '',
+    mdp2:  '',
+    show1: false,
+    show2: false,
+
+    get force() {
+      let s = 0;
+      if (this.mdp.length >= 8)              s++;
+      if (/[A-Z]/.test(this.mdp))            s++;
+      if (/[0-9]/.test(this.mdp))            s++;
+      if (/[^A-Za-z0-9]/.test(this.mdp))    s++;
+      return s;
+    },
+
+    forceLabel() {
+      return ['', 'Faible', 'Moyen', 'Fort', 'Très fort'][this.force] || '';
+    },
+
+    forceCouleur() {
+      return ['', '#ef4444', '#f59e0b', '#22c55e', '#2e7d52'][this.force] || '#e5e7eb';
+    },
+
+    get peutSoumettre() {
+      return this.mdp.length >= 8 && this.mdp === this.mdp2;
+    },
+
+    soumettre() {
+      if (this.peutSoumettre) {
+        this.$el.closest('form') ? this.$el.closest('form').submit() : this.$el.submit();
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

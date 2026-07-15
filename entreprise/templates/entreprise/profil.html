@@ -1,0 +1,1778 @@
+﻿{% extends "entreprise/base.html" %}
+{% load static i18n %}
+
+{% block titre %}{% blocktrans with nom=request.entreprise.raisonSocial %}Mon Entreprise — {{ nom }}{% endblocktrans %}{% endblock %}
+
+{% block css_extra %}
+<style>
+    .prof-input {
+        width: 100%;
+        padding: .75rem 1rem;
+        border-radius: .75rem;
+        border: 1px solid #e5e7eb;
+        background: #f9fafb;
+        font-size: .95rem;
+        color: #1f2937;
+        transition: all .2s;
+    }
+    .prof-input:focus { outline: none; border-color: #009A44; background: #fff; box-shadow: 0 0 0 3px rgba(0,154,68,.12); }
+    .prof-input:disabled { opacity: .8; cursor: not-allowed; background: #f3f4f6; color: #374151; }
+    .field-label { display: block; font-size: .8rem; font-weight: 700; color: #6b7280; margin-bottom: .4rem; text-transform: uppercase; letter-spacing: .05em; }
+    .tab-btn { padding: .625rem 1.25rem; border-radius: .75rem; font-size: .8125rem; font-weight: 600; transition: all .2s; }
+    .tab-btn.active { background: #009A44; color: white; box-shadow: 0 4px 12px rgba(0,154,68,.25); }
+    .tab-btn:not(.active) { color: #6b7280; }
+    .tab-btn:not(.active):hover { background: #f3f4f6; color: #374151; }
+    .section-card { background: white; border: 1px solid #f0f0f0; border-radius: 1rem; padding: 1.5rem; }
+    .plan-badge { display: inline-flex; align-items: center; gap: .375rem; padding: .25rem .75rem; border-radius: 9999px; font-size: .7rem; font-weight: 700; }
+
+    /* ══════════════════════════════════════════════════════════════════
+       MODE SOMBRE — page profil entreprise
+       ══════════════════════════════════════════════════════════════════ */
+
+    /* ── Composants principaux ──────────────────────────────────────── */
+    html.dark .section-card        { background:#1e293b !important; border-color:#334155 !important; color:#e2e8f0 !important; }
+    html.dark .prof-input          { background:#0f172a !important; border-color:#475569 !important; color:#e2e8f0 !important; }
+    html.dark .prof-input:focus    { background:#0f172a !important; border-color:#009A44 !important; }
+    html.dark .prof-input:disabled { background:#162032 !important; color:#94a3b8 !important; }
+    html.dark .field-label         { color:#94a3b8 !important; }
+    html.dark .tab-btn:not(.active)        { color:#94a3b8 !important; }
+    html.dark .tab-btn:not(.active):hover  { background:#243348 !important; color:#e2e8f0 !important; }
+
+    /* ── Section card avec gradient (étape email) ───────────────────── */
+    html.dark .section-card[style*="f0fdf4"],
+    html.dark .section-card[style*="dcfce7"] {
+        background: rgba(34,197,94,.08) !important;
+        border-color: rgba(34,197,94,.25) !important;
+    }
+
+    /* ── Pastels Tailwind non couverts par base.html ────────────────── */
+    /* Verts */
+    html.dark .bg-green-50    { background-color: rgba(34,197,94,.08) !important; }
+    html.dark .bg-green-100   { background-color: rgba(34,197,94,.15) !important; }
+    html.dark .text-green-700,
+    html.dark .text-green-600 { color: #4ade80 !important; }
+    html.dark .border-green-100,
+    html.dark .border-green-200 { border-color: rgba(34,197,94,.3) !important; }
+
+    /* Ambres */
+    html.dark .bg-amber-50,
+    html.dark .bg-yellow-50   { background-color: rgba(245,158,11,.08) !important; }
+    html.dark .bg-amber-100,
+    html.dark .bg-yellow-100  { background-color: rgba(245,158,11,.15) !important; }
+    html.dark .text-amber-700,
+    html.dark .text-amber-800,
+    html.dark .text-yellow-700 { color: #fcd34d !important; }
+    html.dark .border-amber-200 { border-color: rgba(245,158,11,.35) !important; }
+    html.dark .bg-amber-400   { background-color: #f59e0b !important; }
+    html.dark .bg-amber-500   { background-color: #d97706 !important; }
+    html.dark .bg-amber-500:hover,
+    html.dark .hover\:bg-amber-600:hover { background-color: #b45309 !important; }
+
+    /* Rouges */
+    html.dark .bg-red-50      { background-color: rgba(239,68,68,.08) !important; }
+    html.dark .bg-red-100     { background-color: rgba(239,68,68,.15) !important; }
+    html.dark .text-red-700,
+    html.dark .text-red-600   { color: #fca5a5 !important; }
+    html.dark .border-red-100,
+    html.dark .border-red-200 { border-color: rgba(239,68,68,.3) !important; }
+
+    /* Bleus */
+    html.dark .bg-blue-50     { background-color: rgba(59,130,246,.08) !important; }
+    html.dark .bg-blue-100    { background-color: rgba(59,130,246,.15) !important; }
+    html.dark .text-blue-700,
+    html.dark .text-blue-600  { color: #60a5fa !important; }
+    html.dark .border-blue-100,
+    html.dark .border-blue-200 { border-color: rgba(59,130,246,.3) !important; }
+    html.dark .bg-blue-500    { background-color: #2563eb !important; }
+    html.dark .hover\:bg-blue-600:hover { background-color: #1d4ed8 !important; }
+
+    /* Oranges */
+    html.dark .bg-orange-50,
+    html.dark .bg-orange-100  { background-color: rgba(201,96,16,.12) !important; }
+    html.dark .text-orange-700,
+    html.dark .text-orange-600 { color: #fb923c !important; }
+    html.dark .border-orange-200 { border-color: rgba(201,96,16,.3) !important; }
+
+    /* ── Backgrounds inline (style="background:#XYZ;") ──────────────── */
+    /* Badges check verts → versions sombres translucides */
+    html.dark span[style*="#dcfce7"],
+    html.dark div[style*="#dcfce7"] {
+        background: rgba(34,197,94,.18) !important;
+        color: #4ade80 !important;
+    }
+    /* Badges check ambres */
+    html.dark span[style*="#FEF3C7"],
+    html.dark div[style*="#FEF3C7"] {
+        background: rgba(245,158,11,.18) !important;
+        color: #fcd34d !important;
+    }
+    /* Badges rouges */
+    html.dark span[style*="#FEE2E2"],
+    html.dark div[style*="#FEE2E2"] {
+        background: rgba(239,68,68,.18) !important;
+        color: #fca5a5 !important;
+    }
+    /* Badges bleus */
+    html.dark span[style*="#DBEAFE"],
+    html.dark div[style*="#DBEAFE"] {
+        background: rgba(59,130,246,.18) !important;
+        color: #93c5fd !important;
+    }
+    /* Étape grise par défaut (#F3F4F6) → slate */
+    html.dark span[style*="#F3F4F6"],
+    html.dark div[style*="#F3F4F6"] {
+        background: #243348 !important;
+        color: #cbd5e1 !important;
+    }
+
+    /* Ligne progress entre étapes (background:#d1fae5) → slate */
+    html.dark div[style*="#d1fae5"] {
+        background: #334155 !important;
+    }
+
+    /* OTP cases vertes quand digit saisi */
+    html.dark input[style*="#f0fdf4"] {
+        background: rgba(34,197,94,.15) !important;
+        color: #4ade80 !important;
+    }
+
+    /* ── Plan badge ─────────────────────────────────────────────────── */
+    html.dark .plan-badge {
+        background: rgba(0,154,68,.15) !important;
+        color: #4ade80 !important;
+    }
+
+    /* ── Divider du form OTP ────────────────────────────────────────── */
+    html.dark .border-gray-100,
+    html.dark .border-t,
+    html.dark .border-b { border-color: #334155 !important; }
+
+    /* ── Combobox autocomplete dropdowns ─────────────────────────────── */
+    html.dark .bg-green-50 .text-green-700,
+    html.dark .bg-green-50 > button { color: #4ade80 !important; }
+    html.dark button.hover\:bg-gray-50:hover { background-color: #243348 !important; }
+    html.dark button.hover\:bg-green-50:hover { background-color: rgba(34,197,94,.12) !important; }
+
+    /* ══════════════════════════════════════════════════════════════════
+       Tab Plan & Abonnement
+       ══════════════════════════════════════════════════════════════════ */
+
+    /* Carte "Votre plan actuel" — bordure verte + fond vert très clair */
+    html.dark .plan-current[style*="#f0fdf4"],
+    html.dark div[style*="#f0fdf4"] {
+        background: rgba(34,197,94,.08) !important;
+        border-color: #009A44 !important;
+    }
+
+    /* Badge "Populaire" orange — reste visible en sombre */
+    html.dark div[style*="#c96010"] {
+        background: #c96010 !important;
+        color: #fff !important;
+    }
+
+    /* Prix vert et coches : la couleur reste #009A44, mais on l'éclaire en sombre */
+    html.dark p[style*="color:#009A44"],
+    html.dark span[style*="color:#009A44"] {
+        color: #4ade80 !important;
+    }
+
+    /* Ring du plan actuel (carte sélectionnée dans la grille des plans) */
+    html.dark .ring-2 { --tw-ring-color: #009A44 !important; }
+
+    /* Badge "✅ Plan actuel" (text-green-700 bg-green-50 border-green-200) */
+    html.dark .text-green-700.bg-green-50,
+    html.dark span.bg-green-50.text-green-700 {
+        background: rgba(34,197,94,.15) !important;
+        color: #4ade80 !important;
+        border-color: rgba(34,197,94,.35) !important;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════
+       COMPLÉMENTS MODE SOMBRE — textes, fonds gris, bordures, champs
+       ══════════════════════════════════════════════════════════════════ */
+
+    /* ── Textes gris généraux ─────────────────────────────────────────── */
+    html.dark .text-gray-900 { color: #f1f5f9 !important; }
+    html.dark .text-gray-800 { color: #e2e8f0 !important; }
+    html.dark .text-gray-700 { color: #cbd5e1 !important; }
+    html.dark .text-gray-600 { color: #94a3b8 !important; }
+    html.dark .text-gray-500 { color: #64748b !important; }
+    html.dark .text-gray-400 { color: #94a3b8 !important; }
+
+    /* ── Backgrounds gris (hors section-card couvert plus haut) ──────── */
+    html.dark .bg-gray-50  { background-color: #1e293b !important; }
+    html.dark .bg-gray-100 { background-color: #243348 !important; }
+    html.dark .bg-gray-300 { background-color: #475569 !important; }
+
+    /* ── Bordures grises manquantes ──────────────────────────────────── */
+    html.dark .border-gray-50  { border-color: #253348 !important; }
+    html.dark .border-gray-200 { border-color: #334155 !important; }
+    html.dark .border-gray-300 { border-color: #475569 !important; }
+
+    /* ── Blue-800 (note "Bon à savoir") ──────────────────────────────── */
+    html.dark .text-blue-800 { color: #93c5fd !important; }
+
+    /* ── bg-blue-50/50 (note confidentialité) ────────────────────────── */
+    html.dark .bg-blue-50\/50 { background-color: rgba(59,130,246,.08) !important; }
+
+    /* ── Zone upload pointillée ──────────────────────────────────────── */
+    html.dark .border-dashed { border-color: #475569 !important; }
+
+    /* ── Champs témoignage (textarea & input hors .prof-input) ──────── */
+    html.dark textarea:not(.prof-input),
+    html.dark input[type="text"]:not(.prof-input) {
+        background: #0f172a !important;
+        border-color: #475569 !important;
+        color: #e2e8f0 !important;
+    }
+    html.dark textarea::placeholder,
+    html.dark input::placeholder { color: #64748b !important; }
+
+    /* ══════════════════════════════════════════════════════════════════
+       MODE NOIR (OLED) — page profil entreprise
+       ══════════════════════════════════════════════════════════════════ */
+    html.noir .section-card        { background:#0d0d0d !important; border-color:#222 !important; color:#e2e8f0 !important; }
+    html.noir .prof-input          { background:#000 !important; border-color:#333 !important; color:#e2e8f0 !important; }
+    html.noir .prof-input:focus    { background:#000 !important; border-color:#009A44 !important; }
+    html.noir .prof-input:disabled { background:#080808 !important; color:#94a3b8 !important; }
+    html.noir .field-label         { color:#94a3b8 !important; }
+    html.noir .tab-btn:not(.active)        { color:#94a3b8 !important; }
+    html.noir .tab-btn:not(.active):hover  { background:#1a1a1a !important; color:#e2e8f0 !important; }
+
+    html.noir .bg-green-50    { background-color: rgba(34,197,94,.06) !important; }
+    html.noir .bg-green-100   { background-color: rgba(34,197,94,.12) !important; }
+    html.noir .text-green-700,
+    html.noir .text-green-600 { color: #4ade80 !important; }
+    html.noir .border-green-100,
+    html.noir .border-green-200 { border-color: rgba(34,197,94,.24) !important; }
+
+    html.noir .bg-amber-50,
+    html.noir .bg-yellow-50   { background-color: rgba(245,158,11,.06) !important; }
+    html.noir .bg-amber-100,
+    html.noir .bg-yellow-100  { background-color: rgba(245,158,11,.12) !important; }
+    html.noir .text-amber-700,
+    html.noir .text-amber-800,
+    html.noir .text-yellow-700 { color: #fcd34d !important; }
+    html.noir .border-amber-200 { border-color: rgba(245,158,11,.28) !important; }
+
+    html.noir .bg-red-50      { background-color: rgba(239,68,68,.06) !important; }
+    html.noir .bg-red-100     { background-color: rgba(239,68,68,.12) !important; }
+    html.noir .text-red-700,
+    html.noir .text-red-600   { color: #fca5a5 !important; }
+    html.noir .border-red-100,
+    html.noir .border-red-200 { border-color: rgba(239,68,68,.24) !important; }
+
+    html.noir .bg-blue-50     { background-color: rgba(59,130,246,.06) !important; }
+    html.noir .bg-blue-100    { background-color: rgba(59,130,246,.12) !important; }
+    html.noir .text-blue-700,
+    html.noir .text-blue-600  { color: #60a5fa !important; }
+    html.noir .border-blue-100,
+    html.noir .border-blue-200 { border-color: rgba(59,130,246,.24) !important; }
+
+    html.noir .bg-orange-50,
+    html.noir .bg-orange-100  { background-color: rgba(201,96,16,.09) !important; }
+    html.noir .text-orange-700,
+    html.noir .text-orange-600 { color: #fb923c !important; }
+    html.noir .border-orange-200 { border-color: rgba(201,96,16,.24) !important; }
+
+    html.noir .plan-badge {
+        background: rgba(0,154,68,.12) !important;
+        color: #4ade80 !important;
+    }
+
+    /* ══ Mode NOIR — Tab Plan & Abonnement ══════════════════════════════ */
+    /* Carte "plan actuel" — fond vert très clair + bordure verte */
+    html.noir .plan-current[style*="#f0fdf4"],
+    html.noir div[style*="background:#f0fdf4"],
+    html.noir div[style*="background: #f0fdf4"] {
+        background: rgba(34,197,94,.06) !important;
+        border-color: #009A44 !important;
+    }
+    /* Prix et coches vertes */
+    html.noir p[style*="color:#009A44"],
+    html.noir span[style*="color:#009A44"] { color: #4ade80 !important; }
+    /* Ring carte active */
+    html.noir .ring-2 { --tw-ring-color: #009A44 !important; }
+    /* Badge "Populaire" (inline style) */
+    html.noir div[style*="background:#c96010"] { background: #c96010 !important; color: #fff !important; }
+    /* Badge "✅ Plan actuel" */
+    html.noir .text-green-700.bg-green-50,
+    html.noir span.bg-green-50.text-green-700 {
+        background: rgba(34,197,94,.12) !important;
+        color: #4ade80 !important;
+        border-color: rgba(34,197,94,.28) !important;
+    }
+
+    html.noir .border-gray-100,
+    html.noir .border-t,
+    html.noir .border-b { border-color: #222 !important; }
+
+    html.noir button.hover\:bg-gray-50:hover { background-color: #1a1a1a !important; }
+    html.noir button.hover\:bg-green-50:hover { background-color: rgba(34,197,94,.09) !important; }
+
+    html.noir .text-gray-900 { color: #f1f5f9 !important; }
+    html.noir .text-gray-800 { color: #e2e8f0 !important; }
+    html.noir .text-gray-700 { color: #cbd5e1 !important; }
+    html.noir .text-gray-600 { color: #94a3b8 !important; }
+    html.noir .text-gray-500 { color: #64748b !important; }
+    html.noir .text-gray-400 { color: #94a3b8 !important; }
+
+    html.noir .bg-gray-50  { background-color: #0d0d0d !important; }
+    html.noir .bg-gray-100 { background-color: #1a1a1a !important; }
+    html.noir .bg-gray-300 { background-color: #333 !important; }
+
+    html.noir .border-gray-50  { border-color: #1a1a1a !important; }
+    html.noir .border-gray-200 { border-color: #222 !important; }
+    html.noir .border-gray-300 { border-color: #333 !important; }
+
+    html.noir .text-blue-800 { color: #93c5fd !important; }
+    html.noir .bg-blue-50\/50 { background-color: rgba(59,130,246,.06) !important; }
+
+    html.noir .border-dashed { border-color: #333 !important; }
+
+    html.noir textarea:not(.prof-input),
+    html.noir input[type="text"]:not(.prof-input) {
+        background: #000 !important;
+        border-color: #333 !important;
+        color: #e2e8f0 !important;
+    }
+    html.noir textarea::placeholder,
+    html.noir input::placeholder { color: #64748b !important; }
+
+    /* ── En-tête profil entreprise — suppression dégradé ─────── */
+    .profil-ent-header { background:#fff; color:#1f2937; border:1px solid #e5e7eb; }
+    .profil-ent-header .logo-wrap-box { background:rgba(0,154,68,.10); border-color:rgba(0,0,0,.15); color:#009A44; }
+    .profil-ent-header .header-badge-plan { background:rgba(0,154,68,.12) !important; color:#166534 !important; }
+    .profil-ent-header .header-badge-verif { background:rgba(0,0,0,.06) !important; color:#374151 !important; }
+    .profil-ent-header .sous-titre-profil { color:#4b5563; }
+    .profil-ent-header .date-profil { color:#6b7280; }
+    .profil-ent-header .score-widget-box { background:rgba(0,0,0,.04); border-color:rgba(0,0,0,.10); }
+    .profil-ent-header .score-label { color:#6b7280; }
+    .profil-ent-header .score-track { background:rgba(0,0,0,.08); }
+    .profil-ent-header .score-status { color:#6b7280; }
+    .profil-ent-header .tab-bar-profil { border-color:rgba(0,0,0,.10); }
+    .profil-ent-header .bg-white\/20 { background:rgba(0,154,68,.12) !important; }
+    .profil-ent-header .text-white { color:#166534 !important; }
+    .profil-ent-header .text-white\/60 { color:#6b7280 !important; }
+    .profil-ent-header .hover\:text-white:hover { color:#166534 !important; }
+    .profil-ent-header .hover\:bg-white\/10:hover { background:rgba(0,0,0,.05) !important; }
+
+    html.dark .profil-ent-header { background:#1e293b; color:#f1f5f9; border-color:#334155; }
+    html.dark .profil-ent-header .logo-wrap-box { background:rgba(0,154,68,.18); border-color:#334155; color:#4ade80; }
+    html.dark .profil-ent-header .header-badge-plan { background:rgba(0,154,68,.18) !important; color:#4ade80 !important; }
+    html.dark .profil-ent-header .header-badge-verif { background:rgba(255,255,255,.10) !important; color:#e2e8f0 !important; }
+    html.dark .profil-ent-header .sous-titre-profil { color:#94a3b8; }
+    html.dark .profil-ent-header .date-profil { color:#94a3b8; }
+    html.dark .profil-ent-header .score-widget-box { background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.12); }
+    html.dark .profil-ent-header .score-label { color:#94a3b8; }
+    html.dark .profil-ent-header .score-track { background:rgba(255,255,255,.10); }
+    html.dark .profil-ent-header .score-status { color:#94a3b8; }
+    html.dark .profil-ent-header .tab-bar-profil { border-color:rgba(255,255,255,.10); }
+    html.dark .profil-ent-header .text-white { color:#f1f5f9 !important; }
+    html.dark .profil-ent-header .text-white\/60 { color:rgba(241,245,249,.65) !important; }
+
+    html.noir .profil-ent-header { background:linear-gradient(135deg,#000 0%,#080808 60%,#111 100%); color:#f1f5f9; border-color:#222; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="w-full space-y-8 px-4 sm:px-8 lg:px-14" x-data="profilApp()" x-init="init()">
+
+    <!-- ── En-tête profil ──────────────────────────────────────────────── -->
+    <div class="profil-ent-header rounded-2xl overflow-hidden mb-6 shadow-sm">
+
+        <div class="px-4 sm:px-8 pt-6 sm:pt-8 pb-6">
+            <div class="flex flex-col md:flex-row items-start md:items-center gap-6">
+
+                <!-- Logo / upload -->
+                <div class="relative group flex-shrink-0">
+                    <div class="logo-wrap-box w-24 h-24 rounded-2xl border-2 overflow-hidden flex items-center justify-center shadow-lg cursor-pointer"
+                         @click="$refs.logoInput.click()">
+                        <img id="logoPreview"
+                             {% if request.entreprise.logoEntreprise %}
+                             src="{{ request.entreprise.logoEntreprise.url }}"
+                             {% else %}
+                             src=""
+                             {% endif %}
+                             alt="{% trans "Logo" %}"
+                             class="w-full h-full object-cover {% if not request.entreprise.logoEntreprise %}hidden{% endif %}"
+                             id="logoImg">
+                        <span id="logoPlaceholder"
+                              class="text-4xl font-extrabold {% if request.entreprise.logoEntreprise %}hidden{% endif %}">
+                            {{ request.entreprise.raisonSocial|slice:":1"|upper }}
+                        </span>
+                    </div>
+                    <!-- Overlay au survol -->
+                    <div class="absolute inset-0 rounded-2xl bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                         @click="$refs.logoInput.click()">
+                        <span class="text-white text-xs font-bold">📷 {% trans "Changer" %}</span>
+                    </div>
+                </div>
+
+                <!-- Identité -->
+                <div class="flex-1">
+                    <div class="flex flex-wrap items-center gap-2 mb-2">
+                        <h1 class="text-2xl font-extrabold">{{ request.entreprise.raisonSocial }}</h1>
+                        <!-- Badge plan -->
+                        <span class="plan-badge header-badge-plan">
+                            {% if request.entreprise.planAbonnement == 'GRATUIT' %}🆓
+                            {% elif request.entreprise.planAbonnement == 'STARTER' %}⭐
+                            {% elif request.entreprise.planAbonnement == 'PRO' %}🚀
+                            {% else %}👑{% endif %}
+                            {{ request.entreprise.get_planAbonnement_display }}
+                        </span>
+                        <!-- Badge vérification -->
+                        <span class="plan-badge header-badge-verif">
+                            {% if request.entreprise.statutVerification == 'VERIFIE' %}✅ {% trans "Vérifié" %}
+                            {% elif request.entreprise.statutVerification == 'REJETE' %}❌ {% trans "Rejeté" %}
+                            {% else %}⏳ {% trans "En attente" %}{% endif %}
+                        </span>
+                    </div>
+                    <p class="sous-titre-profil text-sm">
+                        {% if request.entreprise.secteurActivite %}{{ request.entreprise.get_secteurActivite_display }}{% endif %}
+                        {% if request.entreprise.ville %} · {{ request.entreprise.ville }}{% endif %}
+                        {% if request.entreprise.pays %}, {{ request.entreprise.pays }}{% endif %}
+                    </p>
+                    <p class="date-profil text-xs mt-1">
+                        {% blocktrans with date=request.entreprise.dateCreationCompte|date:"M Y" %}Membre depuis {{ date }}{% endblocktrans %}
+                    </p>
+                </div>
+
+                <!-- Score -->
+                <div class="score-widget-box rounded-2xl p-4 min-w-[140px] text-center border">
+                    <p class="text-xs score-label uppercase tracking-wider mb-1">{% trans "Score profil" %}</p>
+                    <p class="text-3xl font-extrabold">{{ request.entreprise.scorePertinence|floatformat:0 }}<span class="text-lg score-status">/100</span></p>
+                    <div class="score-track mt-2 h-2 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-700"
+                             style="width: {{ request.entreprise.scorePertinence }}%;
+                                    background: {% if request.entreprise.scorePertinence >= 70 %}#009A44{% elif request.entreprise.scorePertinence >= 40 %}#f59e0b{% else %}#ef4444{% endif %};">
+                        </div>
+                    </div>
+                    <p class="text-xs score-status mt-1.5">
+                        {% if request.entreprise.scorePertinence >= 70 %}{% trans "Excellent" %}
+                        {% elif request.entreprise.scorePertinence >= 40 %}{% trans "À améliorer" %}
+                        {% else %}{% trans "Incomplet" %}{% endif %}
+                    </p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Onglets -->
+        <div class="tab-bar-profil px-4 sm:px-8 pb-0 flex flex-wrap gap-1 border-t pt-2">
+            <button @click="tab = 'infos'"
+                    :class="tab === 'infos' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'"
+                    class="px-4 py-2 rounded-t-xl text-sm font-semibold transition">
+                📋 {% trans "Informations" %}
+            </button>
+            <button @click="tab = 'securite'"
+                    :class="tab === 'securite' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'"
+                    class="px-4 py-2 rounded-t-xl text-sm font-semibold transition">
+                🔒 {% trans "Sécurité" %}
+            </button>
+            <button @click="tab = 'verification'"
+                    :class="tab === 'verification' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'"
+                    class="px-4 py-2 rounded-t-xl text-sm font-semibold transition relative">
+                ✅ {% trans "Vérification" %}
+                {% if not request.entreprise.emailVerifie or request.entreprise.statutVerification != 'VERIFIE' %}
+                <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-white/30"></span>
+                {% endif %}
+            </button>
+            <button @click="tab = 'plan'"
+                    :class="tab === 'plan' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'"
+                    class="px-4 py-2 rounded-t-xl text-sm font-semibold transition">
+                💎 {% trans "Plan & Abonnement" %}
+            </button>
+            <button @click="tab = 'confidentialite'"
+                    :class="tab === 'confidentialite' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'"
+                    class="px-4 py-2 rounded-t-xl text-sm font-semibold transition">
+                🛡️ {% trans "Confidentialité" %}
+            </button>
+            <button @click="tab = 'temoignage'"
+                    :class="tab === 'temoignage' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'"
+                    class="px-4 py-2 rounded-t-xl text-sm font-semibold transition">
+                ⭐ {% trans "Témoignage" %}
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- ONGLET INFORMATIONS                                                -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div x-show="tab === 'infos'" x-transition>
+
+        <form method="post" action="{% url 'entreprise:modifier_profil' %}" enctype="multipart/form-data" id="profilForm">
+            {% csrf_token %}
+
+            <!-- Input logo caché -->
+            <input type="file" x-ref="logoInput" name="logoEntreprise" accept="image/*" class="hidden"
+                   @change="previewLogo($event)">
+
+            <div class="space-y-5">
+
+                <!-- ── Identité ──────────────────────────────────────── -->
+                <div class="section-card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-bold text-gray-800 flex items-center gap-2">🏢 {% trans "Identité" %}</h2>
+                        <div class="flex gap-2" x-show="!editMode">
+                            <button type="button" @click="editMode = true"
+                                    class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white transition hover:opacity-90"
+                                    style="background:#009A44;">
+                                ✏️ {% trans "Modifier" %}
+                            </button>
+                        </div>
+                        <div class="flex gap-2" x-show="editMode">
+                            <button type="button" @click="editMode = false"
+                                    class="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 border border-gray-300 hover:bg-gray-50 transition">
+                                {% trans "Annuler" %}
+                            </button>
+                            <button type="submit"
+                                    class="px-4 py-2 rounded-xl text-xs font-bold text-white transition hover:opacity-90"
+                                    style="background:#009A44;">
+                                💾 {% trans "Enregistrer" %}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="field-label">{% trans "Raison sociale" %} <span class="text-red-400">*</span></label>
+                            <input type="text" name="raisonSocial" value="{{ request.entreprise.raisonSocial }}"
+                                   :disabled="!editMode" class="prof-input">
+                        </div>
+                        <div>
+                            <label class="field-label">{% trans "Registre du commerce" %}</label>
+                            <input type="text" name="registreCommerce" value="{{ request.entreprise.registreCommerce }}"
+                                   :disabled="!editMode" class="prof-input">
+                        </div>
+                        <div>
+                            <label class="field-label">{% trans "Identifiant fiscal (IDU)" %}</label>
+                            <input type="text" name="idu" value="{{ request.entreprise.idu }}"
+                                   :disabled="!editMode" class="prof-input">
+                        </div>
+                        <div>
+                            <label class="field-label">{% trans "Secteur d'activité" %}</label>
+                            <select name="secteurActivite" :disabled="!editMode" class="prof-input">
+                                <option value="">— {% trans "Choisir" %} —</option>
+                                {% for val, label in secteurs %}
+                                <option value="{{ val }}" {% if request.entreprise.secteurActivite == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="field-label">{% trans "Taille de l'entreprise" %}</label>
+                            <select name="tailleEntreprise" :disabled="!editMode" class="prof-input">
+                                <option value="">— {% trans "Choisir" %} —</option>
+                                {% for val, label in tailles %}
+                                <option value="{{ val }}" {% if request.entreprise.tailleEntreprise == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="field-label">{% trans "Description de l'entreprise" %}</label>
+                            <textarea name="description" rows="4" :disabled="!editMode"
+                                      class="prof-input resize-none"
+                                      placeholder="{% trans 'Décrivez votre entreprise, votre mission, vos valeurs…' %}">{{ request.entreprise.description }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Coordonnées ───────────────────────────────────── -->
+                <div class="section-card">
+                    <h2 class="font-bold text-gray-800 flex items-center gap-2 mb-4">📞 {% trans "Coordonnées & Web" %}</h2>
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="field-label">{% trans "Téléphone" %}</label>
+                            <input type="tel" name="telephone" value="{{ request.entreprise.telephone }}"
+                                   :disabled="!editMode" class="prof-input">
+                        </div>
+                        <div>
+                            <label class="field-label">{% trans "Email de contact" %}</label>
+                            <input type="email" name="emailContact" value="{{ request.entreprise.emailContact }}"
+                                   :disabled="!editMode" class="prof-input">
+                        </div>
+                        <div>
+                            <label class="field-label">{% trans "Site web" %}</label>
+                            <input type="url" name="siteWeb" value="{{ request.entreprise.siteWeb }}"
+                                   :disabled="!editMode" class="prof-input" placeholder="https://…">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Localisation ──────────────────────────────────── -->
+                <div class="section-card">
+                    <h2 class="font-bold text-gray-800 flex items-center gap-2 mb-4">📍 {% trans "Localisation" %}</h2>
+                    <div class="grid md:grid-cols-4 gap-4"
+                         x-data="{ _pid: null }"
+                         @cbxpick="if($event.target.closest('[data-cbxe=pays]')) { _pid=$event.detail.id; const villeEl=$el.querySelector('[data-cbxe=ville]'); if(villeEl){ const s=Alpine.$data(villeEl); if(s) s.reload('/referentiel/api/villes/?pays_id='+_pid); } const ind=$event.detail.extra?.indicatifTel; if(ind){ const telEl=$el.querySelector('[name=telephone]'); if(telEl){ const t=telEl.value.trim(); telEl.value=!t?ind+' ':(/^\+\d+/.test(t)?ind+' '+t.replace(/^\+\d+\s*/,''):t); telEl.dispatchEvent(new Event('input')); } } }">
+                        <div>
+                            <label class="field-label">{% trans "Adresse" %}</label>
+                            <input type="text" name="adresse" value="{{ request.entreprise.adresse }}"
+                                   :disabled="!editMode" class="prof-input">
+                        </div>
+                        <div>
+                            <label class="field-label">{% trans "Pays" %}</label>
+                            <div data-cbxe="pays" class="relative"
+                                 x-data="cbx({ url: '{% url 'referentiel:api_pays' %}', v: '{{ request.entreprise.pays|default:''|escapejs }}', k: 'nomPays' })">
+                                <input type="text" x-model="q" name="pays"
+                                       @focus="if(editMode) onfocus()" @blur="onblur()" @input="if(editMode) oninput()" @keydown="onkey($event)"
+                                       placeholder="{% trans "Pays…" %}" class="prof-input w-full pr-8" autocomplete="off" :disabled="!editMode">
+                                <svg x-show="editMode" class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                                <div x-show="open && editMode" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:220px;overflow-y:auto;">
+                                    <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o)" class="w-full px-3 py-2.5 text-sm text-left transition-colors" :class="i===hi?'bg-green-50 text-green-700 font-medium':'text-gray-700 hover:bg-gray-50'" x-text="o.label"></button></template>
+                                    <div x-show="!sh.length" class="px-3 py-3 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="field-label">{% trans "Ville" %}</label>
+                            <div class="relative" data-cbxe="ville"
+                                 x-data="cbx({ url: '{% url 'referentiel:api_villes' %}{% if request.entreprise.pays %}?pays_nom={{ request.entreprise.pays|urlencode }}{% endif %}', v: '{{ request.entreprise.ville|default:''|escapejs }}', k: 'nomVille', s: 'region' })">
+                                <input type="text" x-model="q" name="ville"
+                                       @focus="if(editMode) onfocus()" @blur="onblur()" @input="if(editMode) oninput()" @keydown="onkey($event)"
+                                       placeholder="{% trans "Ville…" %}" class="prof-input w-full pr-8" autocomplete="off" :disabled="!editMode">
+                                <svg x-show="editMode" class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                                <div x-show="open && editMode" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:220px;overflow-y:auto;">
+                                    <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o)" class="w-full px-3 py-2.5 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-green-50 text-green-700 font-medium':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span><span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-3"></span></button></template>
+                                    <div x-show="!sh.length" class="px-3 py-3 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="field-label">{% trans "Code postal" %}</label>
+                            <input type="text" name="codePostal" value="{{ request.entreprise.codePostal }}"
+                                   :disabled="!editMode" class="prof-input">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bouton enregistrer global (visible si editMode) -->
+                <div x-show="editMode" class="flex justify-end gap-3 pb-2">
+                    <button type="button" @click="editMode = false"
+                            class="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-600 border border-gray-300 hover:bg-gray-50 transition">
+                        {% trans "Annuler" %}
+                    </button>
+                    <button type="submit"
+                            class="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90 hover:shadow-md"
+                            style="background: linear-gradient(135deg, #009A44, #007a36);">
+                        💾 {% trans "Enregistrer les modifications" %}
+                    </button>
+                </div>
+
+            </div>
+        </form>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- ONGLET SÉCURITÉ                                                    -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div x-show="tab === 'securite'" x-transition>
+        <div class="grid md:grid-cols-2 gap-6">
+
+            <!-- Changer mot de passe -->
+            <div class="section-card" x-data="{
+            editMdp: false,
+            showOld: false, showNew: false, showConf: false,
+            strength: { score:0, color:'#e5e7eb', label:'' },
+            calcStrength(p) {
+                let sc = 0;
+                if (p.length >= 8) sc++;
+                if (/[A-Z]/.test(p)) sc++;
+                if (/[0-9]/.test(p)) sc++;
+                if (/[^A-Za-z0-9]/.test(p)) sc++;
+                const labels = ['','Faible','Moyen','Fort','Très fort'];
+                const colors = ['','#ef4444','#f59e0b','#3b82f6','#009A44'];
+                this.strength = { score: sc, color: colors[sc]||'#e5e7eb', label: labels[sc]||'' };
+            },
+            annulerMdp() {
+                this.editMdp = false;
+                this.showOld = false; this.showNew = false; this.showConf = false;
+                this.strength = { score:0, color:'#e5e7eb', label:'' };
+                document.querySelectorAll('#formMdpEnt input[type=password],#formMdpEnt input[type=text]').forEach(i => i.value = '');
+            }
+        }">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-bold text-gray-800 flex items-center gap-2">🔑 {% trans "Mot de passe" %}</h2>
+                    <button type="button" x-show="!editMdp" @click="editMdp = true"
+                            class="px-4 py-2 rounded-xl text-xs font-bold text-white"
+                            style="background:#009A44;">✏️ {% trans "Modifier" %}</button>
+                    <button type="button" x-show="editMdp" @click="annulerMdp()"
+                            class="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 border border-gray-300 hover:bg-gray-50 transition">
+                        {% trans "Annuler" %}
+                    </button>
+                </div>
+
+                <!-- État verrouillé (par défaut) -->
+                <div x-show="!editMdp" class="space-y-3">
+                    <div class="flex items-center gap-3 p-4 rounded-xl bg-gray-50 border border-gray-100">
+                        <div class="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-base border border-gray-100 shrink-0">🔒</div>
+                        <div class="flex-1">
+                            <p class="text-sm font-semibold text-gray-800">{% trans "Mot de passe sécurisé" %}</p>
+                            <p class="text-xs text-gray-500 mt-0.5">{% trans "Cliquez sur \"Modifier\" pour changer votre mot de passe." %}</p>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-gray-400 px-1">
+                        💡 {% trans "Conseil : utilisez au moins 8 caractères avec majuscules, chiffres et symboles." %}
+                    </p>
+                </div>
+
+                <!-- Formulaire (visible uniquement en mode édition) -->
+                <form x-show="editMdp" x-transition
+                      id="formMdpEnt" method="post"
+                      action="{% url 'entreprise:changer_mdp' %}"
+                      class="space-y-4">
+                    {% csrf_token %}
+
+                    <div>
+                        <label class="field-label">{% trans "Mot de passe actuel" %}</label>
+                        <div class="relative">
+                            <input :type="showOld ? 'text' : 'password'" name="ancienMotPasse"
+                                   placeholder="••••••••" class="prof-input pr-10" required>
+                            <button type="button" @click="showOld = !showOld"
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm">
+                                <span x-text="showOld ? '🙈' : '👁️'"></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="field-label">{% trans "Nouveau mot de passe" %}</label>
+                        <div class="relative">
+                            <input :type="showNew ? 'text' : 'password'" name="nouveauMotPasse"
+                                   @input="calcStrength($event.target.value)"
+                                   placeholder="{% trans "Au moins 8 caractères" %}" class="prof-input pr-10" required>
+                            <button type="button" @click="showNew = !showNew"
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm">
+                                <span x-text="showNew ? '🙈' : '👁️'"></span>
+                            </button>
+                        </div>
+                        <!-- Force indicateur -->
+                        <div class="mt-2 flex gap-1" x-show="strength.score > 0">
+                            <template x-for="i in 4" :key="i">
+                                <div class="h-1 flex-1 rounded-full transition-all"
+                                     :style="'background:' + (i <= strength.score ? strength.color : '#e5e7eb') + ';'"></div>
+                            </template>
+                        </div>
+                        <p class="text-xs mt-1" x-show="strength.score > 0" :style="'color:' + strength.color" x-text="strength.label"></p>
+                    </div>
+
+                    <div>
+                        <label class="field-label">{% trans "Confirmer le nouveau mot de passe" %}</label>
+                        <div class="relative">
+                            <input :type="showConf ? 'text' : 'password'" name="confirmerMotPasse"
+                                   placeholder="{% trans "Répétez le nouveau mot de passe" %}" class="prof-input pr-10" required>
+                            <button type="button" @click="showConf = !showConf"
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm">
+                                <span x-text="showConf ? '🙈' : '👁️'"></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit"
+                            class="w-full py-2.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90 hover:shadow-md"
+                            style="background:#009A44;">
+                        🔐 {% trans "Mettre à jour le mot de passe" %}
+                    </button>
+                </form>
+
+            </div>
+
+            <!-- Infos sécurité -->
+            <div class="section-card">
+                <h2 class="font-bold text-gray-800 mb-4 flex items-center gap-2">🛡️ {% trans "Statut du compte" %}</h2>
+                <dl class="space-y-4">
+                    <div class="flex justify-between items-center py-3 border-b border-gray-50">
+                        <dt class="text-sm text-gray-500">{% trans "Email professionnel" %}</dt>
+                        <dd class="text-sm font-semibold text-gray-800">{{ request.entreprise.emailProfessionnel }}</dd>
+                    </div>
+                    <div class="flex justify-between items-center py-3 border-b border-gray-50">
+                        <dt class="text-sm text-gray-500">{% trans "Email vérifié" %}</dt>
+                        <dd>
+                            {% if request.entreprise.emailVerifie %}
+                                <span class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-bold">✅ {% trans "Vérifié" %}</span>
+                            {% else %}
+                                <span class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded-full font-bold">⚠️ {% trans "Non vérifié" %}</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div class="flex justify-between items-center py-3 border-b border-gray-50">
+                        <dt class="text-sm text-gray-500">{% trans "Statut du compte" %}</dt>
+                        <dd>
+                            <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-bold
+                                {% if request.entreprise.statutCompte == 'ACTIF' %}bg-green-100 text-green-700
+                                {% elif request.entreprise.statutCompte == 'SUSPENDU' %}bg-amber-100 text-amber-700
+                                {% else %}bg-red-100 text-red-700{% endif %}">
+                                {{ request.entreprise.get_statutCompte_display }}
+                            </span>
+                        </dd>
+                    </div>
+                    <div class="flex justify-between items-center py-3">
+                        <dt class="text-sm text-gray-500">{% trans "Dernière connexion" %}</dt>
+                        <dd class="text-sm text-gray-800">
+                            {% if request.entreprise.derniereConnexion %}
+                                {{ request.entreprise.derniereConnexion|date:"d/m/Y à H:i" }}
+                            {% else %}—{% endif %}
+                        </dd>
+                    </div>
+                </dl>
+
+                {% if not request.entreprise.emailVerifie or request.entreprise.statutVerification != 'VERIFIE' %}
+                <div class="mt-4 p-3 rounded-xl border flex items-center justify-between gap-3
+                    {% if not request.entreprise.emailVerifie %}bg-amber-50 border-amber-200{% else %}bg-blue-50 border-blue-200{% endif %}">
+                    <p class="text-xs font-medium {% if not request.entreprise.emailVerifie %}text-amber-700{% else %}text-blue-700{% endif %}">
+                        {% if not request.entreprise.emailVerifie %}
+                            💡 {% trans "Email non vérifié — vérifiez pour +20 pts de score" %}
+                        {% else %}
+                            🏆 {% trans "Faites vérifier votre compte pour le badge officiel" %}
+                        {% endif %}
+                    </p>
+                    <button @click="tab = 'verification'"
+                            class="flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg transition
+                            {% if not request.entreprise.emailVerifie %}bg-amber-500 hover:bg-amber-600 text-white{% else %}bg-blue-500 hover:bg-blue-600 text-white{% endif %}">
+                        {% trans "Voir →" %}
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- ONGLET VÉRIFICATION                                                -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div x-show="tab === 'verification'" x-transition>
+
+        <!-- ── Stepper parcours ──────────────────────────────────────── -->
+        <div class="section-card mb-5" style="background: linear-gradient(135deg,#f0fdf4,#dcfce7); border-color:#bbf7d0;">
+            <h2 class="font-bold text-gray-800 mb-5 flex items-center gap-2 text-sm">
+                🏆 {% trans "Votre parcours de vérification" %}
+            </h2>
+            <div class="flex items-start gap-0">
+
+                <!-- Étape 1 : Inscription -->
+                <div class="flex flex-col items-center gap-2 flex-1">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-sm text-white"
+                         style="background:#009A44;">✓</div>
+                    <p class="text-xs font-semibold text-green-700 text-center">{% trans "Inscription" %}</p>
+                    <p class="text-xs text-green-600 text-center hidden md:block">{% trans "Compte créé" %}</p>
+                </div>
+                <!-- Trait -->
+                <div class="h-px flex-1 mt-5" style="background:{% if request.entreprise.emailVerifie %}#009A44{% else %}#d1fae5{% endif %};"></div>
+
+                <!-- Étape 2 : Email -->
+                <div class="flex flex-col items-center gap-2 flex-1">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-sm"
+                         style="background:{% if request.entreprise.emailVerifie %}#009A44{% else %}#FEF3C7{% endif %};
+                                color:{% if request.entreprise.emailVerifie %}#fff{% else %}#92400E{% endif %};">
+                        {% if request.entreprise.emailVerifie %}✓{% else %}2{% endif %}
+                    </div>
+                    <p class="text-xs font-semibold text-center {% if request.entreprise.emailVerifie %}text-green-700{% else %}text-amber-600{% endif %}">
+                        {% trans "Email" %}
+                    </p>
+                    <p class="text-xs text-center hidden md:block {% if request.entreprise.emailVerifie %}text-green-600{% else %}text-amber-500{% endif %}">
+                        {% if request.entreprise.emailVerifie %}{% trans "Vérifié" %}{% else %}{% trans "En attente" %}{% endif %}
+                    </p>
+                </div>
+                <!-- Trait -->
+                <div class="h-px flex-1 mt-5"
+                     style="background:{% if demande_en_cours or request.entreprise.statutVerification == 'VERIFIE' %}#009A44{% else %}#d1fae5{% endif %};"></div>
+
+                <!-- Étape 3 : Documents -->
+                <div class="flex flex-col items-center gap-2 flex-1">
+                    {% if request.entreprise.statutVerification == 'VERIFIE' %}
+                        {% with bg='#009A44' fg='#fff' label='Approuvés' %}
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-sm"
+                             style="background:{{ bg }}; color:{{ fg }};">✓</div>
+                        {% endwith %}
+                    {% elif demande_en_cours %}
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-sm"
+                             style="background:#DBEAFE; color:#1E40AF;">⏳</div>
+                    {% elif request.entreprise.statutVerification == 'REJETE' %}
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-sm"
+                             style="background:#FEE2E2; color:#991B1B;">✗</div>
+                    {% else %}
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-sm"
+                             style="background:#F3F4F6; color:#9CA3AF;">3</div>
+                    {% endif %}
+                    <p class="text-xs font-semibold text-center
+                        {% if request.entreprise.statutVerification == 'VERIFIE' %}text-green-700
+                        {% elif demande_en_cours %}text-blue-700
+                        {% elif request.entreprise.statutVerification == 'REJETE' %}text-red-600
+                        {% else %}text-gray-400{% endif %}">{% trans "Documents" %}</p>
+                    <p class="text-xs text-center hidden md:block
+                        {% if request.entreprise.statutVerification == 'VERIFIE' %}text-green-600
+                        {% elif demande_en_cours %}text-blue-600
+                        {% elif request.entreprise.statutVerification == 'REJETE' %}text-red-500
+                        {% else %}text-gray-400{% endif %}">
+                        {% if request.entreprise.statutVerification == 'VERIFIE' %}{% trans "Approuvés" %}
+                        {% elif demande_en_cours %}{% trans "En cours" %}
+                        {% elif request.entreprise.statutVerification == 'REJETE' %}{% trans "Rejeté" %}
+                        {% else %}{% trans "À soumettre" %}{% endif %}
+                    </p>
+                </div>
+                <!-- Trait -->
+                <div class="h-px flex-1 mt-5"
+                     style="background:{% if request.entreprise.statutVerification == 'VERIFIE' %}#009A44{% else %}#d1fae5{% endif %};"></div>
+
+                <!-- Étape 4 : Vérifié -->
+                <div class="flex flex-col items-center gap-2 flex-1">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-sm"
+                         style="background:{% if request.entreprise.statutVerification == 'VERIFIE' %}#009A44{% else %}#F3F4F6{% endif %};
+                                color:{% if request.entreprise.statutVerification == 'VERIFIE' %}#fff{% else %}#9CA3AF{% endif %};">
+                        {% if request.entreprise.statutVerification == 'VERIFIE' %}✓{% else %}4{% endif %}
+                    </div>
+                    <p class="text-xs font-semibold text-center {% if request.entreprise.statutVerification == 'VERIFIE' %}text-green-700{% else %}text-gray-400{% endif %}">
+                        {% trans "Vérifié" %}
+                    </p>
+                    <p class="text-xs text-center hidden md:block {% if request.entreprise.statutVerification == 'VERIFIE' %}text-green-600{% else %}text-gray-400{% endif %}">
+                        {% if request.entreprise.statutVerification == 'VERIFIE' %}{% trans "Badge officiel" %}{% else %}{% trans "Badge officiel" %}{% endif %}
+                    </p>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-5">
+
+            <!-- ── Carte : Vérification email ──────────────────────── -->
+            <div class="section-card flex flex-col"
+                 x-data="emailVerifApp({{ code_email_actif|yesno:'true,false' }})" x-init="init()">
+                <div class="flex items-start justify-between mb-4">
+                    <div>
+                        <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                            ✉️ {% trans "Étape 1 — Email professionnel" %}
+                        </h3>
+                        <p class="text-xs text-gray-500 mt-1">{% trans "+20 points sur votre score de profil" %}</p>
+                    </div>
+                    {% if request.entreprise.emailVerifie %}
+                    <span class="flex-shrink-0 inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-green-100 text-green-700 rounded-full font-bold">
+                        ✅ {% trans "Vérifié" %}
+                    </span>
+                    {% else %}
+                    <span class="flex-shrink-0 inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full font-bold">
+                        ⚠️ {% trans "En attente" %}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="flex-1">
+                    <div class="p-3 rounded-xl mb-4 {% if request.entreprise.emailVerifie %}bg-green-50 border border-green-200{% else %}bg-gray-50 border border-gray-200{% endif %}">
+                        <p class="text-xs text-gray-500 mb-0.5">{% trans "Adresse email" %}</p>
+                        <p class="text-sm font-bold text-gray-800">{{ request.entreprise.emailProfessionnel }}</p>
+                    </div>
+
+                    {% if request.entreprise.emailVerifie %}
+                    <div class="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl">
+                        <div class="w-9 h-9 bg-green-100 rounded-full flex items-center justify-center text-xl flex-shrink-0">✅</div>
+                        <div>
+                            <p class="text-sm font-bold text-green-800">{% trans "Email confirmé" %}</p>
+                            <p class="text-xs text-green-600">{% trans "Votre adresse email est vérifiée. Score +20 pts." %}</p>
+                        </div>
+                    </div>
+                    {% else %}
+                    <!-- Info bénéfices -->
+                    <ul class="space-y-2 mb-4">
+                        <li class="flex items-center gap-2 text-xs text-gray-600">
+                            <span class="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs" style="background:#dcfce7; color:#166534;">✓</span>
+                            {% trans "Score de profil +20 points" %}
+                        </li>
+                        <li class="flex items-center gap-2 text-xs text-gray-600">
+                            <span class="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs" style="background:#dcfce7; color:#166534;">✓</span>
+                            {% trans "Accès à la vérification du compte" %}
+                        </li>
+                        <li class="flex items-center gap-2 text-xs text-gray-600">
+                            <span class="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs" style="background:#dcfce7; color:#166534;">✓</span>
+                            {% trans 'Badge "Email vérifié" visible' %}
+                        </li>
+                    </ul>
+
+                    <!-- ── Étape A : Envoyer le code ──────────────────── -->
+                    <form method="post" action="{% url 'entreprise:envoyer_verification_email' %}">
+                        {% csrf_token %}
+                        <button type="submit"
+                                class="w-full py-2.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90 hover:shadow-md flex items-center justify-center gap-2"
+                                style="background: linear-gradient(135deg, #c96010, #e06a00);">
+                            <span x-show="!codeEnvoye">📨 {% trans "Envoyer un code par email" %}</span>
+                            <span x-show="codeEnvoye">🔄 {% trans "Renvoyer un nouveau code" %}</span>
+                        </button>
+                    </form>
+
+                    <!-- ── Étape B : Saisir le code ──────────────────── -->
+                    <div x-show="codeEnvoye" x-transition class="mt-5 pt-5 border-t border-gray-100">
+                        <p class="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                            🔐 {% trans "Code reçu par email" %}
+                        </p>
+                        <p class="text-xs text-gray-500 mb-4">
+                            {% blocktrans with email=request.entreprise.emailProfessionnel %}Saisissez le code à 6 chiffres envoyé à
+                            <span class="font-semibold text-gray-700">{{ email }}</span>{% endblocktrans %}
+                        </p>
+
+                        <form method="post" action="{% url 'entreprise:verifier_code_email' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="code" :value="digits.join('')">
+
+                            <div class="flex justify-center gap-2 mb-4">
+                                <template x-for="(d, i) in digits" :key="i">
+                                    <input :id="'verifMail-d-' + i"
+                                           type="text" maxlength="1"
+                                           inputmode="numeric" pattern="[0-9]*"
+                                           x-model="digits[i]"
+                                           @input="onDigitInput(i, $event)"
+                                           @keydown.backspace="onBackspace(i, $event)"
+                                           @keydown.left.prevent="focusDigit(i - 1)"
+                                           @keydown.right.prevent="focusDigit(i + 1)"
+                                           @paste.prevent="collerCode($event)"
+                                           @focus="$event.target.select()"
+                                           class="w-10 h-12 text-center text-xl font-black rounded-xl border-2 transition focus:outline-none caret-transparent"
+                                           :class="digits[i] ? 'border-green-500' : 'border-gray-200 focus:border-green-400'"
+                                           :style="digits[i] ? 'background:#f0fdf4; color:#009A44;' : ''">
+                                </template>
+                            </div>
+
+                            <button type="submit"
+                                    :disabled="digits.join('').length < 6"
+                                    class="w-full py-2.5 rounded-xl text-sm font-bold text-white transition flex items-center justify-center gap-2"
+                                    :class="digits.join('').length < 6 ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90 hover:shadow-md'"
+                                    style="background: linear-gradient(135deg, #009A44, #007a36);">
+                                ✅ {% trans "Valider le code" %}
+                            </button>
+                        </form>
+                        <p class="text-xs text-gray-400 text-center mt-3">{% trans "Code valide 15 minutes" %}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- ── Carte : Vérification du compte ──────────────────── -->
+            <div class="section-card flex flex-col" x-data="{
+                rccmFile: '',
+                idFile: '',
+                showForm: false,
+            }">
+                <div class="flex items-start justify-between mb-4">
+                    <div>
+                        <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                            🏢 {% trans "Étape 2 — Compte entreprise" %}
+                        </h3>
+                        <p class="text-xs text-gray-500 mt-1">{% trans "Badge officiel RecrutePro" %}</p>
+                    </div>
+                    {% if request.entreprise.statutVerification == 'VERIFIE' %}
+                    <span class="flex-shrink-0 inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full font-bold">
+                        🏆 {% trans "Vérifié" %}
+                    </span>
+                    {% elif demande_en_cours %}
+                    <span class="flex-shrink-0 inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-yellow-100 text-yellow-700 rounded-full font-bold">
+                        ⏳ {% trans "En examen" %}
+                    </span>
+                    {% elif request.entreprise.statutVerification == 'REJETE' %}
+                    <span class="flex-shrink-0 inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-red-100 text-red-700 rounded-full font-bold">
+                        ❌ {% trans "Rejeté" %}
+                    </span>
+                    {% else %}
+                    <span class="flex-shrink-0 inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full font-bold">
+                        ⏸ {% trans "Non soumis" %}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="flex-1">
+
+                    {% if request.entreprise.statutVerification == 'VERIFIE' %}
+                    <!-- ✅ VÉRIFIÉ -->
+                    <div class="text-center py-6">
+                        <div class="w-20 h-20 rounded-full mx-auto flex items-center justify-center text-4xl mb-4 shadow-lg"
+                             style="background: linear-gradient(135deg,#009A44,#007a36);">🏆</div>
+                        <h4 class="font-extrabold text-green-800 text-lg mb-1">{% trans "Compte vérifié !" %}</h4>
+                        <p class="text-xs text-green-600 mb-3">
+                            {% blocktrans with nom=request.entreprise.raisonSocial %}{{ nom }} est une entreprise officiellement vérifiée sur RecrutePro.{% endblocktrans %}
+                        </p>
+                        {% if derniere_demande and derniere_demande.date_traitement %}
+                        <p class="text-xs text-gray-400">{% trans "Vérifié le" %} {{ derniere_demande.date_traitement|date:"d/m/Y" }}</p>
+                        {% endif %}
+                        <div class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-xl">
+                            <span class="text-blue-600 font-bold text-sm">🏆 {% trans "Badge officiel actif" %}</span>
+                        </div>
+                    </div>
+
+                    {% elif demande_en_cours %}
+                    <!-- ⏳ EN COURS D'EXAMEN -->
+                    <div class="p-4 bg-blue-50 border border-blue-200 rounded-xl mb-4">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-xl flex-shrink-0 animate-pulse">⏳</div>
+                            <div>
+                                <p class="text-sm font-bold text-blue-800">{% trans "Demande en cours d'examen" %}</p>
+                                <p class="text-xs text-blue-600">{% trans "Soumise le" %} {{ demande_en_cours.date_soumission|date:"d/m/Y à H:i" }}</p>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2 text-xs text-blue-700">
+                                <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                                {% trans "Notre équipe examine vos documents soumis" %}
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-blue-700">
+                                <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                                {% trans "Délai de traitement : 2 à 5 jours ouvrables" %}
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-blue-700">
+                                <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                                {% trans "Vous serez notifié par email du résultat" %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="p-2 rounded-lg {% if demande_en_cours.document_rccm %}bg-green-50 border border-green-200{% else %}bg-gray-50 border border-gray-200{% endif %}">
+                            <p class="font-semibold {% if demande_en_cours.document_rccm %}text-green-700{% else %}text-gray-500{% endif %}">
+                                {% if demande_en_cours.document_rccm %}✅ {% trans "RCCM soumis" %}{% else %}⚠️ {% trans "RCCM absent" %}{% endif %}
+                            </p>
+                        </div>
+                        <div class="p-2 rounded-lg {% if demande_en_cours.document_identite %}bg-green-50 border border-green-200{% else %}bg-gray-50 border border-gray-200{% endif %}">
+                            <p class="font-semibold {% if demande_en_cours.document_identite %}text-green-700{% else %}text-gray-500{% endif %}">
+                                {% if demande_en_cours.document_identite %}✅ {% trans "Identité soumise" %}{% else %}⚠️ {% trans "Identité absente" %}{% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    {% elif request.entreprise.statutVerification == 'REJETE' %}
+                    <!-- ❌ REJETÉ -->
+                    <div class="p-4 bg-red-50 border border-red-200 rounded-xl mb-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center text-xl flex-shrink-0">❌</div>
+                            <div>
+                                <p class="text-sm font-bold text-red-800">{% trans "Demande rejetée" %}</p>
+                                {% if derniere_demande and derniere_demande.date_traitement %}
+                                <p class="text-xs text-red-600">{% blocktrans with date=derniere_demande.date_traitement|date:"d/m/Y" %}Le {{ date }}{% endblocktrans %}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if derniere_demande and derniere_demande.notes_admin %}
+                        <div class="mt-2 p-2.5 bg-red-100 rounded-lg">
+                            <p class="text-xs font-semibold text-red-700 mb-1">{% trans "Motif :" %}</p>
+                            <p class="text-xs text-red-700">{{ derniere_demande.notes_admin }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">{% trans "Vous pouvez soumettre une nouvelle demande en corrigeant les points mentionnés." %}</p>
+                    <button @click="showForm = !showForm"
+                            class="w-full py-2.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90 mb-3"
+                            style="background: linear-gradient(135deg, #009A44, #007a36);">
+                        <span x-text="showForm ? '✕ Masquer le formulaire' : '↩ Soumettre une nouvelle demande'"></span>
+                    </button>
+
+                    <div x-show="showForm" x-transition class="space-y-3">
+                        <form method="post" action="{% url 'entreprise:soumettre_demande_verification' %}" enctype="multipart/form-data" class="space-y-3">
+                            {% csrf_token %}
+                            <!-- RCCM -->
+                            <div>
+                                <label class="field-label">{% trans "Registre du Commerce (RCCM)" %}</label>
+                                <div class="border-2 border-dashed rounded-xl p-3 text-center cursor-pointer hover:border-green-400 hover:bg-green-50 transition"
+                                     @click="$refs.rccmInput2.click()"
+                                     :class="rccmFile ? 'border-green-400 bg-green-50' : 'border-gray-300'">
+                                    <input type="file" x-ref="rccmInput2" name="document_rccm" class="hidden"
+                                           accept=".pdf,.jpg,.jpeg,.png,.webp"
+                                           @change="rccmFile = $event.target.files[0]?.name ?? ''">
+                                    <template x-if="!rccmFile">
+                                        <div><p class="text-lg">📄</p><p class="text-xs text-gray-500">{% trans "PDF, JPG ou PNG — Max 5 Mo" %}</p></div>
+                                    </template>
+                                    <template x-if="rccmFile">
+                                        <div><p class="text-lg">✅</p><p class="text-xs font-semibold text-green-700" x-text="rccmFile"></p></div>
+                                    </template>
+                                </div>
+                            </div>
+                            <!-- Pièce d'identité -->
+                            <div>
+                                <label class="field-label">{% trans "Pièce d'identité du dirigeant" %}</label>
+                                <div class="border-2 border-dashed rounded-xl p-3 text-center cursor-pointer hover:border-green-400 hover:bg-green-50 transition"
+                                     @click="$refs.idInput2.click()"
+                                     :class="idFile ? 'border-green-400 bg-green-50' : 'border-gray-300'">
+                                    <input type="file" x-ref="idInput2" name="document_identite" class="hidden"
+                                           accept=".pdf,.jpg,.jpeg,.png,.webp"
+                                           @change="idFile = $event.target.files[0]?.name ?? ''">
+                                    <template x-if="!idFile">
+                                        <div><p class="text-lg">🪪</p><p class="text-xs text-gray-500">{% trans "PDF, JPG ou PNG — Max 5 Mo" %}</p></div>
+                                    </template>
+                                    <template x-if="idFile">
+                                        <div><p class="text-lg">✅</p><p class="text-xs font-semibold text-green-700" x-text="idFile"></p></div>
+                                    </template>
+                                </div>
+                            </div>
+                            <!-- Message -->
+                            <div>
+                                <label class="field-label">{% trans "Message (optionnel)" %}</label>
+                                <textarea name="message" rows="2" class="prof-input resize-none text-xs"
+                                          placeholder="{% trans 'Informations complémentaires pour notre équipe…' %}"></textarea>
+                            </div>
+                            <button type="submit"
+                                    class="w-full py-2.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90"
+                                    style="background: linear-gradient(135deg, #009A44, #007a36);">
+                                📤 {% trans "Soumettre la demande" %}
+                            </button>
+                        </form>
+                    </div>
+
+                    {% else %}
+                    <!-- ⏸ NON SOUMIS — formulaire de demande -->
+                    <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                        <p class="text-xs font-semibold text-blue-800 mb-2">{% trans "Pourquoi se faire vérifier ?" %}</p>
+                        <ul class="space-y-1.5">
+                            <li class="flex items-center gap-2 text-xs text-blue-700">
+                                <span class="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center text-xs bg-blue-200">✓</span>
+                                {% trans 'Badge "Entreprise vérifiée" sur vos offres' %}
+                            </li>
+                            <li class="flex items-center gap-2 text-xs text-blue-700">
+                                <span class="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center text-xs bg-blue-200">✓</span>
+                                {% trans "Meilleure visibilité auprès des candidats" %}
+                            </li>
+                            <li class="flex items-center gap-2 text-xs text-blue-700">
+                                <span class="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center text-xs bg-blue-200">✓</span>
+                                {% trans "Accès aux fonctionnalités avancées" %}
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Formulaire de demande -->
+                    <form method="post" action="{% url 'entreprise:soumettre_demande_verification' %}" enctype="multipart/form-data" class="space-y-3">
+                        {% csrf_token %}
+
+                        <!-- RCCM upload -->
+                        <div>
+                            <label class="field-label">{% trans "Registre du Commerce (RCCM)" %} <span class="text-xs text-gray-400">{% trans "(recommandé)" %}</span></label>
+                            <div class="border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition"
+                                 @click="$refs.rccmInput.click()"
+                                 :class="rccmFile ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-green-300 hover:bg-green-50'">
+                                <input type="file" x-ref="rccmInput" name="document_rccm" class="hidden"
+                                       accept=".pdf,.jpg,.jpeg,.png,.webp"
+                                       @change="rccmFile = $event.target.files[0]?.name ?? ''">
+                                <template x-if="!rccmFile">
+                                    <div>
+                                        <p class="text-2xl mb-1">📄</p>
+                                        <p class="text-xs font-semibold text-gray-600">{% trans "Cliquez pour ajouter votre RCCM" %}</p>
+                                        <p class="text-xs text-gray-400 mt-0.5">{% trans "PDF, JPG, PNG — Max 5 Mo" %}</p>
+                                    </div>
+                                </template>
+                                <template x-if="rccmFile">
+                                    <div>
+                                        <p class="text-2xl mb-1">✅</p>
+                                        <p class="text-xs font-semibold text-green-700" x-text="rccmFile"></p>
+                                        <p class="text-xs text-green-500 mt-0.5">{% trans "Cliquez pour changer" %}</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Identité upload -->
+                        <div>
+                            <label class="field-label">{% trans "Pièce d'identité du dirigeant" %} <span class="text-xs text-gray-400">{% trans "(recommandé)" %}</span></label>
+                            <div class="border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition"
+                                 @click="$refs.idInput.click()"
+                                 :class="idFile ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-green-300 hover:bg-green-50'">
+                                <input type="file" x-ref="idInput" name="document_identite" class="hidden"
+                                       accept=".pdf,.jpg,.jpeg,.png,.webp"
+                                       @change="idFile = $event.target.files[0]?.name ?? ''">
+                                <template x-if="!idFile">
+                                    <div>
+                                        <p class="text-2xl mb-1">🪪</p>
+                                        <p class="text-xs font-semibold text-gray-600">{% trans "CNI, passeport ou titre de séjour" %}</p>
+                                        <p class="text-xs text-gray-400 mt-0.5">{% trans "PDF, JPG, PNG — Max 5 Mo" %}</p>
+                                    </div>
+                                </template>
+                                <template x-if="idFile">
+                                    <div>
+                                        <p class="text-2xl mb-1">✅</p>
+                                        <p class="text-xs font-semibold text-green-700" x-text="idFile"></p>
+                                        <p class="text-xs text-green-500 mt-0.5">{% trans "Cliquez pour changer" %}</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Message optionnel -->
+                        <div>
+                            <label class="field-label">{% trans "Message pour notre équipe" %} <span class="text-xs text-gray-400">{% trans "(optionnel)" %}</span></label>
+                            <textarea name="message" rows="2" class="prof-input resize-none text-xs"
+                                      placeholder="{% trans 'Ex. : Notre RCCM est en cours de renouvellement…' %}"></textarea>
+                        </div>
+
+                        <button type="submit"
+                                class="w-full py-2.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90 hover:shadow-md flex items-center justify-center gap-2"
+                                style="background: linear-gradient(135deg, #009A44, #007a36);">
+                            📤 {% trans "Soumettre ma demande de vérification" %}
+                        </button>
+                        <p class="text-xs text-gray-400 text-center">{% trans "Traitement sous 2 à 5 jours ouvrables" %}</p>
+                    </form>
+                    {% endif %}
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- ONGLET PLAN                                                        -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div x-show="tab === 'plan'" x-transition>
+
+        <!-- Plan actuel -->
+        <div class="section-card mb-5">
+            <h2 class="font-bold text-gray-800 mb-4">💎 {% trans "Votre plan actuel" %}</h2>
+            <div class="plan-current flex items-center gap-4 p-4 rounded-xl border-2"
+                 style="border-color:#009A44; background:#f0fdf4;">
+                <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl"
+                     style="background: #009A44;">
+                    {% if request.entreprise.planAbonnement == 'GRATUIT' %}🆓
+                    {% elif request.entreprise.planAbonnement == 'STARTER' %}⭐
+                    {% elif request.entreprise.planAbonnement == 'PRO' %}🚀
+                    {% else %}👑{% endif %}
+                </div>
+                <div>
+                    <p class="font-extrabold text-gray-900 text-lg">{% trans "Plan" %} {{ request.entreprise.get_planAbonnement_display }}</p>
+                    <p class="text-xs text-gray-500 mt-0.5">
+                        {% if request.entreprise.planAbonnement == 'GRATUIT' %}{% trans "Accès de base à la plateforme — passez au niveau supérieur pour plus de fonctionnalités." %}
+                        {% elif request.entreprise.planAbonnement == 'STARTER' %}{% trans "Idéal pour les PME qui démarrent leur recrutement." %}
+                        {% elif request.entreprise.planAbonnement == 'PRO' %}{% trans "Pour les équipes RH actives avec des besoins avancés." %}
+                        {% else %}{% trans "Solution complète pour les grandes entreprises." %}{% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Offres d'abonnement -->
+        <div class="grid md:grid-cols-3 gap-4">
+
+            {% for plan_key, plan_icon, plan_name, plan_price, plan_features in plans %}
+            <div class="section-card flex flex-col relative overflow-hidden
+                {% if plan_key == request.entreprise.planAbonnement %}ring-2{% endif %}"
+                 {% if plan_key == request.entreprise.planAbonnement %}style="ring-color:#009A44;"{% endif %}>
+
+                {% if plan_key == 'PRO' %}
+                <div class="absolute top-3 right-3 text-xs font-bold px-2 py-0.5 rounded-full text-white"
+                     style="background:#c96010;">{% trans "Populaire" %}</div>
+                {% endif %}
+
+                <div class="text-2xl mb-2">{{ plan_icon }}</div>
+                <h3 class="font-extrabold text-gray-900 text-lg mb-1">{{ plan_name }}</h3>
+                <p class="text-2xl font-extrabold mb-1" style="color:#009A44;">{{ plan_price }}</p>
+                <p class="text-xs text-gray-400 mb-4">{% trans "par mois" %}</p>
+
+                <ul class="space-y-2 text-xs text-gray-600 flex-1 mb-5">
+                    {% for f in plan_features %}
+                    <li class="flex items-start gap-1.5">
+                        <span style="color:#009A44;" class="mt-0.5">✓</span>
+                        {{ f }}
+                    </li>
+                    {% endfor %}
+                </ul>
+
+                {% if plan_key == request.entreprise.planAbonnement %}
+                <span class="text-center text-xs font-bold text-green-700 bg-green-50 py-2 rounded-xl border border-green-200">
+                    ✅ {% trans "Plan actuel" %}
+                </span>
+                {% else %}
+                <button class="py-2 rounded-xl text-xs font-bold text-white transition hover:opacity-90"
+                        style="background:#009A44;">
+                    {% blocktrans with nom=plan_name %}Passer à {{ nom }}{% endblocktrans %}
+                </button>
+                {% endif %}
+            </div>
+            {% empty %}
+            <!-- Plans par défaut si non fournis par la vue -->
+            <div class="section-card flex flex-col">
+                <div class="text-2xl mb-2">🆓</div>
+                <h3 class="font-extrabold text-gray-900 text-lg mb-1">{% trans "Gratuit" %}</h3>
+                <p class="text-2xl font-extrabold mb-1" style="color:#009A44;">0 FCFA</p>
+                <ul class="space-y-2 text-xs text-gray-600 flex-1 mb-5">
+                    <li>✓ {% trans "3 offres actives" %}</li>
+                    <li>✓ {% trans "Profil entreprise" %}</li>
+                    <li>✓ {% trans "Accès aux candidats" %}</li>
+                </ul>
+                {% if request.entreprise.planAbonnement == 'GRATUIT' %}
+                <span class="text-center text-xs font-bold text-green-700 bg-green-50 py-2 rounded-xl border border-green-200">✅ {% trans "Plan actuel" %}</span>
+                {% else %}
+                <button class="py-2 rounded-xl text-xs font-bold text-white" style="background:#009A44;">{% trans "Choisir" %}</button>
+                {% endif %}
+            </div>
+            <div class="section-card flex flex-col">
+                <div class="text-2xl mb-2">⭐</div>
+                <h3 class="font-extrabold text-gray-900 text-lg mb-1">{% trans "Starter" %}</h3>
+                <p class="text-2xl font-extrabold mb-1" style="color:#009A44;">25 000 FCFA</p>
+                <ul class="space-y-2 text-xs text-gray-600 flex-1 mb-5">
+                    <li>✓ {% trans "10 offres actives" %}</li>
+                    <li>✓ {% trans "CV-thèque illimitée" %}</li>
+                    <li>✓ {% trans "Filtres avancés" %}</li>
+                    <li>✓ {% trans "Support email" %}</li>
+                </ul>
+                {% if request.entreprise.planAbonnement == 'STARTER' %}
+                <span class="text-center text-xs font-bold text-green-700 bg-green-50 py-2 rounded-xl border border-green-200">✅ {% trans "Plan actuel" %}</span>
+                {% else %}
+                <button class="py-2 rounded-xl text-xs font-bold text-white" style="background:#009A44;">{% trans "Passer à Starter" %}</button>
+                {% endif %}
+            </div>
+            <div class="section-card flex flex-col relative overflow-hidden">
+                <div class="absolute top-3 right-3 text-xs font-bold px-2 py-0.5 rounded-full text-white" style="background:#c96010;">{% trans "Populaire" %}</div>
+                <div class="text-2xl mb-2">🚀</div>
+                <h3 class="font-extrabold text-gray-900 text-lg mb-1">{% trans "Pro" %}</h3>
+                <p class="text-2xl font-extrabold mb-1" style="color:#009A44;">75 000 FCFA</p>
+                <ul class="space-y-2 text-xs text-gray-600 flex-1 mb-5">
+                    <li>✓ {% trans "Offres illimitées" %}</li>
+                    <li>✓ {% trans "Publication prioritaire" %}</li>
+                    <li>✓ {% trans "Tableau de bord RH complet" %}</li>
+                    <li>✓ {% trans "Support prioritaire 24/7" %}</li>
+                    <li>✓ {% trans "Multi-utilisateurs" %}</li>
+                </ul>
+                {% if request.entreprise.planAbonnement == 'PRO' %}
+                <span class="text-center text-xs font-bold text-green-700 bg-green-50 py-2 rounded-xl border border-green-200">✅ {% trans "Plan actuel" %}</span>
+                {% else %}
+                <button class="py-2 rounded-xl text-xs font-bold text-white" style="background:#009A44;">{% trans "Passer à Pro" %}</button>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- ONGLET CONFIDENTIALITÉ                                              -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div x-show="tab === 'confidentialite'" x-transition>
+        <div class="section-card max-w-2xl">
+            <div class="flex items-start gap-3 mb-5">
+                <div class="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-lg shrink-0">🛡️</div>
+                <div>
+                    <h2 class="font-bold text-gray-800 text-base">{% trans "Confidentialité & Notifications ATS" %}</h2>
+                    <p class="text-xs text-gray-500 mt-1">
+                        {% trans "Vous publiez parfois des offres au nom du compte administrateur. Choisissez comment vous souhaitez être informé(e) lorsque l'ATS détecte un profil candidat correspondant à ces offres." %}
+                    </p>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+
+                <!-- Toggle 1 : Notifs in-app ATS -->
+                <div class="flex items-start gap-3 p-4 rounded-xl border border-gray-100 bg-gray-50">
+                    <div class="w-9 h-9 rounded-xl bg-white shadow-sm flex items-center justify-center text-base border border-gray-100 shrink-0">🎯</div>
+                    <div class="flex-1">
+                        <p class="text-sm font-semibold text-gray-800">{% trans "Alertes ATS dans la cloche" %}</p>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            {% trans "Recevoir une notification dans la cloche du navbar dès qu'un profil candidat correspond à une offre publiée par le compte administrateur." %}
+                        </p>
+                    </div>
+                    <button type="button" @click="prefs.notifsATS = !prefs.notifsATS; sauvegarderPrefs()"
+                            class="relative inline-flex h-6 w-11 items-center rounded-full transition shrink-0 mt-1"
+                            :class="prefs.notifsATS ? 'bg-green-500' : 'bg-gray-300'"
+                            :aria-pressed="prefs.notifsATS">
+                        <span class="inline-block w-4 h-4 bg-white rounded-full shadow transition"
+                              :class="prefs.notifsATS ? 'translate-x-6' : 'translate-x-1'"></span>
+                    </button>
+                </div>
+
+                <!-- Toggle 2 : Email -->
+                <div class="flex items-start gap-3 p-4 rounded-xl border border-gray-100 transition"
+                     :class="prefs.notifsATS ? 'bg-gray-50' : 'bg-gray-100 opacity-50'">
+                    <div class="w-9 h-9 rounded-xl bg-white shadow-sm flex items-center justify-center text-base border border-gray-100 shrink-0">📧</div>
+                    <div class="flex-1">
+                        <p class="text-sm font-semibold text-gray-800">{% trans "Recevoir aussi par email" %}</p>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            {% trans "Un email vous sera envoyé en plus de l'alerte in-app pour chaque nouveau profil détecté." %}
+                        </p>
+                    </div>
+                    <button type="button"
+                            @click="if (prefs.notifsATS) { prefs.notifsATSEmail = !prefs.notifsATSEmail; sauvegarderPrefs(); }"
+                            class="relative inline-flex h-6 w-11 items-center rounded-full transition shrink-0 mt-1"
+                            :class="(prefs.notifsATS && prefs.notifsATSEmail) ? 'bg-green-500' : 'bg-gray-300'"
+                            :disabled="!prefs.notifsATS"
+                            :aria-pressed="prefs.notifsATSEmail">
+                        <span class="inline-block w-4 h-4 bg-white rounded-full shadow transition"
+                              :class="(prefs.notifsATS && prefs.notifsATSEmail) ? 'translate-x-6' : 'translate-x-1'"></span>
+                    </button>
+                </div>
+
+                <p x-show="prefsMessage" x-transition x-text="prefsMessage"
+                   class="text-xs font-semibold text-center py-2 rounded-lg"
+                   :class="prefsOk ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'"></p>
+            </div>
+
+            <div class="mt-5 p-3 rounded-xl border border-blue-100 bg-blue-50/50">
+                <p class="text-xs text-blue-800">
+                    <strong>💡 {% trans "Bon à savoir :" %}</strong> {% trans "ces préférences concernent uniquement les offres publiées par le compte administrateur. Les recruteurs membres de l'entreprise gèrent leurs propres notifications dans leur profil personnel." %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- ONGLET TÉMOIGNAGE                                                   -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    {{ temoignage_init|json_script:"temoignage-entreprise-init" }}
+    <div x-show="tab === 'temoignage'" x-transition>
+    <div x-data="temoignageEntrepriseForm()">
+
+        <div class="mb-6">
+            <h2 class="text-xl font-extrabold text-gray-800 mb-1">⭐ {% trans "Notre témoignage" %}</h2>
+            <p class="text-gray-500 text-sm">{% trans "Partagez votre expérience RecrutePro. Votre témoignage sera vérifié par l'administration avant d'apparaître sur la page d'accueil." %}</p>
+        </div>
+
+        <!-- Bandeaux statut -->
+        <div x-show="statut === 'en_attente'"
+             class="mb-5 flex items-center gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-700 text-sm font-semibold">
+            <span class="text-lg flex-shrink-0">⏳</span>
+            <span>{% trans "Votre témoignage est en attente de validation. Vous pouvez le modifier avant qu'il soit publié." %}</span>
+        </div>
+        <div x-show="statut === 'publie'"
+             class="mb-5 flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm font-semibold">
+            <span class="text-lg flex-shrink-0">✅</span>
+            <span>{% trans "Votre témoignage est publié sur la page d'accueil. Toute modification le repassera en validation." %}</span>
+        </div>
+        <div x-show="statut === 'rejete'"
+             class="mb-5 flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-semibold">
+            <span class="text-lg flex-shrink-0">❌</span>
+            <span>{% trans "Votre témoignage précédent n'a pas été retenu. Soumettez-en un nouveau ci-dessous." %}</span>
+        </div>
+
+        <div class="space-y-5 max-w-2xl">
+
+            <!-- Note étoiles -->
+            <div>
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{% trans "Note" %}</label>
+                <div class="flex gap-1">
+                    <template x-for="i in [1,2,3,4,5]" :key="i">
+                        <button type="button" @click="note = i"
+                                :class="i <= note ? 'text-green-500' : 'text-gray-300'"
+                                class="text-3xl transition hover:scale-110 leading-none">★</button>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Texte -->
+            <div>
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{% trans "Votre témoignage *" %}</label>
+                <textarea x-model="texte" rows="5" maxlength="500"
+                          placeholder="{% trans 'Partagez votre expérience avec RecrutePro…' %}"
+                          class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 resize-none"></textarea>
+                <p class="text-right text-xs text-gray-400 mt-1"><span x-text="texte.length"></span>/500</p>
+            </div>
+
+            <!-- Poste / Titre affiché -->
+            <div>
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
+                    {% trans "Poste de la personne citée" %} <span class="text-gray-300 font-normal">{% trans "(optionnel)" %}</span>
+                </label>
+                <input type="text" x-model="poste" maxlength="150"
+                       placeholder="{% trans "Ex : DRH · Groupe Ivoire" %}"
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500">
+                <p class="text-xs text-gray-400 mt-1">{% trans "Apparaît sous le nom de votre entreprise sur la page d'accueil." %}</p>
+            </div>
+
+            <!-- Message retour -->
+            <p x-show="msg" x-transition class="text-sm font-medium"
+               :class="ok ? 'text-green-600' : 'text-red-500'"
+               x-text="msg"></p>
+
+            <!-- Bouton -->
+            <button type="button" @click="soumettre()" :disabled="loading"
+                    class="inline-flex items-center gap-2 text-sm font-semibold px-6 py-3 rounded-xl text-white transition hover:opacity-90 disabled:opacity-50"
+                    style="background:#009A44;">
+                <span x-show="loading">
+                    <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    </svg>
+                </span>
+                <span x-show="!loading">📨 {% trans "Soumettre notre témoignage" %}</span>
+            </button>
+
+        </div>
+    </div><!-- fin temoignageEntrepriseForm -->
+    </div><!-- fin x-show temoignage -->
+
+</div>
+{% endblock %}
+
+{% block js_extra %}
+<script>
+function profilApp() {
+    return {
+        tab: 'infos',
+        editMode: false,
+
+        // Préférences de confidentialité (entreprise admin)
+        prefs: {
+            notifsATS:      {{ request.entreprise.recevoirNotifsATS|yesno:"true,false" }},
+            notifsATSEmail: {{ request.entreprise.recevoirNotifsATSEmail|yesno:"true,false" }},
+        },
+        prefsMessage: '',
+        prefsOk:      true,
+        _prefsTimer:  null,
+
+        init() {
+            const params = new URLSearchParams(window.location.search);
+            const t = params.get('tab');
+            if (t && ['infos','securite','verification','plan','confidentialite','temoignage'].includes(t)) {
+                this.tab = t;
+            }
+        },
+
+        async sauvegarderPrefs() {
+            clearTimeout(this._prefsTimer);
+            this._prefsTimer = setTimeout(async () => {
+                try {
+                    const fd = new FormData();
+                    fd.append('recevoirNotifsATS',      this.prefs.notifsATS ? '1' : '0');
+                    fd.append('recevoirNotifsATSEmail', this.prefs.notifsATSEmail ? '1' : '0');
+                    const r = await fetch("{% url 'entreprise:entreprise_preferences' %}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: fd,
+                    });
+                    if (!r.ok) {
+                        if (r.status === 403)      throw new Error('Permission refusée (CSRF ou session)');
+                        else if (r.status === 401) throw new Error('Session expirée');
+                        else if (r.status === 500) throw new Error('Erreur serveur');
+                        else throw new Error('HTTP ' + r.status);
+                    }
+                    const d = await r.json();
+                    if (d.ok) {
+                        this.prefsOk      = true;
+                        this.prefsMessage = '✓ Préférences enregistrées';
+                    } else {
+                        this.prefsOk      = false;
+                        this.prefsMessage = '✗ ' + (d.erreur || 'Erreur inconnue');
+                    }
+                } catch (e) {
+                    this.prefsOk      = false;
+                    this.prefsMessage = '✗ ' + (e.message || 'Erreur réseau');
+                }
+                setTimeout(() => { this.prefsMessage = ''; }, 3500);
+            }, 400);
+        },
+
+        previewLogo(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) {
+                alert('Le logo ne doit pas dépasser 2 Mo.');
+                event.target.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = document.getElementById('logoImg');
+                const placeholder = document.getElementById('logoPlaceholder');
+                img.src = e.target.result;
+                img.classList.remove('hidden');
+                if (placeholder) placeholder.classList.add('hidden');
+                // Auto-soumettre le formulaire pour uploader le logo
+                // (ou on laisse l'utilisateur sauvegarder manuellement)
+            };
+            reader.readAsDataURL(file);
+            // Activer le mode édit pour permettre la sauvegarde
+            this.editMode = true;
+        },
+
+        calcStrength(p) {
+            let sc = 0;
+            if (p.length >= 8) sc++;
+            if (/[A-Z]/.test(p)) sc++;
+            if (/[0-9]/.test(p)) sc++;
+            if (/[^A-Za-z0-9]/.test(p)) sc++;
+            const labels = ['', 'Faible', 'Moyen', 'Fort', 'Très fort'];
+            const colors = ['', '#ef4444', '#f59e0b', '#3b82f6', '#009A44'];
+            return { score: sc, color: colors[sc] || '#e5e7eb', label: labels[sc] || '' };
+        },
+    };
+}
+
+function emailVerifApp(codeActif) {
+    return {
+        codeEnvoye: codeActif,
+        digits: ['', '', '', '', '', ''],
+
+        init() {
+            if (this.codeEnvoye) {
+                this.$nextTick(() => this.focusDigit(0));
+            }
+        },
+
+        focusDigit(i) {
+            if (i < 0 || i > 5) return;
+            const el = document.getElementById('verifMail-d-' + i);
+            if (el) el.focus();
+        },
+
+        onDigitInput(i, e) {
+            const v = (e.target.value || '').replace(/\D/g, '');
+            this.digits[i] = v.slice(-1);
+            if (this.digits[i] && i < 5) this.focusDigit(i + 1);
+        },
+
+        onBackspace(i, e) {
+            if (!this.digits[i] && i > 0) {
+                this.focusDigit(i - 1);
+                this.digits[i - 1] = '';
+                e.preventDefault();
+            }
+        },
+
+        collerCode(e) {
+            const txt = (e.clipboardData || window.clipboardData).getData('text') || '';
+            const chiffres = txt.replace(/\D/g, '').slice(0, 6).split('');
+            for (let i = 0; i < 6; i++) {
+                this.digits[i] = chiffres[i] || '';
+            }
+            const next = Math.min(chiffres.length, 5);
+            this.$nextTick(() => this.focusDigit(next));
+        },
+    };
+}
+
+/* ── Alpine.js — Formulaire témoignage entreprise ──────────────────── */
+function temoignageEntrepriseForm() {
+    const init = JSON.parse(document.getElementById('temoignage-entreprise-init').textContent);
+    return {
+        statut:  init.statut || '',
+        texte:   init.texte  || '',
+        note:    init.note   || 5,
+        poste:   init.poste  || '',
+        loading: false,
+        ok:      false,
+        msg:     '',
+
+        async soumettre() {
+            if (!this.texte.trim()) {
+                this.ok  = false;
+                this.msg = 'Veuillez rédiger votre témoignage avant de soumettre.';
+                return;
+            }
+            this.loading = true;
+            this.msg = '';
+            try {
+                const resp = await fetch('{% url "entreprise:api_temoignage" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    },
+                    body: JSON.stringify({
+                        texte: this.texte,
+                        note:  this.note,
+                        poste: this.poste,
+                    }),
+                });
+                const data = await resp.json();
+                this.ok  = data.ok;
+                this.msg = data.message;
+                if (data.ok) this.statut = data.statut;
+            } catch (e) {
+                this.ok  = false;
+                this.msg = 'Une erreur est survenue. Réessayez.';
+            } finally {
+                this.loading = false;
+            }
+        },
+    };
+}
+</script>
+{% endblock %}

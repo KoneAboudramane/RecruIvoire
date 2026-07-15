@@ -1,0 +1,339 @@
+{% extends "candidat/base.html" %}
+{% load i18n %}
+{% block titre %}Créer mon CV — {{ modele.nom }} · {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+{% include "candidat/cv/_form_styles.html" %}
+<style>
+/* ── Rouge & Blanc ── timeline gauche + sidebar droite ───────────────────── */
+#cv-sheet {
+  width: 794px; min-height: 1123px;
+  background: #FFFFFF;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 10pt; color: #222; line-height: 1.5;
+  box-shadow: 0 8px 48px rgba(0,0,0,.18);
+  display: flex;
+}
+
+/* ── Colonne gauche (timeline expériences + formations) ─────────────────── */
+.rb-left {
+  flex: 1;
+  padding: 28px 20px 28px 26px;
+  border-right: 1px solid #F0F0F0;
+  background:
+    radial-gradient(ellipse at 0% 0%,   rgba(229,57,53,.04) 0%, transparent 40%),
+    radial-gradient(ellipse at 50% 100%, rgba(229,57,53,.03) 0%, transparent 35%),
+    #FFFFFF;
+}
+
+/* Titre de section gauche */
+.rb-sec-l {
+  font-size: 8pt; font-weight: 800; letter-spacing: 2px;
+  text-transform: uppercase; color: #E53935;
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px; margin-top: 26px;
+}
+.rb-sec-l:first-child { margin-top: 0; }
+.rb-sec-l::after { content: ''; flex: 1; height: 1px; background: #EBEBEB; }
+
+/* Entrée timeline */
+.rb-entry { display: flex; gap: 10px; margin-bottom: 16px; }
+
+/* Dates à gauche de la timeline */
+.rb-dates {
+  width: 64px; flex-shrink: 0; text-align: right;
+  font-size: 7.5pt; color: #AAAAAA; line-height: 1.7;
+  padding-top: 2px;
+}
+.rb-dates-cur { color: #E53935; font-weight: 700; }
+
+/* Ligne + point de timeline */
+.rb-timeline {
+  display: flex; flex-direction: column; align-items: center;
+  flex-shrink: 0; width: 18px;
+}
+.rb-dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #E53935; flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(229,57,53,.15);
+}
+.rb-line {
+  width: 2px; flex: 1; background: #F0F0F0;
+  margin-top: 5px; min-height: 20px;
+}
+
+/* Contenu de l'entrée */
+.rb-entry-content { flex: 1; padding-top: 0; }
+.rb-entry-title {
+  font-size: 9.5pt; font-weight: 700; color: #1A1A1A; line-height: 1.2;
+}
+.rb-entry-co {
+  font-size: 8pt; color: #E53935; font-weight: 600; margin: 2px 0 3px;
+}
+.rb-entry-lieu { font-size: 8pt; color: #888; font-style: italic; margin-bottom: 3px; }
+.rb-entry-desc { font-size: 8pt; color: #555; line-height: 1.6; }
+
+/* ── Colonne droite (sidebar photo + infos) ─────────────────────────────── */
+.rb-right {
+  width: 248px; flex-shrink: 0;
+  display: flex; flex-direction: column;
+  background:
+    radial-gradient(circle, rgba(229,57,53,.05) 1px, transparent 1px) 0 0 / 20px 20px,
+    radial-gradient(ellipse at 50%   0%, rgba(229,57,53,.10) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 100%, rgba(229,57,53,.06) 0%, transparent 40%),
+    linear-gradient(180deg, #FFFAFA 0%, #FFF5F5 60%, #FFF0F0 100%);
+}
+
+/* Photo rectangulaire pleine largeur en haut */
+.rb-photo-zone {
+  width: 248px; height: 230px; flex-shrink: 0;
+  overflow: hidden; background: #E8E8E8;
+  position: relative;
+}
+.rb-photo-wrap { width: 100%; height: 100%; }
+.rb-photo { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rb-ph {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 60px; color: #CCC; background: #EEEEEE;
+}
+/* Barre rouge au bas de la photo */
+.rb-photo-bar {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 4px; background: #E53935;
+}
+
+/* Nom + titre */
+.rb-name-zone {
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid #F5F5F5;
+}
+.rb-name {
+  font-size: 15pt; font-weight: 900; color: #1A1A1A;
+  text-transform: uppercase; line-height: 1.05;
+}
+.rb-job {
+  font-size: 9pt; color: #E53935; font-weight: 600; margin-top: 5px;
+}
+
+/* Sections droite */
+.rb-sec-r {
+  font-size: 7pt; font-weight: 800; letter-spacing: 2px;
+  text-transform: uppercase; color: #1A1A1A;
+  padding: 12px 18px 5px;
+}
+.rb-contact-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 2px 18px; font-size: 7.5pt; color: #444;
+}
+.rb-contact-icon {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #E53935; color: #FFF;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8pt; flex-shrink: 0; margin-top: 1px;
+}
+.rb-bullet-r {
+  font-size: 8pt; color: #444; margin-bottom: 4px;
+  padding: 0 18px 0 34px; position: relative;
+}
+.rb-bullet-r::before {
+  content: ''; position: absolute; left: 20px; top: 5px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #E53935;
+}
+</style>
+{% endblock %}
+
+{% block contenu %}<div class="-mx-6 -my-8" x-data="cvBuilder()"><div class="cv-builder">
+  {% include "candidat/cv/_form_panel.html" %}
+  <div class="preview-panel">
+  <div id="cv-sheet">
+
+    <!-- GAUCHE : timeline expériences + formations -->
+    <div class="rb-left">
+
+      <template x-if="cv.experiences.some(e => expVisible(e))">
+        <div>
+          <div class="rb-sec-l">{% trans "Expériences professionnelles" %}</div>
+          <template x-for="e in cv.experiences" :key="e.id">
+            <div x-show="expVisible(e)" class="rb-entry">
+              <div class="rb-dates">
+                <div :class="e.enCours ? 'rb-dates-cur' : ''" x-text="e.enCours ? 'Actuel' : (e.fin||'').substring(0,4)"></div>
+                <div x-text="(e.debut||'').substring(0,4)"></div>
+              </div>
+              <div class="rb-timeline">
+                <div class="rb-dot"></div>
+                <div class="rb-line"></div>
+              </div>
+              <div class="rb-entry-content">
+                <div class="rb-entry-title" x-text="expTitre(e)"></div>
+                <div x-show="e.entreprise" class="rb-entry-co" x-text="e.entreprise"></div>
+                <div x-show="e.lieu" class="rb-entry-lieu" x-text="e.lieu"></div>
+                <div x-show="e.desc" class="rb-entry-desc" x-text="e.desc"></div>
+                <template x-if="e.postes && e.postes.length > 1">
+                  <div class="cv-postes-list">
+                    <template x-for="p in e.postes" :key="p.id">
+                      <div x-show="p.titre" class="cv-postes-row">
+                        <span class="cv-postes-titre" x-text="p.titre"></span>
+                        <span x-show="p.debut||p.enCours" class="cv-postes-date" x-text="formatPeriode(p.debut,p.fin,p.enCours)"></span>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+                <template x-if="e.hasMissionsClient && e.missionsClient && e.missionsClient.filter(mc=>mc.client).length>0">
+                  <div class="cv-mc-section">
+                    <div class="cv-mc-label">🏢 Missions clients</div>
+                    <template x-for="mc in e.missionsClient.filter(mc=>mc.client)" :key="mc.id">
+                      <div class="cv-mc-item">
+                        <div class="cv-mc-hdr">
+                          <div class="cv-mc-title" x-text="mc.client||'—'"></div>
+                          <div x-show="mc.debut||mc.enCours" class="cv-mc-badge" x-text="formatPeriode(mc.debut,mc.fin,mc.enCours)"></div>
+                        </div>
+                        <div x-show="mc.desc" class="cv-mc-desc" x-text="mc.desc"></div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <template x-if="vis(cv.formations).filter(f => f.diplome || f.ecole).length > 0">
+        <div>
+          <div class="rb-sec-l">{% trans "Formation" %}</div>
+          <template x-for="f in vis(cv.formations)" :key="f.id">
+            <div x-show="f.diplome || f.ecole" class="rb-entry">
+              <div class="rb-dates">
+                <div x-text="(f.fin||'').substring(0,4)"></div>
+                <div x-text="(f.debut||'').substring(0,4)"></div>
+              </div>
+              <div class="rb-timeline">
+                <div class="rb-dot"></div>
+                <div class="rb-line"></div>
+              </div>
+              <div class="rb-entry-content">
+                <div class="rb-entry-title" x-text="f.diplome || '—'"></div>
+                <div x-show="f.ecole" class="rb-entry-co" x-text="f.ecole"></div>
+                <div x-show="f.domaine" class="rb-entry-lieu" x-text="f.domaine"></div>
+                <div x-show="f.desc" class="rb-entry-desc" x-text="f.desc"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <template x-if="cv.showProjets && vis(cv.projets).filter(p=>p.nom).length > 0">
+        <div>
+          <div class="rb-sec-l">{% trans "Projets" %}</div>
+          <template x-for="p in vis(cv.projets)" :key="p.id">
+            <div x-show="p.nom" class="rb-entry">
+              <div class="rb-dates"><div x-text="p.annee||''"></div></div>
+              <div class="rb-timeline"><div class="rb-dot"></div><div class="rb-line"></div></div>
+              <div class="rb-entry-content">
+                <div class="rb-entry-title" x-text="p.nom"></div>
+                <div x-show="p.desc" class="rb-entry-desc" x-text="p.desc"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+    </div><!-- /left -->
+
+    <!-- DROITE : photo + infos -->
+    <div class="rb-right">
+
+      <div class="rb-photo-zone">
+        <div class="rb-photo-wrap">
+          <template x-if="cv.photo"><img :src="cv.photo" class="rb-photo" alt="{% trans "Photo" %}"></template>
+          <template x-if="!cv.photo"><div class="rb-ph">👤</div></template>
+        </div>
+        <div class="rb-photo-bar"></div>
+      </div>
+
+      <div class="rb-name-zone">
+        <div class="rb-name">
+          <span x-text="cv.prenom || 'Prénom'"></span><br>
+          <span x-text="cv.nom || 'NOM'"></span>
+        </div>
+        <div class="rb-job" x-text="cv.titre || 'Titre professionnel'"></div>
+      </div>
+
+      <template x-if="cv.profil">
+        <div>
+          <div class="rb-sec-r">{% trans "Profil" %}</div>
+          <div style="padding:0 18px;font-size:8pt;color:#555;line-height:1.6" x-text="cv.profil"></div>
+        </div>
+      </template>
+
+      <div class="rb-sec-r">{% trans "Contact" %}</div>
+      <template x-if="cvLoc()">
+        <div class="rb-contact-item">
+          <div class="rb-contact-icon">📍</div><span x-text="cvLoc()"></span>
+        </div>
+      </template>
+      <template x-if="cv.email">
+        <div class="rb-contact-item">
+          <div class="rb-contact-icon">✉</div><span x-text="cv.email"></span>
+        </div>
+      </template>
+      <template x-if="cv.telephone">
+        <div class="rb-contact-item">
+          <div class="rb-contact-icon">☎</div><span x-text="cv.telephone"></span>
+        </div>
+      </template>
+      <template x-if="cv.age">
+        <div class="rb-contact-item">
+          <div class="rb-contact-icon">📅</div><span x-text="cv.age"></span>
+        </div>
+      </template>
+      <template x-if="cv.permis">
+        <div class="rb-contact-item">
+          <div class="rb-contact-icon">🪪</div><span x-text="cv.permis"></span>
+        </div>
+      </template>
+
+      <template x-if="vis(cv.competences).filter(c=>c.nom).length > 0">
+        <div>
+          <div class="rb-sec-r">{% trans "Compétences" %}</div>
+          <template x-for="c in vis(cv.competences)" :key="c.id">
+            <div x-show="c.nom" class="rb-bullet-r" x-text="c.nom"></div>
+          </template>
+        </div>
+      </template>
+
+      <template x-if="vis(cv.langues).filter(l=>l.nom).length > 0">
+        <div>
+          <div class="rb-sec-r">{% trans "Langues" %}</div>
+          <template x-for="l in vis(cv.langues)" :key="l.id">
+            <div x-show="l.nom" class="rb-bullet-r" x-text="l.nom + (l.niveau ? ' · '+l.niveau : '')"></div>
+          </template>
+        </div>
+      </template>
+
+      <template x-if="cv.interets.filter((i,ii) => i && !isInteretMasque(ii)).length > 0">
+        <div>
+          <div class="rb-sec-r">{% trans "Loisirs" %}</div>
+          <template x-for="(ci, idx) in cv.interets" :key="idx">
+            <div x-show="ci && !isInteretMasque(idx)" class="rb-bullet-r" x-text="ci"></div>
+          </template>
+        </div>
+      </template>
+
+      <template x-if="cv.showRef">
+        <div>
+          <div class="rb-sec-r">{% trans "Références" %}</div>
+          <div style="padding:0 18px;font-size:8pt;color:#999;font-style:italic">{% trans "Sur demande" %}</div>
+        </div>
+      </template>
+
+    </div><!-- /right -->
+
+  </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+{% block js_extra %}{% include "candidat/cv/_cvbuilder_js.html" %}{% endblock %}

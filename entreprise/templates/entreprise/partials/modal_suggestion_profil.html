@@ -1,0 +1,171 @@
+﻿{% load i18n %}
+{% if request.recruteur %}
+<script>
+(function () {
+    /* ── Dropdown suggestion de profil à un collègue ──────────────────────── */
+
+    // Crée le dropdown une seule fois dans le body
+    const DD_ID = 'sugg-dropdown';
+    if (!document.getElementById(DD_ID)) {
+        const el = document.createElement('div');
+        el.id = DD_ID;
+        el.style.cssText = 'position:fixed;z-index:9999;width:240px;display:none;' +
+            'border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.18);' +
+            'border:1px solid #e5e7eb;background:#fff;';
+        el.innerHTML = `
+            <div id="sugg-header" style="padding:10px 14px;background:linear-gradient(135deg,#2e7d52,#3d9463);border-bottom:1px solid #e5e7eb;">
+                <p style="font-size:10px;color:rgba(255,255,255,.75);font-weight:600;margin:0;">👥 Suggérer à</p>
+                <p id="sugg-nom" style="font-size:13px;font-weight:800;color:#fff;margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">–</p>
+            </div>
+            <div id="sugg-loading" style="padding:18px;text-align:center;">
+                <div style="width:18px;height:18px;border:2px solid #bbf7d0;border-top-color:#009A44;border-radius:50%;animation:sugg-spin .7s linear infinite;display:inline-block;"></div>
+                <p style="font-size:11px;color:#9ca3af;margin:6px 0 0;">Chargement…</p>
+            </div>
+            <div id="sugg-liste" style="display:none;max-height:220px;overflow-y:auto;padding:4px 0;"></div>
+            <p id="sugg-vide" style="display:none;padding:18px 14px;text-align:center;font-size:12px;color:#6b7280;">Aucun collègue actif.</p>
+            <p id="sugg-fb" style="display:none;padding:8px 14px;text-align:center;font-size:11px;font-weight:600;"></p>
+        `;
+        document.body.appendChild(el);
+
+        // Animation CSS
+        const style = document.createElement('style');
+        style.textContent = '@keyframes sugg-spin{to{transform:rotate(360deg)}} #sugg-liste button:hover{background:#fff7ed;}';
+        document.head.appendChild(style);
+    }
+
+    let _candId = null;
+    let _ouvert = false;
+
+    function g(id) { return document.getElementById(id); }
+
+    function fermer() {
+        g(DD_ID).style.display = 'none';
+        _candId = null;
+        _ouvert = false;
+    }
+
+    function reset() {
+        g('sugg-loading').style.display = 'block';
+        g('sugg-liste').style.display   = 'none';
+        g('sugg-liste').innerHTML        = '';
+        g('sugg-vide').style.display    = 'none';
+        g('sugg-fb').style.display      = 'none';
+    }
+
+    window.ouvrirDropdownSuggestion = function(event, candidatId, nomCandidat) {
+        event.stopPropagation();
+
+        if (_ouvert && _candId === candidatId) { fermer(); return; }
+
+        _candId = candidatId;
+        _ouvert = true;
+
+        const btn  = event.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        const dd   = g(DD_ID);
+        const ddW  = 240;
+
+        g('sugg-nom').textContent = nomCandidat;
+        reset();
+
+        // Positionnement viewport (fixed → pas de scroll offset)
+        // Aligné à droite du bouton → s'étend vers la gauche
+        let left = rect.right - ddW;
+        let top  = 0; // calculé après mesure de hauteur
+        if (left < 8) left = 8;
+
+        // Afficher hors écran pour mesurer la hauteur réelle
+        dd.style.visibility = 'hidden';
+        dd.style.display    = 'block';
+        const ddH = dd.offsetHeight;
+        dd.style.visibility = '';
+
+        top = rect.top - ddH - 6;
+        if (top < 8) top = rect.bottom + 6; // repli vers le bas si pas de place
+
+        dd.style.left = left + 'px';
+        dd.style.top  = top  + 'px';
+
+        fetch('/entreprise/candidats/' + candidatId + '/suggerer/', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        })
+        .then(r => r.json())
+        .then(d => {
+            g('sugg-loading').style.display = 'none';
+            const liste = g('sugg-liste');
+            if (!d.collegues || d.collegues.length === 0) {
+                g('sugg-vide').style.display = 'block';
+                return;
+            }
+            liste.style.display = 'block';
+            d.collegues.forEach(c => {
+                const initiales = c.nom.split(' ').map(p => p[0] || '').join('').toUpperCase().slice(0, 2);
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.style.cssText = 'display:flex;align-items:center;gap:10px;width:100%;padding:9px 14px;border:none;background:transparent;cursor:pointer;transition:background .15s;text-align:left;';
+                item.innerHTML = `
+                    <span style="width:28px;height:28px;border-radius:50%;background:#009A44;color:#fff;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initiales}</span>
+                    <span style="flex:1;min-width:0;">
+                        <span style="display:block;font-size:13px;font-weight:600;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.nom}</span>
+                        <span style="display:block;font-size:10px;color:#9ca3af;">${c.role}</span>
+                    </span>
+                    <span style="font-size:11px;font-weight:700;color:#c96010;flex-shrink:0;">→</span>
+                `;
+                item.addEventListener('mouseenter', () => item.style.background = '#fff7ed');
+                item.addEventListener('mouseleave', () => item.style.background = 'transparent');
+                item.onclick = (e) => { e.stopPropagation(); envoyer(c.id, c.nom, item); };
+                liste.appendChild(item);
+            });
+        })
+        .catch(() => {
+            g('sugg-loading').style.display = 'none';
+            g('sugg-vide').textContent      = 'Erreur de chargement.';
+            g('sugg-vide').style.display    = 'block';
+        });
+    };
+
+    async function envoyer(destinataireId, nomDest, itemEl) {
+        const fb = g('sugg-fb');
+        g('sugg-liste').querySelectorAll('button').forEach(b => b.disabled = true);
+
+        try {
+            const r = await fetch('/entreprise/candidats/' + _candId + '/suggerer/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type':     'application/json',
+                    'X-CSRFToken':      '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({ destinataire_id: destinataireId }),
+            });
+            const d = await r.json();
+            if (d.ok) {
+                itemEl.innerHTML = '<span style="color:#009A44;font-weight:700;font-size:12px;width:100%;text-align:center;">✓ Suggéré à ' + nomDest + '</span>';
+                itemEl.style.background = '#f0fdf4';
+                fb.textContent   = d.message || 'Suggestion envoyée !';
+                fb.style.color   = '#009A44';
+                fb.style.display = 'block';
+                setTimeout(fermer, 1600);
+            } else {
+                fb.textContent   = d.message || 'Erreur.';
+                fb.style.color   = '#dc2626';
+                fb.style.display = 'block';
+                g('sugg-liste').querySelectorAll('button').forEach(b => b.disabled = false);
+            }
+        } catch (e) {
+            fb.textContent   = 'Erreur réseau.';
+            fb.style.color   = '#dc2626';
+            fb.style.display = 'block';
+            g('sugg-liste').querySelectorAll('button').forEach(b => b.disabled = false);
+        }
+    }
+
+    document.addEventListener('click', e => {
+        if (_ouvert && !g(DD_ID).contains(e.target)) fermer();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') fermer(); });
+    window.addEventListener('scroll', fermer, { passive: true, capture: true });
+    window.addEventListener('resize', fermer);
+})();
+</script>
+{% endif %}

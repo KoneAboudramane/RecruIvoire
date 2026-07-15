@@ -1,0 +1,340 @@
+﻿{% extends "candidat/base.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Modèles de Lettre de Motivation" %} — {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+<style>
+    @keyframes fadeUp {
+        from { opacity:0; transform:translateY(24px); }
+        to   { opacity:1; transform:translateY(0); }
+    }
+    @keyframes pulse-ring {
+        0%   { box-shadow:0 0 0 0 rgba(201,96,16,.4); }
+        70%  { box-shadow:0 0 0 12px rgba(201,96,16,0); }
+        100% { box-shadow:0 0 0 0 rgba(201,96,16,0); }
+    }
+
+    .fade-up { animation:fadeUp .5s ease both; }
+    .card-hover { transition:transform .3s ease, box-shadow .3s ease; }
+    .card-hover:hover { transform:translateY(-6px); box-shadow:0 16px 40px rgba(0,0,0,.13); }
+
+    /* Aperçu lettre A4 */
+    .lm-prev { width:100%; aspect-ratio:210/297; overflow:hidden; position:relative; background:#f3f4f6; }
+
+    /* Overlay */
+    .lm-overlay {
+        position:absolute; inset:0;
+        background:rgba(0,0,0,.55);
+        display:flex; flex-direction:column;
+        align-items:center; justify-content:center; gap:8px;
+        opacity:0; transition:opacity .3s;
+    }
+    .lm-card:hover .lm-overlay { opacity:1; }
+
+    /* Filtre */
+    .filter-btn { transition:all .2s ease; cursor:pointer; }
+    .filter-btn.active { color:#fff !important; }
+    .lm-item { transition:opacity .3s, transform .3s; }
+    .lm-item.hidden-item { display:none; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div x-data="previewManager()" x-cloak>
+
+<!-- ══════════ MODAL PRÉVISUALISATION ══════════ -->
+<template x-if="open">
+  <div class="fixed inset-0 z-50 flex flex-col" style="background:rgba(15,15,25,.92)">
+    <div class="flex items-center justify-between px-6 py-3 bg-white/5 border-b border-white/10 shrink-0">
+      <div class="flex items-center gap-3">
+        <span class="text-white font-bold text-sm" x-text="current.nom"></span>
+        <span class="text-xs px-2.5 py-0.5 rounded-full font-semibold"
+              :class="current.premium ? 'bg-yellow-400/20 text-yellow-300' : 'bg-green-400/20 text-green-300'"
+              x-text="current.premium ? '👑 Premium' : 'Gratuit'"></span>
+      </div>
+      <div class="flex items-center gap-3">
+        <template x-if="!current.premium">
+          <a :href="current.creerUrl" class="flex items-center gap-2 px-5 py-2 rounded-xl text-white text-sm font-bold transition hover:opacity-90" style="background:#c96010">
+            ✏️ Utiliser ce modèle
+          </a>
+        </template>
+        <template x-if="current.premium">
+          <a href="#" class="flex items-center gap-2 px-5 py-2 rounded-xl text-white text-sm font-bold transition hover:opacity-90" style="background:#C9A227">
+            🔓 Débloquer Premium
+          </a>
+        </template>
+        <button @click="close()" class="w-9 h-9 rounded-xl flex items-center justify-center text-white hover:bg-white/10 transition text-lg">✕</button>
+      </div>
+    </div>
+    <div class="flex-1 overflow-auto flex items-start justify-center py-8 px-4">
+      <template x-if="current.apercuUrl">
+        <img :src="current.apercuUrl" :alt="{% trans "current.nom" %}"
+             class="rounded-2xl shadow-2xl max-w-2xl w-full"
+             style="max-height:calc(100vh - 120px); object-fit:contain; object-position:top;">
+      </template>
+      <template x-if="!current.apercuUrl">
+        <div class="rounded-2xl overflow-hidden shadow-2xl bg-white" style="width:560px;">
+          <iframe :src="current.iframeUrl" class="w-full border-0" style="height:793px;" loading="lazy"></iframe>
+        </div>
+      </template>
+    </div>
+    <div class="flex items-center justify-center gap-4 py-3 border-t border-white/10 bg-white/5 shrink-0">
+      <span class="text-white/50 text-xs">{% trans "Appuyez sur" %} <kbd class="bg-white/10 text-white px-2 py-0.5 rounded text-xs">{% trans "Échap" %}</kbd> {% trans "pour fermer" %}</span>
+    </div>
+  </div>
+</template>
+
+<!-- ══════════ EN-TÊTE ══════════ -->
+<div class="fade-up mb-10">
+    <div class="flex items-center gap-2 text-sm text-gray-400 mb-4">
+        <a href="{% url 'candidat:accueil' %}" class="hover:underline" style="color:#c96010;">{% trans "Accueil" %}</a>
+        <span>/</span>
+        <span class="text-gray-600 font-medium">{% trans "Lettre de motivation" %}</span>
+    </div>
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+        <div>
+            <h1 class="text-4xl font-extrabold text-gray-800 mb-2">
+                {% trans "Votre" %} <span style="color:#c96010;">{% trans "lettre de motivation" %}</span>
+            </h1>
+            <p class="text-gray-500 text-lg">
+                {% blocktrans with total=total gratuits=gratuits premium=premium %}{{ total }} modèles disponibles · {{ gratuits }} gratuits · {{ premium }} premium{% endblocktrans %}
+            </p>
+        </div>
+        <a href="#" class="inline-flex items-center gap-2 text-white font-bold px-6 py-3 rounded-xl shadow-md transition hover:opacity-90"
+           style="background:#c96010; animation:pulse-ring 2s ease-in-out infinite;">
+            ✉️ {% trans "Rédiger ma lettre" %}
+        </a>
+    </div>
+</div>
+
+<!-- ══════════ STATS ══════════ -->
+<div class="grid grid-cols-3 gap-4 mb-8 fade-up">
+    <div class="bg-white rounded-2xl p-5 text-center border border-gray-100 shadow-sm">
+        <div class="text-3xl font-extrabold mb-1" style="color:#c96010;">{{ total }}</div>
+        <div class="text-gray-500 text-sm">{% trans "Modèles au total" %}</div>
+    </div>
+    <div class="bg-white rounded-2xl p-5 text-center border border-gray-100 shadow-sm">
+        <div class="text-3xl font-extrabold mb-1" style="color:#2e7d52;">{{ gratuits }}</div>
+        <div class="text-gray-500 text-sm">{% trans "Modèles gratuits" %}</div>
+    </div>
+    <div class="rounded-2xl p-5 text-center text-white shadow-sm" style="background:#1a1a2e;">
+        <div class="text-3xl font-extrabold mb-1" style="color:#c96010;">{{ premium }}</div>
+        <div class="text-white/70 text-sm">{% trans "Modèles premium" %}</div>
+    </div>
+</div>
+
+<!-- ══════════ FILTRES ══════════ -->
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-8 fade-up">
+    <div class="flex flex-col gap-4">
+        <div class="relative">
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+            <input id="searchInput" type="text" placeholder="{% trans 'Rechercher un modèle...' %}"
+                   class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+        </div>
+        <div>
+            <p class="text-xs font-semibold text-gray-400 uppercase mb-2">{% trans "Catégorie" %}</p>
+            <div class="flex flex-wrap gap-2" id="catFilters">
+                {% for cat in categories %}
+                <button class="filter-btn px-4 py-2 rounded-full text-sm font-semibold border transition
+                               {% if forloop.first %}active border-transparent{% else %}border-gray-200 text-gray-600 hover:border-orange-400{% endif %}"
+                        data-cat="{{ cat }}"
+                        {% if forloop.first %}style="background:#c96010;"{% endif %}>
+                    {% if forloop.first %}{% trans "Tous" %}{% else %}{{ cat }}{% endif %}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="flex gap-3 pt-1">
+            <button class="filter-btn px-4 py-2 rounded-full text-sm font-semibold border border-gray-200 text-gray-600 hover:border-orange-400 transition" data-type="all" id="typeAll">{% trans "Tous" %}</button>
+            <button class="filter-btn px-4 py-2 rounded-full text-sm font-semibold border border-green-400 text-green-700 hover:bg-green-50 transition" data-type="gratuit" id="typeGratuit">✅ {% trans "Gratuits" %}</button>
+            <button class="filter-btn px-4 py-2 rounded-full text-sm font-semibold border border-yellow-400 text-yellow-700 hover:bg-yellow-50 transition" data-type="premium" id="typePremium">👑 {% trans "Premium" %}</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════ GRILLE ══════════ -->
+<div id="compteur" class="text-sm text-gray-400 mb-4">
+    {% blocktrans with nb=total %}Affichage de <span id="compteurNb">{{ nb }}</span> modèle(s){% endblocktrans %}
+</div>
+
+{% include "candidat/partials/_pagination.html" with total_count=total item_label="modèle" %}
+
+<div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4" id="lmGrid">
+    {% for m in modeles %}
+    <div class="lm-item bg-white rounded-2xl shadow-sm border border-gray-100 card-hover overflow-hidden"
+         data-nom="{{ m.nom|lower }}"
+         data-cat="{{ m.categorie }}"
+         data-premium="{{ m.premium|yesno:'true,false' }}">
+
+        <!-- Aperçu A4 -->
+        <div class="lm-card relative">
+            <div class="lm-prev">
+                {% if m.apercu %}
+                    <img src="{{ m.apercu.url }}" alt="{{ m.nom }}" class="w-full h-full object-contain">
+                {% else %}
+                    <div class="w-full h-full flex flex-col items-center justify-center gap-3 p-6"
+                         style="background:{{ m.couleur }};">
+                        <div class="text-white/30 text-5xl font-black">LM</div>
+                        <div class="space-y-1.5 w-full px-2">
+                            <div class="h-1.5 bg-white/25 rounded w-3/4 mx-auto"></div>
+                            <div class="h-1 bg-white/15 rounded w-1/2 mx-auto"></div>
+                            <div class="h-1 bg-white/15 rounded w-2/3 mx-auto mt-3"></div>
+                            <div class="h-1 bg-white/10 rounded"></div>
+                            <div class="h-1 bg-white/10 rounded w-5/6"></div>
+                            <div class="h-1 bg-white/10 rounded w-4/6"></div>
+                        </div>
+                    </div>
+                {% endif %}
+                {% if m.premium %}
+                    <div class="absolute top-3 right-3 text-xs font-bold px-2 py-1 rounded-lg text-white shadow" style="background:#C9A227;">👑 Premium</div>
+                {% endif %}
+            </div>
+
+            <!-- Overlay -->
+            <div class="lm-overlay rounded-t-2xl">
+                {% if not m.premium %}
+                <a href="{% url 'candidat:creer_lettre' m.id %}"
+                   class="w-4/5 text-center text-sm font-bold text-white py-2.5 rounded-xl transition hover:opacity-90"
+                   style="background:#c96010;">
+                    ✏️ {% trans "Utiliser ce modèle" %}
+                </a>
+                {% else %}
+                <a href="#" class="w-4/5 text-center text-sm font-bold text-white py-2.5 rounded-xl transition hover:opacity-90" style="background:#C9A227;">
+                    🔓 {% trans "Débloquer Premium" %}
+                </a>
+                {% endif %}
+                <button @click.prevent="preview({
+                            id: {{ m.id }},
+                            nom: '{{ m.nom|escapejs }}',
+                            premium: {{ m.premium|yesno:'true,false' }},
+                            apercuUrl: {% if m.apercu %}'{{ m.apercu.url }}'{% else %}null{% endif %},
+                            iframeUrl: '{% url 'candidat:apercu_lettre' m.id %}',
+                            creerUrl: '{% url 'candidat:creer_lettre' m.id %}'
+                        })"
+                        class="w-4/5 text-center text-sm font-semibold border border-white text-white py-2 rounded-xl hover:bg-white/10 transition">
+                    👁 {% trans "Prévisualiser" %}
+                </button>
+            </div>
+        </div>
+
+        <!-- Infos -->
+        <div class="p-4 flex justify-between items-start">
+            <div>
+                <p class="font-bold text-gray-800 text-sm">{{ m.nom }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">{{ m.categorie }}</p>
+            </div>
+            {% if m.premium %}
+                <span class="text-xs bg-yellow-100 text-yellow-700 font-bold px-2.5 py-1 rounded-full whitespace-nowrap">👑 Premium</span>
+            {% else %}
+                <span class="text-xs bg-green-100 text-green-700 font-bold px-2.5 py-1 rounded-full">{% trans "Gratuit" %}</span>
+            {% endif %}
+        </div>
+        <div class="px-4 pb-4">
+            <a href="{% if not m.premium %}{% url 'candidat:creer_lettre' m.id %}{% else %}#{% endif %}"
+               class="block w-full text-center text-sm font-bold py-2.5 rounded-xl transition hover:opacity-90 text-white"
+               style="{% if m.premium %}background:#1a1a2e;{% else %}background:#c96010;{% endif %}">
+                {% if m.premium %}🔓 {% trans "Débloquer" %}{% else %}✏️ {% trans "Rédiger avec ce modèle" %}{% endif %}
+            </a>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-span-4 text-center py-16">
+        <div class="text-5xl mb-4">✉️</div>
+        <h3 class="text-xl font-bold text-gray-600 mb-2">{% trans "Aucun modèle disponible" %}</h3>
+        <p class="text-gray-400">{% trans "L'administrateur n'a pas encore configuré de modèles." %}</p>
+        <p class="text-gray-400 text-sm mt-1">{% trans "Lancez :" %} <code class="bg-gray-100 px-2 py-0.5 rounded text-xs">python manage.py init_modeles_lettre</code></p>
+    </div>
+    {% endfor %}
+</div>
+
+{% include "candidat/partials/_pagination.html" with total_count=total item_label="modèle" %}
+
+<div id="noResult" class="hidden text-center py-16">
+    <div class="text-5xl mb-4">😕</div>
+    <h3 class="text-xl font-bold text-gray-600 mb-2">{% trans "Aucun modèle trouvé" %}</h3>
+    <p class="text-gray-400">{% trans "Essayez d'autres filtres." %}</p>
+</div>
+
+<!-- ══════════ BANNIÈRE PREMIUM ══════════ -->
+<section class="mt-12 rounded-3xl overflow-hidden shadow-lg" style="background:#1a1a2e;">
+    <div class="flex flex-col md:flex-row items-center gap-8 px-5 sm:px-10 py-8 sm:py-10">
+        <div class="text-6xl">👑</div>
+        <div class="flex-1 text-white">
+            <span class="inline-block text-xs font-bold px-3 py-1 rounded-full mb-3" style="background:#c96010;">{% trans "OFFRE LIMITÉE" %}</span>
+            <h3 class="text-2xl font-extrabold mb-2">{% trans "Débloquez tous les modèles Premium" %}</h3>
+            <ul class="text-white/75 text-sm space-y-1">
+                <li>✅ {% trans "Accès à tous les modèles exclusifs CV + Lettre" %}</li>
+                <li>✅ {% trans "Export PDF haute qualité illimité" %}</li>
+                <li>✅ {% trans "Export Word (DOCX) illimité" %}</li>
+                <li>✅ {% trans "Profil mis en avant auprès des recruteurs" %}</li>
+            </ul>
+        </div>
+        <div class="text-center shrink-0">
+            <p class="text-white/50 text-sm line-through mb-1">10 000 FCFA/mois</p>
+            <p class="text-4xl font-extrabold text-white mb-1">5 000 <span class="text-lg">FCFA</span></p>
+            <p class="text-xs text-white/50 mb-4">{% trans "pendant 3 mois" %}</p>
+            <a href="#" class="inline-block font-bold px-8 py-3 rounded-xl text-white transition hover:opacity-90" style="background:#c96010;">
+                {% trans "Je passe Premium →" %}
+            </a>
+        </div>
+    </div>
+</section>
+
+</div>{# /x-data #}
+{% endblock %}
+
+
+{% block js_extra %}
+<script>
+function previewManager() {
+    return {
+        open: false,
+        current: null,
+        preview(data) { this.current = data; this.open = true; document.body.style.overflow = 'hidden'; },
+        close()       { this.open = false; this.current = null; document.body.style.overflow = ''; },
+        init()        { window.addEventListener('keydown', e => { if (e.key === 'Escape' && this.open) this.close(); }); },
+    };
+}
+
+(function () {
+    let activeCat  = 'Tous';
+    let activeType = 'all';
+    let searchVal  = '';
+
+    const items = document.querySelectorAll('.lm-item');
+    const noRes = document.getElementById('noResult');
+    const cptNb = document.getElementById('compteurNb');
+
+    function applyFilters() {
+        let visible = 0;
+        items.forEach(item => {
+            const nom     = item.dataset.nom;
+            const cat     = item.dataset.cat;
+            const premium = item.dataset.premium === 'true';
+            const mCat    = activeCat === 'Tous' || cat === activeCat;
+            const mType   = activeType === 'all' || (activeType === 'gratuit' && !premium) || (activeType === 'premium' && premium);
+            const mSearch = nom.includes(searchVal.toLowerCase());
+            if (mCat && mType && mSearch) { item.classList.remove('hidden-item'); visible++; }
+            else { item.classList.add('hidden-item'); }
+        });
+        if (cptNb) cptNb.textContent = visible;
+        if (noRes) noRes.classList.toggle('hidden', visible > 0);
+    }
+
+    document.getElementById('catFilters').addEventListener('click', e => {
+        const btn = e.target.closest('.filter-btn');
+        if (!btn) return;
+        document.querySelectorAll('#catFilters .filter-btn').forEach(b => { b.classList.remove('active'); b.style.background = ''; b.style.color = ''; });
+        btn.classList.add('active'); btn.style.background = '#c96010'; btn.style.color = '#fff';
+        activeCat = btn.dataset.cat; applyFilters();
+    });
+
+    ['typeAll','typeGratuit','typePremium'].forEach(id => {
+        document.getElementById(id).addEventListener('click', function () { activeType = this.dataset.type; applyFilters(); });
+    });
+
+    document.getElementById('searchInput').addEventListener('input', function () { searchVal = this.value.trim(); applyFilters(); });
+})();
+</script>
+{% endblock %}

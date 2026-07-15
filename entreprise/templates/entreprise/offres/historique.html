@@ -1,0 +1,294 @@
+{% extends "entreprise/base.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Historique des offres" %} — {% trans "Espace entreprise" %}{% endblock %}
+
+{% block css_extra %}
+<style>
+  [x-cloak] { display: none !important; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<section class="mb-10"
+         x-data='historiqueOffresPage({{ offres_json|safe }}, {{ types_contrat_json|safe }})'>
+
+  {# ── Fil d'Ariane ── #}
+  <nav class="text-sm text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2 flex-wrap">
+    {% if request.recruteur %}
+      <a href="{% url 'entreprise:recruteur_tableau_bord' %}" class="hover:underline">{% trans "Tableau de bord" %}</a>
+    {% else %}
+      <a href="{% url 'entreprise:tableau_bord' %}" class="hover:underline">{% trans "Tableau de bord" %}</a>
+    {% endif %}
+    <span>›</span>
+    <a href="{% url 'entreprise:offres_liste' %}" class="hover:underline">{% trans "Offres" %}</a>
+    <span>›</span>
+    <span class="text-gray-700 dark:text-gray-200 font-semibold">{% trans "Historique" %}</span>
+  </nav>
+
+  {# ── En-tête ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
+    <div class="flex items-start gap-4">
+      <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl shadow-md flex-shrink-0"
+           style="background:#6b7280;">🗂</div>
+      <div class="flex-1 min-w-0">
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-800 dark:text-white">{% trans "Historique des offres" %}</h1>
+        <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">
+          {% blocktrans count nb=total %}
+            {{ nb }} offre archivée — expirée, pourvue ou fermée.
+          {% plural %}
+            {{ nb }} offres archivées — expirées, pourvues ou fermées.
+          {% endblocktrans %}
+        </p>
+      </div>
+      <a href="{% url 'entreprise:offres_liste' %}"
+         class="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 transition flex-shrink-0">
+        ← {% trans "Offres actives" %}
+      </a>
+    </div>
+  </div>
+
+  {# ── Cartes-filtres par statut ── #}
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+    <button type="button" @click="statut = ''"
+            class="bg-white dark:bg-gray-800 rounded-2xl p-5 border-2 shadow-sm transition hover:shadow-md hover:-translate-y-0.5 text-left"
+            :class="!statut ? '' : 'border-gray-100 dark:border-gray-700'"
+            :style="!statut ? 'border-color:#6b7280; box-shadow:0 4px 12px rgba(107,114,128,.15)' : ''">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wide">🗂 {% trans "Tout" %}</p>
+        <span x-show="!statut" x-cloak class="text-[10px] font-bold text-white px-2 py-0.5 rounded-full bg-gray-500">{% trans "Actif" %}</span>
+      </div>
+      <p class="text-3xl font-extrabold text-gray-800 dark:text-white">{{ total }}</p>
+    </button>
+
+    <button type="button" @click="statut = 'EXPIREE'"
+            class="bg-white dark:bg-gray-800 rounded-2xl p-5 border-2 shadow-sm transition hover:shadow-md hover:-translate-y-0.5 text-left"
+            :class="statut === 'EXPIREE' ? '' : 'border-gray-100 dark:border-gray-700'"
+            :style="statut === 'EXPIREE' ? 'border-color:#F59E0B; box-shadow:0 4px 12px rgba(245,158,11,.15)' : ''">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wide">⏰ {% trans "Expirées" %}</p>
+        <span x-show="statut === 'EXPIREE'" x-cloak class="text-[10px] font-bold text-white px-2 py-0.5 rounded-full" style="background:#F59E0B;">{% trans "Actif" %}</span>
+      </div>
+      <p class="text-3xl font-extrabold" style="color:#F59E0B;">{{ nb_expirees }}</p>
+    </button>
+
+    <button type="button" @click="statut = 'POURVUE'"
+            class="bg-white dark:bg-gray-800 rounded-2xl p-5 border-2 shadow-sm transition hover:shadow-md hover:-translate-y-0.5 text-left"
+            :class="statut === 'POURVUE' ? '' : 'border-gray-100 dark:border-gray-700'"
+            :style="statut === 'POURVUE' ? 'border-color:#8B5CF6; box-shadow:0 4px 12px rgba(139,92,246,.15)' : ''">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wide">✅ {% trans "Pourvues" %}</p>
+        <span x-show="statut === 'POURVUE'" x-cloak class="text-[10px] font-bold text-white px-2 py-0.5 rounded-full" style="background:#8B5CF6;">{% trans "Actif" %}</span>
+      </div>
+      <p class="text-3xl font-extrabold" style="color:#8B5CF6;">{{ nb_pourvues }}</p>
+    </button>
+
+    <button type="button" @click="statut = 'FERMEE'"
+            class="bg-white dark:bg-gray-800 rounded-2xl p-5 border-2 shadow-sm transition hover:shadow-md hover:-translate-y-0.5 text-left"
+            :class="statut === 'FERMEE' ? '' : 'border-gray-100 dark:border-gray-700'"
+            :style="statut === 'FERMEE' ? 'border-color:#EF4444; box-shadow:0 4px 12px rgba(239,68,68,.15)' : ''">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wide">🔒 {% trans "Fermées" %}</p>
+        <span x-show="statut === 'FERMEE'" x-cloak class="text-[10px] font-bold text-white px-2 py-0.5 rounded-full bg-red-500">{% trans "Actif" %}</span>
+      </div>
+      <p class="text-3xl font-extrabold text-red-500 dark:text-red-400">{{ nb_fermees }}</p>
+    </button>
+
+  </div>
+
+  {# ── Barre filtres : recherche + contrat + tri ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
+    <div class="flex flex-col lg:flex-row lg:items-center gap-4">
+
+      <div class="relative flex-1 min-w-0">
+        <input type="search" x-model="q"
+               placeholder="{% trans 'Rechercher (titre, référence, ville…)' %}"
+               class="w-full pl-9 pr-9 py-2.5 text-sm border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 rounded-lg focus:border-gray-500 dark:focus:border-gray-400 focus:ring-1 focus:ring-gray-500 dark:focus:ring-gray-400 outline-none">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/>
+        </svg>
+        <button x-show="q" x-cloak @click="q = ''" type="button"
+                class="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition">✕</button>
+      </div>
+
+      {# Dropdown contrat #}
+      <div class="flex items-center gap-2 flex-shrink-0"
+           x-data="{ openContrat: false }" @click.outside="openContrat = false">
+        <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">{% trans "Contrat" %}</span>
+        <div class="relative">
+          <button type="button" @click="openContrat = !openContrat"
+                  class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-600 transition min-w-[160px] justify-between">
+            <span class="inline-flex items-center gap-1.5">
+              <span>📋</span>
+              <span x-text="contrat ? (typesContrat.find(t => t.code === contrat)?.libelle || 'Tous') : 'Tous les contrats'"></span>
+            </span>
+            <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 transition-transform" :class="{'rotate-180': openContrat}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div x-show="openContrat" x-cloak x-transition
+               class="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-xl overflow-hidden z-50">
+            <button type="button" @click="contrat = ''; openContrat = false"
+                    :class="!contrat ? 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white font-bold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                    class="w-full text-left px-3 py-2 text-sm transition flex items-center justify-between">
+              <span>📋 {% trans "Tous les contrats" %}</span>
+              <span x-show="!contrat" x-cloak class="text-green-600 dark:text-green-400">✓</span>
+            </button>
+            <template x-for="t in typesContrat" :key="t.code">
+              <button type="button" @click="contrat = t.code; openContrat = false"
+                      :class="contrat === t.code ? 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white font-bold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                      class="w-full text-left px-3 py-2 text-sm transition flex items-center justify-between">
+                <span x-text="t.libelle"></span>
+                <span x-show="contrat === t.code" class="text-green-600 dark:text-green-400">✓</span>
+              </button>
+            </template>
+            <div x-show="!typesContrat.length" class="px-3 py-3 text-xs text-gray-400 dark:text-gray-500 italic text-center">{% trans "Aucun" %}</div>
+          </div>
+        </div>
+      </div>
+
+      {# Segmented tri #}
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">{% trans "Trier" %}</span>
+        <div class="inline-flex items-stretch bg-gray-100 dark:bg-gray-700 rounded-xl p-1 gap-0.5">
+          <template x-for="opt in triOptions" :key="opt.key">
+            <button type="button" @click="tri = opt.key"
+                    :class="tri === opt.key ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-800 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
+                    :title="{% trans "opt.label" %}"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition">
+              <span x-text="opt.icon"></span>
+              <span class="hidden md:inline" x-text="opt.label"></span>
+            </button>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-50 dark:border-gray-700">
+      <p class="text-xs text-gray-500 dark:text-gray-400"><span x-text="visibleOffres.length"></span> {% trans "résultat(s)" %}</p>
+      <button x-show="q || statut || contrat || tri !== 'expiration_recent'" x-cloak
+              @click="resetAll()" type="button"
+              class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition">
+        ✕ {% trans "Réinitialiser" %}
+      </button>
+    </div>
+  </div>
+
+  {# ── Liste ── #}
+  <div x-show="visibleOffres.length > 0" x-cloak
+       class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+    <template x-for="o in visibleOffres" :key="o.id">
+      <article class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col opacity-90">
+        <div class="p-5 sm:p-6 flex items-start gap-4 flex-1">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl shadow-sm flex-shrink-0"
+               :style="o.statut_code === 'EXPIREE' ? 'background:#F59E0B' : o.statut_code === 'POURVUE' ? 'background:#8B5CF6' : 'background:#9ca3af'">
+            <span x-text="o.statut_code === 'EXPIREE' ? '⏰' : o.statut_code === 'POURVUE' ? '✅' : '🔒'"></span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-base sm:text-lg font-extrabold text-gray-800 dark:text-white truncate" x-text="o.titre"></p>
+            <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <span>🔖 <span class="font-mono" x-text="o.reference || '—'"></span></span>
+              <span x-show="o.ville">📍 <span x-text="o.ville"></span></span>
+              <span>📋 <span x-text="o.type_contrat"></span></span>
+              <span x-show="o.date_expiration">⏰ <span x-text="new Date(o.date_expiration).toLocaleDateString('fr-FR')"></span></span>
+            </div>
+          </div>
+          <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
+            <span class="inline-flex items-center gap-1.5 font-bold px-2.5 py-1 rounded-full text-[11px] text-white shadow-sm"
+                  :style="o.statut_code === 'EXPIREE' ? 'background:#F59E0B' : o.statut_code === 'POURVUE' ? 'background:#8B5CF6' : 'background:#EF4444'"
+                  x-text="o.statut_libelle"></span>
+            <span class="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400" title="{% trans 'Candidatures reçues' %}">
+              👥 <span x-text="o.nb_candidatures"></span>
+            </span>
+          </div>
+        </div>
+        <div class="px-5 sm:px-6 py-3 bg-gray-50/60 dark:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
+          <a :href="o.url"
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 transition">
+            👁 {% trans "Voir l'offre" %}
+          </a>
+          <a :href="o.url_candidatures"
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white shadow-sm hover:shadow transition"
+             style="background:#009A44;">
+            👥 {% trans "Candidatures" %} →
+          </a>
+        </div>
+      </article>
+    </template>
+  </div>
+
+  {# État vide #}
+  <div x-show="visibleOffres.length === 0" x-cloak
+       class="bg-white dark:bg-gray-800 rounded-2xl p-10 sm:p-14 border border-gray-100 dark:border-gray-700 shadow-sm text-center">
+    <div class="w-20 h-20 mx-auto rounded-full flex items-center justify-center text-4xl mb-4 bg-gray-100 dark:bg-gray-700">🗂</div>
+    <template x-if="allOffres.length === 0">
+      <div>
+        <h2 class="text-xl font-extrabold text-gray-800 dark:text-white mb-2">{% trans "Historique vide" %}</h2>
+        <p class="text-gray-500 dark:text-gray-400 text-sm mb-6 max-w-md mx-auto">{% trans "Aucune offre archivée pour le moment. Les offres expirées, pourvues ou fermées apparaîtront ici." %}</p>
+        <a href="{% url 'entreprise:offres_liste' %}"
+           class="inline-block text-white font-bold px-6 py-3 rounded-lg text-sm hover:opacity-90 transition"
+           style="background:#009A44;">{% trans "Voir les offres actives" %}</a>
+      </div>
+    </template>
+    <template x-if="allOffres.length > 0">
+      <div>
+        <h2 class="text-xl font-extrabold text-gray-800 dark:text-white mb-2">{% trans "Aucun résultat" %}</h2>
+        <p class="text-gray-500 dark:text-gray-400 text-sm mb-6 max-w-md mx-auto">{% trans "Aucune offre archivée ne correspond à vos critères." %}</p>
+        <button @click="resetAll()" type="button"
+                class="inline-block text-white font-bold px-6 py-3 rounded-lg text-sm hover:opacity-90 transition"
+                style="background:#6b7280;">✕ {% trans "Réinitialiser" %}</button>
+      </div>
+    </template>
+  </div>
+
+</section>
+
+<script>
+function historiqueOffresPage(offres, typesContrat) {
+  return {
+    allOffres:    offres || [],
+    typesContrat: typesContrat || [],
+    q:       '',
+    statut:  '',   // '' | 'EXPIREE' | 'POURVUE' | 'FERMEE'
+    contrat: '',
+    tri:     'expiration_recent',
+
+    triOptions: [
+      { key: 'expiration_recent', icon: '⏰', label: 'Expiration récente' },
+      { key: 'expiration_ancien', icon: '⏰', label: 'Expiration ancienne' },
+      { key: 'date_recent',       icon: '📅', label: 'Publié récemment' },
+      { key: 'nom_asc',           icon: '🔤', label: 'A → Z' },
+      { key: 'nom_desc',          icon: '🔤', label: 'Z → A' },
+    ],
+
+    get visibleOffres() {
+      const q = this.q.trim().toLowerCase();
+      let list = this.allOffres.filter(o => {
+        if (this.statut  && o.statut_code !== this.statut) return false;
+        if (this.contrat && o.type_contrat_code !== this.contrat) return false;
+        if (q) {
+          const hay = ((o.titre||'') + ' ' + (o.reference||'') + ' ' + (o.ville||'') + ' ' + (o.type_contrat||'')).toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+      const safe = s => s || '';
+      const cmp = {
+        expiration_recent: (a, b) => safe(b.date_expiration).localeCompare(safe(a.date_expiration)),
+        expiration_ancien: (a, b) => safe(a.date_expiration).localeCompare(safe(b.date_expiration)),
+        date_recent:       (a, b) => b.date_creation.localeCompare(a.date_creation),
+        nom_asc:           (a, b) => a.titre.localeCompare(b.titre, 'fr', { sensitivity: 'base' }),
+        nom_desc:          (a, b) => b.titre.localeCompare(a.titre, 'fr', { sensitivity: 'base' }),
+      }[this.tri] || ((a, b) => 0);
+      return [...list].sort(cmp);
+    },
+
+    resetAll() {
+      this.q = '';
+      this.statut = '';
+      this.contrat = '';
+      this.tri = 'expiration_recent';
+    },
+  };
+}
+</script>
+{% endblock %}

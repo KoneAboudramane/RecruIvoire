@@ -1,0 +1,422 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+/* ── Reset ──────────────────────────────────────────────────────────────────── */
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body {
+    width: 794px;
+    height: 1123px;
+    overflow: hidden;
+    background: #fff;
+}
+
+/* ── Base commune ───────────────────────────────────────── */
+.lp-wrap { width:100%; height:100%; overflow:hidden; font-size:11.5px; line-height:1.72; color:#1a1a1a; background:#fff; }
+.lp-date { text-align:right; font-size:10px; color:#555; margin-bottom:20px; }
+.lp-recipient { margin-bottom:20px; line-height:1.65; }
+.lp-rcp-name  { font-weight:600; font-size:11px; }
+.lp-rcp-fn, .lp-rcp-addr, .lp-rcp-city { font-size:10px; color:#555; }
+.lp-objet { margin-bottom:18px; font-size:11.5px; }
+.lp-objet-lbl { font-weight:700; }
+.lp-salut { margin-bottom:14px; font-weight:600; }
+.lp-para  { margin-bottom:13px; white-space:pre-wrap; word-break:break-word; }
+.lp-formule { margin-top:24px; margin-bottom:44px; }
+.lp-sig { font-weight:700; }
+
+/* ── Structure FAMILLE : bandeau latéral persistant ──
+   Positionnement absolu (pas flex) : le moteur d'impression PDF de Chromium
+   empile parfois les enfants flex au lieu de les garder côte à côte — avec
+   une page à taille fixe (794×1123), l'absolu est fiable dans les deux
+   contextes (aperçu navigateur ET export PDF). ── */
+.lp-family-sidebar .lp-wrap  { position:relative; }
+.lp-family-sidebar .lp-side  { position:absolute; left:0; top:0; bottom:0; width:220px; padding:50px 26px; overflow:hidden; }
+.lp-family-sidebar .lp-side-name  { font-size:19px; font-weight:800; line-height:1.25; margin-bottom:26px; }
+.lp-family-sidebar .lp-side-block { margin-bottom:10px; }
+.lp-family-sidebar .lp-side-item  { font-size:10.5px; line-height:1.8; word-break:break-word; margin-bottom:4px; }
+.lp-family-sidebar .lp-body  { margin-left:220px; padding:50px 44px 50px 40px; }
+
+/* ── Structure FAMILLE : accroche mise en avant ── */
+.lp-family-accroche .lp-top { padding:44px 60px 0; }
+.lp-family-accroche .lp-name { font-size:20px; font-weight:800; }
+.lp-family-accroche .lp-contact-row { font-size:10px; color:#6b7280; margin-top:8px; display:flex; gap:14px; flex-wrap:wrap; }
+.lp-family-accroche .lp-quote { margin:22px 60px; font-size:17px; font-weight:700; line-height:1.4; }
+.lp-family-accroche .lp-main { padding:0 60px 50px; }
+
+/* ── Structure FAMILLE : carte encadrée ── */
+.lp-family-carte .lp-page { margin:26px; min-height:1071px; }
+.lp-family-carte .lp-top  { padding:36px 48px 0; }
+.lp-family-carte .lp-main { padding:0 48px 40px; }
+
+/* ── CLASSIQUE — Serif élégant, expéditeur droite, objet souligné ── */
+.skin-classique .lp-wrap     { font-family: Georgia,'Times New Roman',serif; }
+.skin-classique .lp-top      { padding:44px 60px 0; display:flex; justify-content:flex-end; margin-bottom:30px; }
+.skin-classique .lp-sender   { text-align:right; }
+.skin-classique .lp-name     { font-size:15px; font-weight:700; color:#111; letter-spacing:.8px; text-transform:uppercase; margin-bottom:6px; }
+.skin-classique .lp-contact  { font-size:9.5px; color:#555; line-height:1.7; margin-top:1px; }
+.skin-classique .lp-main     { padding:0 60px 44px; }
+.skin-classique .lp-objet    { text-decoration:underline; font-weight:700; font-style:italic; }
+.skin-classique .lp-para     { text-align:justify; text-indent:2em; }
+.skin-classique .lp-sig      { text-align:right; }
+
+/* ── MODERNE — bordure gauche noire, divider, objet fond gris ── */
+.skin-moderne .lp-wrap    { font-family: Arial,Helvetica,sans-serif; border-left:4px solid #111; }
+.skin-moderne .lp-top     { padding:30px 44px 22px; border-bottom:1px solid #d1d5db; }
+.skin-moderne .lp-name    { font-size:19px; font-weight:800; color:#111; letter-spacing:-.2px; margin-bottom:5px; }
+.skin-moderne .lp-contact { font-size:9.5px; color:#6b7280; line-height:1.7; margin-top:1px; }
+.skin-moderne .lp-main    { padding:22px 44px 44px; }
+.skin-moderne .lp-objet   { padding:7px 12px; border-left:3px solid #374151; background:#f3f4f6; font-weight:700; }
+.skin-moderne .lp-objet-lbl { color:#374151; }
+.skin-moderne .lp-sig     { font-weight:700; color:#111; }
+
+/* ── ÉLÉGANT — Serif, nom centré en capitales, contacts inline, objet encadré ── */
+.skin-orange-pro .lp-wrap    { font-family: Georgia,'Times New Roman',serif; }
+.skin-orange-pro .lp-top     { padding:36px 56px 22px; text-align:center; border-bottom:2px solid #111; }
+.skin-orange-pro .lp-name    { font-size:20px; font-weight:700; color:#111; letter-spacing:2.5px; text-transform:uppercase; margin-bottom:10px; }
+.skin-orange-pro .lp-contact { display:inline; font-size:9px; color:#555; line-height:2; }
+.skin-orange-pro .lp-contact + .lp-contact::before { content:" · "; color:#aaa; }
+.skin-orange-pro .lp-main    { padding:22px 56px 44px; }
+.skin-orange-pro .lp-objet   { border-top:1px solid #ccc; border-bottom:1px solid #ccc; padding:8px 0; font-style:italic; font-weight:700; text-align:center; }
+.skin-orange-pro .lp-objet-lbl { font-style:normal; }
+.skin-orange-pro .lp-para    { text-align:justify; }
+.skin-orange-pro .lp-sig     { text-align:right; }
+
+/* ── SOBRE — Sans-serif propre, filet 2px bas, objet bordure gauche ── */
+.skin-vert-ivoire .lp-wrap    { font-family: Arial,Helvetica,sans-serif; }
+.skin-vert-ivoire .lp-top     { padding:28px 52px 20px; border-bottom:2px solid #111; }
+.skin-vert-ivoire .lp-name    { font-size:20px; font-weight:800; color:#111; margin-bottom:4px; }
+.skin-vert-ivoire .lp-contact { font-size:9.5px; color:#6b7280; line-height:1.65; margin-top:1px; }
+.skin-vert-ivoire .lp-main    { padding:22px 52px 44px; }
+.skin-vert-ivoire .lp-objet   { border-left:4px solid #111; padding-left:12px; font-weight:700; }
+.skin-vert-ivoire .lp-objet-lbl { color:#374151; }
+.skin-vert-ivoire .lp-sig     { font-weight:700; }
+
+/* ── EXECUTIVE — tout blanc, filet haut 5px, nom capitales, objet structuré ── */
+.skin-executive .lp-wrap    { font-family: Arial,Helvetica,sans-serif; border-top:5px solid #111; }
+.skin-executive .lp-top     { padding:24px 50px 18px; border-bottom:1px solid #e5e7eb; }
+.skin-executive .lp-name    { font-size:18px; font-weight:800; color:#111; text-transform:uppercase; letter-spacing:1.2px; margin-bottom:5px; }
+.skin-executive .lp-contact { font-size:9.5px; color:#6b7280; line-height:1.65; margin-top:1px; }
+.skin-executive .lp-main    { padding:22px 50px 44px; }
+.skin-executive .lp-objet   { font-weight:700; border-left:3px solid #111; padding-left:10px; }
+.skin-executive .lp-objet-lbl { text-transform:uppercase; font-size:10px; letter-spacing:.5px; }
+.skin-executive .lp-sig     { font-weight:700; color:#111; }
+
+/* ── MINIMALISTE — épuré, nom gauche / contacts droite, ligne fine ── */
+.skin-minimaliste .lp-wrap    { font-family: Arial,Helvetica,sans-serif; }
+.skin-minimaliste .lp-top     { padding:36px 58px 22px; border-bottom:1px solid #d1d5db; }
+.skin-minimaliste .lp-sender  { display:grid; grid-template-columns:1fr 1fr; align-items:start; }
+.skin-minimaliste .lp-name    { grid-column:1; font-size:15px; font-weight:700; color:#111; margin-bottom:3px; }
+.skin-minimaliste .lp-contact { grid-column:2; text-align:right; font-size:9px; color:#9ca3af; line-height:1.75; margin-top:1px; }
+.skin-minimaliste .lp-main    { padding:24px 58px 44px; }
+.skin-minimaliste .lp-objet   { font-weight:600; color:#111; }
+.skin-minimaliste .lp-objet-lbl { color:#9ca3af; font-weight:400; font-size:10px; }
+.skin-minimaliste .lp-sig     { font-weight:600; color:#111; }
+
+/* ── CORPORATE BLEU — sans-serif, bandeau bleu, objet en bloc bleu ── */
+.skin-corporate-bleu .lp-wrap    { font-family: Arial,Helvetica,sans-serif; }
+.skin-corporate-bleu .lp-top     { padding:34px 56px 20px; border-bottom:3px solid #0B3D91; }
+.skin-corporate-bleu .lp-name    { font-size:19px; font-weight:800; color:#0B3D91; margin-bottom:5px; }
+.skin-corporate-bleu .lp-contact { font-size:9.5px; color:#4b5c7a; line-height:1.7; margin-top:1px; }
+.skin-corporate-bleu .lp-main    { padding:22px 56px 44px; }
+.skin-corporate-bleu .lp-objet   { background:#EEF3FC; color:#0B3D91; border-radius:6px; padding:8px 14px; font-weight:700; }
+.skin-corporate-bleu .lp-objet-lbl { color:#0B3D91; }
+.skin-corporate-bleu .lp-sig     { font-weight:700; color:#0B3D91; }
+
+/* ── STARTUP TECH — monospace, accents code ── */
+.skin-startup-tech .lp-wrap    { font-family:'Consolas','Courier New',monospace; }
+.skin-startup-tech .lp-top     { padding:32px 54px 18px; }
+.skin-startup-tech .lp-name    { font-size:17px; font-weight:800; color:#0f172a; }
+.skin-startup-tech .lp-contact { font-size:9.5px; color:#4b5563; line-height:1.7; margin-top:2px; }
+.skin-startup-tech .lp-contact::before { content:"> "; color:#16a34a; font-weight:700; }
+.skin-startup-tech .lp-main    { padding:20px 54px 44px; border-top:1px dashed #0f172a; }
+.skin-startup-tech .lp-objet   { border:1px solid #0f172a; border-radius:6px; padding:8px 12px; font-weight:700; }
+.skin-startup-tech .lp-objet-lbl::before { content:"$ "; color:#16a34a; }
+.skin-startup-tech .lp-sig     { font-weight:700; }
+.skin-startup-tech .lp-sig::before { content:"~$ "; color:#16a34a; }
+
+/* ── ACADÉMIQUE — serif centré, capitales espacées ── */
+.skin-academique .lp-wrap    { font-family:'Cambria',Georgia,serif; }
+.skin-academique .lp-top     { padding:44px 56px 20px; text-align:center; border-bottom:2px double #26241f; }
+.skin-academique .lp-sender  { display:inline-block; }
+.skin-academique .lp-name    { font-size:17px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:8px; }
+.skin-academique .lp-contact { font-size:9.5px; color:#555; line-height:1.8; }
+.skin-academique .lp-main    { padding:22px 66px 44px; }
+.skin-academique .lp-objet   { text-align:center; text-transform:uppercase; font-weight:700; letter-spacing:.5px; }
+.skin-academique .lp-para    { text-align:justify; text-indent:2em; }
+.skin-academique .lp-sig     { text-align:center; font-weight:700; }
+
+/* ── SCANDINAVE (famille sidebar) — bandeau clair, léger, accent taupe ── */
+.skin-scandinave .lp-wrap        { font-family:'Helvetica Neue',Arial,sans-serif; font-weight:300; }
+.skin-scandinave .lp-side        { background:#fdfcfa; border-right:1px solid #e8e3da; }
+.skin-scandinave .lp-side-name   { font-weight:400; letter-spacing:.4px; color:#3a3a36; border-bottom:2px solid #c9a892; padding-bottom:10px; }
+.skin-scandinave .lp-side-item   { color:#9c9890; }
+.skin-scandinave .lp-objet       { font-weight:600; color:#3a3a36; }
+.skin-scandinave .lp-objet-lbl   { color:#9c9890; font-weight:400; }
+.skin-scandinave .lp-sig         { font-weight:400; }
+
+/* ── BOLD TYPO (famille accroche) — citation énorme, accent rouge ── */
+.skin-bold-typo .lp-wrap        { font-family:Arial,Helvetica,sans-serif; }
+.skin-bold-typo .lp-top         { border-top:6px solid #111; padding-top:24px; }
+.skin-bold-typo .lp-name        { font-size:26px; font-weight:900; text-transform:uppercase; letter-spacing:-.5px; }
+.skin-bold-typo .lp-contact-row { font-size:9.5px; color:#555; }
+.skin-bold-typo .lp-quote       { font-size:24px; font-weight:900; text-transform:uppercase; color:#E63946; line-height:1.15; }
+.skin-bold-typo .lp-sig         { font-weight:900; text-transform:uppercase; font-size:12px; }
+
+/* ── SIDEBAR COLONNE (famille sidebar) — colonne marine pleine hauteur ── */
+.skin-sidebar-colonne .lp-wrap      { font-family:'Segoe UI',Arial,sans-serif; }
+.skin-sidebar-colonne .lp-side      { background:#1a1a2e; color:#fff; }
+.skin-sidebar-colonne .lp-side-name { color:#fff; }
+.skin-sidebar-colonne .lp-side-item { color:#c7c9db; }
+.skin-sidebar-colonne .lp-objet     { border-left:3px solid #c96010; padding-left:10px; font-weight:700; color:#1a1a2e; }
+.skin-sidebar-colonne .lp-sig       { font-weight:700; color:#1a1a2e; }
+
+/* ── VINTAGE PAPIER (famille carte) — monospace, cadre double ── */
+.skin-vintage-papier .lp-wrap    { font-family:'Courier New',Courier,monospace; }
+.skin-vintage-papier .lp-page    { outline:1px solid #8a7256; outline-offset:-10px; }
+.skin-vintage-papier .lp-top     { text-align:center; border-bottom:1px dashed #8a7256; margin:0 20px; padding-left:0; padding-right:0; }
+.skin-vintage-papier .lp-sender  { display:inline-block; }
+.skin-vintage-papier .lp-name    { font-size:16px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; }
+.skin-vintage-papier .lp-contact { font-size:9px; color:#6b5b4d; }
+.skin-vintage-papier .lp-main    { margin:0 20px; }
+.skin-vintage-papier .lp-objet   { font-weight:700; text-decoration:underline wavy; text-align:center; }
+.skin-vintage-papier .lp-sig     { font-weight:700; font-style:italic; text-align:right; }
+
+/* ── GRADIENT CONTEMPORAIN (famille accroche) — citation sur fond dégradé ── */
+.skin-gradient-contemporain .lp-wrap        { font-family:'Segoe UI',Arial,sans-serif; }
+.skin-gradient-contemporain .lp-name        { font-size:19px; font-weight:800; }
+.skin-gradient-contemporain .lp-contact-row { font-size:9.5px; color:#6b7280; }
+.skin-gradient-contemporain .lp-quote {
+    background:linear-gradient(120deg,#6D28D9 0%,#DB2777 55%,#F97316 100%);
+    color:#fff; padding:18px 24px; border-radius:12px; font-size:15px;
+}
+.skin-gradient-contemporain .lp-sig     { font-weight:700; color:#6D28D9; }
+
+/* ── LIGNE ROUGE — minimal, filet rouge (famille classique) ── */
+.skin-ligne-rouge .lp-wrap    { font-family:'Helvetica Neue',Arial,sans-serif; }
+.skin-ligne-rouge .lp-top     { padding:44px 70px 0; border-top:2px solid #C81E1E; }
+.skin-ligne-rouge .lp-name    { font-size:16px; font-weight:600; margin-top:16px; }
+.skin-ligne-rouge .lp-contact { font-size:9.5px; color:#7a7a7a; line-height:1.8; }
+.skin-ligne-rouge .lp-main    { padding:24px 70px 44px; }
+.skin-ligne-rouge .lp-objet   { font-weight:600; color:#C81E1E; }
+.skin-ligne-rouge .lp-sig     { font-weight:600; border-top:2px solid #C81E1E; display:inline-block; padding-top:10px; }
+
+/* ── GRILLE STRUCTURÉE (famille carte) — carte grise, objet en encadré ── */
+.skin-grille-structuree .lp-wrap    { font-family:'Segoe UI',Arial,sans-serif; }
+.skin-grille-structuree .lp-page    { background:#f6f7f8; border:1px solid #e0e0e0; border-radius:14px; }
+.skin-grille-structuree .lp-top     { border-bottom:3px solid #202124; }
+.skin-grille-structuree .lp-name    { font-size:18px; font-weight:800; }
+.skin-grille-structuree .lp-contact { font-size:9.5px; color:#5f6368; line-height:1.7; }
+.skin-grille-structuree .lp-objet   { background:#fff; border-radius:8px; padding:9px 14px; font-weight:700; border:1px solid #e0e0e0; }
+.skin-grille-structuree .lp-sig     { font-weight:800; }
+
+/* ── SIGNATURE MANUSCRITE (famille accroche) — citation en script ── */
+.skin-signature-manuscrite .lp-wrap        { font-family:Georgia,'Times New Roman',serif; }
+.skin-signature-manuscrite .lp-name        { font-size:20px; font-weight:700; color:#9C6B3F; }
+.skin-signature-manuscrite .lp-contact-row { font-size:9.5px; color:#8a8378; }
+.skin-signature-manuscrite .lp-quote {
+    font-family:'Brush Script MT','Segoe Script',cursive; font-size:32px;
+    color:#9C6B3F; font-weight:400; line-height:1.2;
+}
+.skin-signature-manuscrite .lp-sig  { font-family:'Brush Script MT','Segoe Script',cursive; font-size:24px; color:#9C6B3F; font-weight:400; }
+
+/* ── ANGLO-SAXON (famille carte) — business letter US/UK, cadre sobre ── */
+.skin-anglo-saxon .lp-wrap    { font-family:'Times New Roman',Times,serif; }
+.skin-anglo-saxon .lp-page    { border:1px solid #999; }
+.skin-anglo-saxon .lp-sender  { text-align:left; }
+.skin-anglo-saxon .lp-name    { font-size:14px; font-weight:700; }
+.skin-anglo-saxon .lp-contact { font-size:10.5px; color:#333; line-height:1.6; }
+.skin-anglo-saxon .lp-objet   { font-weight:700; }
+.skin-anglo-saxon .lp-objet-lbl::before { content:"Re: "; }
+.skin-anglo-saxon .lp-para    { text-align:left; }
+.skin-anglo-saxon .lp-sig     { font-weight:700; text-align:left; }
+
+/* ── OR & NOIR LUXE — bandeau noir, accents or (famille classique) ── */
+.skin-or-noir-luxe .lp-wrap    { font-family:'Cambria',Georgia,serif; }
+.skin-or-noir-luxe .lp-top     { padding:34px 56px; background:#0d0d0d; }
+.skin-or-noir-luxe .lp-name    { font-size:20px; font-weight:700; letter-spacing:1px; color:#D4AF37; }
+.skin-or-noir-luxe .lp-contact { font-size:9.5px; color:#c9c9c9; line-height:1.7; }
+.skin-or-noir-luxe .lp-main    { padding:22px 56px 44px; }
+.skin-or-noir-luxe .lp-objet   { font-weight:700; border-bottom:1px solid #D4AF37; display:inline-block; padding-bottom:4px; }
+.skin-or-noir-luxe .lp-sig     { font-weight:700; }
+
+/* ── BICOLORE DIAGONAL (famille sidebar) — colonne diagonale bicolore ── */
+.skin-bicolore-diagonal .lp-wrap      { font-family:'Segoe UI',Arial,sans-serif; }
+.skin-bicolore-diagonal .lp-side      { background:linear-gradient(160deg,#0EA5A5 0%,#0EA5A5 55%,#17494A 55%,#17494A 100%); color:#fff; }
+.skin-bicolore-diagonal .lp-side-name { color:#fff; }
+.skin-bicolore-diagonal .lp-side-item { color:#e5f6f6; }
+.skin-bicolore-diagonal .lp-objet     { font-weight:700; color:#0EA5A5; }
+.skin-bicolore-diagonal .lp-sig       { font-weight:700; color:#17494A; }
+</style>
+</head>
+<body>
+
+{% if modele.famille == 'sidebar' %}
+{# ── FAMILLE : bandeau latéral persistant (colonne pleine hauteur) ── #}
+<div class="skin-{{ modele.slug }} lp-family-sidebar">
+<div class="lp-wrap">
+    <div class="lp-side">
+        <div class="lp-side-name">{{ lettre.prenom }}<br>{{ lettre.nom }}</div>
+        <div class="lp-side-block">
+            {% if lettre.email %}<div class="lp-side-item">{{ lettre.email }}</div>{% endif %}
+            {% if lettre.telephone %}<div class="lp-side-item">{{ lettre.telephone }}</div>{% endif %}
+            {% if lettre.adresse %}<div class="lp-side-item">{{ lettre.adresse }}</div>{% endif %}
+            {% if lettre.codePostal or lettre.ville %}<div class="lp-side-item">{{ lettre.codePostal }} {{ lettre.ville }}</div>{% endif %}
+        </div>
+    </div>
+    <div class="lp-body">
+        <div class="lp-date">{{ lettre.lieu|default:"Abidjan" }}, le {{ lettre.date }}</div>
+        <div class="lp-recipient">
+            <div class="lp-rcp-name">{{ lettre.titreDestinataire }} {{ lettre.nomDestinataire }}</div>
+            {% if lettre.posteDestinataire %}<div class="lp-rcp-fn">{{ lettre.posteDestinataire }}</div>{% endif %}
+            {% if lettre.entreprise %}<div style="font-weight:600;">{{ lettre.entreprise }}</div>{% endif %}
+            {% if lettre.villeEntreprise %}<div class="lp-rcp-city">{{ lettre.villeEntreprise }}</div>{% endif %}
+        </div>
+        {% if lettre.objet %}
+        <div class="lp-objet"><span class="lp-objet-lbl">{% trans "Objet :" %} </span>{{ lettre.objet }}</div>
+        {% endif %}
+        <div class="lp-letter">
+            <p class="lp-salut">
+                {% if lettre.titreDestinataire == "M." or lettre.titreDestinataire == "M" %}Monsieur
+                {% elif lettre.titreDestinataire == "Mme" or lettre.titreDestinataire == "Mme." %}Madame
+                {% elif lettre.titreDestinataire == "Dr." %}Docteur
+                {% elif lettre.titreDestinataire == "Pr." %}Professeur
+                {% else %}{{ lettre.titreDestinataire }}{% endif %},
+            </p>
+            {% if lettre.corps %}<p class="lp-para">{{ lettre.corps }}</p>{% endif %}
+            <p class="lp-formule">{{ lettre.formuleFull }}</p>
+        </div>
+        <div class="lp-sig">{{ lettre.prenom }} {{ lettre.nom }}</div>
+    </div>
+</div>
+</div>
+
+{% elif modele.famille == 'accroche' %}
+{# ── FAMILLE : accroche mise en avant (objet affiché en grande citation) ── #}
+<div class="skin-{{ modele.slug }} lp-family-accroche">
+<div class="lp-wrap">
+    <div class="lp-top">
+        <div class="lp-name">{{ lettre.prenom }} {{ lettre.nom }}</div>
+        <div class="lp-contact-row">
+            {% if lettre.email %}<span>{{ lettre.email }}</span>{% endif %}
+            {% if lettre.telephone %}<span>{{ lettre.telephone }}</span>{% endif %}
+            {% if lettre.ville %}<span>{{ lettre.codePostal }} {{ lettre.ville }}</span>{% endif %}
+        </div>
+    </div>
+    {% if lettre.objet %}
+    <div class="lp-quote">{{ lettre.objet }}</div>
+    {% endif %}
+    <div class="lp-main">
+        <div class="lp-date">{{ lettre.lieu|default:"Abidjan" }}, le {{ lettre.date }}</div>
+        <div class="lp-recipient">
+            <div class="lp-rcp-name">{{ lettre.titreDestinataire }} {{ lettre.nomDestinataire }}</div>
+            {% if lettre.posteDestinataire %}<div class="lp-rcp-fn">{{ lettre.posteDestinataire }}</div>{% endif %}
+            {% if lettre.entreprise %}<div style="font-weight:600;">{{ lettre.entreprise }}</div>{% endif %}
+            {% if lettre.villeEntreprise %}<div class="lp-rcp-city">{{ lettre.villeEntreprise }}</div>{% endif %}
+        </div>
+        <div class="lp-letter">
+            <p class="lp-salut">
+                {% if lettre.titreDestinataire == "M." or lettre.titreDestinataire == "M" %}Monsieur
+                {% elif lettre.titreDestinataire == "Mme" or lettre.titreDestinataire == "Mme." %}Madame
+                {% elif lettre.titreDestinataire == "Dr." %}Docteur
+                {% elif lettre.titreDestinataire == "Pr." %}Professeur
+                {% else %}{{ lettre.titreDestinataire }}{% endif %},
+            </p>
+            {% if lettre.corps %}<p class="lp-para">{{ lettre.corps }}</p>{% endif %}
+            <p class="lp-formule">{{ lettre.formuleFull }}</p>
+        </div>
+        <div class="lp-sig">{{ lettre.prenom }} {{ lettre.nom }}</div>
+    </div>
+</div>
+</div>
+
+{% elif modele.famille == 'carte' %}
+{# ── FAMILLE : carte encadrée (lettre contenue dans un cadre) ── #}
+<div class="skin-{{ modele.slug }} lp-family-carte">
+<div class="lp-page">
+<div class="lp-wrap">
+    <div class="lp-top">
+        <div class="lp-sender">
+            <div class="lp-name">{{ lettre.prenom }} {{ lettre.nom }}</div>
+            {% if lettre.adresse %}<div class="lp-contact">{{ lettre.adresse }}</div>{% endif %}
+            {% if lettre.codePostal or lettre.ville %}
+            <div class="lp-contact">{{ lettre.codePostal }}{% if lettre.codePostal and lettre.ville %} {% endif %}{{ lettre.ville }}</div>
+            {% endif %}
+            {% if lettre.telephone %}<div class="lp-contact">{{ lettre.telephone }}</div>{% endif %}
+            {% if lettre.email %}<div class="lp-contact">{{ lettre.email }}</div>{% endif %}
+        </div>
+    </div>
+    <div class="lp-main">
+        <div class="lp-date">{{ lettre.lieu|default:"Abidjan" }}, le {{ lettre.date }}</div>
+        <div class="lp-recipient">
+            <div class="lp-rcp-name">{{ lettre.titreDestinataire }} {{ lettre.nomDestinataire }}</div>
+            {% if lettre.posteDestinataire %}<div class="lp-rcp-fn">{{ lettre.posteDestinataire }}</div>{% endif %}
+            {% if lettre.entreprise %}<div style="font-weight:600;">{{ lettre.entreprise }}</div>{% endif %}
+            {% if lettre.villeEntreprise %}<div class="lp-rcp-city">{{ lettre.villeEntreprise }}</div>{% endif %}
+        </div>
+        {% if lettre.objet %}
+        <div class="lp-objet"><span class="lp-objet-lbl">{% trans "Objet :" %} </span>{{ lettre.objet }}</div>
+        {% endif %}
+        <div class="lp-letter">
+            <p class="lp-salut">
+                {% if lettre.titreDestinataire == "M." or lettre.titreDestinataire == "M" %}Monsieur
+                {% elif lettre.titreDestinataire == "Mme" or lettre.titreDestinataire == "Mme." %}Madame
+                {% elif lettre.titreDestinataire == "Dr." %}Docteur
+                {% elif lettre.titreDestinataire == "Pr." %}Professeur
+                {% else %}{{ lettre.titreDestinataire }}{% endif %},
+            </p>
+            {% if lettre.corps %}<p class="lp-para">{{ lettre.corps }}</p>{% endif %}
+            <p class="lp-formule">{{ lettre.formuleFull }}</p>
+        </div>
+        <div class="lp-sig">{{ lettre.prenom }} {{ lettre.nom }}</div>
+    </div>
+</div>
+</div>
+</div>
+
+{% else %}
+{# ── FAMILLE : classique (bloc unique) — structure d'origine ── #}
+<div class="skin-{{ modele.slug }}">
+<div class="lp-wrap">
+    <div class="lp-top">
+        <div class="lp-sender">
+            <div class="lp-name">{{ lettre.prenom }} {{ lettre.nom }}</div>
+            {% if lettre.adresse %}<div class="lp-contact">{{ lettre.adresse }}</div>{% endif %}
+            {% if lettre.codePostal or lettre.ville %}
+            <div class="lp-contact">{{ lettre.codePostal }}{% if lettre.codePostal and lettre.ville %} {% endif %}{{ lettre.ville }}</div>
+            {% endif %}
+            {% if lettre.telephone %}<div class="lp-contact">{{ lettre.telephone }}</div>{% endif %}
+            {% if lettre.email %}<div class="lp-contact">{{ lettre.email }}</div>{% endif %}
+        </div>
+    </div>
+    <div class="lp-main">
+        <div class="lp-date">{{ lettre.lieu|default:"Abidjan" }}, le {{ lettre.date }}</div>
+        <div class="lp-recipient">
+            <div class="lp-rcp-name">{{ lettre.titreDestinataire }} {{ lettre.nomDestinataire }}</div>
+            {% if lettre.posteDestinataire %}<div class="lp-rcp-fn">{{ lettre.posteDestinataire }}</div>{% endif %}
+            {% if lettre.entreprise %}<div style="font-weight:600;">{{ lettre.entreprise }}</div>{% endif %}
+            {% if lettre.villeEntreprise %}<div class="lp-rcp-city">{{ lettre.villeEntreprise }}</div>{% endif %}
+        </div>
+        {% if lettre.objet %}
+        <div class="lp-objet"><span class="lp-objet-lbl">{% trans "Objet :" %} </span>{{ lettre.objet }}</div>
+        {% endif %}
+        <div class="lp-letter">
+            <p class="lp-salut">
+                {% if lettre.titreDestinataire == "M." or lettre.titreDestinataire == "M" %}Monsieur
+                {% elif lettre.titreDestinataire == "Mme" or lettre.titreDestinataire == "Mme." %}Madame
+                {% elif lettre.titreDestinataire == "Dr." %}Docteur
+                {% elif lettre.titreDestinataire == "Pr." %}Professeur
+                {% else %}{{ lettre.titreDestinataire }}{% endif %},
+            </p>
+            {% if lettre.corps %}<p class="lp-para">{{ lettre.corps }}</p>{% endif %}
+            <p class="lp-formule">{{ lettre.formuleFull }}</p>
+        </div>
+        <div class="lp-sig">{{ lettre.prenom }} {{ lettre.nom }}</div>
+    </div>
+</div>
+</div>
+{% endif %}
+
+</body>
+</html>

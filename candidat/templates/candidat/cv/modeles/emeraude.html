@@ -1,0 +1,604 @@
+{% extends "candidat/base.html" %}
+{% load i18n %}
+{% block titre %}Créer mon CV — {{ modele.nom }} · {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+{% include "candidat/cv/_form_styles.html" %}
+<style>
+/* ═══════════════════════════════════════════════════════
+   EMERAUDE — Vert Forêt #0D3B2E + Or #C9A844
+   Sidebar gauche pleine hauteur · Corps droit épuré
+═══════════════════════════════════════════════════════ */
+
+.cv-sheet-em {
+  width: 794px;
+  min-height: 1123px;
+  background: #FAFAFA;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 12px;
+  color: #1F2937;
+  box-shadow: 0 4px 32px rgba(0,0,0,.15);
+  display: flex;
+}
+
+/* ─── Sidebar gauche ──────────────────────────────── */
+.em-sidebar {
+  width: 35%;
+  background: #0D3B2E;
+  padding: 36px 20px 40px 22px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* ─── Photo — carré aux coins coupés ─────────────── */
+.em-photo-frame {
+  width: 140px; height: 140px;
+  clip-path: polygon(14% 0%, 86% 0%, 100% 14%, 100% 86%, 86% 100%, 14% 100%, 0% 86%, 0% 14%);
+  background: #C9A844;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 22px;
+  flex-shrink: 0;
+}
+.em-photo-inner {
+  width: 130px; height: 130px;
+  clip-path: polygon(14% 0%, 86% 0%, 100% 14%, 100% 86%, 86% 100%, 14% 100%, 0% 86%, 0% 14%);
+  background: #0A2E22;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px; color: rgba(201,168,68,.5);
+  overflow: hidden;
+}
+.em-photo-inner img { width: 130%; height: 130%; object-fit: cover; object-position: center top; }
+
+/* ─── Identité ────────────────────────────────────── */
+.em-identity {
+  text-align: center;
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(201,168,68,.25);
+}
+.em-prenom {
+  font-size: 9.5px; font-weight: 600;
+  color: rgba(255,255,255,.5);
+  letter-spacing: 2.5px; text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.em-nom {
+  font-size: 19px; font-weight: 900;
+  color: #fff; text-transform: uppercase;
+  letter-spacing: .7px; line-height: 1.1;
+  word-break: break-word; margin-bottom: 10px;
+}
+.em-titre {
+  display: inline-block;
+  font-size: 13px; font-weight: 600;
+  color: #0D3B2E;
+  background: #C9A844;
+  padding: 3px 12px; border-radius: 20px;
+  letter-spacing: .3px;
+}
+
+/* ─── Contacts ────────────────────────────────────── */
+.em-contacts {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.em-contact {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 9.5px; color: rgba(255,255,255,.72);
+  margin-bottom: 6px;
+  word-break: break-all;
+}
+.em-contact-icon {
+  color: #C9A844; font-size: 11px;
+  width: 15px; text-align: center; flex-shrink: 0; margin-top: 1px;
+}
+
+/* ─── Titres de sections sidebar ─────────────────── */
+.em-sb-sec { margin-bottom: 18px; }
+.em-sb-title {
+  font-size: 7.5px; font-weight: 800;
+  color: #C9A844; text-transform: uppercase;
+  letter-spacing: 2.5px; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 7px;
+}
+.em-sb-title::after {
+  content: ''; flex: 1;
+  height: 1px; background: rgba(201,168,68,.28);
+}
+
+/* ─── Profil sidebar ──────────────────────────────── */
+.em-profil {
+  font-size: 10px; color: rgba(255,255,255,.68);
+  line-height: 1.7; font-style: italic;
+}
+
+/* ─── Compétences ─────────────────────────────────── */
+.em-skill { margin-bottom: 8px; }
+.em-skill-row {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 3px;
+}
+.em-skill-name { font-size: 10px; color: rgba(255,255,255,.82); }
+.em-skill-dots { display: flex; gap: 3px; }
+.em-skill-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.18); }
+.em-skill-dot.on { background: #C9A844; }
+
+/* ─── Grille 2 colonnes (langues & intérêts) ─────── */
+.em-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+}
+
+/* ─── Langues ─────────────────────────────────────── */
+.em-lang { margin-bottom: 5px; }
+.em-lang-head {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 3px;
+}
+.em-lang-name { font-size: 10px; color: rgba(255,255,255,.82); }
+.em-lang-badge {
+  font-size: 7.5px; font-weight: 700;
+  color: #0D3B2E; background: #C9A844;
+  padding: 1px 6px; border-radius: 3px;
+}
+.em-lang-bar-bg { height: 3px; background: rgba(255,255,255,.15); border-radius: 2px; overflow: hidden; }
+.em-lang-bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, #52B788, #C9A844);
+  border-radius: 2px;
+}
+
+/* ─── Intérêts ────────────────────────────────────── */
+.em-interest-item {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 9.5px; color: rgba(255,255,255,.70);
+  padding: 2px 0;
+}
+.em-interest-dot {
+  width: 4px; height: 4px;
+  border-radius: 50%; background: #52B788; flex-shrink: 0;
+}
+
+/* ─── Certifications sidebar ──────────────────────── */
+.em-certif {
+  margin-bottom: 8px; padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.em-certif:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.em-certif-title { font-size: 10px; font-weight: 700; color: rgba(255,255,255,.88); margin-bottom: 2px; }
+.em-certif-sub {
+  font-size: 9px; color: rgba(255,255,255,.48);
+  display: flex; justify-content: space-between;
+}
+.em-certif-year { color: #C9A844; font-weight: 700; }
+
+/* ─── Corps principal droit ───────────────────────── */
+.em-main {
+  flex: 1;
+  padding: 34px 34px 40px 28px;
+  background: #FAFAFA;
+}
+
+/* ─── En-têtes de sections principales ───────────── */
+.em-sec { margin-bottom: 24px; }
+.em-sec-hdr {
+  display: flex; align-items: center;
+  gap: 10px; margin-bottom: 14px;
+}
+.em-sec-icon {
+  width: 26px; height: 26px;
+  background: #0D3B2E;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.em-sec-title {
+  font-size: 10.5px; font-weight: 800;
+  color: #0D3B2E; text-transform: uppercase;
+  letter-spacing: 1.8px;
+}
+.em-sec-line {
+  flex: 1; height: 1px;
+  background: linear-gradient(to right, rgba(13,59,46,.3), transparent);
+}
+
+/* ─── Entrées (expériences, formation) ────────────── */
+.em-entry {
+  margin-bottom: 15px;
+  padding-left: 14px;
+  border-left: 2px solid rgba(82,183,136,.3);
+  position: relative;
+}
+.em-entry::before {
+  content: '';
+  position: absolute; left: -5px; top: 5px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #52B788; border: 2px solid #FAFAFA;
+}
+.em-entry-head {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; gap: 8px; margin-bottom: 2px;
+}
+.em-entry-title {
+  font-weight: 700; font-size: 12px;
+  color: #111827; line-height: 1.25;
+}
+.em-entry-date {
+  font-size: 8px; font-weight: 800;
+  color: #0D3B2E;
+  background: rgba(13,59,46,.08);
+  border: 1px solid rgba(13,59,46,.2);
+  padding: 2px 8px; border-radius: 20px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.em-entry-org {
+  font-size: 10.5px; color: #0D3B2E;
+  font-weight: 600; margin-bottom: 4px; opacity: .8;
+}
+.em-entry-desc { font-size: 11px; color: #4B5563; line-height: 1.65; }
+
+/* ─── Projets ─────────────────────────────────────── */
+.em-proj-item {
+  margin-bottom: 10px; padding-bottom: 10px;
+  border-bottom: 1px dashed rgba(13,59,46,.15);
+}
+.em-proj-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.em-proj-head {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; gap: 8px; margin-bottom: 2px;
+}
+.em-proj-name { font-weight: 700; font-size: 11px; color: #111827; }
+.em-proj-year { font-size: 9px; color: #52B788; font-weight: 700; white-space: nowrap; }
+.em-proj-desc { font-size: 10.5px; color: #4B5563; }
+.em-proj-link { font-size: 9.5px; color: #6B7280; margin-top: 2px; }
+
+/* ─── Bénévolat ───────────────────────────────────── */
+.em-benev-item {
+  margin-bottom: 10px; padding-bottom: 10px;
+  border-bottom: 1px solid rgba(13,59,46,.1);
+}
+.em-benev-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.em-benev-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.em-benev-role { font-weight: 700; font-size: 11px; color: #111827; }
+.em-benev-date { font-size: 9px; color: #52B788; font-weight: 700; white-space: nowrap; }
+.em-benev-orga { font-size: 10px; color: #6B7280; margin-top: 1px; }
+
+/* ─── Références ──────────────────────────────────── */
+.em-ref {
+  font-style: italic; font-size: 11px; color: #6B7280;
+  padding: 10px 16px;
+  border: 1px dashed rgba(13,59,46,.3);
+  border-radius: 6px; text-align: center;
+  background: rgba(13,59,46,.03);
+}
+
+/* ─── Missions clients (cv-mc-* obligatoire) ─────── */
+.cv-mc-section {
+  margin-top: 8px; padding: 7px 10px 7px 12px;
+  background: rgba(13,59,46,.05);
+  border-left: 3px solid #52B788;
+  border-radius: 0 5px 5px 0;
+}
+.cv-mc-label {
+  font-size: 7pt; font-weight: 700; color: #0D3B2E;
+  text-transform: uppercase; letter-spacing: .7px; margin-bottom: 6px;
+}
+.cv-mc-item {
+  margin-bottom: 6px; padding-bottom: 6px;
+  border-bottom: 1px dashed rgba(13,59,46,.2);
+}
+.cv-mc-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.cv-mc-hdr { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+.cv-mc-title { font-size: 9pt; font-weight: 600; color: #111827; }
+.cv-mc-badge {
+  font-size: 6.5pt; color: #fff; background: #0D3B2E;
+  padding: 1px 7px; border-radius: 3px; white-space: nowrap; flex-shrink: 0;
+}
+.cv-mc-client { font-size: 8pt; color: #6B7280; margin-top: 1px; }
+.cv-mc-desc { font-size: 7.5pt; color: #4B5563; margin-top: 2px; line-height: 1.5; }
+</style>
+{% endblock %}
+
+{% block contenu %}<div class="-mx-6 -my-8" x-data="cvBuilder()"><div class="cv-builder">
+  {% include "candidat/cv/_form_panel.html" %}
+  <div class="preview-panel">
+  <div id="cv-sheet">
+  <div class="cv-sheet-em">
+
+    <!-- ══ SIDEBAR GAUCHE ══ -->
+    <div class="em-sidebar">
+
+      <!-- Photo -->
+      <div class="em-photo-frame">
+        <div class="em-photo-inner">
+          <img x-show="cv.photo" :src="cv.photo" alt="{% trans "Photo" %}">
+          <span x-show="!cv.photo">👤</span>
+        </div>
+      </div>
+
+      <!-- Identité -->
+      <div class="em-identity">
+        <div class="em-prenom" x-text="cv.prenom || 'Prénom'"></div>
+        <div class="em-nom" x-text="cv.nom || 'NOM'"></div>
+        <div class="em-titre" x-show="cv.titre" x-text="cv.titre"></div>
+      </div>
+
+      <!-- Contacts -->
+      <div class="em-contacts">
+        <div class="em-contact" x-show="cv.email">
+          <span class="em-contact-icon">✉</span><span x-text="cv.email"></span>
+        </div>
+        <div class="em-contact" x-show="cv.telephone">
+          <span class="em-contact-icon">☎</span><span x-text="cv.telephone"></span>
+        </div>
+        <div class="em-contact" x-show="cvLoc()">
+          <span class="em-contact-icon">⌖</span><span x-text="cvLoc()"></span>
+        </div>
+        <div class="em-contact" x-show="cv.age">
+          <span class="em-contact-icon">◑</span><span x-text="cv.age + ' ans'"></span>
+        </div>
+        <div class="em-contact" x-show="cv.linkedin">
+          <span class="em-contact-icon">in</span><span x-text="cv.linkedin"></span>
+        </div>
+        <div class="em-contact" x-show="cv.permis">
+          <span class="em-contact-icon">🪪</span><span x-text="'Permis ' + cv.permis"></span>
+        </div>
+        <div class="em-contact" x-show="cv.portfolio">
+          <span class="em-contact-icon">⊕</span><span x-text="cv.portfolio"></span>
+        </div>
+      </div>
+
+      <!-- Profil -->
+      <template x-if="cv.profil">
+        <div class="em-sb-sec">
+          <div class="em-sb-title">{% trans "Profil" %}</div>
+          <div class="em-profil" x-text="cv.profil"></div>
+        </div>
+      </template>
+
+      <!-- Compétences -->
+      <template x-if="vis(cv.competences).filter(c=>c.nom).length > 0">
+        <div class="em-sb-sec">
+          <div class="em-sb-title">{% trans "Compétences" %}</div>
+          <template x-for="skill in vis(cv.competences)" :key="skill.id">
+            <div class="em-skill" x-show="skill.nom">
+              <div class="em-skill-row">
+                <span class="em-skill-name" x-text="skill.nom"></span>
+                <div class="em-skill-dots">
+                  <template x-for="s in 5" :key="s">
+                    <div class="em-skill-dot" :class="s <= niveauDots(skill.niveau) ? 'on' : ''"></div>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Langues -->
+      <template x-if="vis(cv.langues).filter(l=>l.nom).length > 0">
+        <div class="em-sb-sec">
+          <div class="em-sb-title">{% trans "Langues" %}</div>
+          <div class="em-two-col">
+          <template x-for="lang in vis(cv.langues)" :key="lang.id">
+            <div class="em-lang" x-show="lang.nom">
+              <div class="em-lang-head">
+                <span class="em-lang-name" x-text="lang.nom"></span>
+                <span class="em-lang-badge" x-text="niveauCode(lang.niveau, 'langue')"></span>
+              </div>
+              <div class="em-lang-bar-bg">
+                <div class="em-lang-bar-fill" :style="'width:' + (niveauDots(lang.niveau) * 20) + '%'"></div>
+              </div>
+            </div>
+          </template>
+          </div>
+        </div>
+      </template>
+
+      <!-- Intérêts -->
+      <template x-if="cv.interets.filter((i,ii)=>i && !isInteretMasque(ii)).length > 0">
+        <div class="em-sb-sec">
+          <div class="em-sb-title">{% trans "Intérêts" %}</div>
+          <div class="em-two-col">
+          <template x-for="(interet, idx) in cv.interets" :key="idx">
+            <div x-show="interet && !isInteretMasque(idx)" class="em-interest-item">
+              <div class="em-interest-dot"></div>
+              <span x-text="interet"></span>
+            </div>
+          </template>
+          </div>
+        </div>
+      </template>
+
+      <!-- Certifications sidebar -->
+      <template x-if="cv.showCertif && cv.certifs.filter(c=>c.nom).length > 0">
+        <div class="em-sb-sec">
+          <div class="em-sb-title">{% trans "Certifications" %}</div>
+          <template x-for="certif in cv.certifs" :key="certif.id">
+            <div class="em-certif" x-show="certif.nom">
+              <div class="em-certif-title" x-text="certif.nom"></div>
+              <div class="em-certif-sub">
+                <span x-text="certif.organisme"></span>
+                <span class="em-certif-year" x-text="certif.annee"></span>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+    </div><!-- /.em-sidebar -->
+
+    <!-- ══ CORPS PRINCIPAL ══ -->
+    <div class="em-main">
+
+      <!-- Expériences -->
+      <template x-if="cv.experiences.some(e=>expVisible(e))">
+        <div class="em-sec">
+          <div class="em-sec-hdr">
+            <div class="em-sec-icon">💼</div>
+            <div class="em-sec-title">{% trans "Expériences professionnelles" %}</div>
+            <div class="em-sec-line"></div>
+          </div>
+          <template x-for="exp in cv.experiences" :key="exp.id">
+            <div class="em-entry" x-show="expVisible(exp)">
+              <div class="em-entry-head">
+                <div class="em-entry-title" x-text="expTitre(exp)"></div>
+                <div class="em-entry-date" x-show="expTitrePeriodeShow(exp)" x-text="expTitrePeriodeStr(exp)"></div>
+              </div>
+              <template x-if="!exp.postes||exp.postes.length<=1">
+                <div x-show="exp.entreprise||exp.lieu" class="em-entry-org">
+                  <span x-text="exp.entreprise"></span>
+                  <span x-show="exp.lieu" x-text="exp.lieu?' · '+exp.lieu:''"></span>
+                  <span x-show="expPeriodeShow(exp)" style="font-size:7.5pt;color:#94a3b8;margin-left:4px;white-space:nowrap" x-text="expPeriodeStr(exp)"></span>
+                </div>
+              </template>
+              <template x-if="exp.postes&&exp.postes.length>1">
+                <div>
+                  <div x-show="exp.lieu" class="em-entry-org" x-text="'· '+exp.lieu" style="margin-bottom:3px"></div>
+                  <div class="cv-postes-list">
+                    <template x-for="p in exp.postes" :key="p.id">
+                      <div x-show="p.titre" class="cv-postes-row">
+                        <span class="cv-postes-titre" x-text="p.titre"></span>
+                        <span x-show="p.debut||p.enCours" class="cv-postes-date" x-text="formatPeriode(p.debut,p.fin,p.enCours)"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </template>
+              <div class="em-entry-desc" x-show="exp.desc" x-text="exp.desc"></div>
+              <template x-if="exp.hasMissionsClient && exp.missionsClient && exp.missionsClient.filter(mc=>mc.client).length>0">
+                <div class="cv-mc-section">
+                  <div class="cv-mc-label">🏢 Missions clients</div>
+                  <template x-for="mc in exp.missionsClient.filter(mc=>mc.client)" :key="mc.id">
+                    <div class="cv-mc-item">
+                      <div class="cv-mc-hdr">
+                        <div class="cv-mc-title" x-text="mc.client||'—'"></div>
+                        <div x-show="mc.debut||mc.enCours" class="cv-mc-badge" x-text="formatPeriode(mc.debut,mc.fin,mc.enCours)"></div>
+                      </div>
+                      <div x-show="mc.pays||mc.ville" class="cv-mc-client">
+                        <span x-show="mc.pays" x-text="mc.pays"></span>
+                        <span x-show="mc.ville" x-text="mc.pays&&mc.ville?' · '+mc.ville:mc.ville||''"></span>
+                      </div>
+                      <div x-show="mc.desc" class="cv-mc-desc" x-text="mc.desc"></div>
+                    </div>
+                  </template>
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Formation -->
+      <template x-if="vis(cv.formations).filter(f=>f.diplome||f.ecole).length > 0">
+        <div class="em-sec">
+          <div class="em-sec-hdr">
+            <div class="em-sec-icon">🎓</div>
+            <div class="em-sec-title">{% trans "Formation" %}</div>
+            <div class="em-sec-line"></div>
+          </div>
+          <template x-for="form in vis(cv.formations)" :key="form.id">
+            <div class="em-entry" x-show="form.diplome||form.ecole">
+              <div class="em-entry-head">
+                <div class="em-entry-title" x-text="(form.typeSortie==='certification'?'🏅 ':form.typeSortie==='attestation'?'📄 ':'')+(form.diplome||'—')"></div>
+                <div class="em-entry-date" x-text="form.typeSortie==='certification'?(form.expiration?'Exp. '+formatMonth(form.expiration):(form.fin?formatMonth(form.fin):'')):(formatPeriode(form.debut,form.fin,form.enCours)||'—')"></div>
+              </div>
+              <div class="em-entry-org">
+                <span x-text="form.ecole"></span>
+                <span x-show="form.lieu&&form.typeSortie!=='certification'" x-text="form.lieu?' · '+form.lieu:''"></span>
+              </div>
+              <div class="em-entry-desc" x-show="form.domaine" x-text="form.domaine" style="font-style:italic;opacity:.8"></div>
+              <div class="em-entry-desc" x-show="form.typeSortie==='certification'&&form.numero" x-text="'N° '+form.numero"></div>
+              <div class="em-entry-desc" x-show="form.desc" x-text="form.desc"></div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Projets -->
+      <template x-if="cv.showProjets && vis(cv.projets).filter(p=>p.nom).length > 0">
+        <div class="em-sec">
+          <div class="em-sec-hdr">
+            <div class="em-sec-icon">🚀</div>
+            <div class="em-sec-title">{% trans "Projets" %}</div>
+            <div class="em-sec-line"></div>
+          </div>
+          <template x-for="projet in vis(cv.projets)" :key="projet.id">
+            <div class="em-proj-item em-certif" x-show="projet.nom">
+              <div class="em-proj-head">
+                <div class="em-proj-name" x-text="projet.nom"></div>
+                <span class="em-proj-year" x-text="projet.annee"></span>
+              </div>
+              <div class="em-proj-desc" x-text="projet.desc"></div>
+              <div class="em-proj-link" x-show="projet.lien" x-text="projet.lien"></div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Bénévolat -->
+      <template x-if="cv.showBenev && cv.benevs && vis(cv.benevs).filter(b=>b.role||b.orga).length > 0">
+        <div class="em-sec">
+          <div class="em-sec-hdr">
+            <div class="em-sec-icon">🤝</div>
+            <div class="em-sec-title">{% trans "Engagement &amp; Bénévolat" %}</div>
+            <div class="em-sec-line"></div>
+          </div>
+          <template x-for="benev in vis(cv.benevs)" :key="benev.id">
+            <div class="em-benev-item em-entry" x-show="benev.role||benev.orga">
+              <div class="em-benev-head">
+                <div class="em-benev-role" x-text="benev.role"></div>
+                <div class="em-benev-date" x-text="formatPeriode(benev.debut, benev.fin, benev.enCours)"></div>
+              </div>
+              <div class="em-benev-orga" x-text="benev.orga"></div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Références -->
+      <template x-if="cv.showRef">
+        <div class="em-sec">
+          <div class="em-sec-hdr">
+            <div class="em-sec-icon">📋</div>
+            <div class="em-sec-title">{% trans "Références" %}</div>
+            <div class="em-sec-line"></div>
+          </div>
+          <div class="em-ref em-profil">{% trans "Références disponibles sur demande." %}</div>
+        </div>
+      </template>
+
+    </div><!-- /.em-main -->
+
+  </div><!-- /.cv-sheet-em -->
+  </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+
+{% block js_extra %}{% include "candidat/cv/_cvbuilder_js.html" %}
+<script>
+(function () {
+  var PAGE_H = 1123;
+  var _timer = null;
+  function adjustSheet() {
+    var el = document.querySelector('.cv-sheet-em');
+    if (!el) return;
+    el.style.minHeight = '0px';
+    var pages = Math.max(1, Math.ceil(el.scrollHeight / PAGE_H));
+    el.style.minHeight = (pages * PAGE_H) + 'px';
+  }
+  function schedule() { clearTimeout(_timer); _timer = setTimeout(adjustSheet, 60); }
+  document.addEventListener('DOMContentLoaded', function () {
+    adjustSheet();
+    var preview = document.querySelector('.preview-panel');
+    if (preview) new MutationObserver(schedule).observe(preview, { childList:true, subtree:true, characterData:true });
+  });
+})();
+</script>
+{% endblock %}

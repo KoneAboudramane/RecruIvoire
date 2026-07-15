@@ -1,0 +1,155 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Votre code de réinitialisation — {{ logo_site.nom_site }}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Segoe UI',Arial,sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
+         style="background-color:#f3f4f6;padding:40px 16px;">
+    <tr>
+      <td align="center">
+
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
+               style="max-width:520px;background:#ffffff;border-radius:16px;
+                      box-shadow:0 4px 24px rgba(0,0,0,.08);overflow:hidden;">
+
+          <!-- En-tête vert -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#009A44 0%,#007a36 100%);
+                       padding:32px 40px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:800;
+                         letter-spacing:-0.5px;">{{ logo_site.nom_site }}</h1>
+              <p style="margin:6px 0 0;color:rgba(255,255,255,.80);font-size:13px;">
+                La plateforme de recrutement ivoirienne
+              </p>
+            </td>
+          </tr>
+
+          <!-- Corps -->
+          <tr>
+            <td style="padding:40px 40px 32px;">
+
+              <!-- Icône -->
+              <div style="text-align:center;margin-bottom:20px;">
+                <div style="display:inline-block;width:64px;height:64px;border-radius:50%;
+                            background:#d1fae5;border:3px solid #009A44;
+                            line-height:64px;font-size:30px;text-align:center;">
+                  🔑
+                </div>
+              </div>
+
+              <!-- Titre -->
+              <h2 style="margin:0 0 6px;text-align:center;font-size:20px;
+                         font-weight:700;color:#111827;">
+                Réinitialisation du mot de passe
+              </h2>
+              <p style="margin:0 0 28px;text-align:center;font-size:14px;color:#6b7280;">
+                Bonjour <strong style="color:#1f2937;">{{ nom }}</strong>,
+                voici votre code de réinitialisation :
+              </p>
+
+              <!-- Cases code 5 chiffres -->
+              <div style="text-align:center;margin-bottom:28px;">
+                <p style="margin:0 0 14px;font-size:12px;font-weight:600;
+                           color:#065f28;text-transform:uppercase;letter-spacing:1px;">
+                  Code de réinitialisation
+                </p>
+                <table cellpadding="0" cellspacing="0" role="presentation"
+                       style="margin:0 auto;">
+                  <tr>
+                    <td style="padding:0 5px;">
+                      <div style="width:52px;height:64px;background:#F0FFF4;
+                                  border:2px solid #009A44;border-radius:10px;
+                                  text-align:center;line-height:64px;
+                                  font-size:34px;font-weight:900;color:#009A44;
+                                  font-family:'Courier New',monospace;">{{ code.0 }}</div>
+                    </td>
+                    <td style="padding:0 5px;">
+                      <div style="width:52px;height:64px;background:#F0FFF4;
+                                  border:2px solid #009A44;border-radius:10px;
+                                  text-align:center;line-height:64px;
+                                  font-size:34px;font-weight:900;color:#009A44;
+                                  font-family:'Courier New',monospace;">{{ code.1 }}</div>
+                    </td>
+                    <td style="padding:0 5px;">
+                      <div style="width:52px;height:64px;background:#F0FFF4;
+                                  border:2px solid #009A44;border-radius:10px;
+                                  text-align:center;line-height:64px;
+                                  font-size:34px;font-weight:900;color:#009A44;
+                                  font-family:'Courier New',monospace;">{{ code.2 }}</div>
+                    </td>
+                    <td style="padding:0 5px;">
+                      <div style="width:52px;height:64px;background:#F0FFF4;
+                                  border:2px solid #009A44;border-radius:10px;
+                                  text-align:center;line-height:64px;
+                                  font-size:34px;font-weight:900;color:#009A44;
+                                  font-family:'Courier New',monospace;">{{ code.3 }}</div>
+                    </td>
+                    <td style="padding:0 5px;">
+                      <div style="width:52px;height:64px;background:#F0FFF4;
+                                  border:2px solid #009A44;border-radius:10px;
+                                  text-align:center;line-height:64px;
+                                  font-size:34px;font-weight:900;color:#009A44;
+                                  font-family:'Courier New',monospace;">{{ code.4 }}</div>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <!-- Instructions -->
+              <p style="margin:0 0 16px;font-size:14px;color:#374151;text-align:center;
+                         line-height:1.6;">
+                Saisissez ce code sur la page de réinitialisation.<br>
+                Il vous permettra de définir un nouveau mot de passe.
+              </p>
+
+              <!-- Expiration -->
+              <div style="background:#F0FFF4;border:1px solid #A7F3D0;border-radius:10px;
+                          padding:12px 20px;text-align:center;margin-bottom:0;">
+                <p style="margin:0;font-size:13px;color:#065f28;">
+                  ⏱️ Ce code est valable <strong>10 minutes</strong> seulement.
+                </p>
+              </div>
+
+              <!-- Séparateur -->
+              <hr style="margin:28px 0;border:none;border-top:1px solid #e5e7eb;">
+
+              <!-- Note sécurité -->
+              <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.7;">
+                🔒 Si vous n'avez <strong>{% trans "pas" %}</strong> demandé cette réinitialisation,
+                ignorez cet email. Votre mot de passe reste inchangé.
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Bande tricolore ivoirienne -->
+          <tr>
+            <td style="height:4px;background:linear-gradient(to right,
+              #c96010 0%,#c96010 33.33%,
+              #FFFFFF 33.33%,#FFFFFF 66.66%,
+              #009A44 66.66%,#009A44 100%);"></td>
+          </tr>
+
+          <!-- Pied de page -->
+          <tr>
+            <td style="background:#f9fafb;padding:20px 40px;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#9ca3af;">
+                © {{ logo_site.nom_site }} — La plateforme de recrutement ivoirienne<br>
+                Vous recevez cet email car une demande de réinitialisation a été effectuée.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

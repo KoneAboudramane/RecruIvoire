@@ -1,0 +1,605 @@
+﻿{% extends "candidat/base.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Mes notifications" %} — {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+<style>
+    .notif-card {
+        transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    .notif-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(0,0,0,.07);
+        border-color: #FED7AA;
+    }
+    .notif-non-lue {
+        background: #FFF8F0;
+        border-color: #FED7AA;
+    }
+    @keyframes slideOut {
+        to { opacity: 0; transform: translateX(-30px); height: 0; padding: 0; margin: 0; }
+    }
+    .notif-disparait {
+        animation: slideOut .35s ease forwards;
+        overflow: hidden;
+    }
+
+    /* ── MODE SOMBRE ────────────────────────────────────────── */
+    html.dark .notif-non-lue  { background: rgba(201,96,16,.08) !important; border-color: rgba(201,96,16,.35) !important; }
+    html.dark .notif-card     { background: #1e293b !important; border-color: #334155 !important; }
+    html.dark .notif-card:hover { border-color: rgba(201,96,16,.4) !important; }
+
+    html.dark .text-gray-800 { color: #e2e8f0 !important; }
+    html.dark .text-gray-700 { color: #cbd5e1 !important; }
+    html.dark .text-gray-600 { color: #94a3b8 !important; }
+    html.dark .text-gray-500 { color: #64748b !important; }
+    html.dark .text-gray-400 { color: #94a3b8 !important; }
+    html.dark .bg-white       { background-color: #1e293b !important; }
+    html.dark .bg-gray-50     { background-color: #0f172a !important; }
+    html.dark .bg-gray-100    { background-color: #243348 !important; }
+    html.dark .border-gray-100 { border-color: #334155 !important; }
+    html.dark .border-gray-200 { border-color: #475569 !important; }
+    html.dark .border-dashed.border-gray-200 { border-color: #475569 !important; }
+    html.dark .bg-orange-100  { background-color: rgba(201,96,16,.15) !important; }
+    html.dark .text-orange-700 { color: #fb923c !important; }
+
+    /* ── En-tête hero ── */
+    .cand-hero { background:#fff; color:#1f2937; border:1px solid #e5e7eb; }
+    .cand-hero .deco-cercle { display:none; }
+    .cand-hero .text-white { color:#1f2937 !important; }
+    .cand-hero .text-white\/90 { color:#4b5563 !important; }
+    .cand-hero .bg-white\/20 { background:rgba(0,0,0,.06) !important; }
+    .cand-hero .bg-white\/30 { background:rgba(0,0,0,.07) !important; }
+    html.dark .cand-hero { background:#1e293b; color:#f1f5f9; border-color:#334155; }
+    html.dark .cand-hero .deco-cercle { display:block; opacity:.25; }
+    html.dark .cand-hero .text-white { color:#f1f5f9 !important; }
+    html.dark .cand-hero .text-white\/90 { color:rgba(241,245,249,.9) !important; }
+    html.noir .cand-hero { background:linear-gradient(135deg,#000 0%,#080808 60%,#111 100%); color:#f1f5f9; border-color:#222; }
+    html.noir .cand-hero .deco-cercle { display:block; opacity:.12; }
+    html.noir .cand-hero .text-white { color:#f1f5f9 !important; }
+    html.noir .cand-hero .text-white\/90 { color:rgba(241,245,249,.9) !important; }
+
+    /* ── MODE NOIR (OLED) ────────────────────────────────────── */
+    html.noir .notif-non-lue  { background: rgba(201,96,16,.06) !important; border-color: rgba(201,96,16,.28) !important; }
+    html.noir .notif-card     { background: #0d0d0d !important; border-color: #222 !important; }
+    html.noir .notif-card:hover { border-color: rgba(201,96,16,.32) !important; }
+
+    html.noir .text-gray-800 { color: #e2e8f0 !important; }
+    html.noir .text-gray-700 { color: #cbd5e1 !important; }
+    html.noir .text-gray-600 { color: #94a3b8 !important; }
+    html.noir .text-gray-500 { color: #64748b !important; }
+    html.noir .text-gray-400 { color: #94a3b8 !important; }
+    html.noir .bg-white       { background-color: #0d0d0d !important; }
+    html.noir .bg-gray-50     { background-color: #000 !important; }
+    html.noir .bg-gray-100    { background-color: #1a1a1a !important; }
+    html.noir .border-gray-100 { border-color: #222 !important; }
+    html.noir .border-gray-200 { border-color: #333 !important; }
+    html.noir .border-dashed.border-gray-200 { border-color: #333 !important; }
+    html.noir .bg-orange-100  { background-color: rgba(201,96,16,.12) !important; }
+    html.noir .text-orange-700 { color: #fb923c !important; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<section x-data="notificationsPage()" x-init="init()" class="max-w-5xl mx-auto">
+
+    {# ── En-tête ──────────────────────────────────────────────────────── #}
+    <div class="cand-hero rounded-3xl px-6 sm:px-10 py-10 mb-8 relative overflow-hidden shadow-sm">
+        <div class="deco-cercle absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full translate-x-1/3 -translate-y-1/3"></div>
+        <div class="deco-cercle absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full -translate-x-1/2 translate-y-1/2"></div>
+        <div class="relative">
+            <div class="flex items-center gap-3 mb-3">
+                <span class="text-3xl">🔔</span>
+                <h1 class="text-3xl sm:text-4xl font-extrabold">{% trans "Mes notifications" %}</h1>
+            </div>
+            <p class="text-white/90 text-base sm:text-lg mb-4">
+                {% blocktrans %}Retrouvez ici toutes les alertes d'offres correspondant à votre profil, ainsi que les changements de statut de vos candidatures.{% endblocktrans %}
+            </p>
+            <div class="flex flex-wrap items-center gap-3 text-sm">
+                <span class="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full font-semibold">
+                    📦 <span x-text="items.length"></span> {% trans "au total" %}
+                </span>
+                <span x-show="nbNonLues > 0" x-cloak
+                      class="bg-white/30 backdrop-blur-sm px-3 py-1.5 rounded-full font-bold">
+                    🔥 <span x-text="nbNonLues"></span> {% trans "non lue(s)" %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    {# ── Barre d'actions ──────────────────────────────────────────────── #}
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6 bg-white rounded-2xl p-3 border border-gray-100 shadow-sm">
+        <div class="flex flex-wrap items-center gap-2">
+            {# Filtres #}
+            <button type="button" @click="filtre='toutes'"
+                    :class="filtre==='toutes' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300'"
+                    class="text-xs font-semibold px-3 py-2 rounded-lg border transition">
+                {% trans "Toutes" %}
+            </button>
+            <button type="button" @click="filtre='non-lues'"
+                    :class="filtre==='non-lues' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300'"
+                    class="text-xs font-semibold px-3 py-2 rounded-lg border transition flex items-center gap-1.5">
+                {% trans "Non lues" %}
+                <span x-show="nbNonLues > 0"
+                      :class="filtre==='non-lues' ? 'bg-white/30 text-white' : 'bg-orange-100 text-orange-700'"
+                      class="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full"
+                      x-text="nbNonLues"></span>
+            </button>
+            <button type="button" @click="filtre='offres'"
+                    :class="filtre==='offres' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300'"
+                    class="text-xs font-semibold px-3 py-2 rounded-lg border transition">
+                🎯 {% trans "Offres" %}
+            </button>
+            <button type="button" @click="filtre='candidatures'"
+                    :class="filtre==='candidatures' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300'"
+                    class="text-xs font-semibold px-3 py-2 rounded-lg border transition">
+                📋 {% trans "Candidatures" %}
+            </button>
+            <button type="button" @click="filtre='invitations'"
+                    :class="filtre==='invitations' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300'"
+                    class="text-xs font-semibold px-3 py-2 rounded-lg border transition">
+                📩 {% trans "Invitations" %}
+            </button>
+            <button type="button" @click="filtre='entretiens'"
+                    :class="filtre==='entretiens' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300'"
+                    class="text-xs font-semibold px-3 py-2 rounded-lg border transition">
+                📅 {% trans "Entretiens" %}
+            </button>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <button type="button" @click="toutesLues()"
+                    x-show="nbNonLues > 0" x-cloak
+                    class="text-xs font-bold text-white px-4 py-2 rounded-lg transition hover:opacity-90"
+                    style="background:#c96010;">
+                ✓ {% trans "Tout marquer comme lu" %}
+            </button>
+            <button type="button" @click="supprimerToutes()"
+                    x-show="items.length > 0" x-cloak
+                    class="text-xs font-bold text-red-600 bg-white px-4 py-2 rounded-lg transition hover:bg-red-50 border border-red-200 dark:border-red-700/40">
+                🗑 {% trans "Tout supprimer" %}
+            </button>
+        </div>
+    </div>
+
+    {# ── Liste ───────────────────────────────────────────────────────── #}
+    <div x-show="filteredItems().length > 0" class="space-y-3">
+        <template x-for="n in filteredItems()" :key="n.id">
+            <div :id="`notif-${n.id}`"
+                 class="notif-card relative bg-white rounded-2xl p-5 border-2 flex items-start gap-4"
+                 :class="!n.lue ? 'notif-non-lue' : 'border-gray-100'">
+
+                {# Icône #}
+                <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 shadow-md"
+                     :class="!n.lue ? 'text-white' : 'bg-gray-100 text-gray-600'"
+                     :style="!n.lue ? 'background:#c96010' : ''">
+                    <span x-show="n.type === 'OFFRE_MATCH'">🎯</span>
+                    <span x-show="n.type === 'CANDIDATURE'">📋</span>
+                    <span x-show="n.type === 'SYSTEME'">⚙️</span>
+                    <span x-show="n.type === 'INVITATION'">📩</span>
+                    <span x-show="n.type === 'ENTRETIEN'">📅</span>
+                    <span x-show="n.type === 'PROFIL_VU'">👀</span>
+                </div>
+
+                {# Contenu #}
+                <div class="flex-1 min-w-0">
+                    <div class="flex flex-wrap items-start justify-between gap-2 mb-1">
+                        <a :href="lienConv(n)" @click="lire(n)"
+                           class="font-extrabold text-gray-800 hover:text-orange-600 transition leading-tight"
+                           :class="!n.lue ? '' : 'text-gray-600'"
+                           x-text="n.titre"></a>
+                        <span x-show="n.score !== null && n.score !== undefined && n.type !== 'PROFIL_VU'"
+                              x-text="n.score + '%'"
+                              class="text-xs font-bold px-2 py-1 rounded-full text-white whitespace-nowrap"
+                              style="background:#2e7d52;"></span>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-2" x-text="n.message"></p>
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                        <span x-text="formatDate(n.date)"></span>
+                        <template x-if="n.entreprise">
+                            <span>• <span x-text="n.entreprise"></span></span>
+                        </template>
+                    </div>
+                </div>
+
+                {# Actions #}
+                <div class="flex flex-col gap-1 flex-shrink-0">
+                    <button type="button" @click="lire(n); window.location = n.lien;"
+                            x-show="n.lien" x-cloak
+                            class="text-xs font-bold text-white px-3 py-1.5 rounded-lg transition hover:opacity-90"
+                            style="background:#2e7d52;">
+                        {% trans "Voir" %}
+                    </button>
+                    <button type="button" @click="supprimer(n)"
+                            class="text-xs font-semibold text-gray-400 hover:text-red-500 px-3 py-1.5 rounded-lg transition"
+                            :title="'{% trans "Supprimer" %}'">
+                        🗑
+                    </button>
+                </div>
+
+                {# Pastille non-lue (côté droit) #}
+                <span x-show="!n.lue" class="absolute top-3 right-3 w-2.5 h-2.5 rounded-full"
+                      style="background:#c96010;"></span>
+            </div>
+        </template>
+    </div>
+
+    {# ── Empty state ──────────────────────────────────────────────────── #}
+    <div x-show="filteredItems().length === 0" x-cloak
+         class="bg-white rounded-2xl p-16 border border-dashed border-gray-200 text-center">
+        <div class="text-6xl mb-4">📭</div>
+        <h3 class="text-xl font-bold text-gray-700 mb-2">
+            <span x-show="filtre === 'toutes'">{% trans "Aucune notification" %}</span>
+            <span x-show="filtre === 'non-lues'">{% trans "Aucune notification non lue" %}</span>
+            <span x-show="filtre === 'offres'">{% trans "Aucune alerte d'offre" %}</span>
+            <span x-show="filtre === 'candidatures'">{% trans "Aucune notification de candidature" %}</span>
+            <span x-show="filtre === 'invitations'">{% trans "Aucune notification d'invitation" %}</span>
+            <span x-show="filtre === 'entretiens'">{% trans "Aucune notification d'entretien" %}</span>
+        </h3>
+        <p class="text-gray-500 text-sm mb-6">
+            {% trans "Activez le matching et complétez votre profil pour recevoir des alertes pertinentes." %}
+        </p>
+        <a href="{% url 'candidat:offres' %}"
+           class="inline-block text-white font-bold px-6 py-3 rounded-xl text-sm shadow-sm hover:opacity-90 transition"
+           style="background:#c96010;">
+            🔍 {% trans "Parcourir les offres" %}
+        </a>
+    </div>
+
+</section>
+
+{# ── Section Alertes emploi ──────────────────────────────────────────────── #}
+<section x-data="alertesPage({{ alertes_actives|yesno:'true,false' }})" x-init="init()"
+         class="max-w-5xl mx-auto mt-10">
+
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div>
+            <h2 class="text-2xl font-extrabold text-gray-800">🔔 {% trans "Mes alertes emploi" %}</h2>
+            <p class="text-sm text-gray-500 mt-1">{% trans "Recevez une notification dès qu'une offre correspond à vos critères." %}</p>
+        </div>
+        {# Master toggle #}
+        <label class="flex items-center gap-3 cursor-pointer select-none">
+            <span class="text-sm font-semibold text-gray-700">{% trans "Alertes actives" %}</span>
+            <div @click="toggleMaster()"
+                 :class="masterActif ? 'bg-green-500' : 'bg-gray-300'"
+                 class="relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer">
+                <span :class="masterActif ? 'translate-x-6' : 'translate-x-1'"
+                      class="absolute top-1 left-0 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 inline-block"></span>
+            </div>
+        </label>
+    </div>
+
+    {# Liste des alertes #}
+    <div class="space-y-3 mb-6">
+        <template x-for="a in alertes" :key="a.id">
+            <div class="bg-white rounded-2xl border-2 border-gray-100 p-4 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex-1 min-w-0">
+                    <div class="flex flex-wrap gap-2 mb-1">
+                        <template x-if="a.motsCles">
+                            <span class="text-xs font-bold px-2 py-1 rounded-full bg-orange-100 text-orange-700"
+                                  x-text="a.motsCles"></span>
+                        </template>
+                        <template x-for="tc in a.typeContrat" :key="tc">
+                            <span class="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100"
+                                  x-text="tc"></span>
+                        </template>
+                        <template x-for="v in a.ville" :key="v">
+                            <span class="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600"
+                                  x-text="'📍 ' + v"></span>
+                        </template>
+                        <template x-if="a.salaireMin">
+                            <span class="text-xs px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-100"
+                                  x-text="'≥ ' + a.salaireMin.toLocaleString() + ' FCFA'"></span>
+                        </template>
+                    </div>
+                    <p class="text-xs text-gray-400" x-text="'Créée le ' + a.creeLe"></p>
+                </div>
+                <div class="flex items-center gap-2">
+                    {# Toggle alerte individuelle #}
+                    <div @click="toggleAlerte(a)"
+                         :class="a.active ? 'bg-green-500' : 'bg-gray-300'"
+                         class="relative w-10 h-5 rounded-full transition-colors duration-200 cursor-pointer flex-shrink-0">
+                        <span :class="a.active ? 'translate-x-5' : 'translate-x-1'"
+                              class="absolute top-0.5 left-0 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 inline-block"></span>
+                    </div>
+                    <button @click="supprimerAlerte(a.id)"
+                            class="text-gray-400 hover:text-red-500 transition text-lg px-1"
+                            title="{% trans "Supprimer cette alerte" %}">🗑</button>
+                </div>
+            </div>
+        </template>
+
+        <div x-show="alertes.length === 0" x-cloak
+             class="bg-white rounded-2xl border border-dashed border-gray-200 p-10 text-center text-gray-400">
+            <div class="text-4xl mb-3">🔕</div>
+            <p class="text-sm">{% trans "Aucune alerte configurée." %}</p>
+        </div>
+    </div>
+
+    {# Formulaire de création #}
+    <div x-show="!showForm" class="text-center mb-4">
+        <button @click="showForm=true" x-show="alertes.length < 10"
+                class="text-sm font-bold text-white px-5 py-2.5 rounded-xl shadow hover:opacity-90 transition"
+                style="background:#c96010;">
+            + {% trans "Nouvelle alerte" %}
+        </button>
+        <p x-show="alertes.length >= 10" class="text-sm text-gray-400">
+            {% trans "Maximum 10 alertes actives atteint." %}
+        </p>
+    </div>
+
+    <div x-show="showForm" x-cloak
+         class="bg-white rounded-2xl border-2 border-orange-100 p-6 shadow-sm mb-6">
+        <h3 class="text-base font-extrabold text-gray-800 mb-4">{% trans "Créer une alerte" %}</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">{% trans "Mots-clés (postes)" %}</label>
+                <input x-model="form.motsCles" type="text"
+                       placeholder="{% trans "ex : Comptable, Développeur, Commercial" %}"
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-300 focus:border-orange-400 outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">{% trans "Salaire minimum (FCFA)" %}</label>
+                <input x-model.number="form.salaireMin" type="number" min="0" step="10000"
+                       placeholder="{% trans "ex : 150000" %}"
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-300 focus:border-orange-400 outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">{% trans "Types de contrat" %}</label>
+                <div class="flex flex-wrap gap-2">
+                    <template x-for="tc in typeContratOptions" :key="tc.val">
+                        <label class="flex items-center gap-1 cursor-pointer text-xs">
+                            <input type="checkbox" :value="tc.val" x-model="form.typeContrat"
+                                   class="rounded border-gray-300 text-orange-500 focus:ring-orange-300">
+                            <span x-text="tc.label"></span>
+                        </label>
+                    </template>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">{% trans "Villes" %}</label>
+                <input x-model="form.villeInput" type="text"
+                       @keydown.enter.prevent="ajouterVille()"
+                       @keydown.comma.prevent="ajouterVille()"
+                       placeholder="{% trans "Tapez une ville et Entrée" %}"
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-300 focus:border-orange-400 outline-none">
+                <div class="flex flex-wrap gap-1 mt-2">
+                    <template x-for="(v, i) in form.ville" :key="i">
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span x-text="v"></span>
+                            <button @click="form.ville.splice(i,1)" class="text-gray-400 hover:text-red-400 font-bold">×</button>
+                        </span>
+                    </template>
+                </div>
+            </div>
+        </div>
+        <p x-show="erreur" x-text="erreur" class="text-red-600 text-xs mt-3"></p>
+        <div class="flex gap-3 mt-5">
+            <button @click="creerAlerte()"
+                    class="text-sm font-bold text-white px-5 py-2 rounded-xl hover:opacity-90 transition"
+                    style="background:#2e7d52;">
+                {% trans "Enregistrer" %}
+            </button>
+            <button @click="showForm=false; resetForm()"
+                    class="text-sm font-semibold text-gray-500 px-5 py-2 rounded-xl hover:bg-gray-100 transition">
+                {% trans "Annuler" %}
+            </button>
+        </div>
+    </div>
+
+</section>
+
+{% csrf_token %}
+{% endblock %}
+
+{% block js_extra %}
+<script>
+function notificationsPage() {
+    return {
+        items:     [],
+        nbNonLues: 0,
+        filtre:    'toutes',
+        loading:   false,
+
+        async init() {
+            await this.refresh();
+        },
+
+        async refresh() {
+            this.loading = true;
+            try {
+                const r = await fetch('{% url "candidat:api_notifications_lister" %}?limit=50');
+                const d = await r.json();
+                if (d.ok) {
+                    this.items     = d.items || [];
+                    this.nbNonLues = d.nb_non_lues || 0;
+                }
+            } catch (e) { console.warn(e); }
+            finally { this.loading = false; }
+        },
+
+        filteredItems() {
+            switch (this.filtre) {
+                case 'non-lues':     return this.items.filter(n => !n.lue);
+                case 'offres':       return this.items.filter(n => n.type === 'OFFRE_MATCH');
+                case 'candidatures': return this.items.filter(n => n.type === 'CANDIDATURE');
+                case 'invitations':  return this.items.filter(n => n.type === 'INVITATION');
+                case 'entretiens':   return this.items.filter(n => n.type === 'ENTRETIEN');
+                default:             return this.items;
+            }
+        },
+
+        lienConv(n) { return n.lien || '#'; },
+
+        async lire(n) {
+            if (n.lue) return;
+            try {
+                const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+                await fetch(`/candidat/api/notifications/${n.id}/lire/`, {
+                    method: 'POST', headers: { 'X-CSRFToken': csrf },
+                });
+                n.lue = true;
+                this.nbNonLues = Math.max(0, this.nbNonLues - 1);
+            } catch (e) { console.warn(e); }
+        },
+
+        async toutesLues() {
+            try {
+                const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+                await fetch('{% url "candidat:api_notifications_toutes_lues" %}', {
+                    method: 'POST', headers: { 'X-CSRFToken': csrf },
+                });
+                this.items.forEach(n => n.lue = true);
+                this.nbNonLues = 0;
+            } catch (e) { console.warn(e); }
+        },
+
+        async supprimerToutes() {
+            if (!confirm("Supprimer toutes vos notifications ? Cette action est définitive.")) return;
+            try {
+                const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+                await fetch('{% url "candidat:api_notifications_supprimer_toutes" %}', {
+                    method: 'POST', headers: { 'X-CSRFToken': csrf },
+                });
+                this.items     = [];
+                this.nbNonLues = 0;
+            } catch (e) { console.warn(e); }
+        },
+
+        async supprimer(n) {
+            try {
+                const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+                // Animation de sortie
+                const el = document.getElementById(`notif-${n.id}`);
+                if (el) el.classList.add('notif-disparait');
+                await new Promise(r => setTimeout(r, 350));
+                await fetch(`/candidat/api/notifications/${n.id}/supprimer/`, {
+                    method: 'POST', headers: { 'X-CSRFToken': csrf },
+                });
+                if (!n.lue) this.nbNonLues = Math.max(0, this.nbNonLues - 1);
+                this.items = this.items.filter(x => x.id !== n.id);
+            } catch (e) { console.warn(e); }
+        },
+
+        formatDate(iso) {
+            try {
+                const d = new Date(iso);
+                const diff = (Date.now() - d.getTime()) / 1000;
+                if (diff < 60)        return 'À l\'instant';
+                if (diff < 3600)      return `Il y a ${Math.floor(diff / 60)} min`;
+                if (diff < 86400)     return `Il y a ${Math.floor(diff / 3600)} h`;
+                if (diff < 86400 * 7) return `Il y a ${Math.floor(diff / 86400)} j`;
+                return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+            } catch (e) { return ''; }
+        },
+    };
+}
+
+function alertesPage(masterActifInitial) {
+    return {
+        alertes:      [],
+        masterActif:  masterActifInitial,
+        showForm:     false,
+        erreur:       '',
+        typeContratOptions: [
+            { val: 'CDI',        label: 'CDI' },
+            { val: 'CDD',        label: 'CDD' },
+            { val: 'STAGE',      label: 'Stage' },
+            { val: 'FREELANCE',  label: 'Freelance' },
+            { val: 'ALTERNANCE', label: 'Alternance' },
+        ],
+        form: { motsCles: '', typeContrat: [], ville: [], villeInput: '', salaireMin: null },
+
+        async init() { await this.charger(); },
+
+        async charger() {
+            try {
+                const r = await fetch('{% url "candidat:api_alertes_liste" %}');
+                const d = await r.json();
+                if (d.ok) this.alertes = d.alertes;
+            } catch (e) { console.warn(e); }
+        },
+
+        async toggleMaster() {
+            const nouvel = !this.masterActif;
+            this.masterActif = nouvel;
+            const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+            try {
+                await fetch('{% url "candidat:api_alertes_master_toggle" %}', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ actif: nouvel }),
+                });
+            } catch (e) { console.warn(e); }
+        },
+
+        async toggleAlerte(a) {
+            const nouvel = !a.active;
+            a.active = nouvel;
+            const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+            try {
+                await fetch(`/candidat/api/alertes/${a.id}/toggle/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ actif: nouvel }),
+                });
+            } catch (e) { console.warn(e); }
+        },
+
+        async supprimerAlerte(id) {
+            if (!confirm('Supprimer cette alerte ?')) return;
+            const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+            try {
+                await fetch(`/candidat/api/alertes/${id}/supprimer/`, {
+                    method: 'POST', headers: { 'X-CSRFToken': csrf },
+                });
+                this.alertes = this.alertes.filter(a => a.id !== id);
+            } catch (e) { console.warn(e); }
+        },
+
+        ajouterVille() {
+            const v = this.form.villeInput.trim();
+            if (v && !this.form.ville.includes(v)) this.form.ville.push(v);
+            this.form.villeInput = '';
+        },
+
+        resetForm() {
+            this.form = { motsCles: '', typeContrat: [], ville: [], villeInput: '', salaireMin: null };
+            this.erreur = '';
+        },
+
+        async creerAlerte() {
+            this.erreur = '';
+            if (this.form.villeInput.trim()) this.ajouterVille();
+            const payload = {
+                mots_cles:   this.form.motsCles.trim(),
+                type_contrat: this.form.typeContrat,
+                ville:        this.form.ville,
+                salaire_min:  this.form.salaireMin || null,
+            };
+            if (!payload.mots_cles && !payload.type_contrat.length && !payload.ville.length && !payload.salaire_min) {
+                this.erreur = 'Veuillez renseigner au moins un critère.';
+                return;
+            }
+            const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+            try {
+                const r = await fetch('{% url "candidat:api_alerte_creer" %}', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const d = await r.json();
+                if (d.ok) {
+                    this.alertes.unshift(d.alerte);
+                    this.showForm = false;
+                    this.resetForm();
+                    this.masterActif = true;
+                } else {
+                    this.erreur = d.erreur || 'Erreur lors de la création.';
+                }
+            } catch (e) { this.erreur = 'Erreur réseau.'; }
+        },
+    };
+}
+</script>
+{% endblock %}

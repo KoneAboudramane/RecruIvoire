@@ -1,0 +1,117 @@
+{% extends "base_public.html" %}
+{% load i18n %}
+
+{% block titre %}{% if page %}{{ page.titre }}{% else %}Conditions Générales d'Utilisation{% endif %} — {{ logo_site.nom_site }}{% endblock %}
+{% block meta_description %}Conditions Générales d'Utilisation de {{ logo_site.nom_site }} — Règles d'accès et d'utilisation de la plateforme de recrutement.{% endblock %}
+
+{% block css_extra %}
+<style>
+/* ── Mode sombre ──────────────────────────────────────────────────── */
+html.dark .legal-header h1 { color: #f1f5f9; }
+html.dark .legal-header p,
+html.dark .legal-header .text-gray-500,
+html.dark .legal-header .text-gray-600 { color: #94a3b8; }
+html.dark .legal-header .text-gray-400 { color: #64748b; }
+html.dark .legal-card { background: #1e293b; border-color: #334155; box-shadow: 0 1px 6px rgba(0,0,0,.2); }
+html.dark .legal-card h2,
+html.dark .legal-card h3 { color: #f1f5f9; }
+html.dark .legal-card p,
+html.dark .legal-card li,
+html.dark .legal-card dd { color: #94a3b8; }
+html.dark .legal-card dt { color: #cbd5e1; }
+html.dark .legal-card .text-gray-700 { color: #cbd5e1; }
+html.dark .legal-card .text-gray-400 { color: #64748b; }
+html.dark .legal-card .border-gray-200 { border-color: #334155; color: #94a3b8; }
+html.dark .legal-card .hover\:bg-gray-50:hover { background: #334155; }
+html.dark .cgu-notice { background: #1c1500; border-color: #78350f; color: #fcd34d; }
+html.dark .legal-footer { background: #1e293b; border-color: #334155; }
+html.dark .legal-footer p,
+html.dark .legal-footer .text-gray-500 { color: #94a3b8; }
+html.dark .legal-footer .border-gray-200 { border-color: #334155; color: #94a3b8; }
+html.dark .legal-footer .hover\:bg-gray-50:hover { background: #334155; }
+
+/* ── Mode noir ────────────────────────────────────────────────────── */
+html.noir .legal-header h1 { color: #f9fafb; }
+html.noir .legal-header p,
+html.noir .legal-header .text-gray-500,
+html.noir .legal-header .text-gray-600 { color: #9ca3af; }
+html.noir .legal-header .text-gray-400 { color: #6b7280; }
+html.noir .legal-card { background: #111827; border-color: #1f2937; box-shadow: 0 1px 6px rgba(0,0,0,.4); }
+html.noir .legal-card h2,
+html.noir .legal-card h3 { color: #f9fafb; }
+html.noir .legal-card p,
+html.noir .legal-card li,
+html.noir .legal-card dd { color: #9ca3af; }
+html.noir .legal-card dt { color: #d1d5db; }
+html.noir .legal-card .text-gray-700 { color: #d1d5db; }
+html.noir .legal-card .text-gray-400 { color: #6b7280; }
+html.noir .legal-card .border-gray-200 { border-color: #1f2937; color: #9ca3af; }
+html.noir .legal-card .hover\:bg-gray-50:hover { background: #1f2937; }
+html.noir .cgu-notice { background: #1c1500; border-color: #78350f; color: #fde68a; }
+html.noir .legal-footer { background: #111827; border-color: #1f2937; }
+html.noir .legal-footer p,
+html.noir .legal-footer .text-gray-500 { color: #9ca3af; }
+html.noir .legal-footer .border-gray-200 { border-color: #1f2937; color: #9ca3af; }
+html.noir .legal-footer .hover\:bg-gray-50:hover { background: #1f2937; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="max-w-3xl mx-auto px-4 py-12">
+
+    <div class="legal-header mb-8">
+        <div class="flex items-center gap-2 text-sm text-gray-400 mb-4">
+            <a href="{% url 'candidat:accueil' %}" class="hover:underline" style="color:#c96010;">{% trans "Accueil" %}</a>
+            <span>/</span>
+            <span class="text-gray-600 font-medium">CGU</span>
+        </div>
+        <h1 class="text-3xl font-extrabold text-gray-800 mb-2">
+            📋 {% if page %}{{ page.titre }}{% else %}{% trans "Conditions Générales d'Utilisation" %}{% endif %}
+        </h1>
+        {% if page and page.mise_a_jour %}
+            <p class="text-gray-500 text-sm">{% trans "Mise à jour :" %} <strong>{{ page.mise_a_jour|date:"F Y" }}</strong> — {{ logo_site.nom_site }}</p>
+        {% endif %}
+    </div>
+
+    <div class="space-y-6">
+
+        <!-- Notice / chapeau -->
+        {% if page and page.description %}
+        <div class="cgu-notice bg-amber-50 border border-amber-200 rounded-2xl p-5 text-sm text-amber-800">
+            {{ page.description|safe }}
+        </div>
+        {% endif %}
+
+        <!-- Sections dynamiques -->
+        {% for section in sections %}
+        <div class="legal-card bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <h2 class="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
+                <span class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center flex-shrink-0" style="background:#c96010;">{{ forloop.counter }}</span>
+                {{ section.titre }}
+            </h2>
+            <div class="text-sm text-gray-600 leading-relaxed">
+                {{ section.contenu|safe }}
+            </div>
+        </div>
+        {% empty %}
+        <div class="legal-card bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center text-gray-400">
+            {% trans "Aucun article disponible." %}
+        </div>
+        {% endfor %}
+
+    </div>
+
+    <div class="legal-footer mt-10 flex flex-col sm:flex-row gap-4 items-center justify-between p-5 rounded-2xl border border-gray-100 bg-white shadow-sm">
+        <p class="text-sm text-gray-500">{% trans "Des questions sur nos conditions ?" %}</p>
+        <div class="flex gap-3">
+            <a href="{% url 'contenu:contact' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-sm font-bold hover:opacity-90 transition" style="background:#c96010;">
+                {% trans "Nous contacter" %}
+            </a>
+            <a href="{% url 'contenu:confidentialite' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold border border-gray-200 text-gray-600 hover:bg-gray-50 transition">
+                {% trans "Politique de confidentialité" %}
+            </a>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

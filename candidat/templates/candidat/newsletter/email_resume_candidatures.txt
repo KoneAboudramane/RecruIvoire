@@ -1,0 +1,33 @@
+{{ logo_site.nom_site }} — Résumé de vos candidatures
+Semaine du {{ semaine }}
+======================================================
+
+Bonjour {{ candidat.prenom }},
+
+Voici un point sur vos candidatures en cours.
+
+EN COURS : {{ donnees.total_actives }}
+{% for label, nb in donnees.stats.items %}  • {{ label }} : {{ nb }}
+{% endfor %}
+{% if donnees.total_recentes %}CLÔTURÉES CETTE SEMAINE : {{ donnees.total_recentes }}
+{% endif %}
+
+{% if donnees.actives %}── CANDIDATURES EN COURS ──────────────────────────
+
+{% for c in donnees.actives %}▸ {{ c.offre.titre }}
+  Entreprise : {{ c.offre.entreprise.raisonSocial }}
+  Statut     : {{ c.statut.libelle|default:"En attente" }}
+  Date       : {{ c.dateCandidature|date:"d/m/Y" }}
+
+{% endfor %}{% endif %}{% if donnees.recentes %}── CLÔTURÉES CETTE SEMAINE ────────────────────────
+
+{% for c in donnees.recentes %}▸ {{ c.offre.titre }}
+  Entreprise : {{ c.offre.entreprise.raisonSocial }}
+  Statut     : {{ c.statut.libelle|default:"Clôturée" }}
+
+{% endfor %}{% endif %}
+Voir toutes mes candidatures : {{ site_url }}/candidat/mes-candidatures/
+
+---
+Vous recevez cet e-mail car vous avez activé le résumé hebdomadaire sur {{ logo_site.nom_site }}.
+Pour gérer vos préférences : {{ desabo_url }}

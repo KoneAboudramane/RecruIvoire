@@ -1,0 +1,187 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<style>
+.sp-title    { font-size: 22px; font-weight: 900; color: #1e293b; margin-bottom: 4px; }
+.sp-subtitle { font-size: 13px; color: #94a3b8; margin-bottom: 28px; }
+.sp-back     { display: inline-flex; align-items: center; gap: 8px; background: #f0fdf4; color: #009A44; border: 1px solid #bbf7d0; padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 700; text-decoration: none; margin-bottom: 20px; transition: all .15s; }
+.sp-back:hover { background: #dcfce7; color: #007a36; }
+
+.sp-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 14px; margin-bottom: 28px; }
+.sp-kpi      { background: #fff; border: 1px solid #e8f0ec; border-radius: 18px; padding: 20px 22px; box-shadow: 0 1px 6px rgba(0,0,0,.05); }
+.sp-kpi-val  { font-size: 32px; font-weight: 900; color: #1e293b; line-height: 1; }
+.sp-kpi-lbl  { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; margin-top: 6px; }
+.sp-kpi-sub  { font-size: 11px; color: #009A44; font-weight: 600; margin-top: 4px; }
+.sp-kpi-sub.orange { color: #F77F00; }
+
+.sp-card     { background: #fff; border: 1px solid #e8f0ec; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 6px rgba(0,0,0,.05); margin-bottom: 18px; }
+.sp-card-title { font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+.sp-card-sub   { font-size: 11px; color: #94a3b8; margin-bottom: 18px; }
+
+.sp-two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+.record-box { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; text-align: center; }
+.record-val { font-size: 48px; font-weight: 900; color: #F77F00; line-height: 1; }
+.record-label { font-size: 12px; color: #94a3b8; }
+
+@media (max-width: 900px) { .sp-two { grid-template-columns: 1fr; } }
+
+/* ── Mode sombre ─────────────────────────────────────────────── */
+html.rp-dark .sp-title    { color: #f1f5f9; }
+html.rp-dark .sp-subtitle { color: #94a3b8; }
+html.rp-dark .sp-back     { background: rgba(0,154,68,.15); color: #4ade80; border-color: rgba(0,154,68,.3); }
+html.rp-dark .sp-back:hover { background: rgba(0,154,68,.25); color: #86efac; }
+html.rp-dark .sp-kpi, html.rp-dark .sp-card { background: #1e293b; border-color: #334155; }
+html.rp-dark .sp-kpi-val  { color: #f1f5f9; }
+html.rp-dark .sp-kpi-lbl  { color: #94a3b8; }
+html.rp-dark .sp-kpi-sub  { color: #4ade80; }
+html.rp-dark .sp-kpi-sub.orange { color: #fb923c; }
+html.rp-dark .sp-card-title { color: #cbd5e1; }
+html.rp-dark .sp-card-sub   { color: #94a3b8; }
+html.rp-dark .record-val   { color: #fb923c; }
+html.rp-dark .record-label { color: #94a3b8; }
+
+/* ── Mode noir (OLED) ────────────────────────────────────────── */
+html.rp-noir .sp-title    { color: #f1f5f9; }
+html.rp-noir .sp-subtitle { color: #64748b; }
+html.rp-noir .sp-back     { background: rgba(0,122,53,.10); color: #4ade80; border-color: rgba(0,122,53,.25); }
+html.rp-noir .sp-back:hover { background: rgba(0,122,53,.20); color: #86efac; }
+html.rp-noir .sp-kpi, html.rp-noir .sp-card { background: #000; border-color: #1a1a1a; box-shadow: 0 1px 6px rgba(0,0,0,.6); }
+html.rp-noir .sp-kpi-val  { color: #f1f5f9; }
+html.rp-noir .sp-kpi-lbl  { color: #64748b; }
+html.rp-noir .sp-kpi-sub  { color: #4ade80; }
+html.rp-noir .sp-kpi-sub.orange { color: #fb923c; }
+html.rp-noir .sp-card-title { color: #cbd5e1; }
+html.rp-noir .sp-card-sub   { color: #64748b; }
+html.rp-noir .record-val   { color: #fb923c; }
+html.rp-noir .record-label { color: #64748b; }
+</style>
+
+<a href="/admin/candidat/visiteurjournalier/" class="sp-back">← Retour à la liste</a>
+
+<div class="sp-title">Statistiques — Visiteurs</div>
+<div class="sp-subtitle">Comptage unique par adresse IP — une visite par IP et par jour.</div>
+
+<!-- KPIs -->
+<div class="sp-kpi-grid">
+    <div class="sp-kpi">
+        <div class="sp-kpi-val" style="color:#009A44;">{{ nb_auj }}</div>
+        <div class="sp-kpi-lbl">Aujourd'hui</div>
+        <div class="sp-kpi-sub">visiteurs uniques</div>
+    </div>
+    <div class="sp-kpi">
+        <div class="sp-kpi-val">{{ nb_7j }}</div>
+        <div class="sp-kpi-lbl">7 derniers jours</div>
+        <div class="sp-kpi-sub">cette semaine</div>
+    </div>
+    <div class="sp-kpi">
+        <div class="sp-kpi-val">{{ nb_30j }}</div>
+        <div class="sp-kpi-lbl">30 derniers jours</div>
+        <div class="sp-kpi-sub">ce mois</div>
+    </div>
+    <div class="sp-kpi">
+        <div class="sp-kpi-val">{{ total_all }}</div>
+        <div class="sp-kpi-lbl">Total cumulé</div>
+        <div class="sp-kpi-sub">depuis le début</div>
+    </div>
+    <div class="sp-kpi">
+        <div class="sp-kpi-val" style="color:#F77F00;">{{ record_val }}</div>
+        <div class="sp-kpi-lbl">Record journalier</div>
+        <div class="sp-kpi-sub orange">{{ record_date }}</div>
+    </div>
+</div>
+
+<!-- Courbe 30 jours -->
+<div class="sp-card">
+    <div class="sp-card-title">Visiteurs uniques par jour</div>
+    <div class="sp-card-sub">30 derniers jours — chaque point = visiteurs IP uniques ce jour</div>
+    <canvas id="chartJour" height="90"></canvas>
+</div>
+
+<!-- Semaines + record -->
+<div class="sp-two">
+    <div class="sp-card" style="margin-bottom:0;">
+        <div class="sp-card-title">Visiteurs par semaine</div>
+        <div class="sp-card-sub">12 dernières semaines (total par semaine)</div>
+        <canvas id="chartSem" height="130"></canvas>
+    </div>
+    <div class="sp-card" style="margin-bottom:0;">
+        <div class="sp-card-title">Moyenne journalière</div>
+        <div class="sp-card-sub">Sur les 30 derniers jours</div>
+        <div class="record-box" style="height:calc(100% - 48px);">
+            {% if nb_30j %}
+            <div class="record-val">{{ nb_30j|floatformat:0 }}</div>
+            <div style="font-size:22px;font-weight:700;color:#009A44;">
+                ≈ {% widthratio nb_30j 30 1 %} / jour
+            </div>
+            {% else %}
+            <div style="color:#94a3b8;">Aucune donnée</div>
+            {% endif %}
+            <div class="record-label">Total 30j : {{ nb_30j }} visiteurs uniques</div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+    const GREEN = '#009A44', ORANGE = '#F77F00';
+    const GREEN_T = 'rgba(0,154,68,.12)', ORANGE_T = 'rgba(247,127,0,.15)';
+    const isNoir = document.documentElement.classList.contains('rp-noir');
+    const isDark = isNoir || document.documentElement.classList.contains('rp-dark');
+    Chart.defaults.font.family = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";
+    Chart.defaults.font.size = 11;
+    Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
+    const grid = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.05)';
+
+    /* Visiteurs par jour — 30j */
+    new Chart(document.getElementById('chartJour'), {
+        type: 'line',
+        data: {
+            labels: {{ labels_30|safe }},
+            datasets: [{
+                label: 'Visiteurs uniques',
+                data: {{ data_30|safe }},
+                borderColor: GREEN, backgroundColor: GREEN_T,
+                fill: true, tension: .35,
+                pointBackgroundColor: GREEN, pointRadius: 3, pointHoverRadius: 5,
+                borderWidth: 2,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: { mode: 'index', intersect: false }
+            },
+            scales: {
+                x: { grid: { color: grid }, ticks: { color: '#94a3b8', maxTicksLimit: 10, maxRotation: 0 } },
+                y: { grid: { color: grid }, ticks: { color: '#94a3b8' }, beginAtZero: true }
+            }
+        }
+    });
+
+    /* Visiteurs par semaine — 12 semaines */
+    new Chart(document.getElementById('chartSem'), {
+        type: 'bar',
+        data: {
+            labels: {{ labels_sem|safe }},
+            datasets: [{
+                label: 'Visiteurs / semaine',
+                data: {{ data_sem|safe }},
+                backgroundColor: ORANGE_T, borderColor: ORANGE,
+                borderWidth: 2, borderRadius: 6, borderSkipped: false,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: grid }, ticks: { color: '#94a3b8' } },
+                y: { grid: { color: grid }, ticks: { color: '#94a3b8' }, beginAtZero: true }
+            }
+        }
+    });
+})();
+</script>
+{% endblock %}

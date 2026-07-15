@@ -1,0 +1,618 @@
+{% extends "entreprise/base.html" %}
+{% load i18n %}
+
+{% block titre %}Modifier — {{ offre.titre }}{% endblock %}
+
+{% block css_extra %}
+<style>
+    .step-active { background:#009A44; color:white; border-color:#009A44; }
+    .step-done   { background:#009A44; color:white; border-color:#009A44; }
+    .step-todo   { background:white; color:#9CA3AF; border-color:#E5E7EB; }
+    .tag-skill   { display:inline-flex; align-items:center; gap:.3rem; padding:.25rem .65rem; border-radius:9999px;
+                   background:#DCFCE7; color:#166534; font-size:.75rem; font-weight:600; }
+    .type-card   { border-radius:.75rem; border:2px solid #E5E7EB; padding:.75rem 1rem; text-align:center;
+                   font-size:.85rem; font-weight:600; cursor:pointer; transition:all .2s; color:#6B7280; }
+    .type-card.selected { border-color:#009A44; background:#F0FDF4; color:#166534; }
+    .type-card:not(.selected):hover { border-color:#D1D5DB; color:#374151; }
+    .mode-card   { border-radius:.75rem; border:2px solid #E5E7EB; padding:.75rem; text-align:center;
+                   font-size:.8rem; font-weight:600; cursor:pointer; transition:all .2s; color:#6B7280; }
+    .mode-card.selected { border-color:#009A44; background:#F0FDF4; color:#166534; }
+    .mode-card:not(.selected):hover { border-color:#D1D5DB; }
+    .toggle-btn  { position:relative; display:inline-flex; height:1.5rem; width:2.75rem; align-items:center;
+                   border-radius:9999px; transition:background-color .2s; cursor:pointer; }
+    .toggle-thumb { display:inline-block; height:1rem; width:1rem; border-radius:9999px; background:white;
+                    box-shadow:0 1px 3px rgba(0,0,0,.2); transition:transform .2s; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+
+<!-- Données JSON embarquées pour Alpine.js -->
+{{ offre.competencesRequises|json_script:"offre-competences" }}
+
+<div class="w-full space-y-5" x-data="modifierWizard()" x-init="init()">
+
+    <!-- En-tête -->
+    <div class="flex items-center gap-3">
+        <a href="{% url 'entreprise:offre_detail' offre.pk %}"
+           class="p-2 rounded-xl hover:bg-gray-100 transition text-gray-400 hover:text-gray-700">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+        </a>
+        <div class="flex-1 min-w-0">
+            <h1 class="text-2xl font-extrabold text-gray-900">{% trans "Modifier l'offre" %}</h1>
+            <p class="text-sm text-gray-500 mt-0.5 truncate">{{ offre.titre }}</p>
+        </div>
+        <span class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border"
+              style="background:{{ offre.get_style_statut.bg }};color:{{ offre.get_style_statut.text }};border-color:{{ offre.get_style_statut.dot }}20;">
+            <span class="w-1.5 h-1.5 rounded-full" style="background:{{ offre.get_style_statut.dot }};"></span>
+            {{ offre.get_statutOffre_display }}
+        </span>
+    </div>
+
+    <!-- Bannière erreur Django -->
+    {% if errors %}
+    <div class="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+        <span class="text-red-500 text-xl">⚠️</span>
+        <div class="text-sm text-red-700">
+            <p class="font-semibold mb-1">{% trans "Veuillez corriger les erreurs suivantes :" %}</p>
+            {% for field, msg in errors.items %}<p class="mt-0.5">{{ msg }}</p>{% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Barre de progression -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div class="flex items-center">
+            <template x-for="(label, i) in steps" :key="i">
+                <div class="flex items-center" :class="i < steps.length - 1 ? 'flex-1' : ''">
+                    <div class="flex flex-col items-center shrink-0">
+                        <div class="w-9 h-9 rounded-full border-2 flex items-center justify-center text-sm font-bold transition-all duration-300"
+                             :class="step > i+1 ? 'step-done' : step === i+1 ? 'step-active' : 'step-todo'">
+                            <template x-if="step <= i+1"><span x-text="i+1"></span></template>
+                            <template x-if="step > i+1">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>
+                            </template>
+                        </div>
+                        <span class="text-xs mt-1 font-medium whitespace-nowrap transition-colors"
+                              :class="step === i+1 ? 'text-green-700' : step > i+1 ? 'text-green-500' : 'text-gray-400'"
+                              x-text="label"></span>
+                    </div>
+                    <div x-show="i < steps.length - 1"
+                         class="flex-1 h-0.5 mx-2 rounded-full transition-all duration-500"
+                         :class="step > i+1 ? 'bg-green-400' : 'bg-gray-200'"></div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Formulaire HTML -->
+    <form id="modifierForm" method="post" action="{% url 'entreprise:offre_modifier' offre.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="titre"                    :value="form.titre">
+        {# IDs FK depuis le référentiel BD #}
+        <input type="hidden" name="contratId"                :value="form.contratId">
+        <input type="hidden" name="modeTravailId"            :value="form.modeTravailId">
+        <input type="hidden" name="experienceId"             :value="form.experienceId">
+        <input type="hidden" name="deviseId"                 :value="form.deviseId">
+        <input type="hidden" name="ville"                    :value="form.ville">
+        <input type="hidden" name="pays"                     :value="form.pays">
+        <input type="hidden" name="localisation"             :value="form.localisation">
+        <input type="hidden" name="missions"                 :value="form.missions">
+        <input type="hidden" name="profilRecherche"          :value="form.profilRecherche">
+        <input type="hidden" name="competencesRequises"      :value="form.competencesJson">
+        <input type="hidden" name="niveauEtudeRequis"        :value="form.niveauEtudeRequis">
+        <input type="hidden" name="salaireMin"               :value="form.salaireMin">
+        <input type="hidden" name="salaireMax"               :value="form.salaireMax">
+        <input type="hidden" name="devise"                   :value="form.devise">
+        <input type="hidden" name="dateExpiration"           :value="form.dateExpiration">
+        <input type="hidden" name="cvObligatoire"            :value="form.cvObligatoire ? '1' : '0'">
+        <input type="hidden" name="lettreMotivationnObligatoire" :value="form.lettreObligatoire ? '1' : '0'">
+        <input type="hidden" name="testRequis"               :value="form.testRequis ? '1' : '0'">
+        <input type="hidden" name="scoreMinimum"             :value="form.scoreMinimum">
+        <input type="hidden" name="publierImmediatement"     :value="form.publier ? '1' : '0'">
+        <template x-for="mid in form.managersAssignes" :key="mid">
+            <input type="hidden" name="managers_assignes" :value="mid">
+        </template>
+    </form>
+
+    <!-- ─── Étape 1 : Poste & Localisation ────────────────────────────────── -->
+    <div x-show="step === 1" x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0"
+         class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
+
+        <h2 class="text-base font-bold text-gray-900 pb-3 border-b border-gray-100 flex items-center gap-2">
+            <span class="w-7 h-7 rounded-full bg-green-100 text-green-700 text-xs font-extrabold flex items-center justify-center">1</span>
+            Poste & Localisation
+        </h2>
+
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">{% trans "Titre du poste" %} <span class="text-red-500">*</span></label>
+            <div class="relative" x-data="cbx({ url: '{% url 'referentiel:api_postes' %}', k: 'nomPoste', s: 'domaine' })"
+                 @cbxpick="form.titre=$event.detail.val" x-init="q=form.titre||''">
+                <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput(); form.titre=q" @keydown="onkey($event)" @change="form.titre=q"
+                       placeholder="{% trans "Ex : Développeur Full-Stack Senior" %}"
+                       class="w-full px-4 py-2.5 rounded-xl border text-sm transition focus:outline-none focus:ring-2 focus:ring-green-200 pr-8"
+                       :class="err.titre ? 'border-red-400 bg-red-50' : 'border-gray-200 focus:border-green-400'"
+                       autocomplete="off">
+                <svg class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:220px;overflow-y:auto;">
+                    <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o); form.titre=o.label" class="w-full px-4 py-2.5 text-sm text-left flex items-center justify-between transition-colors" :class="i===hi?'bg-green-50 text-green-700 font-medium':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span><span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-2"></span></button></template>
+                    <div x-show="!sh.length" class="px-4 py-3 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                </div>
+            </div>
+            <p x-show="err.titre" x-text="err.titre" class="text-xs text-red-500 mt-1"></p>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">{% trans "Type de contrat" %} <span class="text-red-500">*</span></label>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {% for contrat in types_contrat %}
+                <div class="type-card" :class="form.contratId === '{{ contrat.id }}' ? 'selected' : ''"
+                     @click="form.contratId = '{{ contrat.id }}'; form.contratLabel = '{{ contrat.libelle|escapejs }}'">{{ contrat.libelle }}</div>
+                {% endfor %}
+            </div>
+            <p x-show="err.typeContrat" x-text="err.typeContrat" class="text-xs text-red-500 mt-1"></p>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">{% trans "Mode de travail" %}</label>
+            <div class="grid grid-cols-3 gap-2">
+                {% for mode in modes_travail %}
+                <div class="mode-card" :class="form.modeTravailId === '{{ mode.id }}' ? 'selected' : ''"
+                     @click="form.modeTravailId = '{{ mode.id }}'; form.modeTravailLabel = '{{ mode.libelle|escapejs }}'">
+                    {% if mode.libelle == 'Présentiel' %}🏢{% elif mode.libelle == 'Télétravail' %}🌐{% else %}🔀{% endif %}
+                    <div class="mt-0.5">{{ mode.libelle }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-4"
+             x-data="{ _pid: null }"
+             @cbxpick="if($event.target.closest('[data-cbxm=pays]')) { _pid=$event.detail.id; const villeEl=$el.querySelector('[data-cbxm=ville]'); if(villeEl){ const s=Alpine.$data(villeEl); if(s) s.reload('/referentiel/api/villes/?pays_id='+_pid); } }">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">{% trans "Pays" %}</label>
+                <div data-cbxm="pays" class="relative"
+                     x-data="cbx({ url: '{% url 'referentiel:api_pays' %}', v: form.pays||'', k: 'nomPays' })"
+                     @cbxpick="form.pays=$event.detail.val" x-init="$watch('q', v => form.pays=v)">
+                    <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)"
+                           placeholder="{% trans "Choisir ou saisir un pays…" %}" class="w-full px-4 py-2.5 pr-9 rounded-xl border border-gray-200 focus:outline-none focus:border-green-400 text-sm" autocomplete="off">
+                    <svg class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                    <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:220px;overflow-y:auto;">
+                        <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o)" class="w-full px-3 py-2.5 text-sm text-left transition-colors" :class="i===hi?'bg-green-50 text-green-700 font-medium':'text-gray-700 hover:bg-gray-50'" x-text="o.label"></button></template>
+                        <div x-show="!sh.length" class="px-3 py-3 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">{% trans "Ville" %}</label>
+                <div class="relative" data-cbxm="ville"
+                     x-data="cbx({ url: '{% url 'referentiel:api_villes' %}?pays_nom={{ data.pays|default:"Côte d'Ivoire"|urlencode }}', v: form.ville||'', k: 'nomVille', s: 'region' })"
+                     @cbxpick="form.ville=$event.detail.val" x-init="$watch('q', v => form.ville=v)">
+                    <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)"
+                           placeholder="{% trans "Choisir ou saisir une ville…" %}" class="w-full px-4 py-2.5 pr-9 rounded-xl border border-gray-200 focus:outline-none focus:border-green-400 text-sm" autocomplete="off">
+                    <svg class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                    <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:220px;overflow-y:auto;">
+                        <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o)" class="w-full px-3 py-2.5 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-green-50 text-green-700 font-medium':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span><span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-3"></span></button></template>
+                        <div x-show="!sh.length" class="px-3 py-3 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">{% trans "Adresse / Quartier" %}</label>
+            <input type="text" x-model="form.localisation" placeholder="{% trans "Ex : Plateau, Immeuble CCIA" %}"
+                   class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-green-400 text-sm">
+        </div>
+
+        {% if managers_disponibles %}
+        <!-- Assigner des managers -->
+        <div class="pt-2 border-t border-gray-100">
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+                👔 Managers assignés <span class="text-gray-400 font-normal">(optionnel)</span>
+            </label>
+            <p class="text-xs text-gray-400 mb-3">{% trans "Les managers sélectionnés verront cette offre et ses candidatures." %}</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {% for m in managers_disponibles %}
+                <label class="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-200 hover:border-green-400 hover:bg-green-50 cursor-pointer transition"
+                       :class="form.managersAssignes.includes({{ m.id }}) ? 'border-green-500 bg-green-50' : ''">
+                    <input type="checkbox" class="hidden"
+                           :checked="form.managersAssignes.includes({{ m.id }})"
+                           @change="form.managersAssignes.includes({{ m.id }})
+                               ? form.managersAssignes = form.managersAssignes.filter(x => {% trans "x !==" %} {{ m.id }})
+                               : form.managersAssignes.push({{ m.id }})">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                         style="background:#1d4ed8;">
+                        {{ m.prenom|first|upper }}{{ m.nom|first|upper }}
+                    </div>
+                    <span class="text-sm font-medium text-gray-700">{{ m.prenom }} {{ m.nom }}</span>
+                    <span x-show="form.managersAssignes.includes({{ m.id }})" class="ml-auto text-green-600 text-sm font-bold">✓</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ─── Étape 2 : Description ──────────────────────────────────────────── -->
+    <div x-show="step === 2" x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0"
+         class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
+
+        <h2 class="text-base font-bold text-gray-900 pb-3 border-b border-gray-100 flex items-center gap-2">
+            <span class="w-7 h-7 rounded-full bg-green-100 text-green-700 text-xs font-extrabold flex items-center justify-center">2</span>
+            Description du poste
+        </h2>
+
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">{% trans "Missions & Responsabilités" %}</label>
+            <p class="text-xs text-gray-400 mb-2">{% trans "Une mission par ligne pour plus de lisibilité" %}</p>
+            <textarea x-model="form.missions" rows="7"
+                      class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-green-400 text-sm resize-none leading-relaxed"></textarea>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">{% trans "Profil recherché" %}</label>
+            <p class="text-xs text-gray-400 mb-2">{% trans "Diplôme, qualités, soft skills…" %}</p>
+            <textarea x-model="form.profilRecherche" rows="5"
+                      class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-green-400 text-sm resize-none leading-relaxed"></textarea>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">{% trans "Compétences techniques" %}</label>
+            <p class="text-xs text-gray-400 mb-2">{% trans "Appuyez sur" %} <kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-500 text-xs">{% trans "Entrée" %}</kbd> ou <kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-500 text-xs">,</kbd> {% trans "pour ajouter" %}</p>
+            <div class="min-h-12 flex flex-wrap gap-2 p-3 rounded-xl border border-gray-200 focus-within:border-green-400 bg-gray-50 transition cursor-text"
+                 @click="$refs.compInput.focus()">
+                <template x-for="(comp, i) in form.competences" :key="i">
+                    <span class="tag-skill">
+                        <span x-text="comp"></span>
+                        <button type="button" @click.stop="form.competences.splice(i,1); syncComp()"
+                                class="text-green-600 hover:text-red-600 font-bold text-base leading-none ml-0.5">×</button>
+                    </span>
+                </template>
+                <input type="text" x-ref="compInput"
+                       @keydown.enter.prevent="addComp($event.target.value); $event.target.value=''"
+                       @keydown.188.prevent="addComp($event.target.value); $event.target.value=''"
+                       @blur="if($event.target.value.trim()){addComp($event.target.value);$event.target.value=''}"
+                       placeholder="{% trans "Ajouter une compétence…" %}"
+                       class="flex-1 min-w-32 bg-transparent outline-none text-sm placeholder-gray-400 py-0.5">
+            </div>
+            <p x-show="form.competences.length > 0" class="text-xs text-gray-400 mt-1"
+               x-text="form.competences.length + ' compétence(s)'"></p>
+        </div>
+    </div>
+
+    <!-- ─── Étape 3 : Conditions & Rémunération ───────────────────────────── -->
+    <div x-show="step === 3" x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0"
+         class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
+
+        <h2 class="text-base font-bold text-gray-900 pb-3 border-b border-gray-100 flex items-center gap-2">
+            <span class="w-7 h-7 rounded-full bg-green-100 text-green-700 text-xs font-extrabold flex items-center justify-center">3</span>
+            Conditions & Rémunération
+        </h2>
+
+        <div class="grid sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">{% trans "Expérience requise" %}</label>
+                <select x-model="form.experienceId"
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-green-400 text-sm bg-white">
+                    <option value="">— Non spécifiée —</option>
+                    {% for exp in experiences %}
+                    <option value="{{ exp.id }}">{{ exp.libelle }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">{% trans "Niveau d'études requis" %}</label>
+                <div class="relative" x-data="cbx({ url: '{% url 'referentiel:api_niveaux_etude' %}', k: 'nomNiveau' })"
+                     @cbxpick="form.niveauEtudeRequis=$event.detail.val" x-init="q=form.niveauEtudeRequis||''">
+                    <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput(); form.niveauEtudeRequis=q" @keydown="onkey($event)" @change="form.niveauEtudeRequis=q"
+                           placeholder="{% trans "Bac+3, Bac+5, Doctorat…" %}"
+                           class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-green-400 text-sm pr-8" autocomplete="off">
+                    <svg class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                    <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:220px;overflow-y:auto;">
+                        <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o); form.niveauEtudeRequis=o.label" class="w-full px-4 py-2.5 text-sm text-left transition-colors" :class="i===hi?'bg-green-50 text-green-700 font-medium':'text-gray-700 hover:bg-gray-50'" x-text="o.label"></button></template>
+                        <div x-show="!sh.length" class="px-4 py-3 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">{% trans "Rémunération" %}</label>
+            <div class="grid grid-cols-7 gap-2 items-center">
+                <div class="col-span-3">
+                    <label class="text-xs text-gray-500 mb-1 block">{% trans "Minimum" %}</label>
+                    <input type="number" x-model="form.salaireMin" placeholder="200 000" min="0" step="5000"
+                           class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-green-400 text-sm">
+                </div>
+                <div class="text-center text-gray-400 text-sm mt-4">–</div>
+                <div class="col-span-3">
+                    <label class="text-xs text-gray-500 mb-1 block">{% trans "Maximum" %}</label>
+                    <input type="number" x-model="form.salaireMax" placeholder="400 000" min="0" step="5000"
+                           class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-green-400 text-sm">
+                </div>
+            </div>
+            <div class="mt-2">
+                <label class="text-xs text-gray-500 mb-1 block">{% trans "Devise" %}</label>
+                <select x-model="form.deviseId"
+                        @change="form.devise = $event.target.options[$event.target.selectedIndex].dataset.libelle || ''"
+                        class="px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-green-400 text-sm bg-white">
+                    <option value="">— Choisir —</option>
+                    {% for dev in devises_ref %}
+                    <option value="{{ dev.id }}" data-libelle="{{ dev.libelle }}">{{ dev.libelle }}{% if dev.symbole %} ({{ dev.symbole }}){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div x-show="form.salaireMin || form.salaireMax"
+                 class="mt-2 text-xs text-green-700 bg-green-50 rounded-lg px-3 py-1.5 font-medium">
+                💰 <span x-text="salairePreview()"></span>
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">{% trans "Date d'expiration" %}</label>
+            <p class="text-xs text-gray-400 mb-2">{% trans "L'offre sera automatiquement marquée expirée après cette date." %}</p>
+            <input type="date" x-model="form.dateExpiration"
+                   class="px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-green-400 text-sm">
+            <button x-show="form.dateExpiration" type="button" @click="form.dateExpiration=''"
+                    class="ml-2 text-xs text-red-400 hover:text-red-600 font-medium">✕ Supprimer</button>
+        </div>
+    </div>
+
+    <!-- ─── Étape 4 : ATS & Publication ──────────────────────────────────── -->
+    <div x-show="step === 4" x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0"
+         class="space-y-4">
+
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <h2 class="text-base font-bold text-gray-900 mb-5 flex items-center gap-2">
+                <span class="w-7 h-7 rounded-full bg-green-100 text-green-700 text-xs font-extrabold flex items-center justify-center">4</span>
+                Critères ATS
+            </h2>
+            <div class="space-y-3">
+                <div class="flex items-center justify-between p-4 rounded-xl bg-gray-50 border border-gray-100">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-white shadow-sm flex items-center justify-center text-base border border-gray-100">📄</div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-800">{% trans "CV obligatoire" %}</p>
+                            <p class="text-xs text-gray-500">{% trans "Les candidats doivent joindre leur CV" %}</p>
+                        </div>
+                    </div>
+                    <button type="button" @click="form.cvObligatoire = !form.cvObligatoire"
+                            class="toggle-btn" :class="form.cvObligatoire ? 'bg-green-500' : 'bg-gray-300'">
+                        <span class="toggle-thumb" :class="form.cvObligatoire ? 'translate-x-6' : 'translate-x-1'"></span>
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between p-4 rounded-xl bg-gray-50 border border-gray-100">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-white shadow-sm flex items-center justify-center text-base border border-gray-100">✉️</div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-800">{% trans "Lettre de motivation obligatoire" %}</p>
+                            <p class="text-xs text-gray-500">{% trans "Les candidats rédigent une lettre" %}</p>
+                        </div>
+                    </div>
+                    <button type="button" @click="form.lettreObligatoire = !form.lettreObligatoire"
+                            class="toggle-btn" :class="form.lettreObligatoire ? 'bg-green-500' : 'bg-gray-300'">
+                        <span class="toggle-thumb" :class="form.lettreObligatoire ? 'translate-x-6' : 'translate-x-1'"></span>
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between p-4 rounded-xl bg-gray-50 border border-gray-100">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-white shadow-sm flex items-center justify-center text-base border border-gray-100">🧪</div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-800">{% trans "Test technique requis" %}</p>
+                            <p class="text-xs text-gray-500">{% trans "Un test sera soumis aux candidats" %}</p>
+                        </div>
+                    </div>
+                    <button type="button" @click="form.testRequis = !form.testRequis"
+                            class="toggle-btn" :class="form.testRequis ? 'bg-green-500' : 'bg-gray-300'">
+                        <span class="toggle-thumb" :class="form.testRequis ? 'translate-x-6' : 'translate-x-1'"></span>
+                    </button>
+                </div>
+
+                <div class="p-4 rounded-xl bg-gray-50 border border-gray-100">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl bg-white shadow-sm flex items-center justify-center text-base border border-gray-100">🎯</div>
+                            <div>
+                                <p class="text-sm font-semibold text-gray-800">{% trans "Score ATS minimum" %}</p>
+                                <p class="text-xs text-gray-500">{% trans "Score minimum pour qu'un profil candidat vous soit recommandé" %}</p>
+                            </div>
+                        </div>
+                        <span class="text-xl font-extrabold text-green-600" x-text="form.scoreMinimum + '%'"></span>
+                    </div>
+                    <input type="range" x-model.number="form.scoreMinimum" min="0" max="100" step="5"
+                           class="w-full accent-green-500 h-2">
+                    <div class="flex justify-between text-xs text-gray-400 mt-1">
+                        <span>0%</span><span>50%</span><span>100%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Option publier si brouillon -->
+        {% if offre.statutOffre == 'BROUILLON' %}
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <h3 class="text-sm font-bold text-gray-900 mb-4">{% trans "Publication" %}</h3>
+            <div class="flex items-center justify-between p-4 rounded-xl border-2 transition-all"
+                 :class="form.publier ? 'border-green-500 bg-green-50' : 'border-gray-200'"
+                 @click="form.publier = !form.publier">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
+                         :class="form.publier ? 'bg-green-100' : 'bg-gray-100'">🚀</div>
+                    <div>
+                        <p class="text-sm font-bold" :class="form.publier ? 'text-green-700' : 'text-gray-700'">{% trans "Publier après enregistrement" %}</p>
+                        <p class="text-xs text-gray-500 mt-0.5">{% trans "L'offre sera visible immédiatement" %}</p>
+                    </div>
+                </div>
+                <div class="toggle-btn" :class="form.publier ? 'bg-green-500' : 'bg-gray-300'" @click.stop="form.publier = !form.publier">
+                    <span class="toggle-thumb" :class="form.publier ? 'translate-x-6' : 'translate-x-1'"></span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Récapitulatif -->
+        <div class="rounded-2xl border border-green-100 p-5" style="background:linear-gradient(135deg,#F0FDF4,#FFFFFF);">
+            <p class="text-xs font-bold text-green-700 uppercase tracking-wide mb-3">{% trans "Récapitulatif des modifications" %}</p>
+            <div class="grid sm:grid-cols-2 gap-y-2 gap-x-6 text-sm">
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-500 shrink-0">{% trans "Poste :" %}</span>
+                    <span class="font-semibold text-gray-800 truncate" x-text="form.titre || '—'"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-500 shrink-0">{% trans "Contrat :" %}</span>
+                    <span class="font-semibold text-gray-800" x-text="form.contratLabel || '—'"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-500 shrink-0">{% trans "Ville :" %}</span>
+                    <span class="font-semibold text-gray-800" x-text="form.ville || '—'"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-500 shrink-0">{% trans "Mode :" %}</span>
+                    <span class="font-semibold text-gray-800" x-text="form.modeTravailLabel || '—'"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-500 shrink-0">{% trans "Compétences :" %}</span>
+                    <span class="font-semibold text-gray-800" x-text="form.competences.length + ' tag(s)'"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-500 shrink-0">{% trans "Salaire :" %}</span>
+                    <span class="font-semibold text-green-700" x-text="salairePreview() || '—'"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Navigation ────────────────────────────────────────────────────── -->
+    <div class="flex items-center justify-between pb-8">
+        <button type="button" x-show="step > 1" @click="prevStep()"
+                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-600 border border-gray-200 hover:bg-gray-50 transition">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg>
+            Retour
+        </button>
+        <div x-show="step === 1"></div>
+
+        <button type="button" x-show="step < 4" @click="nextStep()"
+                class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white shadow-md hover:shadow-lg hover:opacity-90 transition"
+                style="background:linear-gradient(135deg,#009A44,#007a36);">
+            Suivant
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+
+        <button type="button" x-show="step === 4" @click="submitForm()"
+                class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white shadow-md hover:shadow-lg hover:opacity-90 transition"
+                style="background:linear-gradient(135deg,#009A44,#007a36);">
+            <span x-text="form.publier ? '🚀 Enregistrer & Publier' : '💾 Enregistrer les modifications'"></span>
+        </button>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block js_extra %}
+<script>
+function modifierWizard() {
+    return {
+        step: 1,
+        steps: ['Poste', 'Description', 'Conditions', 'Publication'],
+        err: {},
+        form: {
+            titre:             '{{ offre.titre|escapejs }}',
+            // Pré-sélection des FK depuis l'offre existante
+            contratId:         '{% if offre.contrat_id %}{{ offre.contrat_id }}{% endif %}',
+            contratLabel:      '{{ offre.contrat.libelle|default:""|escapejs }}',
+            modeTravailId:     '{% if offre.modeTravailRef_id %}{{ offre.modeTravailRef_id }}{% endif %}',
+            modeTravailLabel:  '{{ offre.modeTravailRef.libelle|default:""|escapejs }}',
+            experienceId:      '{% if offre.anneesExperience_id %}{{ offre.anneesExperience_id }}{% endif %}',
+            deviseId:          '{% if offre.deviseRef_id %}{{ offre.deviseRef_id }}{% endif %}',
+            ville:             '{{ offre.ville|escapejs }}',
+            pays:              '{{ offre.pays|escapejs }}',
+            localisation:      '{{ offre.localisation|escapejs }}',
+            missions:          '',
+            profilRecherche:   '',
+            competences:       [],
+            competencesJson:   '[]',
+            niveauEtudeRequis: '{{ offre.niveauEtudeRequis|escapejs }}',
+            salaireMin:        '{% if offre.salaireMin %}{{ offre.salaireMin }}{% endif %}',
+            salaireMax:        '{% if offre.salaireMax %}{{ offre.salaireMax }}{% endif %}',
+            devise:            '{{ offre.devise|escapejs }}',
+            dateExpiration:    '{% if offre.dateExpiration %}{{ offre.dateExpiration|date:"Y-m-d" }}{% endif %}',
+            cvObligatoire:     {{ offre.criteresATS.cvObligatoire|yesno:"true,false" }},
+            lettreObligatoire: {{ offre.criteresATS.lettreMotivationnObligatoire|yesno:"true,false" }},
+            testRequis:        {{ offre.criteresATS.testRequis|yesno:"true,false" }},
+            scoreMinimum:      {{ offre.criteresATS.scoreMinimum|default:0 }},
+            publier:           false,
+            managersAssignes:  [{% for mid in managers_assignes_ids %}{{ mid }}{% if not forloop.last %},{% endif %}{% endfor %}],
+        },
+
+        init() {
+            /* Missions & profil depuis le modèle */
+            const missionsEl = document.getElementById('init-missions');
+            const profilEl   = document.getElementById('init-profil');
+            if (missionsEl) this.form.missions        = JSON.parse(missionsEl.textContent);
+            if (profilEl)   this.form.profilRecherche = JSON.parse(profilEl.textContent);
+
+            /* Compétences depuis json_script */
+            try {
+                const el = document.getElementById('offre-competences');
+                if (el) {
+                    const c = JSON.parse(el.textContent);
+                    if (Array.isArray(c)) { this.form.competences = c; this.syncComp(); }
+                }
+            } catch(e) {}
+        },
+
+        addComp(val) {
+            const v = val.trim().replace(/,+$/, '').trim();
+            if (v && !this.form.competences.includes(v)) {
+                this.form.competences.push(v);
+                this.syncComp();
+            }
+        },
+
+        syncComp() {
+            this.form.competencesJson = JSON.stringify(this.form.competences);
+        },
+
+        salairePreview() {
+            const min = this.form.salaireMin, max = this.form.salaireMax, dev = this.form.devise || 'FCFA';
+            const fmt = v => parseInt(v).toLocaleString('fr-FR');
+            if (min && max) return fmt(min) + ' – ' + fmt(max) + ' ' + dev;
+            if (min) return 'À partir de ' + fmt(min) + ' ' + dev;
+            if (max) return "Jusqu'à " + fmt(max) + ' ' + dev;
+            return '';
+        },
+
+        nextStep() {
+            this.err = {};
+            if (this.step === 1) {
+                if (!this.form.titre.trim()) this.err.titre       = 'Le titre du poste est obligatoire.';
+                if (!this.form.contratId)    this.err.typeContrat = 'Veuillez choisir un type de contrat.';
+            }
+            if (Object.keys(this.err).length === 0) this.step++;
+        },
+
+        prevStep() {
+            if (this.step > 1) this.step--;
+        },
+
+        submitForm() {
+            this.syncComp();
+            this.$nextTick(() => document.getElementById('modifierForm').submit());
+        }
+    };
+}
+</script>
+
+<!-- Données textarea pré-remplies via json_script pour sécurité -->
+{{ offre.missions|json_script:"init-missions" }}
+{{ offre.profilRecherche|json_script:"init-profil" }}
+{% endblock %}

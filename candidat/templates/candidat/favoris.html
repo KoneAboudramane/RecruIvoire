@@ -1,0 +1,183 @@
+﻿{% extends "candidat/base.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Mes offres favorites" %}{% endblock %}
+
+{% block css_extra %}
+<style>
+    .card-hover { transition: transform .2s ease, box-shadow .2s ease; }
+    .card-hover:hover { transform: translateY(-3px); box-shadow: 0 10px 25px -10px rgba(0,0,0,.12); }
+
+    /* ── En-tête hero ── */
+    .cand-hero { background:#fff; color:#1f2937; border:1px solid #e5e7eb; }
+    .cand-hero .deco-cercle { display:none; }
+    .cand-hero .text-white { color:#1f2937 !important; }
+    .cand-hero .text-white\/80 { color:#4b5563 !important; }
+    .cand-hero .bg-white\/15 { background:rgba(0,0,0,.04) !important; }
+    .cand-hero .bg-white\/25,.cand-hero .bg-white\/30 { background:rgba(0,0,0,.07) !important; }
+    .cand-hero .hover\:bg-white\/25:hover { background:rgba(0,0,0,.07) !important; }
+    .cand-hero .ring-white { --tw-ring-color:rgba(0,0,0,.22) !important; }
+    html.dark .cand-hero { background:#1e293b; color:#f1f5f9; border-color:#334155; }
+    html.dark .cand-hero .deco-cercle { display:block; opacity:.25; }
+    html.dark .cand-hero .text-white { color:#f1f5f9 !important; }
+    html.dark .cand-hero .text-white\/80 { color:rgba(241,245,249,.8) !important; }
+    html.noir .cand-hero { background:linear-gradient(135deg,#000 0%,#080808 60%,#111 100%); color:#f1f5f9; border-color:#222; }
+    html.noir .cand-hero .deco-cercle { display:block; opacity:.12; }
+    html.noir .cand-hero .text-white { color:#f1f5f9 !important; }
+    html.noir .cand-hero .text-white\/80 { color:rgba(241,245,249,.8) !important; }
+
+    html.dark .bg-white        { background-color: #1e293b !important; }
+    html.dark .border-gray-100 { border-color: #334155 !important; }
+    html.dark .border-gray-200 { border-color: #475569 !important; }
+    html.dark .text-gray-800   { color: #e2e8f0 !important; }
+    html.dark .text-gray-700   { color: #cbd5e1 !important; }
+    html.dark .text-gray-600   { color: #94a3b8 !important; }
+    html.dark .text-gray-500   { color: #64748b !important; }
+    html.dark .text-gray-400   { color: #94a3b8 !important; }
+    html.dark .bg-gray-100     { background-color: #334155 !important; }
+    html.dark .text-red-600    { color: #f87171 !important; }
+
+    /* ── MODE NOIR (OLED) ─────────────────────────────────────── */
+    html.noir .bg-white        { background-color: #0d0d0d !important; }
+    html.noir .border-gray-100 { border-color: #222 !important; }
+    html.noir .border-gray-200 { border-color: #333 !important; }
+    html.noir .text-gray-800   { color: #e2e8f0 !important; }
+    html.noir .text-gray-700   { color: #cbd5e1 !important; }
+    html.noir .text-gray-600   { color: #94a3b8 !important; }
+    html.noir .text-gray-500   { color: #64748b !important; }
+    html.noir .text-gray-400   { color: #94a3b8 !important; }
+    html.noir .bg-gray-100     { background-color: #222 !important; }
+    html.noir .text-red-600    { color: #f87171 !important; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<section class="mb-10" x-data="{ filtre: 'toutes' }">
+
+    {# Fil d'Ariane #}
+    <nav class="text-sm text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2 flex-wrap">
+        <a href="{% url 'candidat:accueil' %}" class="hover:underline">{% trans "Accueil" %}</a>
+        <span>›</span>
+        <span class="text-gray-700 dark:text-gray-300 font-semibold">{% trans "Mes favoris" %}</span>
+    </nav>
+
+    {# En-tête #}
+    <div class="cand-hero rounded-3xl px-6 sm:px-10 py-8 mb-6 relative overflow-hidden shadow-sm">
+        <div class="deco-cercle absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
+        <div class="deco-cercle absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full -translate-x-1/2 translate-y-1/2 pointer-events-none"></div>
+        <div class="relative flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold mb-1">❤️ {% trans "Mes offres favorites" %}</h1>
+                <p class="text-white/80 text-sm">
+                    {% blocktrans count n=favoris|length %}{{ n }} offre sauvegardée{% plural %}{{ n }} offres sauvegardées{% endblocktrans %}
+                </p>
+            </div>
+            {% if favoris %}
+            <div class="flex gap-2">
+                <button @click="filtre='toutes'"
+                        :class="filtre==='toutes' ? 'bg-white/30 ring-2 ring-white' : 'bg-white/15 hover:bg-white/25'"
+                        class="px-4 py-2 rounded-xl text-sm font-semibold transition">
+                    {% trans "Toutes" %} ({{ favoris|length }})
+                </button>
+                <button @click="filtre='actives'"
+                        :class="filtre==='actives' ? 'bg-white/30 ring-2 ring-white' : 'bg-white/15 hover:bg-white/25'"
+                        class="px-4 py-2 rounded-xl text-sm font-semibold transition">
+                    ✅ {% trans "Actives" %}
+                </button>
+                <button @click="filtre='expirees'"
+                        :class="filtre==='expirees' ? 'bg-white/30 ring-2 ring-white' : 'bg-white/15 hover:bg-white/25'"
+                        class="px-4 py-2 rounded-xl text-sm font-semibold transition">
+                    ⏰ {% trans "Expirées" %}
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if not favoris %}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl p-16 border border-dashed border-gray-200 dark:border-gray-700 text-center">
+        <div class="text-6xl mb-4">🤍</div>
+        <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% trans "Aucune offre sauvegardée" %}</h3>
+        <p class="text-gray-500 dark:text-gray-400 mb-6">{% trans "Cliquez sur le cœur d'une offre pour la retrouver ici." %}</p>
+        <a href="{% url 'candidat:offres' %}"
+           class="inline-block px-5 py-2.5 rounded-xl text-white font-bold text-sm hover:opacity-90 transition"
+           style="background:#c96010;">
+            🔍 {% trans "Explorer les offres" %}
+        </a>
+    </div>
+    {% else %}
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+        {% for fav in favoris %}
+        {% with offre=fav.offre %}
+        <div class="relative bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm card-hover flex flex-col"
+             id="fav-card-{{ offre.id }}"
+             x-show="filtre === 'toutes'
+                      || (filtre === 'actives'  && '{{ offre.statutOffre }}' === 'PUBLIEE')
+                      || (filtre === 'expirees' && '{{ offre.statutOffre }}' !== 'PUBLIEE')">
+
+            {# Bouton retirer favori #}
+            <button type="button"
+                    onclick="toggleFavori(this, {{ offre.id }})"
+                    class="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white shadow border border-gray-100 transition hover:scale-110 active:scale-95 disabled:opacity-50 text-base leading-none"
+                    title="{% trans 'Retirer des favoris' %}">
+                ❤️
+            </button>
+
+            {# Logo + infos #}
+            <div class="flex items-start gap-3 mb-3 pr-8">
+                {% if offre.entreprise.logoEntreprise %}
+                    <img src="{{ offre.entreprise.logoEntreprise.url }}"
+                         alt="{{ offre.entreprise.raisonSocial }}"
+                         class="w-12 h-12 rounded-xl object-contain bg-white border border-gray-200 p-1 flex-shrink-0">
+                {% else %}
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center text-white font-extrabold text-sm flex-shrink-0"
+                         style="background:#2e7d52;">{{ offre.entreprise.raisonSocial|slice:":2"|upper }}</div>
+                {% endif %}
+                <div class="flex-1 min-w-0">
+                    <a href="{% url 'candidat:offre_detail' offre.id %}"
+                       class="block font-bold text-gray-800 text-sm leading-snug hover:text-orange-600 transition line-clamp-2">
+                        {{ offre.titre }}
+                    </a>
+                    <p class="text-gray-500 text-xs mt-0.5">
+                        <a href="{% url 'candidat:entreprise_profil' offre.entreprise.id %}" class="hover:underline">{{ offre.entreprise.raisonSocial }}</a>
+                        {% if offre.ville %} · {{ offre.ville }}{% endif %}
+                    </p>
+                </div>
+            </div>
+
+            {# Badges #}
+            <div class="flex gap-1.5 flex-wrap mb-3">
+                <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{{ offre.get_typeContrat_display }}</span>
+                <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{{ offre.get_modeTravail_display }}</span>
+                {% if offre.experienceRequise %}
+                    <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{{ offre.get_experienceRequise_display }}</span>
+                {% endif %}
+            </div>
+
+            {% if offre.dateExpiration %}
+            <p class="text-xs font-semibold mb-3 text-red-600">⏰ {% trans "Expire le" %} {{ offre.dateExpiration|date:"d M Y" }}</p>
+            {% endif %}
+
+            <p class="text-xs text-gray-400 mb-3">{% trans "Sauvegardée le" %} {{ fav.date_ajout|date:"d/m/Y" }}</p>
+
+            <div class="flex justify-between items-center mt-auto">
+                <span class="font-bold text-sm" style="color:#2e7d52;">
+                    {% with sal=offre.salaire_display %}
+                        {% if sal %}{{ sal }}{% else %}<span class="text-gray-400 font-normal text-xs">{% trans "Salaire à négocier" %}</span>{% endif %}
+                    {% endwith %}
+                </span>
+                <a href="{% url 'candidat:offre_detail' offre.id %}"
+                   class="text-xs font-bold px-3 py-1.5 rounded-lg text-white transition hover:opacity-90"
+                   style="background:#c96010;">
+                    {% trans "Voir" %}
+                </a>
+            </div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+</section>
+
+{% endblock %}

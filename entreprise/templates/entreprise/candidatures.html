@@ -1,0 +1,264 @@
+﻿{% extends "entreprise/base.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Candidatures" %} — {% trans "Espace entreprise" %}{% endblock %}
+
+{% block contenu %}
+<section class="mb-10"
+         x-data="{ qLive: '{{ q|escapejs }}', contratLive: '' }">
+
+  {# ── Fil d'Ariane ── #}
+  <nav class="text-sm text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2 flex-wrap">
+    <a href="{% url 'entreprise:recruteur_tableau_bord' %}" class="hover:underline">{% trans "Tableau de bord" %}</a>
+    <span>›</span>
+    <span class="text-gray-700 dark:text-gray-200 font-semibold">{% trans "Candidatures" %}</span>
+  </nav>
+
+  {# ── En-tête ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
+    <div class="flex items-start gap-4">
+      <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl shadow-md flex-shrink-0"
+           style="background:#009A44;">
+        📥
+      </div>
+      <div class="flex-1 min-w-0">
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-800 dark:text-gray-100">{% trans "Candidatures reçues" %}</h1>
+        <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">
+          {% blocktrans count nb=total_offres %}
+            Vous avez publié {{ nb }} offre. Cliquez sur les cartes ci-dessous pour filtrer.
+          {% plural %}
+            Vous avez publié {{ nb }} offres. Cliquez sur les cartes ci-dessous pour filtrer.
+          {% endblocktrans %}
+        </p>
+      </div>
+      <a href="{% url 'entreprise:entretiens' %}"
+         class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white shadow-sm hover:shadow transition flex-shrink-0"
+         style="background:#009A44;">
+        🤝 {% trans "Entretiens" %}
+      </a>
+    </div>
+  </div>
+
+  {# ── Sélecteur de périmètre (réservé aux administrateurs) ── #}
+  {% if not request.recruteur or request.recruteur.roleMembre == 'ADMIN' %}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
+    <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">{% trans "Périmètre" %}</p>
+    <div class="flex flex-wrap items-center gap-2">
+
+      <a href="?scope=mes"
+         class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition border"
+         style="{% if scope == 'mes' %}background:#009A44; color:white; border-color:#009A44;{% else %}background:transparent; color:#6b7280; border-color:#e5e7eb;{% endif %}">
+        👤 {% trans "Mes candidatures" %}
+      </a>
+
+      <a href="?scope=entreprise"
+         class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition border"
+         style="{% if scope == 'entreprise' %}background:#c96010; color:white; border-color:#c96010;{% else %}background:transparent; color:#6b7280; border-color:#e5e7eb;{% endif %}">
+        🏢 {% trans "Toute l'entreprise" %}
+      </a>
+
+      {% if recruteurs_entreprise %}
+      <form method="get" class="inline-flex items-center gap-2">
+        <input type="hidden" name="scope" value="recruteur">
+        <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap">🔍 {% trans "Par recruteur" %} :</label>
+        <select name="recruteur" onchange="this.form.submit()"
+                class="text-xs font-semibold border rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none"
+                style="{% if scope == 'recruteur' %}border-color:#3B82F6;{% endif %}">
+          <option value="">— {% trans "Choisir un recruteur" %} —</option>
+          {% for r in recruteurs_entreprise %}
+            <option value="{{ r.id }}" {% if recruteur_filtre and recruteur_filtre.id == r.id %}selected{% endif %}>
+              {{ r.prenom }} {{ r.nom }} ({{ r.get_roleMembre_display }})
+            </option>
+          {% endfor %}
+        </select>
+      </form>
+      {% endif %}
+    </div>
+    {% if scope == 'recruteur' and recruteur_filtre %}
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+      {% blocktrans with nom=recruteur_filtre.nomComplet|default:recruteur_filtre.prenom %}
+        Affichage des candidatures pour les offres créées par {{ nom }}.
+      {% endblocktrans %}
+    </p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ── Tableau de bord : 3 cartes cliquables = filtres ── #}
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+
+    <a href="?filtre=toutes&tri={{ tri }}&scope={{ scope }}{% if recruteur_filtre %}&recruteur={{ recruteur_filtre.id }}{% endif %}{% if q %}&q={{ q }}{% endif %}"
+       class="bg-white dark:bg-gray-800 rounded-2xl p-5 border shadow-sm transition hover:shadow-md hover:-translate-y-0.5"
+       style="{% if filtre == 'toutes' %}border-color:#009A44; border-width:2px;{% else %}border-color:transparent;{% endif %}">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wide">📋 {% trans "Toutes les offres" %}</p>
+        {% if filtre == 'toutes' %}
+          <span class="text-[10px] font-bold text-white px-2 py-0.5 rounded-full" style="background:#009A44;">{% trans "Actif" %}</span>
+        {% endif %}
+      </div>
+      <p class="text-3xl font-extrabold text-gray-800 dark:text-gray-100">{{ total_offres }}</p>
+      <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{% trans "offres publiées au total" %}</p>
+    </a>
+
+    <a href="?filtre=postulees&tri={{ tri }}&scope={{ scope }}{% if recruteur_filtre %}&recruteur={{ recruteur_filtre.id }}{% endif %}{% if q %}&q={{ q }}{% endif %}"
+       class="bg-white dark:bg-gray-800 rounded-2xl p-5 border shadow-sm transition hover:shadow-md hover:-translate-y-0.5"
+       style="{% if filtre == 'postulees' %}border-color:#c96010; border-width:2px;{% else %}border-color:transparent;{% endif %}">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wide">👥 {% trans "Avec candidat(s)" %}</p>
+        {% if filtre == 'postulees' %}
+          <span class="text-[10px] font-bold text-white px-2 py-0.5 rounded-full" style="background:#c96010;">{% trans "Actif" %}</span>
+        {% endif %}
+      </div>
+      <p class="text-3xl font-extrabold" style="color:#c96010;">{{ nb_offres_postulees }}</p>
+      <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{% trans "offres ayant reçu au moins une candidature" %}</p>
+    </a>
+
+    <a href="?filtre=non_postulees&tri={{ tri }}&scope={{ scope }}{% if recruteur_filtre %}&recruteur={{ recruteur_filtre.id }}{% endif %}{% if q %}&q={{ q }}{% endif %}"
+       class="bg-white dark:bg-gray-800 rounded-2xl p-5 border shadow-sm transition hover:shadow-md hover:-translate-y-0.5"
+       style="{% if filtre == 'non_postulees' %}border-color:#9ca3af; border-width:2px;{% else %}border-color:transparent;{% endif %}">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wide">🕓 {% trans "Sans candidat" %}</p>
+        {% if filtre == 'non_postulees' %}
+          <span class="text-[10px] font-bold text-white px-2 py-0.5 rounded-full bg-gray-500">{% trans "Actif" %}</span>
+        {% endif %}
+      </div>
+      <p class="text-3xl font-extrabold text-gray-600 dark:text-gray-300">{{ nb_offres_non_post }}</p>
+      <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{% trans "offres en attente de candidatures" %}</p>
+    </a>
+
+  </div>
+
+  {# ── Barre filtres ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
+    <form method="get" class="flex flex-col md:flex-row md:items-center gap-3">
+      <input type="hidden" name="filtre" value="{{ filtre }}">
+      <input type="hidden" name="scope" value="{{ scope }}">
+      {% if recruteur_filtre %}<input type="hidden" name="recruteur" value="{{ recruteur_filtre.id }}">{% endif %}
+
+      <div class="relative flex-1 min-w-0">
+        <input type="search" name="q" x-model="qLive" value="{{ q }}"
+               placeholder="{% trans 'Rechercher une offre par titre…' %}"
+               class="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/>
+        </svg>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <label for="tri" class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">{% trans "Trier par" %}</label>
+        <select name="tri" id="tri" onchange="this.form.submit()"
+                class="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none">
+          <option value="date_recent" {% if tri == 'date_recent' %}selected{% endif %}>📅 {% trans "Date (plus récent)" %}</option>
+          <option value="date_ancien" {% if tri == 'date_ancien' %}selected{% endif %}>📅 {% trans "Date (plus ancien)" %}</option>
+          <option value="nom_asc"     {% if tri == 'nom_asc' %}selected{% endif %}>🔤 {% trans "Nom (A → Z)" %}</option>
+          <option value="nom_desc"    {% if tri == 'nom_desc' %}selected{% endif %}>🔤 {% trans "Nom (Z → A)" %}</option>
+        </select>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <label for="contratFilter" class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">{% trans "Type de contrat" %}</label>
+        <select id="contratFilter" x-model="contratLive"
+                class="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none">
+          <option value="">📋 {% trans "Tous" %}</option>
+          {% regroup offres by typeContrat as types_groupes %}
+          {% for grp in types_groupes %}
+            <option value="{{ grp.grouper }}">{{ grp.list.0.get_typeContrat_display }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {% if q or tri != 'date_recent' %}
+      <a href="?filtre={{ filtre }}"
+         class="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition">
+        ✕ {% trans "Réinitialiser" %}
+      </a>
+      {% endif %}
+    </form>
+  </div>
+
+  {# ── Liste : une carte synthétique par offre ── #}
+  {% if offres %}
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {% for offre in offres %}
+      <article x-show="(!qLive.trim() || '{{ offre.titre|lower|escapejs }} {{ offre.reference|lower|escapejs }} {{ offre.ville|lower|escapejs }} {{ offre.get_typeContrat_display|lower|escapejs }}'.includes(qLive.toLowerCase().trim())) && (!contratLive || contratLive === '{{ offre.typeContrat|escapejs }}')"
+               class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col">
+        <div class="p-5 sm:p-6 flex items-start gap-4 flex-1">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl shadow-sm flex-shrink-0"
+               style="background:#009A44;">
+            📋
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-base sm:text-lg font-extrabold text-gray-800 dark:text-gray-100 truncate">{{ offre.titre }}</p>
+            <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <span>🔖 <span class="font-mono">{{ offre.reference|default:"—" }}</span></span>
+              {% if offre.ville %}<span>📍 {{ offre.ville }}</span>{% endif %}
+              <span>📋 {{ offre.get_typeContrat_display }}</span>
+              <span>📊 {{ offre.get_statutOffre_display }}</span>
+            </div>
+            {% if offre.statutOffre == 'EXPIREE' and offre.a_pending %}
+            <div class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold text-white"
+                 style="background:#c96010;">
+              📋 {% trans "Prêt à évaluer · délai expiré" %}
+            </div>
+            {% endif %}
+          </div>
+          <span class="inline-flex items-center gap-1.5 font-bold px-3 py-1.5 rounded-full text-sm bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-100 dark:border-green-800/30 flex-shrink-0">
+            <span>👥</span>
+            <span>{{ offre.candidatures.count }}</span>
+          </span>
+        </div>
+        <div class="px-5 sm:px-6 py-3 bg-gray-50/60 dark:bg-gray-700/40 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
+          <a href="{% url 'entreprise:entretiens_offre' offre.pk %}"
+             class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 transition">
+            🤝 {% trans "Entretiens" %}
+          </a>
+          <a href="{% url 'entreprise:candidatures_offre' offre.pk %}"
+             class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold text-white shadow-sm hover:shadow transition"
+             style="background:#009A44;">
+            👥 {% trans "Voir les candidatures" %} →
+          </a>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl p-10 sm:p-14 border border-gray-100 dark:border-gray-700 shadow-sm text-center">
+      <div class="w-20 h-20 mx-auto rounded-full flex items-center justify-center text-4xl mb-4 bg-green-50 dark:bg-green-900/20">
+        📭
+      </div>
+      {% if filtre == 'postulees' %}
+        <h2 class="text-xl font-extrabold text-gray-800 dark:text-gray-100 mb-2">{% trans "Aucune offre avec candidat" %}</h2>
+        <p class="text-gray-500 dark:text-gray-400 text-sm mb-6 max-w-md mx-auto">
+          {% trans "Aucune de vos offres n'a encore reçu de candidature." %}
+        </p>
+        <a href="?filtre=toutes&tri={{ tri }}"
+           class="inline-block text-white font-bold px-6 py-3 rounded-lg text-sm hover:opacity-90 transition"
+           style="background:#009A44;">
+          {% trans "Voir toutes les offres" %}
+        </a>
+      {% elif filtre == 'non_postulees' %}
+        <h2 class="text-xl font-extrabold text-gray-800 dark:text-gray-100 mb-2">{% trans "Toutes vos offres ont des candidats" %}</h2>
+        <p class="text-gray-500 dark:text-gray-400 text-sm mb-6 max-w-md mx-auto">
+          {% trans "Bonne nouvelle : aucune de vos offres n'est sans candidature." %}
+        </p>
+        <a href="?filtre=toutes&tri={{ tri }}"
+           class="inline-block text-white font-bold px-6 py-3 rounded-lg text-sm hover:opacity-90 transition"
+           style="background:#009A44;">
+          {% trans "Voir toutes les offres" %}
+        </a>
+      {% else %}
+        <h2 class="text-xl font-extrabold text-gray-800 dark:text-gray-100 mb-2">{% trans "Aucune offre publiée" %}</h2>
+        <p class="text-gray-500 dark:text-gray-400 text-sm mb-6 max-w-md mx-auto">
+          {% trans "Créez votre première offre d'emploi pour commencer à recevoir des candidatures." %}
+        </p>
+        <a href="{% url 'entreprise:offre_creer' %}"
+           class="inline-block text-white font-bold px-6 py-3 rounded-lg text-sm hover:opacity-90 transition"
+           style="background:#009A44;">
+          ➕ {% trans "Publier une offre" %}
+        </a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+</section>
+{% endblock %}

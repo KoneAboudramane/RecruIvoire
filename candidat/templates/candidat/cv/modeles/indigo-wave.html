@@ -1,0 +1,404 @@
+{% extends "candidat/base.html" %}
+{% load i18n %}
+{% block titre %}Créer mon CV — {{ modele.nom }} · {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+{% include "candidat/cv/_form_styles.html" %}
+<style>
+/* ── Vague Indigo — Header indigo dégradé · Vague SVG · Sidebar lavande · Barres ambre ── */
+#cv-sheet {
+  width: 794px; min-height: 1123px; background: #fff;
+  font-family: 'Segoe UI', 'Calibri', sans-serif;
+  font-size: 11px; color: #1a1a2e; line-height: 1.5;
+  box-shadow: 0 8px 48px rgba(0,0,0,.18);
+  display: flex; flex-direction: column;
+}
+
+/* Bande supérieure ambre */
+.iv-topbar {
+  height: 4px;
+  background: linear-gradient(to right, #0D1754, #F9A825, #1565C0, #F9A825, #0D1754);
+}
+
+/* ── Header ── */
+.iv-header {
+  background: linear-gradient(135deg, #0D1754 0%, #1A237E 50%, #1565C0 100%);
+  padding: 28px 44px;
+  display: flex; align-items: center; gap: 26px;
+  position: relative; overflow: hidden;
+}
+.iv-header::before {
+  content: ''; position: absolute;
+  top: -55px; right: -40px; width: 220px; height: 220px;
+  border-radius: 50%; border: 40px solid rgba(249,168,37,.09);
+  pointer-events: none;
+}
+.iv-header::after {
+  content: ''; position: absolute;
+  bottom: -65px; left: 140px; width: 165px; height: 165px;
+  border-radius: 50%; background: rgba(255,255,255,.04);
+  pointer-events: none;
+}
+
+/* Photo */
+.iv-photo-wrap {
+  flex-shrink: 0; position: relative; z-index: 1;
+  width: 96px; height: 96px; border-radius: 50%;
+  background: rgba(255,255,255,.1); padding: 3px;
+  box-shadow: 0 0 0 3px rgba(249,168,37,.55),
+              0 0 0 7px rgba(249,168,37,.15),
+              0 0 22px rgba(249,168,37,.25);
+}
+.iv-photo-inner {
+  width: 90px; height: 90px; border-radius: 50%;
+  overflow: hidden; background: rgba(255,255,255,.12);
+  display: flex; align-items: center; justify-content: center; font-size: 28px;
+}
+.iv-photo-inner img { width: 130%; height: 130%; object-fit: cover; }
+
+.iv-header-info { flex: 1; position: relative; z-index: 1; }
+.iv-name { font-size: 25pt; font-weight: 800; color: #fff; letter-spacing: .4px; line-height: 1.1; }
+.iv-title { font-size: 12pt; color: #F9A825; font-style: italic; margin-top: 5px; margin-bottom: 13px; letter-spacing: .2px; }
+.iv-contacts { display: flex; flex-wrap: wrap; gap: 5px 18px; padding-top: 11px; border-top: 1px solid rgba(249,168,37,.35); }
+.iv-ci { display: flex; align-items: center; gap: 6px; font-size: 8.5pt; color: rgba(255,255,255,.88); }
+.iv-ci-dot { width: 5px; height: 5px; border-radius: 50%; background: #F9A825; flex-shrink: 0; }
+
+/* ── Vague SVG ── */
+.iv-wave { line-height: 0; display: block; }
+.iv-wave svg { display: block; }
+
+/* ── Body ── */
+.iv-body { display: flex; flex: 1; }
+
+/* Main gauche */
+.iv-main { flex: 1; padding: 22px 26px 26px 40px; background: #fff; }
+
+/* Sidebar droite */
+.iv-aside {
+  width: 36%; padding: 22px 22px 26px 18px;
+  background: #EDE7F6; border-left: 3px solid #1A237E;
+}
+
+/* ── Titres section (main) ── */
+.iv-sec { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; margin-top: 20px; }
+.iv-sec:first-child { margin-top: 0; }
+.iv-sec-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: #F9A825; flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(249,168,37,.22);
+}
+.iv-sec-label { font-size: 7.5pt; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #1A237E; white-space: nowrap; }
+.iv-sec-line { flex: 1; height: 1px; background: #C5CAE9; }
+
+/* ── Titres section (aside) ── */
+.iv-aside-sec {
+  font-size: 7pt; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  color: #1A237E; padding-bottom: 5px;
+  border-bottom: 2px solid #F9A825;
+  margin-bottom: 11px; margin-top: 20px;
+}
+.iv-aside-sec:first-child { margin-top: 0; }
+
+/* ── Profil ── */
+.iv-profil { font-size: 8.5pt; color: #3b3f5c; line-height: 1.75; text-align: justify; }
+
+/* ── Compétences — barres dégradées ── */
+.iv-skill { margin-bottom: 10px; }
+.iv-skill-name { font-size: 8.5pt; color: #1a1a2e; margin-bottom: 4px; }
+.iv-skill-bg { height: 5px; background: rgba(26,35,126,.12); border-radius: 3px; overflow: hidden; }
+.iv-skill-fill { height: 100%; border-radius: 3px; background: linear-gradient(to right, #1A237E, #F9A825); }
+
+/* ── Langues — 2 colonnes ── */
+.iv-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 8px; }
+.iv-lang {
+  background: rgba(255,255,255,.65); border-radius: 6px; padding: 5px 8px;
+  display: flex; flex-direction: column; gap: 2px;
+  border: 1px solid rgba(26,35,126,.12);
+}
+.iv-lang-name { font-size: 8pt; font-weight: 700; color: #1A237E; }
+.iv-lang-badge { font-size: 7pt; color: #7B5E00; font-weight: 600; }
+
+/* ── Intérêts — 2 colonnes ── */
+.iv-interest { display: flex; align-items: center; gap: 6px; font-size: 8pt; color: #3b3f5c; }
+.iv-interest-dot { width: 6px; height: 6px; background: #F9A825; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Entrées ── */
+.iv-entry {
+  margin-bottom: 12px; padding: 10px 14px;
+  border-left: 3px solid #1A237E; border-radius: 0 8px 8px 0;
+  background: #F5F6FF;
+  box-shadow: 2px 2px 8px rgba(26,35,126,.07);
+}
+.iv-entry-hdr { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.iv-entry-title { font-size: 10pt; font-weight: 700; color: #1a1a2e; }
+.iv-entry-badge {
+  font-size: 7.5pt; color: #fff; background: #1A237E;
+  padding: 2px 8px; border-radius: 10px; white-space: nowrap; flex-shrink: 0;
+}
+.iv-entry-sub { font-size: 9pt; color: #1565C0; font-weight: 600; margin-top: 2px; }
+.iv-entry-place { font-size: 8pt; color: #9ca3af; }
+.iv-entry-desc { font-size: 8.5pt; color: #4b5563; margin-top: 4px; line-height: 1.65; }
+
+/* ── Listes (certifs, projets, bénévolat) ── */
+.iv-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 7px 0; border-bottom: 1px solid #C5CAE9; gap: 12px; }
+.iv-item:last-child { border-bottom: none; }
+.iv-item-title { font-weight: 600; font-size: 9pt; color: #1a1a2e; }
+.iv-item-sub { font-size: 8pt; color: #6b7280; margin-top: 1px; }
+.iv-item-year { font-size: 8pt; color: #1A237E; font-weight: 700; white-space: nowrap; }
+
+/* ── Missions clients ── */
+.cv-mc-section { margin-top: 8px; padding: 7px 10px 7px 12px; background: rgba(26,35,126,.05); border-left: 3px solid #1A237E; border-radius: 0 6px 6px 0; }
+.cv-mc-label { font-size: 6.5pt; font-weight: 700; color: #1A237E; text-transform: uppercase; letter-spacing: .7px; margin-bottom: 6px; }
+.cv-mc-item { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed rgba(26,35,126,.2); }
+.cv-mc-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.cv-mc-hdr { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+.cv-mc-title { font-size: 9pt; font-weight: 600; }
+.cv-mc-badge { font-size: 6.5pt; color: #fff; background: #1A237E; padding: 1px 7px; border-radius: 8px; white-space: nowrap; flex-shrink: 0; }
+.cv-mc-client { font-size: 8pt; color: #6b7280; margin-top: 1px; }
+.cv-mc-desc { font-size: 7.5pt; color: #4b5563; margin-top: 2px; line-height: 1.5; }
+
+/* ── Références ── */
+.iv-ref-box { font-size: 8pt; color: #6b7280; font-style: italic; text-align: center; padding: 9px 10px; border: 1px dashed rgba(26,35,126,.25); border-radius: 6px; margin-top: 14px; background: rgba(255,255,255,.5); }
+
+/* ── Footer ── */
+.iv-footer {
+  height: 4px;
+  background: linear-gradient(to right, #0D1754, #F9A825, #1565C0, #F9A825, #0D1754);
+  margin-top: auto;
+}
+</style>
+{% endblock %}
+
+{% block contenu %}<div class="-mx-6 -my-8" x-data="cvBuilder()"><div class="cv-builder">
+  {% include "candidat/cv/_form_panel.html" %}
+  <div class="preview-panel">
+  <div id="cv-sheet">
+
+    <div class="iv-topbar"></div>
+
+    <!-- HEADER indigo dégradé -->
+    <div class="iv-header">
+      <div class="iv-photo-wrap">
+        <template x-if="cv.photo">
+          <div class="iv-photo-inner"><img :src="cv.photo" alt="{% trans "Photo" %}"></div>
+        </template>
+        <template x-if="!cv.photo">
+          <div class="iv-photo-inner">👤</div>
+        </template>
+      </div>
+      <div class="iv-header-info">
+        <div class="iv-name">
+          <span x-text="cv.prenom||'Prénom'"></span>
+          <span x-text="cv.nom?cv.nom.toUpperCase():'NOM'"></span>
+        </div>
+        <div class="iv-title" x-text="cv.titre||'Titre professionnel'"></div>
+        <div class="iv-contacts">
+          <template x-if="cv.email"><span class="iv-ci"><span class="iv-ci-dot"></span><span x-text="cv.email"></span></span></template>
+          <template x-if="cv.telephone"><span class="iv-ci"><span class="iv-ci-dot"></span><span x-text="cv.telephone"></span></span></template>
+          <template x-if="cvLoc()"><span class="iv-ci"><span class="iv-ci-dot"></span><span x-text="cvLoc()"></span></span></template>
+          <template x-if="cv.age"><span class="iv-ci"><span class="iv-ci-dot"></span><span x-text="cv.age+' ans'"></span></span></template>
+          <template x-if="cv.linkedin"><span class="iv-ci"><span class="iv-ci-dot"></span><span x-text="cv.linkedin"></span></span></template>
+          <template x-if="cv.permis"><span class="iv-ci"><span class="iv-ci-dot"></span><span x-text="'Permis '+cv.permis"></span></span></template>
+        </div>
+      </div>
+    </div>
+
+    <!-- Séparateur en vague concave : indigo → blanc (main) / lavande (aside) -->
+    <div class="iv-wave">
+      <svg width="794" height="32" viewBox="0 0 794 32" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Fond lavande pour la zone aside (36% droite, x=508→794) -->
+        <rect x="508" y="0" width="286" height="32" fill="#EDE7F6"/>
+        <!-- Arche concave indigo descendant du header -->
+        <path d="M0,0 L794,0 L794,16 Q397,32 0,16 Z" fill="#1A237E"/>
+        <!-- Liseré ambre sur la vague -->
+        <path d="M0,16 Q397,32 794,16" stroke="#F9A825" stroke-width="1.5" fill="none" opacity=".5"/>
+      </svg>
+    </div>
+
+    <!-- BODY -->
+    <div class="iv-body">
+
+      <!-- ── Contenu principal (gauche) ── -->
+      <div class="iv-main">
+
+        <!-- Expériences -->
+        <template x-if="cv.experiences.some(e=>expVisible(e))">
+          <div>
+            <div class="iv-sec"><div class="iv-sec-dot"></div><div class="iv-sec-label">{% trans "Expériences professionnelles" %}</div><div class="iv-sec-line"></div></div>
+            <template x-for="e in cv.experiences" :key="e.id">
+              <div x-show="expVisible(e)" class="iv-entry">
+                <div class="iv-entry-hdr">
+                  <div class="iv-entry-title" x-text="expTitre(e)"></div>
+                  <div x-show="expTitrePeriodeShow(e)" class="iv-entry-badge" x-text="expTitrePeriodeStr(e)"></div>
+                </div>
+                <template x-if="!e.postes||e.postes.length<=1">
+                  <div x-show="e.entreprise||e.lieu">
+                    <span class="iv-entry-sub" x-text="e.entreprise"></span>
+                    <span x-show="e.lieu" class="iv-entry-place" x-text="e.lieu?' · '+e.lieu:''"></span>
+                    <span x-show="expPeriodeShow(e)" style="font-size:7.5pt;color:#94a3b8;margin-left:4px;white-space:nowrap" x-text="expPeriodeStr(e)"></span>
+                  </div>
+                </template>
+                <template x-if="e.postes&&e.postes.length>1">
+                  <div><div x-show="e.lieu" class="iv-entry-place" x-text="'· '+e.lieu" style="margin-bottom:3px"></div><div class="cv-postes-list"><template x-for="p in e.postes" :key="p.id"><div x-show="p.titre" class="cv-postes-row"><span class="cv-postes-titre" x-text="p.titre"></span><span x-show="p.debut||p.enCours" class="cv-postes-date" x-text="formatPeriode(p.debut,p.fin,p.enCours)"></span></div></template></div></div>
+                </template>
+                <div x-show="e.desc" class="iv-entry-desc" x-text="e.desc"></div>
+                <template x-if="e.hasMissionsClient && e.missionsClient && e.missionsClient.filter(mc=>mc.client).length>0">
+                  <div class="cv-mc-section">
+                    <div class="cv-mc-label">🏢 Missions clients</div>
+                    <template x-for="mc in e.missionsClient.filter(mc=>mc.client)" :key="mc.id">
+                      <div class="cv-mc-item">
+                        <div class="cv-mc-hdr">
+                          <div class="cv-mc-title" x-text="mc.client||'—'"></div>
+                          <div x-show="mc.debut||mc.enCours" class="cv-mc-badge" x-text="formatPeriode(mc.debut,mc.fin,mc.enCours)"></div>
+                        </div>
+                        <div x-show="mc.pays||mc.ville" class="cv-mc-client">
+                          <span x-show="mc.pays" x-text="mc.pays"></span>
+                          <span x-show="mc.ville" x-text="mc.pays&&mc.ville?' · '+mc.ville:mc.ville||''"></span>
+                        </div>
+                        <div x-show="mc.desc" class="cv-mc-desc" x-text="mc.desc"></div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Formations -->
+        <template x-if="vis(cv.formations).filter(f=>f.diplome||f.ecole).length > 0">
+          <div>
+            <div class="iv-sec"><div class="iv-sec-dot"></div><div class="iv-sec-label">{% trans "Formations" %}</div><div class="iv-sec-line"></div></div>
+            <template x-for="f in vis(cv.formations)" :key="f.id">
+              <div x-show="f.diplome||f.ecole" class="iv-entry">
+                <div class="iv-entry-hdr">
+                  <div class="iv-entry-title" x-text="(f.typeSortie==='certification'?'🏅 ':f.typeSortie==='attestation'?'📄 ':'')+(f.diplome||'—')"></div>
+                  <div x-show="f.typeSortie==='certification'?(f.fin||f.expiration):(f.debut||f.enCours)" class="iv-entry-badge" x-text="f.typeSortie==='certification'?(f.expiration?'Exp. '+formatMonth(f.expiration):(f.fin?formatMonth(f.fin):'')):(formatPeriode(f.debut,f.fin,f.enCours))"></div>
+                </div>
+                <div x-show="f.ecole||f.lieu">
+                  <span class="iv-entry-sub" x-text="f.ecole"></span>
+                  <span x-show="f.lieu&&f.typeSortie!=='certification'" class="iv-entry-place" x-text="f.lieu?' · '+f.lieu:''"></span>
+                </div>
+                <div x-show="f.domaine" class="iv-entry-desc" x-text="f.domaine" style="font-style:italic;opacity:.8"></div>
+                <div x-show="f.typeSortie==='certification'&&f.numero" class="iv-entry-desc" x-text="'N° '+f.numero"></div>
+                <div x-show="f.desc" class="iv-entry-desc" x-text="f.desc"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Certifications -->
+        <template x-if="cv.showCertif && cv.certifs.filter(c=>c.nom).length > 0">
+          <div>
+            <div class="iv-sec"><div class="iv-sec-dot"></div><div class="iv-sec-label">{% trans "Certifications" %}</div><div class="iv-sec-line"></div></div>
+            <template x-for="c in cv.certifs" :key="c.id">
+              <div x-show="c.nom" class="iv-item iv-certif">
+                <div>
+                  <div class="iv-item-title" x-text="c.nom"></div>
+                  <div class="iv-item-sub" x-text="c.organisme"></div>
+                </div>
+                <div class="iv-item-year" x-text="c.annee"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Projets -->
+        <template x-if="cv.showProjets && vis(cv.projets).filter(p=>p.nom).length > 0">
+          <div>
+            <div class="iv-sec"><div class="iv-sec-dot"></div><div class="iv-sec-label">{% trans "Projets personnels" %}</div><div class="iv-sec-line"></div></div>
+            <template x-for="p in vis(cv.projets)" :key="p.id">
+              <div x-show="p.nom" class="iv-item iv-certif">
+                <div>
+                  <div class="iv-item-title" x-text="p.nom"></div>
+                  <div class="iv-item-sub" x-text="p.desc"></div>
+                </div>
+                <div class="iv-item-year" x-text="p.annee"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Bénévolat -->
+        <template x-if="cv.showBenev && cv.benevs && vis(cv.benevs).filter(b=>b.role||b.orga).length > 0">
+          <div>
+            <div class="iv-sec"><div class="iv-sec-dot"></div><div class="iv-sec-label">{% trans "Engagement &amp; Bénévolat" %}</div><div class="iv-sec-line"></div></div>
+            <template x-for="b in vis(cv.benevs)" :key="b.id">
+              <div x-show="b.role||b.orga" class="iv-item iv-certif">
+                <div>
+                  <div class="iv-item-title" x-text="b.role"></div>
+                  <div class="iv-item-sub" x-text="b.orga"></div>
+                </div>
+                <div class="iv-item-year" x-text="formatPeriode(b.debut,b.fin,b.enCours)"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+      </div>
+
+      <!-- ── Sidebar droite lavande ── -->
+      <div class="iv-aside">
+
+        <template x-if="cv.profil">
+          <div>
+            <div class="iv-aside-sec">{% trans "Profil" %}</div>
+            <p class="iv-profil" x-text="cv.profil"></p>
+          </div>
+        </template>
+
+        <template x-if="vis(cv.competences).filter(c=>c.nom).length > 0">
+          <div>
+            <div class="iv-aside-sec">{% trans "Compétences" %}</div>
+            <template x-for="c in vis(cv.competences)" :key="c.id">
+              <div x-show="c.nom" class="iv-skill">
+                <div class="iv-skill-name" x-text="c.nom"></div>
+                <div class="iv-skill-bg">
+                  <div class="iv-skill-fill" :style="'width:' + (niveauDots(c.niveau) * 20) + '%'"></div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="vis(cv.langues).filter(l=>l.nom).length > 0">
+          <div>
+            <div class="iv-aside-sec">{% trans "Langues" %}</div>
+            <div class="iv-two-col">
+              <template x-for="l in vis(cv.langues)" :key="l.id">
+                <div x-show="l.nom" class="iv-lang">
+                  <span class="iv-lang-name" x-text="l.nom"></span>
+                  <span class="iv-lang-badge" x-text="niveauCode(l.niveau,'langue')"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <template x-if="cv.interets.filter((i,ii)=>i && !isInteretMasque(ii)).length > 0">
+          <div>
+            <div class="iv-aside-sec">{% trans "Centres d'intérêt" %}</div>
+            <div class="iv-two-col">
+              <template x-for="(ci,idx) in cv.interets" :key="idx">
+                <div x-show="ci && !isInteretMasque(idx)" class="iv-interest">
+                  <div class="iv-interest-dot"></div>
+                  <span x-text="ci"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <template x-if="cv.showRef">
+          <div class="iv-ref-box">{% trans "Références professionnelles disponibles sur demande." %}</div>
+        </template>
+
+      </div>
+    </div>
+
+    <div class="iv-footer"></div>
+  </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+{% block js_extra %}{% include "candidat/cv/_cvbuilder_js.html" %}{% endblock %}

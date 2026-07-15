@@ -1,0 +1,873 @@
+{% extends "entreprise/base.html" %}
+{% load i18n %}
+
+{% block titre %}Conversations — {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+<style>
+    .conv-sidebar-header { background:#fff; border-bottom:1px solid #e5e7eb; color:#1f2937; }
+    .conv-sidebar-header .conv-icon { background:rgba(0,154,68,.12); color:#009A44; }
+    .conv-sidebar-header .conv-sous-titre { color:#6b7280; }
+    html.dark .conv-sidebar-header { background:#1e293b; border-color:#334155; color:#f1f5f9; }
+    html.dark .conv-sidebar-header .conv-icon { background:rgba(0,154,68,.20); color:#4ade80; }
+    html.dark .conv-sidebar-header .conv-sous-titre { color:#94a3b8; }
+    html.noir .conv-sidebar-header { background:linear-gradient(135deg,#000 0%,#080808 60%,#111 100%); border-color:#222; color:#f1f5f9; }
+    html.noir .conv-sidebar-header .conv-icon { background:rgba(0,154,68,.15); color:#4ade80; }
+    html.noir .conv-sidebar-header .conv-sous-titre { color:#94a3b8; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div style="height:calc(100vh - 130px); min-height:500px;"
+     class="max-w-5xl mx-auto flex overflow-hidden rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,.12)] border border-gray-100 dark:border-gray-700"
+     x-data="pageConvsEnt()" x-init="init()">
+
+    {# ══ SIDEBAR GAUCHE ══ #}
+    <div class="flex flex-col flex-shrink-0 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-700"
+         style="width:300px;"
+         :class="convActive ? 'hidden sm:flex' : 'flex w-full sm:w-[300px]'">
+
+        {# Header sidebar #}
+        <div class="conv-sidebar-header flex items-center gap-3 px-4 py-4 flex-shrink-0">
+            <div class="conv-icon w-9 h-9 rounded-full flex items-center justify-center text-lg font-bold">💬</div>
+            <div>
+                <p class="font-bold text-sm">{% trans "Conversations" %}</p>
+                <p class="conv-sous-titre text-[10px]" x-text="conversations.length + ' contact(s)'"></p>
+            </div>
+        </div>
+
+        {# Recherche #}
+        <div class="px-3 pt-2 pb-1 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
+            <div class="flex items-center gap-2 bg-white dark:bg-gray-700 rounded-full px-3 py-1.5 shadow-sm">
+                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input x-model="recherche" type="text" placeholder="{% trans "Rechercher…" %}"
+                       class="flex-1 bg-transparent text-xs text-gray-700 dark:text-gray-200 placeholder-gray-400 outline-none min-w-0">
+                <button x-show="recherche" @click="recherche=''" class="text-gray-400 hover:text-gray-600 text-xs leading-none">✕</button>
+            </div>
+        </div>
+
+        {# Filtres #}
+        <div class="flex gap-1 px-3 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
+            <template x-for="f in [{k:'toutes',l:'Toutes'},{k:'non_lues',l:'Non lues'},{k:'lues',l:'Lues'}]" :key="f.k">
+                <button @click="filtre = f.k"
+                        class="flex-1 text-[11px] font-semibold py-1 rounded-full transition"
+                        :class="filtre === f.k ? 'text-white' : 'text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-700 hover:bg-green-50 dark:hover:bg-gray-600'"
+                        :style="filtre === f.k ? 'background:#009A44;' : ''"
+                        x-text="f.l"></button>
+            </template>
+        </div>
+
+        {# Vide #}
+        <template x-if="convsFiltrees.length === 0">
+            <div class="flex flex-col items-center justify-center flex-1 py-16 px-6 text-center">
+                <div class="text-5xl mb-3 opacity-50">💬</div>
+                <p class="text-sm font-semibold text-gray-500 dark:text-gray-400"
+                   x-text="filtre === 'non_lues' ? 'Aucun message non lu' : filtre === 'lues' ? 'Aucune conversation lue' : 'Aucune conversation'"></p>
+                <p class="text-xs text-gray-400 mt-1" x-show="filtre === 'toutes'">{% trans "Contactez un candidat depuis son profil." %}</p>
+            </div>
+        </template>
+
+        {# Liste #}
+        <div class="overflow-y-auto flex-1 chat-scroll p-2 space-y-1" @click="menuOuvert = null">
+            <template x-for="c in convsFiltrees" :key="c.id">
+                <div class="relative rounded-xl transition"
+                     :class="[convActive && convActive.id === c.id ? 'bg-green-50 dark:bg-green-900/20 shadow-sm' : 'hover:bg-gray-50 dark:hover:bg-gray-800', c.archivee ? 'opacity-60' : '']">
+                    <div class="flex items-center">
+                        {# Zone cliquable principale #}
+                        <button type="button" @click="ouvrirConv(c)"
+                                class="flex-1 flex items-center gap-3 px-3 py-2.5 text-left min-w-0">
+                            <div class="relative flex-shrink-0">
+                                <template x-if="c.photo">
+                                    <img :src="c.photo" :alt="{% trans "c.initiales" %}" class="w-12 h-12 rounded-full object-cover shadow-sm">
+                                </template>
+                                <template x-if="!c.photo">
+                                    <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-base shadow-sm"
+                                         style="background:linear-gradient(135deg,#009A44,#00c455);" x-text="c.initiales"></div>
+                                </template>
+                                <span x-show="c.nb_non_lus > 0"
+                                      class="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-red-500 border-2 border-white dark:border-gray-900"></span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-1">
+                                    <p class="text-sm truncate flex-1"
+                                       :class="c.nb_non_lus > 0 ? 'font-bold text-gray-900 dark:text-gray-100' : 'font-semibold text-gray-900 dark:text-gray-100'"
+                                       x-text="c.nom"></p>
+                                    <span x-show="c.silencieux" title="{% trans "Mode silencieux" %}" class="text-gray-400 text-xs flex-shrink-0">🔇</span>
+                                    <span x-show="c.archivee" title="{% trans "Archivée" %}" class="text-gray-400 text-xs flex-shrink-0">📦</span>
+                                    <span class="text-[10px] text-gray-400 flex-shrink-0" x-text="c.date"></span>
+                                </div>
+                                <div class="flex items-center justify-between gap-1 mt-0.5">
+                                    <p class="text-xs truncate"
+                                       :class="c.nb_non_lus > 0 ? 'font-semibold text-gray-800 dark:text-gray-200' : 'text-gray-400 dark:text-gray-500 italic'"
+                                       x-text="c.dernier_message || 'Nouvelle conversation'"></p>
+                                    <span x-show="c.nb_non_lus > 0" x-text="c.nb_non_lus"
+                                          class="flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full text-white text-[10px] font-bold flex items-center justify-center"
+                                          style="background:#009A44;"></span>
+                                </div>
+                            </div>
+                        </button>
+
+                        {# Bouton ⋮ #}
+                        <button type="button"
+                                @click.stop="menuOuvert = menuOuvert === c.id ? null : c.id"
+                                class="flex-shrink-0 mr-2 w-7 h-7 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                                :class="menuOuvert === c.id ? 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white' : ''">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+                        </button>
+                    </div>
+
+                    {# Menu contextuel #}
+                    <div x-show="menuOuvert === c.id" x-cloak
+                         @click.outside="menuOuvert = null"
+                         class="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-1 min-w-[180px]"
+                         x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                         x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
+                        <button type="button" @click.stop="convAction(c, 'marquer_lu')"
+                                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition text-left">
+                            <span class="text-base">✅</span> Marquer comme lu
+                        </button>
+                        <button type="button" @click.stop="convAction(c, 'archiver')"
+                                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition text-left">
+                            <span class="text-base" x-text="c.archivee ? '📤' : '📦'"></span>
+                            <span x-text="c.archivee ? 'Désarchiver' : 'Archiver'"></span>
+                        </button>
+                        <button type="button" @click.stop="convAction(c, 'silencieux')"
+                                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition text-left">
+                            <span class="text-base" x-text="c.silencieux ? '🔔' : '🔇'"></span>
+                            <span x-text="c.silencieux ? 'Activer les notifs' : 'Mode silencieux'"></span>
+                        </button>
+                        <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+                        <button type="button" @click.stop="convAction(c, 'supprimer')"
+                                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition text-left">
+                            <span class="text-base">🗑️</span> Supprimer
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    {# ══ PANNEAU DROIT ══ #}
+    <div class="flex-1 flex flex-col min-w-0 bg-gray-100 dark:bg-gray-800"
+         :class="!convActive ? 'hidden sm:flex' : 'flex'">
+
+        {# Aucune conv sélectionnée #}
+        <template x-if="!convActive">
+            <div class="flex flex-col items-center justify-center flex-1 text-center px-8 bg-gray-50 dark:bg-gray-900">
+                <div class="w-24 h-24 rounded-full flex items-center justify-center text-4xl mb-5 shadow-inner"
+                     style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9);">💬</div>
+                <h3 class="text-lg font-bold text-gray-700 dark:text-gray-200 mb-1">{% trans "Vos conversations" %}</h3>
+                <p class="text-sm text-gray-400 max-w-xs">{% trans "Sélectionnez un candidat à gauche pour démarrer ou reprendre une conversation." %}</p>
+            </div>
+        </template>
+
+        <template x-if="convActive">
+            <div class="flex flex-col h-full relative">
+
+                {# Header conv #}
+                <div class="flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-900 shadow-sm flex-shrink-0 border-b border-gray-100 dark:border-gray-700">
+                    <button type="button" @click="convActive = null"
+                            class="sm:hidden text-gray-400 hover:text-gray-600 mr-1 text-xl leading-none">←</button>
+                    <button type="button" @click="ouvrirProfilPanel()"
+                            class="flex items-center gap-3 flex-1 min-w-0 text-left hover:opacity-75 transition-opacity">
+                        <div class="relative flex-shrink-0">
+                            <template x-if="convActive.photo">
+                                <img :src="convActive.photo" :alt="{% trans "convActive.initiales" %}" class="w-10 h-10 rounded-full object-cover shadow">
+                            </template>
+                            <template x-if="!convActive.photo">
+                                <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow"
+                                     style="background:linear-gradient(135deg,#009A44,#00c455);" x-text="convActive.initiales"></div>
+                            </template>
+                            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-white dark:border-gray-900"></span>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="font-bold text-sm text-gray-900 dark:text-gray-100 truncate" x-text="convActive.nom"></p>
+                            <p class="text-[11px] text-green-500 font-medium">{% trans "En ligne · Voir le profil →" %}</p>
+                        </div>
+                    </button>
+                    <div x-show="loadingMessages"
+                         class="w-5 h-5 border-2 border-green-200 border-t-green-600 rounded-full animate-spin flex-shrink-0"></div>
+                </div>
+
+                {# Zone messages #}
+                <div id="page-ent-msg-list"
+                     class="flex-1 overflow-y-auto chat-scroll chat-wall-ent px-4 py-4 space-y-2">
+                    <template x-for="m in messages" :key="m.id">
+                        <div>
+                        <template x-if="m._sep">
+                            <div class="flex justify-center my-3">
+                                <span class="text-[11px] text-gray-400 bg-white/80 dark:bg-gray-700/80 px-3 py-1 rounded-full shadow-sm" x-text="m._sep"></span>
+                            </div>
+                        </template>
+                        {# Indicateur épinglé #}
+                        <div x-show="m.epingle" class="flex mb-0.5" :class="m.expediteur === 'recruteur' ? 'justify-end pr-1' : 'justify-start pl-9'">
+                            <span class="text-[10px] text-amber-500 flex items-center gap-0.5">📌 <span>{% trans "Épinglé" %}</span></span>
+                        </div>
+                        <div class="flex items-end gap-2" :class="m.expediteur === 'recruteur' ? 'justify-end' : 'justify-start'">
+                            {# Avatar interlocuteur sur les messages reçus #}
+                            <template x-if="m.expediteur !== 'recruteur'">
+                                <div class="flex-shrink-0 w-7 h-7 rounded-full overflow-hidden shadow-sm">
+                                    <template x-if="convActive.photo">
+                                        <img :src="convActive.photo" :alt="{% trans "convActive.initiales" %}" class="w-full h-full object-cover">
+                                    </template>
+                                    <template x-if="!convActive.photo">
+                                        <div class="w-full h-full flex items-center justify-center text-white text-[10px] font-bold"
+                                             style="background:linear-gradient(135deg,#009A44,#00c455);" x-text="convActive.initiales"></div>
+                                    </template>
+                                </div>
+                            </template>
+                            {# Enveloppe : bulle + bouton côte à côte #}
+                            <div class="relative max-w-[70%]">
+                                <div class="flex items-end gap-1"
+                                     :class="m.expediteur === 'recruteur' ? 'flex-row-reverse' : 'flex-row'">
+                                    {# Bulle #}
+                                    <div class="px-4 py-3 text-sm shadow-sm"
+                                         :class="m.expediteur === 'recruteur'
+                                             ? 'bubble-sent-ent text-white'
+                                             : 'bubble-recv-ent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100'"
+                                         :style="m.expediteur === 'recruteur' ? 'background:linear-gradient(135deg,#009A44,#00b84d);' : ''">
+                                        {# Message supprimé #}
+                                        <div x-show="m.supprime" class="italic text-xs opacity-60 flex items-center gap-1">
+                                            <span>🚫</span><span>{% trans "Message supprimé" %}</span>
+                                        </div>
+                                        {# Contenu normal #}
+                                        <div x-show="!m.supprime">
+                                            <template x-if="m.type_msg === 'image'">
+                                                <div>
+                                                    <img :src="m.fichier_url" class="max-w-full rounded-xl cursor-pointer shadow"
+                                                         style="max-height:180px;object-fit:cover;" @click="window.open(m.fichier_url,'_blank')">
+                                                    <p x-show="m.contenu" class="text-xs mt-1.5 whitespace-pre-wrap break-words" x-text="m.contenu"></p>
+                                                </div>
+                                            </template>
+                                            <template x-if="m.type_msg === 'audio'">
+                                                <div class="flex items-center gap-2 py-0.5">
+                                                    <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-base"
+                                                         :style="m.expediteur==='recruteur' ? 'background:rgba(255,255,255,.2)' : 'background:#e8f5e9'">🎤</div>
+                                                    <audio :src="m.fichier_url" controls class="h-7" style="min-width:150px;max-width:200px;"></audio>
+                                                </div>
+                                            </template>
+                                            <template x-if="m.type_msg === 'fichier'">
+                                                <a :href="m.fichier_url" target="_blank"
+                                                   class="flex items-center gap-2 hover:opacity-80 transition py-0.5">
+                                                    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                                                         :style="m.expediteur==='recruteur' ? 'background:rgba(255,255,255,.2)' : 'background:#e8f5e9'">📄</div>
+                                                    <div class="min-w-0">
+                                                        <p class="text-xs font-semibold truncate max-w-[140px]" x-text="m.nom_fichier || 'Fichier'"></p>
+                                                        <p class="text-[10px] opacity-70">{% trans "Appuyer pour ouvrir" %}</p>
+                                                    </div>
+                                                </a>
+                                            </template>
+                                            <template x-if="!m.type_msg || m.type_msg === 'texte'">
+                                                <p class="whitespace-pre-wrap break-words leading-relaxed" x-text="m.contenu"></p>
+                                            </template>
+                                            {# Traduction #}
+                                            <div x-show="msgTraductions[m.id]" class="mt-1.5 pt-1.5" :class="m.expediteur==='recruteur' ? 'border-t border-white/20' : 'border-t border-gray-200 dark:border-gray-600'">
+                                                <p class="text-xs opacity-80 italic whitespace-pre-wrap break-words" x-text="msgTraductions[m.id]"></p>
+                                                <p class="text-[9px] opacity-50 mt-0.5">🌐 Traduction</p>
+                                            </div>
+                                            <div class="flex items-center justify-end gap-1 mt-1">
+                                                <p class="text-[10px] leading-none"
+                                                   :class="m.expediteur === 'recruteur' ? 'text-white/60' : 'text-gray-400'"
+                                                   x-text="m.heure"></p>
+                                                <span x-show="m.expediteur === 'recruteur'"
+                                                      class="text-[10px] leading-none font-bold"
+                                                      :class="m.lu ? 'text-blue-200' : 'text-white/40'"
+                                                      x-text="m.lu ? '✓✓' : '✓'"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {# Bouton ▾ à côté de la bulle #}
+                                    <button x-show="!m.supprime"
+                                            class="flex-shrink-0 self-end mb-1 w-6 h-6 rounded-full flex items-center justify-center text-[11px] bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                                            @click.stop="msgMenuOuvert = msgMenuOuvert === m.id ? null : m.id">▾</button>
+                                </div>
+                                {# Menu contextuel (s'ouvre vers le haut) #}
+                                <div x-show="msgMenuOuvert === m.id && !m.supprime" @click.outside="msgMenuOuvert = null"
+                                     class="absolute right-0 bottom-full mb-1 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-1 min-w-[155px]">
+                                    <button class="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                                            @click="traduire(m)">
+                                        <span>🌐</span>
+                                        <span x-text="msgTraductions[m.id] ? 'Masquer traduction' : 'Traduire'"></span>
+                                    </button>
+                                    <button class="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                                            @click="msgAction(m, 'epingler')">
+                                        <span>📌</span>
+                                        <span x-text="m.epingle ? 'Désépingler' : 'Épingler'"></span>
+                                    </button>
+                                    <button x-show="peutSupprimerMsg(m)"
+                                            class="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-red-500"
+                                            @click="msgAction(m, 'supprimer')">
+                                        <span>🗑️</span><span>{% trans "Supprimer" %}</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+                    </template>
+                    <template x-if="!loadingMessages && messages.length === 0">
+                        <div class="flex justify-center py-8">
+                            <div class="bg-white/80 dark:bg-gray-700/80 rounded-2xl px-5 py-3 text-center shadow-sm">
+                                <p class="text-sm text-gray-500 dark:text-gray-300">🔒 Les messages sont chiffrés</p>
+                                <p class="text-xs text-gray-400 mt-0.5">{% trans "Commencez la conversation !" %}</p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                {# Bouton flottant "nouveaux messages" #}
+                <div x-show="nbNouveauxMsgs > 0" x-cloak
+                     @click="scrollToBottom()"
+                     class="absolute bottom-20 left-1/2 -translate-x-1/2 z-20 cursor-pointer flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold text-white shadow-lg select-none hover:scale-105 active:scale-95 transition-transform"
+                     style="background:linear-gradient(135deg,#009A44,#00b84d);"
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0 translate-y-2"
+                     x-transition:enter-end="opacity-100 translate-y-0"
+                     x-transition:leave="transition ease-in duration-150"
+                     x-transition:leave-start="opacity-100 translate-y-0"
+                     x-transition:leave-end="opacity-0 translate-y-2">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    <span x-text="nbNouveauxMsgs + ' nouveau' + (nbNouveauxMsgs > 1 ? 'x' : '') + ' message' + (nbNouveauxMsgs > 1 ? 's' : '')"></span>
+                </div>
+
+                {# Zone saisie — masquée pour MANAGER (lecture seule) #}
+                {% if not request.recruteur or request.recruteur.roleMembre == 'ADMIN' or request.recruteur.roleMembre == 'RH' %}
+                <div class="bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 flex-shrink-0">
+
+                    <div x-show="emojiOuvert" x-cloak @click.away="emojiOuvert=false"
+                         class="px-3 py-2 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-wrap gap-1">
+                        <template x-for="e in emojis" :key="e">
+                            <button @click="insererEmoji(e)" class="text-lg hover:scale-125 transition leading-none p-0.5" x-text="e"></button>
+                        </template>
+                    </div>
+
+                    <div x-show="fichierSelec || audioBlob" x-cloak class="px-4 pt-2 pb-1 flex items-center gap-3">
+                        <template x-if="fichierSelec && fichierPreview">
+                            <img :src="fichierPreview" class="h-14 w-14 rounded-lg object-cover shadow border border-gray-200">
+                        </template>
+                        <template x-if="fichierSelec && !fichierPreview">
+                            <div class="flex items-center gap-2 bg-white dark:bg-gray-700 rounded-xl px-3 py-2 shadow-sm border border-gray-200 dark:border-gray-600">
+                                <span class="text-xl">📄</span>
+                                <span class="text-xs font-medium text-gray-700 dark:text-gray-200 max-w-[120px] truncate" x-text="fichierNom"></span>
+                            </div>
+                        </template>
+                        <template x-if="audioBlob">
+                            <div class="flex items-center gap-2 bg-white dark:bg-gray-700 rounded-xl px-3 py-2 shadow-sm border border-gray-200 dark:border-gray-600">
+                                <span class="text-xl">🎤</span>
+                                <span class="text-xs font-medium text-gray-700 dark:text-gray-200"
+                                      x-text="'Note vocale · ' + formatDuree(audioDuree)"></span>
+                                <audio :src="audioBlobUrl()" controls class="h-6" style="min-width:120px;"></audio>
+                            </div>
+                        </template>
+                        <button @click="supprimerAttachment()"
+                                class="ml-auto w-7 h-7 rounded-full bg-red-100 hover:bg-red-200 flex items-center justify-center text-red-500 text-sm transition">✕</button>
+                    </div>
+
+                    <div x-show="enregistrement" x-cloak class="px-4 pt-2 flex items-center gap-3">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse flex-shrink-0"></span>
+                        <canvas id="page-ent-waveform" width="220" height="34"
+                                class="flex-1" style="max-width:220px;"></canvas>
+                        <span class="text-xs text-red-500 font-mono font-bold flex-shrink-0"
+                              x-text="formatDuree(audioDuree)"></span>
+                    </div>
+
+                    <div class="flex items-end gap-2 px-4 py-3">
+                        <button @click="emojiOuvert = !emojiOuvert"
+                                class="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition hover:bg-gray-200 dark:hover:bg-gray-700 text-lg"
+                                :class="emojiOuvert ? 'bg-green-100 dark:bg-green-900/30' : ''">😊</button>
+                        <div class="flex-1 bg-white dark:bg-gray-700 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-600 px-4 py-2.5">
+                            <textarea x-ref="msgInput" x-model="contenu" rows="1" maxlength="2000"
+                                      placeholder="Écrivez un message… (Shift+Entrée pour sauter une ligne)"
+                                      @keydown.enter="if(!$event.shiftKey){$event.preventDefault();envoyer();}"
+                                      @input="$el.style.height='auto'; $el.style.height=Math.min($el.scrollHeight,120)+'px'"
+                                      class="w-full bg-transparent text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 outline-none resize-none leading-relaxed"
+                                      style="max-height:120px;"></textarea>
+                        </div>
+                        <input type="file" x-ref="fileInput" class="hidden"
+                               accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
+                               @change="onFichierChange($event)">
+                        <button @click="choisirFichier()"
+                                class="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition hover:bg-gray-200 dark:hover:bg-gray-700 text-lg"
+                                :class="fichierSelec ? 'bg-green-100 dark:bg-green-900/30' : ''">📎</button>
+                        <button @click="enregistrement ? arreterEnregistrement() : demarrerEnregistrement()"
+                                class="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition text-lg"
+                                :class="enregistrement ? 'bg-red-500 text-white animate-pulse' : 'hover:bg-gray-200 dark:hover:bg-gray-700'">🎤</button>
+                        <button type="button" @click="envoyer()"
+                                :disabled="envoi || (!contenu.trim() && !fichierSelec && !audioBlob)"
+                                class="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-white shadow-lg transition disabled:opacity-40 hover:opacity-90 active:scale-90"
+                                style="background:linear-gradient(135deg,#009A44,#00b84d);">
+                            <svg x-show="!envoi" class="w-5 h-5 translate-x-0.5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                            </svg>
+                            <div x-show="envoi" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        </button>
+                    </div>
+
+                    <p x-show="erreur" x-text="erreur" class="text-xs text-red-500 px-5 pb-2"></p>
+                </div>
+                {% else %}
+                <div class="bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 px-4 py-3 text-center flex-shrink-0">
+                    <p class="text-xs text-gray-400">👁 Consultation seule — les Managers ne peuvent pas envoyer de messages.</p>
+                </div>
+                {% endif %}
+
+                {# ── Panel mini-profil candidat ── #}
+                <div x-show="profilPanelOuvert" x-cloak
+                     @click.self="fermerProfilPanel()"
+                     class="absolute inset-0 z-30 bg-black/20 backdrop-blur-[1px]"
+                     x-transition:enter="transition ease-out duration-150"
+                     x-transition:enter-start="opacity-0"
+                     x-transition:enter-end="opacity-100"
+                     x-transition:leave="transition ease-in duration-100"
+                     x-transition:leave-start="opacity-100"
+                     x-transition:leave-end="opacity-0">
+                    <div class="absolute right-0 top-0 bottom-0 w-72 bg-white dark:bg-gray-900 shadow-2xl border-l border-gray-100 dark:border-gray-700 flex flex-col overflow-y-auto">
+                        {# Header panel #}
+                        <div class="flex items-center justify-between px-4 py-3 flex-shrink-0"
+                             style="background:linear-gradient(135deg,#009A44 0%,#00c455 100%);">
+                            <p class="font-bold text-white text-sm">{% trans "Profil candidat" %}</p>
+                            <button @click="fermerProfilPanel()" class="text-white/70 hover:text-white text-xl leading-none transition-colors">✕</button>
+                        </div>
+                        {# Infos candidat #}
+                        <div class="px-4 py-5 flex flex-col items-center text-center gap-2 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
+                            <div class="relative">
+                                <template x-if="convActive.photo">
+                                    <img :src="convActive.photo" :alt="{% trans "convActive.initiales" %}" class="w-16 h-16 rounded-full object-cover shadow-lg">
+                                </template>
+                                <template x-if="!convActive.photo">
+                                    <div class="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-lg"
+                                         style="background:linear-gradient(135deg,#009A44,#00c455);" x-text="convActive.initiales"></div>
+                                </template>
+                                <span class="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full bg-green-400 border-2 border-white"></span>
+                            </div>
+                            <p class="font-bold text-gray-900 dark:text-gray-100 text-sm" x-text="convActive.nom"></p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 italic leading-snug" x-show="convActive.titre" x-text="convActive.titre"></p>
+                            <p class="text-xs text-gray-400 flex items-center gap-1" x-show="convActive.ville">
+                                <span>📍</span><span x-text="convActive.ville"></span>
+                            </p>
+                        </div>
+                        {# Actions #}
+                        <div class="px-4 py-4 flex flex-col gap-3">
+                            {# Sélection offre #}
+                            <div>
+                                <label class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide block mb-1.5">{% trans "Pour quelle offre ?" %}</label>
+                                <template x-if="offres.length > 0">
+                                    <select x-model="panelOffreId"
+                                            class="w-full text-xs border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 outline-none focus:border-green-400 transition">
+                                        <option value="">{% trans "Choisir une offre…" %}</option>
+                                        <template x-for="o in offres" :key="o.id">
+                                            <option :value="o.id" x-text="o.titre"></option>
+                                        </template>
+                                    </select>
+                                </template>
+                                <template x-if="offres.length === 0">
+                                    <p class="text-xs text-gray-400 italic">{% trans "Aucune offre publiée pour le moment." %}</p>
+                                </template>
+                            </div>
+                            {# Message optionnel (invitation uniquement) #}
+                            <div x-show="panelAction === 'inviter'" x-cloak>
+                                <label class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide block mb-1.5">{% trans "Message (optionnel)" %}</label>
+                                <textarea x-model="panelMessage" rows="3" maxlength="500"
+                                          placeholder="Bonjour, votre profil nous a séduit…"
+                                          class="w-full text-xs border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 outline-none focus:border-green-400 resize-none transition"></textarea>
+                            </div>
+                            {# Feedback #}
+                            <p x-show="panelFeedback" x-cloak
+                               x-text="panelFeedback && panelFeedback.msg"
+                               class="text-xs text-center font-medium py-1.5 px-3 rounded-lg"
+                               :class="panelFeedback && panelFeedback.ok ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-600'">
+                            </p>
+                            {# Bouton Retenir #}
+                            <button type="button"
+                                    :disabled="panelLoading || offres.length === 0"
+                                    @click="actionRetenir()"
+                                    class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-white shadow-sm transition disabled:opacity-40 hover:opacity-90 active:scale-95"
+                                    style="background:linear-gradient(135deg,#009A44,#00b84d);">
+                                <span>🎯</span>
+                                <span x-text="panelLoading && panelAction !== 'inviter' ? 'Envoi…' : 'Retenir pour entretien'"></span>
+                            </button>
+                            {# Bouton Inviter : mode initial #}
+                            <template x-if="panelAction !== 'inviter'">
+                                <button type="button"
+                                        :disabled="panelLoading || offres.length === 0"
+                                        @click="panelAction = 'inviter'; panelFeedback = null;"
+                                        class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold border border-blue-400 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition disabled:opacity-40 active:scale-95">
+                                    <span>📨</span><span>{% trans "Inviter à postuler" %}</span>
+                                </button>
+                            </template>
+                            {# Bouton Inviter : mode confirmation #}
+                            <template x-if="panelAction === 'inviter'">
+                                <div class="flex gap-2">
+                                    <button type="button"
+                                            @click="panelAction = null; panelMessage = ''; panelFeedback = null;"
+                                            class="flex-1 px-3 py-2.5 rounded-xl text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                                        Annuler
+                                    </button>
+                                    <button type="button"
+                                            :disabled="panelLoading || !panelOffreId"
+                                            @click="actionInviter()"
+                                            class="flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-xl text-xs font-semibold text-white shadow-sm transition disabled:opacity-40 hover:opacity-90 active:scale-95"
+                                            style="background:linear-gradient(135deg,#2563eb,#3b82f6);">
+                                        <span>📨</span>
+                                        <span x-text="panelLoading ? 'Envoi…' : 'Envoyer'"></span>
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </template>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block js_extra %}
+<script>
+(function () {
+    window._convsEnt  = {{ convs_json|safe }};
+    window._offresEnt = {{ offres_json|safe }};
+})();
+function pageConvsEnt() {
+    return {
+        conversations: window._convsEnt || [],
+        convActive: null,
+        messages: [], contenu: '', loadingMessages: false,
+        envoi: false, erreur: '', recherche: '', filtre: 'toutes',
+        emojiOuvert: false, menuOuvert: null, msgMenuOuvert: null, msgTraductions: {},
+        emojis: ['😀','😊','😍','🤝','👍','👋','🎉','✅','⚡','💼','📄','📋','🏆','🌟','💡','🔍','📊','📈','🎯','💪','🙏','😎','🤔','💬','📞','✉️','🗓️','⏰','🔗','📌','🚀','🙌','👏','🫡','🥳','❤️','🔥','⭐','🎓','🖊️'],
+        fichierSelec: null, fichierPreview: null, fichierNom: '',
+        enregistrement: false, audioBlob: null, audioDuree: 0, _vr: null,
+        profilPanelOuvert: false, panelAction: null, panelOffreId: '', panelMessage: '', panelLoading: false, panelFeedback: null,
+        offres: window._offresEnt || [],
+        nbNouveauxMsgs: 0, _pollInterval: null,
+
+        get convsFiltrees() {
+            let l = this.conversations;
+            if (this.filtre === 'non_lues') l = l.filter(c => c.nb_non_lus > 0);
+            else if (this.filtre === 'lues') l = l.filter(c => c.nb_non_lus === 0 && c.dernier_message);
+            if (!this.recherche.trim()) return l;
+            const q = this.recherche.toLowerCase();
+            return l.filter(c => c.nom.toLowerCase().includes(q));
+        },
+
+        async init() {
+            const convId = parseInt(new URLSearchParams(window.location.search).get('conv'));
+            if (convId) {
+                const c = this.conversations.find(c => c.id === convId);
+                if (c) await this.ouvrirConv(c);
+            }
+        },
+
+        async convAction(c, action) {
+            this.menuOuvert = null;
+            if (action === 'supprimer' && !confirm('Supprimer cette conversation ?')) return;
+            try {
+                const r = await fetch(`/entreprise/recruteur/conversations/${c.id}/action/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '' },
+                    body: JSON.stringify({ action }),
+                });
+                const d = await r.json();
+                if (!d.ok) return;
+                if (action === 'supprimer') {
+                    this.conversations = this.conversations.filter(x => x.id !== c.id);
+                    if (this.convActive && this.convActive.id === c.id) this.convActive = null;
+                } else if (action === 'archiver') {
+                    c.archivee = d.archivee;
+                } else if (action === 'silencieux') {
+                    c.silencieux = d.silencieux;
+                } else if (action === 'marquer_lu') {
+                    c.nb_non_lus = 0;
+                }
+            } catch (_) {}
+        },
+
+        peutSupprimerMsg(m) {
+            if (m.supprime || m.expediteur !== 'recruteur') return false;
+            return (Date.now() - new Date(m.date_envoi).getTime()) < 86400000;
+        },
+
+        async msgAction(m, action) {
+            this.msgMenuOuvert = null;
+            if (action === 'supprimer' && !confirm('Supprimer ce message ?')) return;
+            const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+            try {
+                const r = await fetch(`/entreprise/recruteur/messages/${m.id}/action/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                    body: JSON.stringify({ action }),
+                });
+                const d = await r.json();
+                if (!d.ok) return;
+                if (action === 'supprimer') { m.supprime = true; m.contenu = ''; }
+                else if (action === 'epingler') { m.epingle = d.epingle; }
+            } catch (_) {}
+        },
+
+        async traduire(m) {
+            this.msgMenuOuvert = null;
+            if (this.msgTraductions[m.id]) {
+                this.msgTraductions = Object.fromEntries(Object.entries(this.msgTraductions).filter(([k]) => k != m.id));
+                return;
+            }
+            const texte = m.contenu;
+            if (!texte) return;
+            try {
+                const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(texte)}&langpair=auto|fr`);
+                const d = await r.json();
+                if (d.responseStatus === 200) this.msgTraductions = { ...this.msgTraductions, [m.id]: d.responseData.translatedText };
+            } catch (_) {}
+        },
+
+        ouvrirProfilPanel() {
+            this.profilPanelOuvert = true;
+            this.panelAction = null;
+            this.panelFeedback = null;
+            this.panelMessage = '';
+            this.panelOffreId = '';
+        },
+
+        fermerProfilPanel() {
+            this.profilPanelOuvert = false;
+            this.panelAction = null;
+            this.panelFeedback = null;
+        },
+
+        async actionRetenir() {
+            if (!this.panelOffreId) {
+                this.panelFeedback = { ok: false, msg: 'Veuillez sélectionner une offre.' };
+                return;
+            }
+            this.panelLoading = true; this.panelFeedback = null;
+            try {
+                const r = await fetch(`/entreprise/candidats/${this.convActive.candidat_id}/retenir/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '' },
+                    body: JSON.stringify({ offre_id: parseInt(this.panelOffreId) }),
+                });
+                const d = await r.json();
+                this.panelFeedback = { ok: d.ok, msg: d.message };
+            } catch (_) { this.panelFeedback = { ok: false, msg: 'Erreur réseau.' }; }
+            finally { this.panelLoading = false; }
+        },
+
+        async actionInviter() {
+            if (!this.panelOffreId) {
+                this.panelFeedback = { ok: false, msg: 'Veuillez sélectionner une offre.' };
+                return;
+            }
+            this.panelLoading = true; this.panelFeedback = null;
+            try {
+                const r = await fetch(`/entreprise/candidats/${this.convActive.candidat_id}/inviter/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '' },
+                    body: JSON.stringify({ offre_id: parseInt(this.panelOffreId), message: this.panelMessage }),
+                });
+                const d = await r.json();
+                this.panelFeedback = { ok: d.ok, msg: d.message };
+                if (d.ok) { this.panelAction = null; this.panelMessage = ''; }
+            } catch (_) { this.panelFeedback = { ok: false, msg: 'Erreur réseau.' }; }
+            finally { this.panelLoading = false; }
+        },
+
+        async ouvrirConv(c) {
+            this.convActive = c; this.messages = []; this.erreur = '';
+            this.nbNouveauxMsgs = 0;
+            if (this._pollInterval) { clearInterval(this._pollInterval); this._pollInterval = null; }
+            this.supprimerAttachment();
+            this.loadingMessages = true;
+            try {
+                const r = await fetch(`/entreprise/recruteur/conversations/${c.id}/`,
+                    { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                if (r.ok) { this.messages = this.processMessages((await r.json()).messages || []); c.nb_non_lus = 0; }
+            } catch (_) {}
+            finally { this.loadingMessages = false; }
+            this._pollInterval = setInterval(() => this.pollMessages(), 5000);
+            this.$nextTick(() => {
+                const el = document.getElementById('page-ent-msg-list');
+                if (el) el.scrollTop = el.scrollHeight;
+                if (this.$refs.msgInput) this.$refs.msgInput.focus();
+            });
+        },
+
+        insererEmoji(e) {
+            this.contenu += e;
+            this.emojiOuvert = false;
+            this.$nextTick(() => this.$refs.msgInput && this.$refs.msgInput.focus());
+        },
+
+        choisirFichier() { this.$refs.fileInput.click(); },
+
+        onFichierChange(ev) {
+            const f = ev.target.files[0];
+            if (!f) return;
+            this.fichierSelec = f; this.fichierNom = f.name; this.fichierPreview = null;
+            if (f.type.startsWith('image/')) {
+                const rd = new FileReader();
+                rd.onload = () => { this.fichierPreview = rd.result; };
+                rd.readAsDataURL(f);
+            }
+        },
+
+        supprimerAttachment() {
+            this.fichierSelec = null; this.fichierPreview = null; this.fichierNom = '';
+            if (this.$refs.fileInput) this.$refs.fileInput.value = '';
+            this.audioBlob = null; this.audioDuree = 0;
+            if (this._vr) { this._vr.cancel(); this._vr = null; }
+            this.enregistrement = false;
+        },
+
+        audioBlobUrl() { return this.audioBlob ? URL.createObjectURL(this.audioBlob) : ''; },
+
+        async demarrerEnregistrement() {
+            if (this.fichierSelec) { this.erreur = "Retirez d'abord la pièce jointe."; return; }
+            this._vr = new VoiceRecorder({
+                canvasId: 'page-ent-waveform', color: '#009A44',
+                onStart:  ()        => { this.enregistrement = true; this.audioDuree = 0; },
+                onTick:   (s)       => { this.audioDuree = s; },
+                onStop:   (blob, s) => { this.audioBlob = blob; this.audioDuree = s; this.enregistrement = false; },
+                onError:  (msg)     => { this.erreur = msg; this.enregistrement = false; },
+            });
+            await this._vr.start();
+        },
+
+        arreterEnregistrement() { if (this._vr) { this._vr.stop(); this._vr = null; } },
+
+        scrollToBottom() {
+            const el = document.getElementById('page-ent-msg-list');
+            if (el) el.scrollTop = el.scrollHeight;
+            this.nbNouveauxMsgs = 0;
+        },
+
+        async pollMessages() {
+            if (!this.convActive || this.loadingMessages || this.envoi) return;
+            try {
+                const r = await fetch(`/entreprise/recruteur/conversations/${this.convActive.id}/`,
+                    { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                if (!r.ok) return;
+                const bruts = (await r.json()).messages || [];
+                if (!bruts.length) return;
+
+                // Mise à jour silencieuse de lu/supprime sans perturber le DOM
+                bruts.forEach(mBrut => {
+                    const mExist = this.messages.find(m => m.id === mBrut.id);
+                    if (mExist) {
+                        if (mExist.lu !== mBrut.lu) mExist.lu = mBrut.lu;
+                        if (mExist.supprime !== mBrut.supprime) {
+                            mExist.supprime = mBrut.supprime;
+                            mExist.contenu = mBrut.contenu;
+                        }
+                    }
+                });
+
+                const maxIdActuel = this.messages.reduce((max, m) => Math.max(max, m.id || 0), 0);
+                const nouveaux = bruts.filter(m => m.id > maxIdActuel);
+                if (!nouveaux.length) return;
+
+                const el = document.getElementById('page-ent-msg-list');
+                const wasAtBottom = !el || (el.scrollHeight - el.scrollTop - el.clientHeight < 80);
+                const hasNewFromCandidat = nouveaux.some(m => m.expediteur !== 'recruteur');
+
+                nouveaux.forEach((m, i) => {
+                    const allExisting = this.messages.filter(x => x.id > 0);
+                    const prevMsg = i === 0
+                        ? (allExisting.length > 0 ? allExisting[allExisting.length - 1] : null)
+                        : nouveaux[i - 1];
+                    m._sep = (!prevMsg || !this.sameDay(prevMsg.date_envoi, m.date_envoi))
+                        ? this.formatDateSep(m.date_envoi) : '';
+                    this.messages.push(m);
+                });
+
+                const conv = this.conversations.find(c => c.id === this.convActive.id);
+                if (conv) {
+                    conv.dernier_message = nouveaux[nouveaux.length - 1].contenu || '';
+                    conv.nb_non_lus = 0;
+                }
+
+                if (!hasNewFromCandidat || wasAtBottom) {
+                    this.nbNouveauxMsgs = 0;
+                    this.$nextTick(() => { if (el) el.scrollTop = el.scrollHeight; });
+                } else {
+                    this.nbNouveauxMsgs += nouveaux.filter(m => m.expediteur !== 'recruteur').length;
+                }
+            } catch (_) {}
+        },
+
+        formatDuree(s) {
+            return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+        },
+
+        sameDay(a, b) {
+            if (!a || !b) return true;
+            return new Date(a).toDateString() === new Date(b).toDateString();
+        },
+
+        formatDateSep(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            const now = new Date();
+            const hier = new Date(); hier.setDate(now.getDate() - 1);
+            if (d.toDateString() === now.toDateString()) return "Aujourd'hui";
+            if (d.toDateString() === hier.toDateString()) return 'Hier';
+            return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
+        },
+
+        processMessages(msgs) {
+            return msgs.map((m, i) => {
+                const prev = i > 0 ? msgs[i - 1] : null;
+                m._sep = (i === 0 || !this.sameDay(prev.date_envoi, m.date_envoi)) ? this.formatDateSep(m.date_envoi) : '';
+                return m;
+            });
+        },
+
+        async envoyer() {
+            const hasText = this.contenu.trim();
+            const hasFile = !!this.fichierSelec;
+            const hasAudio = !!this.audioBlob;
+            if ((!hasText && !hasFile && !hasAudio) || !this.convActive) return;
+            this.envoi = true; this.erreur = '';
+            try {
+                let r;
+                if (hasFile || hasAudio) {
+                    const fd = new FormData();
+                    fd.append('contenu', this.contenu.trim());
+                    if (hasFile)  fd.append('fichier', this.fichierSelec, this.fichierNom);
+                    if (hasAudio) fd.append('fichier', this.audioBlob, 'note_vocale.webm');
+                    r = await fetch(`/entreprise/recruteur/conversations/${this.convActive.id}/envoyer/`, {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                        body: fd,
+                    });
+                } else {
+                    r = await fetch(`/entreprise/recruteur/conversations/${this.convActive.id}/envoyer/`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                        body: JSON.stringify({ contenu: this.contenu }),
+                    });
+                }
+                const d = await r.json();
+                if (d.ok) {
+                    const prev = this.messages.length > 0 ? this.messages[this.messages.length - 1] : null;
+                    d.msg._sep = (this.messages.length === 0 || !this.sameDay(prev.date_envoi, d.msg.date_envoi)) ? this.formatDateSep(d.msg.date_envoi) : '';
+                    this.messages.push(d.msg);
+                    this.contenu = '';
+                    this.supprimerAttachment();
+                    const conv = this.conversations.find(c => c.id === this.convActive.id);
+                    if (conv) conv.dernier_message = d.msg.contenu || '';
+                    this.$nextTick(() => {
+                        const el = document.getElementById('page-ent-msg-list');
+                        if (el) el.scrollTop = el.scrollHeight;
+                        if (this.$refs.msgInput) this.$refs.msgInput.style.height = 'auto';
+                    });
+                } else { this.erreur = d.message; }
+            } catch (_) { this.erreur = 'Erreur réseau.'; }
+            finally { this.envoi = false; }
+        },
+    };
+}
+</script>
+{% endblock %}

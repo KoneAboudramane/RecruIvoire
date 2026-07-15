@@ -1,0 +1,305 @@
+﻿{% extends "candidat/base.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Historique des candidatures" %} — {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+<style>
+    .cand-hero { background:#fff; color:#1f2937; border:1px solid #e5e7eb; }
+    .cand-hero .deco-cercle { display:none; }
+    .cand-hero .text-white { color:#1f2937 !important; }
+    .cand-hero .text-white\/80,.cand-hero .text-white\/90 { color:#4b5563 !important; }
+    .cand-hero .bg-white\/10,.cand-hero .bg-white\/15 { background:rgba(0,0,0,.04) !important; }
+    .cand-hero .bg-white\/20 { background:rgba(0,0,0,.06) !important; }
+    .cand-hero .bg-white\/25,.cand-hero .bg-white\/30 { background:rgba(0,0,0,.07) !important; }
+    .cand-hero .hover\:bg-white\/25:hover,.cand-hero .hover\:bg-white\/30:hover { background:rgba(0,0,0,.07) !important; }
+    .cand-hero .border-white\/30 { border-color:rgba(0,0,0,.12) !important; }
+    .cand-hero .ring-white { --tw-ring-color:rgba(0,0,0,.22) !important; }
+    .cand-hero .text-green-300 { color:#15803d !important; }
+    .cand-hero .text-red-300   { color:#b91c1c !important; }
+    .cand-hero .text-gray-300  { color:#4b5563 !important; }
+    html.dark .cand-hero { background:#1e293b; color:#f1f5f9; border-color:#334155; }
+    html.dark .cand-hero .deco-cercle { display:block; opacity:.25; }
+    html.dark .cand-hero .text-white { color:#f1f5f9 !important; }
+    html.dark .cand-hero .text-white\/80 { color:rgba(241,245,249,.8) !important; }
+    html.dark .cand-hero .text-white\/90 { color:rgba(241,245,249,.9) !important; }
+    html.noir .cand-hero { background:linear-gradient(135deg,#000 0%,#080808 60%,#111 100%); color:#f1f5f9; border-color:#222; }
+    html.noir .cand-hero .deco-cercle { display:block; opacity:.12; }
+    html.noir .cand-hero .text-white { color:#f1f5f9 !important; }
+    html.noir .cand-hero .text-white\/80 { color:rgba(241,245,249,.8) !important; }
+    html.noir .cand-hero .text-white\/90 { color:rgba(241,245,249,.9) !important; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<section class="pb-10">
+
+    {# ── Fil d'Ariane ── #}
+    <nav class="text-sm text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2 flex-wrap">
+        <a href="{% url 'candidat:accueil' %}" class="hover:underline">{% trans "Accueil" %}</a>
+        <span>›</span>
+        <a href="{% url 'candidat:mes_candidatures' %}" class="hover:underline">{% trans "Mes candidatures" %}</a>
+        <span>›</span>
+        <span class="text-gray-700 dark:text-gray-300 font-semibold">{% trans "Historique" %}</span>
+    </nav>
+
+    {# ── Hero ── #}
+    <div class="cand-hero rounded-3xl px-6 sm:px-10 py-8 mb-6 relative overflow-hidden shadow-sm">
+        <div class="deco-cercle absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
+        <div class="deco-cercle absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full -translate-x-1/2 translate-y-1/2 pointer-events-none"></div>
+        <div class="relative">
+            <div class="flex flex-wrap items-start justify-between gap-4 mb-6">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-extrabold mb-1">📚 {% trans "Historique des candidatures" %}</h1>
+                    <p class="text-white/80 text-sm">{% trans "Candidatures clôturées ou dont l'entretien est passé." %}</p>
+                </div>
+                <a href="{% url 'candidat:mes_candidatures' %}"
+                   class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-white/20 hover:bg-white/30 border border-white/30 transition">
+                    ← {% trans "En cours" %}
+                </a>
+            </div>
+
+            {# Stats cliquables #}
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <a href="{% url 'candidat:historique_candidatures' %}"
+                   class="rounded-2xl px-4 py-3 text-center transition hover:scale-105
+                          {% if not statut_actif %}ring-2 ring-white bg-white/30{% else %}bg-white/15 hover:bg-white/25{% endif %}">
+                    <p class="text-2xl font-extrabold">{{ stats.total }}</p>
+                    <p class="text-xs text-white/80 font-semibold mt-0.5">{% trans "Total" %}</p>
+                </a>
+                <a href="?statut=ENTRETIEN_PASSE"
+                   class="rounded-2xl px-4 py-3 text-center transition hover:scale-105
+                          {% if statut_actif == 'ENTRETIEN_PASSE' %}ring-2 ring-white bg-white/30{% else %}bg-white/15 hover:bg-white/25{% endif %}">
+                    <p class="text-2xl font-extrabold text-blue-300">{{ stats.entretien_passe }}</p>
+                    <p class="text-xs text-white/80 font-semibold mt-0.5">📅 {% trans "Entretien passé" %}</p>
+                </a>
+                <a href="?statut=REFUSEE"
+                   class="rounded-2xl px-4 py-3 text-center transition hover:scale-105
+                          {% if statut_actif == 'REFUSEE' %}ring-2 ring-white bg-white/30{% else %}bg-white/15 hover:bg-white/25{% endif %}">
+                    <p class="text-2xl font-extrabold text-red-300">{{ stats.refusees }}</p>
+                    <p class="text-xs text-white/80 font-semibold mt-0.5">❌ {% trans "Refusées" %}</p>
+                </a>
+                <a href="?statut=RETIREE"
+                   class="rounded-2xl px-4 py-3 text-center transition hover:scale-105
+                          {% if statut_actif == 'RETIREE' %}ring-2 ring-white bg-white/30{% else %}bg-white/15 hover:bg-white/25{% endif %}">
+                    <p class="text-2xl font-extrabold text-gray-300">{{ stats.retirees }}</p>
+                    <p class="text-xs text-white/80 font-semibold mt-0.5">🚫 {% trans "Retirées" %}</p>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {# ── Filtre actif — chip + lien reset ── #}
+    {% if statut_actif %}
+    <div class="flex items-center gap-2 mb-5">
+        <span class="text-sm text-gray-500 dark:text-gray-400">{% trans "Filtre actif :" %}</span>
+        <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold
+                     {% if statut_actif == 'REFUSEE' %}bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400
+                     {% elif statut_actif == 'ENTRETIEN_PASSE' %}bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400
+                     {% else %}bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300{% endif %}">
+            {% if statut_actif == 'REFUSEE' %}❌ {% trans "Refusées" %}
+            {% elif statut_actif == 'ENTRETIEN_PASSE' %}📅 {% trans "Entretien passé" %}
+            {% else %}🚫 {% trans "Retirées" %}{% endif %}
+        </span>
+        <a href="{% url 'candidat:historique_candidatures' %}"
+           class="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition">
+            ✕ {% trans "Tout afficher" %}
+        </a>
+    </div>
+    {% endif %}
+
+    {# ── Liste ── #}
+    {% if candidatures %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        {% for c in candidatures %}
+        <article class="bg-white dark:bg-gray-800 rounded-2xl border-2 shadow-sm overflow-hidden transition hover:-translate-y-0.5 hover:shadow-md
+                        {% if c.statut.code == 'ACCEPTEE' %}border-green-200 dark:border-green-700/40
+                        {% elif c.statut.code == 'REFUSEE' %}border-red-200 dark:border-red-700/40
+                        {% else %}border-gray-100 dark:border-gray-700{% endif %}">
+
+            {# Bandeau couleur #}
+            <div class="h-1"
+                 style="background:{{ c.statut.couleur|default:'#6B7280' }};"></div>
+
+            <div class="p-5 sm:p-6">
+                <div class="flex items-start gap-4">
+
+                    {# Logo entreprise #}
+                    <div class="flex-shrink-0">
+                        {% if c.offre.entreprise.logoEntreprise %}
+                        <img src="{{ c.offre.entreprise.logoEntreprise.url }}"
+                             alt="{{ c.offre.entreprise.raisonSocial }}"
+                             class="w-14 h-14 rounded-xl object-contain border border-gray-100 dark:border-gray-700 bg-white shadow-sm">
+                        {% else %}
+                        <div class="w-14 h-14 rounded-xl flex items-center justify-center text-white text-xl font-extrabold shadow-sm"
+                             style="background:{{ c.statut.couleur|default:'#6B7280' }};">
+                            {{ c.offre.entreprise.raisonSocial|first|upper }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {# Contenu #}
+                    <div class="flex-1 min-w-0">
+
+                        {# Badge statut + référence #}
+                        <div class="flex flex-wrap items-center gap-2 mb-2">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold text-white"
+                                  style="background:{{ c.statut.couleur|default:'#6B7280' }};">
+                                {{ c.statut.icone }} {{ c.statut.libelle }}
+                            </span>
+                            <span class="text-[10px] text-gray-400 dark:text-gray-500 font-mono">🔖 {{ c.reference }}</span>
+                        </div>
+
+                        {# Titre offre — lien direct #}
+                        <a href="{% url 'candidat:offre_detail' c.offre.id %}"
+                           class="font-extrabold text-gray-900 dark:text-white text-base leading-tight hover:text-orange-600 dark:hover:text-orange-400 transition line-clamp-2">
+                            {{ c.offre.titre }}
+                        </a>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                            🏢 {{ c.offre.entreprise.raisonSocial }}
+                        </p>
+
+                        {# Métadonnées offre #}
+                        <div class="flex flex-wrap gap-2 mt-2">
+                            {% if c.offre.contrat %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                                📄 {{ c.offre.contrat.libelle }}
+                            </span>
+                            {% endif %}
+                            {% if c.offre.modeTravailRef %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                                🏠 {{ c.offre.modeTravailRef.libelle }}
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        {# Mini-timeline : étapes de la candidature #}
+                        {% with steps=c.historiques.all %}
+                        {% if steps %}
+                        <div class="mt-4">
+                            <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+                                📋 {% trans "Parcours" %} · {{ steps|length }} {% trans "étape" %}{{ steps|length|pluralize }}
+                            </p>
+                            <div class="flex items-center gap-1 flex-wrap">
+                                {% for h in steps %}
+                                <div class="flex items-center gap-1">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold text-white"
+                                          style="background:{{ h.nouveauStatut.couleur|default:'#6B7280' }};">
+                                        {{ h.nouveauStatut.icone|default:"•" }} {{ h.nouveauStatut.libelle }}
+                                    </span>
+                                    {% if not forloop.last %}
+                                    <svg class="w-3 h-3 text-gray-300 dark:text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {# Commentaire final du recruteur #}
+                            {% with last_h=steps|first %}
+                            {% if last_h.commentaire %}
+                            <p class="mt-2 text-xs text-gray-600 dark:text-gray-400 italic bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 border border-gray-100 dark:border-gray-700 line-clamp-2">
+                                « {{ last_h.commentaire }} »
+                            </p>
+                            {% endif %}
+                            {% endwith %}
+                        </div>
+                        {% endif %}
+                        {% endwith %}
+
+                        {# Entretiens passés #}
+                        {% for ent in c.entretiens.all %}
+                        <div class="mt-3 flex items-center gap-2 px-3 py-2 rounded-lg text-xs
+                            {% if ent.statut == 'REALISE' %}bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400
+                            {% elif ent.statut == 'ANNULE' %}bg-gray-50 dark:bg-gray-700/50 text-gray-500
+                            {% else %}bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400{% endif %}">
+                            <span>📅</span>
+                            <span class="font-semibold">
+                                {% if ent.typeEntretienRef %}{{ ent.typeEntretienRef.libelle }}{% else %}{{ ent.get_typeEntretien_display }}{% endif %}
+                                — {{ ent.dateEntretien|date:"d M Y, H:i" }}
+                                · {{ ent.get_statut_display }}
+                            </span>
+                        </div>
+                        {% endfor %}
+
+                        {# Footer : date + action #}
+                        <div class="flex items-center justify-between gap-3 mt-4 flex-wrap">
+                            <p class="text-xs text-gray-400 dark:text-gray-500">
+                                📅 {% trans "Postulée le" %} {{ c.dateCandidature|date:"d M Y" }}
+                            </p>
+                            <a href="{% url 'candidat:offre_detail' c.offre.id %}"
+                               class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                🔍 {% trans "Voir l'offre" %}
+                            </a>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+
+    {# ── Pagination ── #}
+    {% if page_obj.has_other_pages %}
+    <nav class="flex items-center justify-center gap-2 flex-wrap">
+        {% if page_obj.has_previous %}
+        <a href="?{% if statut_actif %}statut={{ statut_actif }}&{% endif %}page=1"
+           class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 transition">«</a>
+        <a href="?{% if statut_actif %}statut={{ statut_actif }}&{% endif %}page={{ page_obj.previous_page_number }}"
+           class="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 transition">‹</a>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <span class="px-4 py-2 rounded-xl text-sm font-extrabold text-white shadow-sm" style="background:#c96010;">{{ num }}</span>
+            {% elif num >= page_obj.number|add:'-3' and num <= page_obj.number|add:'3' %}
+            <a href="?{% if statut_actif %}statut={{ statut_actif }}&{% endif %}page={{ num }}"
+               class="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-300 transition">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <a href="?{% if statut_actif %}statut={{ statut_actif }}&{% endif %}page={{ page_obj.next_page_number }}"
+           class="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 transition">›</a>
+        <a href="?{% if statut_actif %}statut={{ statut_actif }}&{% endif %}page={{ page_obj.paginator.num_pages }}"
+           class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 transition">»</a>
+        {% endif %}
+    </nav>
+    <p class="text-center text-xs text-gray-400 dark:text-gray-500 mt-3">
+        {% trans "Page" %} {{ page_obj.number }} {% trans "sur" %} {{ page_obj.paginator.num_pages }}
+        · {{ stats.total }} {% trans "candidature" %}{{ stats.total|pluralize }}
+    </p>
+    {% endif %}
+
+    {% else %}
+    {# ── État vide ── #}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl p-14 border border-dashed border-gray-200 dark:border-gray-700 text-center">
+        <div class="text-6xl mb-4">
+            {% if statut_actif == 'ACCEPTEE' %}🎉
+            {% elif statut_actif == 'REFUSEE' %}📭
+            {% elif statut_actif == 'RETIREE' %}🚫
+            {% elif statut_actif == 'ENTRETIEN_PASSE' %}📅
+            {% else %}📚{% endif %}
+        </div>
+        {% if statut_actif %}
+        <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% trans "Aucune candidature dans ce filtre" %}</h3>
+        <a href="{% url 'candidat:historique_candidatures' %}"
+           class="inline-flex items-center gap-2 mt-3 px-5 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm hover:opacity-90 transition"
+           style="background:#6B7280;">
+            ← {% trans "Voir tout l'historique" %}
+        </a>
+        {% else %}
+        <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% trans "Aucune candidature clôturée" %}</h3>
+        <p class="text-gray-500 dark:text-gray-400 mb-5 max-w-sm mx-auto text-sm">
+            {% trans "Vos candidatures retirées, acceptées ou refusées apparaîtront ici." %}
+        </p>
+        <a href="{% url 'candidat:mes_candidatures' %}"
+           class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm hover:opacity-90 transition"
+           style="background:#c96010;">
+            📋 {% trans "Mes candidatures en cours" %}
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</section>
+{% endblock %}

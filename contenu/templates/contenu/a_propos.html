@@ -1,0 +1,176 @@
+{% extends "base_public.html" %}
+{% load i18n %}
+
+{% block titre %}{% if page %}{{ page.titre }}{% else %}{% trans "À propos" %}{% endif %} — {{ logo_site.nom_site }}{% endblock %}
+{% block meta_description %}Découvrez {{ logo_site.nom_site }}, la plateforme de recrutement en ligne qui connecte candidats et entreprises en Côte d'Ivoire.{% endblock %}
+
+{% block css_extra %}
+<style>
+/* ── Mode sombre ──────────────────────────────────────────────────── */
+html.dark .apropos-header h1 { color: #f1f5f9; }
+html.dark .apropos-header p { color: #94a3b8; }
+html.dark .apropos-section-h2 { color: #f1f5f9 !important; }
+html.dark .legal-card { background: #1e293b; border-color: #334155; box-shadow: 0 1px 6px rgba(0,0,0,.2); }
+html.dark .legal-card h2,
+html.dark .legal-card h3 { color: #f1f5f9; }
+html.dark .legal-card p { color: #94a3b8; }
+html.dark .legal-card .text-gray-800 { color: #f1f5f9; }
+html.dark .legal-card .text-gray-500 { color: #94a3b8; }
+html.dark .apropos-cta { background: #1e293b !important; border-color: #334155 !important; }
+html.dark .apropos-cta h2 { color: #f1f5f9; }
+html.dark .apropos-cta p { color: #94a3b8; }
+
+/* ── Mode noir ────────────────────────────────────────────────────── */
+html.noir .apropos-header h1 { color: #f9fafb; }
+html.noir .apropos-header p { color: #9ca3af; }
+html.noir .apropos-section-h2 { color: #f9fafb !important; }
+html.noir .legal-card { background: #111827; border-color: #1f2937; box-shadow: 0 1px 6px rgba(0,0,0,.4); }
+html.noir .legal-card h2,
+html.noir .legal-card h3 { color: #f9fafb; }
+html.noir .legal-card p { color: #9ca3af; }
+html.noir .legal-card .text-gray-800 { color: #f9fafb; }
+html.noir .legal-card .text-gray-500 { color: #9ca3af; }
+html.noir .apropos-cta { background: #111827 !important; border-color: #1f2937 !important; }
+html.noir .apropos-cta h2 { color: #f9fafb; }
+html.noir .apropos-cta p { color: #9ca3af; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="max-w-4xl mx-auto px-4 py-12">
+
+    <!-- ── En-tête ─────────────────────────────────────────────────────── -->
+    <div class="apropos-header text-center mb-14">
+        <p class="text-sm font-bold uppercase tracking-widest mb-3" style="color:#c96010;">{% trans "Notre histoire" %}</p>
+        <h1 class="text-4xl lg:text-5xl font-extrabold text-gray-800 mb-4 leading-tight">
+            {% if page %}
+                {{ page.titre }}
+            {% else %}
+                {% trans "Connecter les talents" %}<br>
+                <span style="color:#2e7d52;">{% trans "aux opportunités" %}</span>
+            {% endif %}
+        </h1>
+        <p class="text-gray-500 text-lg max-w-2xl mx-auto">
+            {% if page and page.description %}
+                {{ page.description }}
+            {% else %}
+                {% blocktrans with nom_site=logo_site.nom_site %}{{ nom_site }} est né d'une conviction simple : le recrutement en Côte d'Ivoire mérite une plateforme moderne, intuitive et réellement adaptée aux réalités locales.{% endblocktrans %}
+            {% endif %}
+        </p>
+    </div>
+
+    <!-- ── Mission + Vision ────────────────────────────────────────────── -->
+    {% if section_mission or section_vision %}
+    <div class="grid md:grid-cols-2 gap-8 mb-14">
+        {% if section_mission %}
+        <div class="legal-card bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+            <div class="text-4xl mb-4">{{ section_mission.icone }}</div>
+            <h2 class="text-xl font-extrabold text-gray-800 mb-3">{{ section_mission.titre }}</h2>
+            <p class="text-gray-600 text-sm leading-relaxed">{{ section_mission.contenu|safe }}</p>
+        </div>
+        {% endif %}
+        {% if section_vision %}
+        <div class="legal-card bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+            <div class="text-4xl mb-4">{{ section_vision.icone }}</div>
+            <h2 class="text-xl font-extrabold text-gray-800 mb-3">{{ section_vision.titre }}</h2>
+            <p class="text-gray-600 text-sm leading-relaxed">{{ section_vision.contenu|safe }}</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ── Chiffres clés ───────────────────────────────────────────────── -->
+    {% if chiffres %}
+    <div class="rounded-3xl p-10 mb-14 text-white" style="background:linear-gradient(135deg,#2e7d52,#1a4d33);">
+        <h2 class="text-2xl font-extrabold mb-8 text-center">{% trans "En quelques chiffres" %}</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            {% for c in chiffres %}
+            <div>
+                <p class="text-4xl font-black mb-1">{{ c.chiffre }}</p>
+                <p class="text-white/70 text-sm">{{ c.label }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Comment ça marche ───────────────────────────────────────────── -->
+    {% if etapes_candidat or etapes_entreprise %}
+    <div class="mb-14">
+        <h2 class="apropos-section-h2 text-2xl font-extrabold text-gray-800 mb-8 text-center">{% trans "Comment ça marche ?" %}</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+
+            {% if etapes_candidat %}
+            <div class="legal-card bg-white rounded-2xl border border-gray-100 shadow-sm p-7">
+                <p class="text-xs font-bold uppercase tracking-widest mb-4" style="color:#2e7d52;">👤 {% trans "Pour les candidats" %}</p>
+                <ol class="space-y-4">
+                    {% for etape in etapes_candidat %}
+                    <li class="flex items-start gap-3">
+                        <span class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5" style="background:#2e7d52;">{{ forloop.counter }}</span>
+                        <div>
+                            <p class="font-semibold text-gray-800 text-sm">{{ etape.titre }}</p>
+                            <p class="text-xs text-gray-500 mt-0.5">{{ etape.contenu|safe }}</p>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ol>
+            </div>
+            {% endif %}
+
+            {% if etapes_entreprise %}
+            <div class="legal-card bg-white rounded-2xl border border-gray-100 shadow-sm p-7">
+                <p class="text-xs font-bold uppercase tracking-widest mb-4" style="color:#c96010;">🏢 {% trans "Pour les entreprises" %}</p>
+                <ol class="space-y-4">
+                    {% for etape in etapes_entreprise %}
+                    <li class="flex items-start gap-3">
+                        <span class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5" style="background:#c96010;">{{ forloop.counter }}</span>
+                        <div>
+                            <p class="font-semibold text-gray-800 text-sm">{{ etape.titre }}</p>
+                            <p class="text-xs text-gray-500 mt-0.5">{{ etape.contenu|safe }}</p>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ol>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Valeurs ─────────────────────────────────────────────────────── -->
+    {% if valeurs %}
+    <div class="mb-14">
+        <h2 class="apropos-section-h2 text-2xl font-extrabold text-gray-800 mb-8 text-center">{% trans "Nos valeurs" %}</h2>
+        <div class="grid md:grid-cols-3 gap-5">
+            {% for valeur in valeurs %}
+            <div class="legal-card bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center">
+                <div class="text-3xl mb-3">{{ valeur.icone }}</div>
+                <h3 class="font-bold text-gray-800 mb-2">{{ valeur.titre }}</h3>
+                <p class="text-xs text-gray-500 leading-relaxed">{{ valeur.contenu|safe }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── CTA final ───────────────────────────────────────────────────── -->
+    <div class="apropos-cta rounded-3xl p-10 text-center" style="background:#f9fafb; border:2px dashed #e5e7eb;">
+        <h2 class="text-2xl font-extrabold text-gray-800 mb-3">{% trans "Prêt à rejoindre la communauté ?" %}</h2>
+        <p class="text-gray-500 text-sm mb-6">{% trans "Gratuit pour les candidats. Commencez en 2 minutes." %}</p>
+        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+            <a href="{% url 'candidat:inscription' %}"
+               class="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm hover:opacity-90 transition"
+               style="background:#2e7d52;">
+                👤 {% trans "Créer un compte candidat" %}
+            </a>
+            <a href="{% url 'entreprise:inscription' %}"
+               class="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm hover:opacity-90 transition"
+               style="background:#c96010;">
+                🏢 {% trans "Espace recruteur" %}
+            </a>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

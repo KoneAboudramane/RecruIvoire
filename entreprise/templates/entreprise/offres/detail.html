@@ -1,0 +1,442 @@
+﻿{% extends "entreprise/base.html" %}
+{% load i18n %}
+
+{% block titre %}{{ offre.titre }} — {{ request.entreprise.raisonSocial }}{% endblock %}
+
+{% block css_extra %}
+<style>
+    .badge { display:inline-flex; align-items:center; gap:.3rem; padding:.25rem .7rem;
+             border-radius:9999px; font-size:.75rem; font-weight:700; }
+    .info-row { display:flex; align-items:flex-start; gap:.75rem; padding:.75rem 0;
+                border-bottom:1px solid #F3F4F6; font-size:.85rem; }
+    .info-row:last-child { border-bottom:none; }
+    .info-label { width:7rem; color:#9CA3AF; font-weight:500; shrink:0; flex-shrink:0; }
+    .info-val   { color:#1F2937; font-weight:600; flex:1; }
+    .tag-comp   { display:inline-flex; align-items:center; padding:.25rem .65rem; border-radius:9999px;
+                  background:#DCFCE7; color:#166534; font-size:.75rem; font-weight:600; }
+    .action-btn { display:inline-flex; align-items:center; gap:.4rem; padding:.5rem 1rem;
+                  border-radius:.6rem; font-size:.8rem; font-weight:600; transition:all .2s; cursor:pointer; border:none; }
+
+    /* ── Mode sombre : surcharges spécifiques à cette page ──────────────────── */
+    html.dark .info-row     { border-bottom-color: #334155 !important; }
+    html.dark .info-label   { color: #94a3b8 !important; }
+    html.dark .info-val     { color: #e2e8f0 !important; }
+    html.dark .tag-comp     { background: rgba(34,197,94,.15) !important; color: #4ade80 !important; }
+
+    /* Boutons d'action colorés (pastels en clair, translucides en sombre) */
+    html.dark .action-btn.bg-blue-50    { background-color: rgba(59,130,246,.15) !important; }
+    html.dark .action-btn.bg-green-50   { background-color: rgba(34,197,94,.15)  !important; }
+    html.dark .action-btn.bg-purple-50  { background-color: rgba(139,92,246,.15) !important; }
+    html.dark .action-btn.bg-amber-50   { background-color: rgba(245,158,11,.15) !important; }
+    html.dark .action-btn.bg-red-50     { background-color: rgba(239,68,68,.15)  !important; }
+    html.dark .action-btn.bg-gray-100   { background-color: #243348 !important; color: #e2e8f0 !important; }
+    html.dark .action-btn.text-blue-700   { color: #60a5fa !important; }
+    html.dark .action-btn.text-green-700  { color: #4ade80 !important; }
+    html.dark .action-btn.text-purple-700 { color: #c4b5fd !important; }
+    html.dark .action-btn.text-amber-700  { color: #fcd34d !important; }
+    html.dark .action-btn.text-red-600    { color: #f87171 !important; }
+    html.dark .action-btn.hover\:bg-blue-100:hover   { background-color: rgba(59,130,246,.25) !important; }
+    html.dark .action-btn.hover\:bg-green-100:hover  { background-color: rgba(34,197,94,.25)  !important; }
+    html.dark .action-btn.hover\:bg-purple-100:hover { background-color: rgba(139,92,246,.25) !important; }
+    html.dark .action-btn.hover\:bg-amber-100:hover  { background-color: rgba(245,158,11,.25) !important; }
+    html.dark .action-btn.hover\:bg-red-100:hover    { background-color: rgba(239,68,68,.25)  !important; }
+    html.dark .action-btn.hover\:bg-gray-200:hover   { background-color: #334155 !important; }
+
+    /* Badges contrat/statut/mode (inline style avec couleurs claires) */
+    html.dark [style*="#F0FDF4"]:not(.tag-comp) { background: rgba(34,197,94,.15) !important; }
+    html.dark [style*="#F5F3FF"]                { background: rgba(139,92,246,.15) !important; }
+    html.dark [style*="#F9FAFB"]                { background: #243348 !important; }
+    html.dark [style*="#15803D"]                { color: #4ade80 !important; }
+    html.dark [style*="#6D28D9"]                { color: #c4b5fd !important; }
+    html.dark [style*="#6B7280"]                { color: #94a3b8 !important; }
+
+    /* Encart "Lecture seule" amber */
+    html.dark .bg-amber-50  { background-color: rgba(245,158,11,.10) !important; }
+    html.dark .text-amber-800 { color: #fcd34d !important; }
+    html.dark .border-amber-200 { border-color: rgba(245,158,11,.3) !important; }
+
+    /* Diviseurs verticaux dans la barre de stats */
+    html.dark .bg-gray-200 { background-color: #334155 !important; }
+
+    /* CTA candidatures (était un gradient F0FDF4→FFFFFF) */
+    html.dark [style*="linear-gradient(135deg,#F0FDF4,#FFFFFF)"] {
+        background: rgba(34,197,94,.10) !important;
+    }
+
+    /* ── MODE NOIR (OLED) — surcharges spécifiques à cette page ─────── */
+    html.noir .info-row     { border-bottom-color: #222 !important; }
+    html.noir .info-label   { color: #94a3b8 !important; }
+    html.noir .info-val     { color: #e2e8f0 !important; }
+    html.noir .tag-comp     { background: rgba(34,197,94,.12) !important; color: #4ade80 !important; }
+
+    html.noir .action-btn.bg-blue-50    { background-color: rgba(59,130,246,.12) !important; }
+    html.noir .action-btn.bg-green-50   { background-color: rgba(34,197,94,.12)  !important; }
+    html.noir .action-btn.bg-purple-50  { background-color: rgba(139,92,246,.12) !important; }
+    html.noir .action-btn.bg-amber-50   { background-color: rgba(245,158,11,.12) !important; }
+    html.noir .action-btn.bg-red-50     { background-color: rgba(239,68,68,.12)  !important; }
+    html.noir .action-btn.bg-gray-100   { background-color: #1a1a1a !important; color: #e2e8f0 !important; }
+    html.noir .action-btn.text-blue-700   { color: #60a5fa !important; }
+    html.noir .action-btn.text-green-700  { color: #4ade80 !important; }
+    html.noir .action-btn.text-purple-700 { color: #c4b5fd !important; }
+    html.noir .action-btn.text-amber-700  { color: #fcd34d !important; }
+    html.noir .action-btn.text-red-600    { color: #f87171 !important; }
+    html.noir .action-btn.hover\:bg-blue-100:hover   { background-color: rgba(59,130,246,.20) !important; }
+    html.noir .action-btn.hover\:bg-green-100:hover  { background-color: rgba(34,197,94,.20)  !important; }
+    html.noir .action-btn.hover\:bg-purple-100:hover { background-color: rgba(139,92,246,.20) !important; }
+    html.noir .action-btn.hover\:bg-amber-100:hover  { background-color: rgba(245,158,11,.20) !important; }
+    html.noir .action-btn.hover\:bg-red-100:hover    { background-color: rgba(239,68,68,.20)  !important; }
+    html.noir .action-btn.hover\:bg-gray-200:hover   { background-color: #222 !important; }
+
+    html.noir [style*="#F0FDF4"]:not(.tag-comp) { background: rgba(34,197,94,.12) !important; }
+    html.noir [style*="#F5F3FF"]                { background: rgba(139,92,246,.12) !important; }
+    html.noir [style*="#F9FAFB"]                { background: #1a1a1a !important; }
+    html.noir [style*="#15803D"]                { color: #4ade80 !important; }
+    html.noir [style*="#6D28D9"]                { color: #c4b5fd !important; }
+    html.noir [style*="#6B7280"]                { color: #94a3b8 !important; }
+
+    html.noir .bg-amber-50  { background-color: rgba(245,158,11,.08) !important; }
+    html.noir .text-amber-800 { color: #fcd34d !important; }
+    html.noir .border-amber-200 { border-color: rgba(245,158,11,.24) !important; }
+
+    html.noir .bg-gray-200 { background-color: #222 !important; }
+
+    html.noir [style*="linear-gradient(135deg,#F0FDF4,#FFFFFF)"] {
+        background: rgba(34,197,94,.08) !important;
+    }
+</style>
+{% endblock %}
+
+{% block contenu %}
+{% with s=offre.get_style_statut c=offre.get_style_contrat %}
+<div class="w-full space-y-5">
+
+    <!-- Fil d'Ariane + bouton Suggestions ATS -->
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+        <nav class="flex items-center gap-2 text-sm text-gray-400 min-w-0">
+            <a href="{% url 'entreprise:offres_liste' %}" class="hover:text-gray-600 transition">{% trans "Offres" %}</a>
+            <span>/</span>
+            <span class="text-gray-700 font-medium truncate">{{ offre.titre }}</span>
+        </nav>
+        <a href="{% url 'entreprise:suggestions_offre' offre.pk %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white transition hover:opacity-90 shadow-sm shrink-0"
+           style="background:#c96010;">
+            🎯 Voir les suggestions
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+            </svg>
+        </a>
+    </div>
+
+    <!-- ── En-tête ─────────────────────────────────────────────────────────── -->
+    <div class="rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+        <!-- Bande couleur statut -->
+        <div class="h-1.5 w-full" style="background:{{ s.dot }};"></div>
+
+        <div class="bg-white p-6">
+            <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+
+                <!-- Gauche : titre + badges + méta -->
+                <div class="flex-1 min-w-0">
+                    <!-- Badges -->
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="badge" style="background:{{ c.bg }};color:{{ c.text }};">
+                            {{ c.icon }} {{ offre.get_typeContrat_display }}
+                        </span>
+                        <span class="badge" style="background:{{ s.bg }};color:{{ s.text }};">
+                            <span class="w-1.5 h-1.5 rounded-full inline-block" style="background:{{ s.dot }};"></span>
+                            {{ offre.get_statutOffre_display }}
+                        </span>
+                        {% if offre.modeTravail == 'REMOTE' %}
+                        <span class="badge" style="background:#F0FDF4;color:#15803D;">🌐 Télétravail</span>
+                        {% elif offre.modeTravail == 'HYBRIDE' %}
+                        <span class="badge" style="background:#F5F3FF;color:#6D28D9;">🔀 Hybride</span>
+                        {% else %}
+                        <span class="badge" style="background:#F9FAFB;color:#6B7280;">🏢 Présentiel</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Titre -->
+                    <h1 class="text-2xl font-extrabold text-gray-900 leading-tight mb-1">{{ offre.titre }}</h1>
+
+                    <!-- Méta -->
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-400 mt-2">
+                        <span>{% trans "Réf." %} <span class="font-mono font-semibold text-gray-600">{{ offre.reference }}</span></span>
+                        {% if offre.ville %}<span>📍 {{ offre.ville }}{% if offre.pays %}, {{ offre.pays }}{% endif %}</span>{% endif %}
+                        <span>📅 Créée le {{ offre.dateCreation|date:"d/m/Y" }}</span>
+                        {% if offre.datePublication %}<span>🚀 Publiée le {{ offre.datePublication|date:"d/m/Y" }}</span>{% endif %}
+                        {% if offre.creePar %}<span>👤 Par {{ offre.creePar.nomComplet }}</span>{% endif %}
+                    </div>
+
+                    <!-- Stats -->
+                    <div class="flex items-center gap-5 mt-4 pt-4 border-t border-gray-100">
+                        <div class="text-center">
+                            <p class="text-2xl font-extrabold text-gray-800">{{ offre.nbVues }}</p>
+                            <p class="text-xs text-gray-400">{% trans "Vues" %}</p>
+                        </div>
+                        <div class="w-px h-8 bg-gray-200"></div>
+                        <div class="text-center">
+                            <p class="text-2xl font-extrabold text-green-600">{{ offre.nbCandidatures }}</p>
+                            <p class="text-xs text-gray-400">{% trans "Candidatures" %}</p>
+                        </div>
+                        {% if offre.dateExpiration %}
+                        <div class="w-px h-8 bg-gray-200"></div>
+                        <div class="text-center">
+                            <p class="text-sm font-bold {% if offre.statutOffre == 'EXPIREE' %}text-red-500{% else %}text-amber-500{% endif %}">
+                                {{ offre.dateExpiration|date:"d/m/Y" }}
+                            </p>
+                            <p class="text-xs text-gray-400">{% trans "Expiration" %}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Droite : actions -->
+                <div class="flex flex-wrap lg:flex-col items-start gap-2 lg:shrink-0">
+                    {% if peut_modifier %}
+                    <a href="{% url 'entreprise:offre_modifier' offre.pk %}"
+                       class="action-btn bg-blue-50 text-blue-700 hover:bg-blue-100">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        Modifier
+                    </a>
+
+                    {% if offre.statutOffre == 'BROUILLON' %}
+                    <form method="post" action="{% url 'entreprise:offre_changer_statut' offre.pk %}" class="inline">
+                        {% csrf_token %}<input type="hidden" name="action" value="publier">
+                        <button type="submit" class="action-btn bg-green-50 text-green-700 hover:bg-green-100">
+                            🚀 Publier l'offre
+                        </button>
+                    </form>
+                    {% elif offre.statutOffre == 'PUBLIEE' %}
+                    <form method="post" action="{% url 'entreprise:offre_changer_statut' offre.pk %}" class="inline">
+                        {% csrf_token %}<input type="hidden" name="action" value="pourvue">
+                        <button type="submit" class="action-btn bg-purple-50 text-purple-700 hover:bg-purple-100">
+                            🏆 Marquer pourvue
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'entreprise:offre_changer_statut' offre.pk %}" class="inline">
+                        {% csrf_token %}<input type="hidden" name="action" value="fermer">
+                        <button type="submit" class="action-btn bg-amber-50 text-amber-700 hover:bg-amber-100">
+                            🔒 Fermer l'offre
+                        </button>
+                    </form>
+                    {% elif offre.statutOffre == 'EXPIREE' or offre.statutOffre == 'FERMEE' %}
+                    <form method="post" action="{% url 'entreprise:offre_changer_statut' offre.pk %}" class="inline">
+                        {% csrf_token %}<input type="hidden" name="action" value="brouillon">
+                        <button type="submit" class="action-btn bg-gray-100 text-gray-700 hover:bg-gray-200">
+                            ↩ Remettre en brouillon
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    <form method="post" action="{% url 'entreprise:offre_supprimer' offre.pk %}" class="inline"
+                          onsubmit="return confirm('Supprimer définitivement cette offre ?')">
+                        {% csrf_token %}
+                        <button type="submit" class="action-btn bg-red-50 text-red-600 hover:bg-red-100">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                            Supprimer
+                        </button>
+                    </form>
+                    {% else %}
+                    <div class="px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 space-y-1">
+                        <p class="font-bold flex items-center gap-1">🔒 Lecture seule</p>
+                        <p>
+                            Vous consultez une offre créée par
+                            <span class="font-semibold">
+                                {% if offre.creePar %}{{ offre.creePar.nomComplet|default:offre.creePar.emailProfessionnel }}{% else %}l'administrateur principal{% endif %}</span>.
+                            Seul son créateur peut la modifier.
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Contenu principal ───────────────────────────────────────────────── -->
+    <div class="grid lg:grid-cols-3 gap-5">
+
+        <!-- Colonne gauche : description -->
+        <div class="lg:col-span-2 space-y-4">
+
+            {% if offre.missions %}
+            <!-- Missions -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <span class="w-8 h-8 rounded-xl bg-green-100 flex items-center justify-center text-sm">📋</span>
+                    Missions & Responsabilités
+                </h2>
+                <div class="prose prose-sm max-w-none text-gray-700 leading-relaxed">
+                    {{ offre.missions|linebreaksbr }}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if offre.profilRecherche %}
+            <!-- Profil recherché -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <span class="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-sm">👤</span>
+                    Profil recherché
+                </h2>
+                <div class="prose prose-sm max-w-none text-gray-700 leading-relaxed">
+                    {{ offre.profilRecherche|linebreaksbr }}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if offre.competencesRequises %}
+            <!-- Compétences -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <span class="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center text-sm">⚡</span>
+                    Compétences requises
+                </h2>
+                <div class="flex flex-wrap gap-2">
+                    {% for comp in offre.competencesRequises %}
+                    <span class="tag-comp">{{ comp }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if not offre.missions and not offre.profilRecherche and not offre.competencesRequises %}
+            <div class="bg-white rounded-2xl border border-dashed border-gray-200 p-10 text-center">
+                <div class="text-4xl mb-3">📝</div>
+                <p class="text-gray-500 font-medium">{% trans "Aucune description renseignée." %}</p>
+                {% if peut_modifier %}
+                <a href="{% url 'entreprise:offre_modifier' offre.pk %}"
+                   class="inline-block mt-3 text-sm text-green-600 font-semibold hover:underline">
+                    Compléter l'offre →
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Colonne droite : informations -->
+        <div class="space-y-4">
+
+            <!-- Informations clés -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <h3 class="text-sm font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">{% trans "Informations" %}</h3>
+                <div>
+                    <div class="info-row">
+                        <span class="info-label">{% trans "Contrat" %}</span>
+                        <span class="info-val">{{ offre.get_typeContrat_display }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">{% trans "Mode" %}</span>
+                        <span class="info-val">{{ offre.get_modeTravail_display }}</span>
+                    </div>
+                    {% if offre.ville %}
+                    <div class="info-row">
+                        <span class="info-label">{% trans "Localisation" %}</span>
+                        <span class="info-val">
+                            {{ offre.ville }}{% if offre.pays %}, {{ offre.pays }}{% endif %}
+                            {% if offre.localisation %}<br><span class="font-normal text-gray-500 text-xs">{{ offre.localisation }}</span>{% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if offre.experienceRequise %}
+                    <div class="info-row">
+                        <span class="info-label">{% trans "Expérience" %}</span>
+                        <span class="info-val">{{ offre.get_experienceRequise_display }}</span>
+                    </div>
+                    {% endif %}
+                    {% if offre.niveauEtudeRequis %}
+                    <div class="info-row">
+                        <span class="info-label">{% trans "Études" %}</span>
+                        <span class="info-val">{{ offre.get_niveauEtudeRequis_display }}</span>
+                    </div>
+                    {% endif %}
+                    {% with sal=offre.salaire_display %}
+                    {% if sal %}
+                    <div class="info-row">
+                        <span class="info-label">{% trans "Salaire" %}</span>
+                        <span class="info-val text-green-700">{{ sal }}</span>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+
+            <!-- Dates -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <h3 class="text-sm font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">{% trans "Dates" %}</h3>
+                <div>
+                    <div class="info-row">
+                        <span class="info-label">{% trans "Création" %}</span>
+                        <span class="info-val">{{ offre.dateCreation|date:"d/m/Y à H:i" }}</span>
+                    </div>
+                    {% if offre.datePublication %}
+                    <div class="info-row">
+                        <span class="info-label">{% trans "Publication" %}</span>
+                        <span class="info-val">{{ offre.datePublication|date:"d/m/Y à H:i" }}</span>
+                    </div>
+                    {% endif %}
+                    {% if offre.dateExpiration %}
+                    <div class="info-row">
+                        <span class="info-label">{% trans "Expiration" %}</span>
+                        <span class="info-val {% if offre.statutOffre == 'EXPIREE' %}text-red-500{% else %}text-amber-600{% endif %}">
+                            {{ offre.dateExpiration|date:"d/m/Y" }}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Critères ATS -->
+            {% if offre.criteresATS %}
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <h3 class="text-sm font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">{% trans "Critères ATS" %}</h3>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">{% trans "CV obligatoire" %}</span>
+                        <span class="font-semibold {% if offre.criteresATS.cvObligatoire %}text-green-600{% else %}text-gray-400{% endif %}">
+                            {% if offre.criteresATS.cvObligatoire %}✓ Oui{% else %}— Non{% endif %}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">{% trans "Lettre de motivation" %}</span>
+                        <span class="font-semibold {% if offre.criteresATS.lettreMotivationnObligatoire %}text-green-600{% else %}text-gray-400{% endif %}">
+                            {% if offre.criteresATS.lettreMotivationnObligatoire %}✓ Oui{% else %}— Non{% endif %}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">{% trans "Test requis" %}</span>
+                        <span class="font-semibold {% if offre.criteresATS.testRequis %}text-green-600{% else %}text-gray-400{% endif %}">
+                            {% if offre.criteresATS.testRequis %}✓ Oui{% else %}— Non{% endif %}
+                        </span>
+                    </div>
+                    {% if offre.criteresATS.scoreMinimum %}
+                    <div class="flex items-center justify-between pt-2 mt-2 border-t border-gray-100">
+                        <span class="text-gray-600">{% trans "Score minimum" %}</span>
+                        <span class="font-extrabold text-green-600">{{ offre.criteresATS.scoreMinimum }}%</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- CTA Candidatures (futur) -->
+            <div class="rounded-2xl p-4 text-center border border-green-100"
+                 style="background:linear-gradient(135deg,#F0FDF4,#FFFFFF);">
+                <p class="text-2xl font-extrabold text-green-600 mb-0.5">{{ offre.nbCandidatures }}</p>
+                <p class="text-xs text-gray-500 mb-3">{% trans "candidature" %}{{ offre.nbCandidatures|pluralize }} reçue{{ offre.nbCandidatures|pluralize }}</p>
+                <a href="{% url 'entreprise:candidatures_offre' offre.pk %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white transition hover:opacity-90"
+                   style="background:#009A44;">
+                    Voir les candidatures →
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endwith %}
+{% endblock %}

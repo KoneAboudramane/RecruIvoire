@@ -1,0 +1,396 @@
+{% extends "candidat/base.html" %}
+{% load i18n static %}
+
+{% block titre %}{{ projet.nom }} — {{ candidat.prenom }} {{ candidat.nom }}{% endblock %}
+
+{% block css_extra %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+.tdd, .tdd * { box-sizing:border-box; -webkit-font-smoothing:antialiased; }
+.tdd {
+  --td-accent:   {{ couleur_accent|default:'#6366f1' }};
+  --td-accent-d: color-mix(in srgb, var(--td-accent) 80%, #000);
+  --td-accent-l: color-mix(in srgb, var(--td-accent) 12%, transparent);
+  --td-navy:     #1e2a4a;
+  --td-bg:       #f4f6fa;
+  --td-surface:  #ffffff;
+  --td-dark:     #0f172a;
+  --td-text:     #4a5568;
+  --td-mute:     #8893a9;
+  --td-border:   #e4e8f0;
+  --td-font:     'Inter', system-ui, sans-serif;
+
+  font-family:var(--td-font); font-size:15px; line-height:1.7;
+  color:var(--td-text); background:var(--td-bg); min-height:100vh;
+}
+.tdd h1,.tdd h2,.tdd h3,.tdd h4 { color:var(--td-dark); margin:0; line-height:1.2; font-weight:700; }
+.tdd a { text-decoration:none; transition:.3s; color:inherit; }
+
+@keyframes tdd-up { from{opacity:0;transform:translateY(14px);} to{opacity:1;transform:translateY(0);} }
+.tdd-reveal { opacity:0; }
+.tdd-reveal.in { animation:tdd-up .6s cubic-bezier(.16,.84,.44,1) both; }
+.tdd-reveal.d1 { animation-delay:.07s; }
+.tdd-reveal.d2 { animation-delay:.14s; }
+.tdd-reveal.d3 { animation-delay:.21s; }
+.tdd-reveal.d4 { animation-delay:.28s; }
+
+/* ── Topbar ── */
+.tdd-topbar {
+  position:sticky; top:60px; z-index:30;
+  background:var(--td-navy); color:#fff;
+  padding:10px clamp(20px,4vw,56px);
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  box-shadow:0 2px 12px rgba(30,42,74,.3);
+}
+@media (min-width:768px) { .tdd-topbar { top:76px; } }
+.tdd-back {
+  display:inline-flex; align-items:center; gap:8px;
+  font-size:13px; font-weight:600; color:rgba(255,255,255,.8);
+  padding:8px 14px; border-radius:6px;
+  border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.08); transition:.3s;
+}
+.tdd-back:hover { background:var(--td-accent); border-color:var(--td-accent); color:#fff; }
+.tdd-back i { transition:transform .25s; }
+.tdd-back:hover i { transform:translateX(-3px); }
+.tdd-topbar-cta {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:8px 16px; border-radius:6px;
+  background:var(--td-accent); color:#fff;
+  font-size:13px; font-weight:600; transition:.3s;
+}
+.tdd-topbar-cta:hover { background:var(--td-accent-d); transform:translateY(-2px); }
+
+/* ── Hero ── */
+.tdd-hero {
+  padding:clamp(48px,6vw,80px) clamp(24px,5vw,56px) clamp(36px,4vw,56px);
+  background:var(--td-navy); color:#fff;
+  position:relative; overflow:hidden;
+}
+.tdd-hero::before {
+  content:''; position:absolute; top:0; right:0;
+  width:300px; height:300px; border-radius:50%;
+  background:radial-gradient(circle, color-mix(in srgb, var(--td-accent) 20%, transparent), transparent 70%);
+  pointer-events:none;
+}
+.tdd-hero-inner { max-width:1200px; margin:0 auto; position:relative; z-index:1; }
+.tdd-eyebrow {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:5px 14px; border-radius:20px;
+  background:var(--td-accent-l); border:1px solid color-mix(in srgb, var(--td-accent) 30%, transparent);
+  color:var(--td-accent); font-size:12px; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+  margin-bottom:18px;
+}
+.tdd-eyebrow i { font-size:13px; }
+.tdd-title {
+  font-size:clamp(30px,5vw,56px); line-height:1.1; font-weight:800; letter-spacing:-.02em;
+  margin-bottom:22px; color:#fff;
+}
+.tdd-meta { display:flex; flex-wrap:wrap; gap:10px; }
+.tdd-meta-pill {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:7px 14px; border-radius:20px;
+  background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.15);
+  font-size:13px; color:rgba(255,255,255,.85); font-weight:500;
+}
+.tdd-meta-pill i { color:var(--td-accent); }
+.tdd-meta-pill .key { color:rgba(255,255,255,.5); font-size:12px; }
+
+/* ── Cover ── */
+.tdd-cover { padding:0 clamp(20px,4vw,56px); margin-top:-24px; }
+.tdd-cover-wrap {
+  max-width:1200px; margin:0 auto;
+  border-radius:12px; overflow:hidden;
+  border:1px solid var(--td-border);
+  box-shadow:0 20px 60px -16px rgba(99,102,241,.2);
+  background:var(--td-surface);
+}
+.tdd-cover-wrap img { display:block; width:100%; height:auto; max-height:560px; object-fit:cover; }
+.tdd-cover-fallback {
+  width:100%; aspect-ratio:21/9;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--td-bg); color:var(--td-accent); font-size:72px;
+}
+
+/* ── Contenu ── */
+.tdd-section { padding:clamp(40px,6vw,72px) clamp(20px,4vw,56px); }
+.tdd-content {
+  max-width:1200px; margin:0 auto;
+  display:grid; gap:clamp(20px,4vw,40px);
+  grid-template-columns:minmax(220px,280px) 1fr;
+  align-items:start;
+}
+@media (max-width:860px) { .tdd-content { grid-template-columns:1fr; } }
+
+.tdd-aside {
+  background:var(--td-navy); color:#fff;
+  border-radius:12px; padding:22px;
+  position:sticky; top:148px;
+  box-shadow:0 8px 24px rgba(30,42,74,.25);
+}
+.tdd-aside-title {
+  font-size:10px; font-weight:700; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--td-accent); display:block; padding-bottom:10px; margin-bottom:14px;
+  border-bottom:1px solid rgba(255,255,255,.1);
+}
+.tdd-aside-row {
+  display:grid; grid-template-columns:28px 1fr;
+  gap:10px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,.07); font-size:13px;
+}
+.tdd-aside-row:last-child { border-bottom:0; }
+.tdd-aside-row .icon {
+  width:28px; height:28px; border-radius:6px;
+  background:var(--td-accent-l); color:var(--td-accent);
+  display:flex; align-items:center; justify-content:center; font-size:13px;
+}
+.tdd-aside-row .body .key { display:block; font-size:10px; font-weight:600; letter-spacing:.1em; color:rgba(255,255,255,.45); text-transform:uppercase; margin-bottom:2px; }
+.tdd-aside-row .body .val { color:rgba(255,255,255,.88); font-weight:500; word-break:break-word; }
+.tdd-aside-row .body .val a { color:var(--td-accent); }
+
+.tdd-card {
+  background:var(--td-surface); border:1px solid var(--td-border);
+  border-radius:12px; padding:clamp(20px,3vw,28px);
+  box-shadow:0 2px 12px rgba(0,0,0,.05);
+  margin-bottom:20px;
+}
+.tdd-card:last-child { margin-bottom:0; }
+.tdd-card-title {
+  font-size:clamp(16px,2.2vw,22px); font-weight:700; margin-bottom:14px;
+  display:flex; align-items:center; gap:10px; color:var(--td-dark);
+}
+.tdd-card-title::before {
+  content:''; display:block; width:4px; height:20px; border-radius:2px;
+  background:var(--td-accent); flex-shrink:0;
+}
+.tdd-card-text { font-size:15px; line-height:1.8; color:var(--td-text); }
+.tdd-card-text p { margin:0 0 12px; }
+
+.tdd-gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:12px; }
+.tdd-gallery-item {
+  border-radius:10px; overflow:hidden;
+  border:1px solid var(--td-border); background:var(--td-bg);
+  transition:.3s; cursor:pointer; padding:0;
+}
+.tdd-gallery-item:hover { transform:translateY(-4px); border-color:var(--td-accent); box-shadow:0 12px 30px -8px rgba(99,102,241,.2); }
+.tdd-gallery-item img { display:block; width:100%; height:180px; object-fit:cover; transition:transform .7s; }
+.tdd-gallery-item:hover img { transform:scale(1.05); }
+
+.tdd-videos { display:grid; gap:14px; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); }
+.tdd-video {
+  position:relative; display:block; width:100%;
+  border-radius:10px; overflow:hidden;
+  background:#000; border:1px solid var(--td-border);
+  cursor:pointer; padding:0; transition:.3s;
+}
+.tdd-video:hover { transform:translateY(-4px); border-color:var(--td-accent); box-shadow:0 14px 36px -10px rgba(99,102,241,.22); }
+.tdd-video-preview { display:block; width:100%; aspect-ratio:16/9; object-fit:cover; pointer-events:none; }
+.tdd-video-overlay {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(180deg,rgba(0,0,0,.04) 0%,rgba(30,42,74,.6) 100%); pointer-events:none; transition:.3s;
+}
+.tdd-video:hover .tdd-video-overlay { background:linear-gradient(180deg,rgba(0,0,0,.08) 0%,rgba(30,42,74,.72) 100%); }
+.tdd-video-play {
+  width:56px; height:56px; border-radius:50%;
+  background:var(--td-accent); color:#fff;
+  display:flex; align-items:center; justify-content:center; font-size:24px;
+  box-shadow:0 8px 24px rgba(99,102,241,.4); transition:transform .3s;
+}
+.tdd-video:hover .tdd-video-play { transform:scale(1.1); }
+.tdd-video-play i { margin-left:3px; }
+.tdd-video-name {
+  position:absolute; left:12px; right:12px; bottom:10px;
+  color:#fff; font-size:13px; font-weight:600; text-shadow:0 1px 2px rgba(0,0,0,.5);
+}
+
+.tdd-bottom-cta {
+  margin-top:28px; padding:clamp(20px,3vw,32px);
+  background:var(--td-navy); border-radius:12px; color:#fff;
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:20px;
+}
+.tdd-bottom-cta-text { font-size:clamp(16px,2vw,22px); font-weight:700; color:#fff; line-height:1.3; }
+.tdd-bottom-cta-text em { color:var(--td-accent); font-style:normal; }
+.tdd-bottom-cta-btn {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:11px 22px; border-radius:8px;
+  background:var(--td-accent); color:#fff;
+  font-size:13px; font-weight:600; transition:.3s;
+}
+.tdd-bottom-cta-btn:hover { background:var(--td-accent-d); transform:translateY(-2px); }
+
+.tdd-empty {
+  padding:22px; border-radius:10px;
+  background:var(--td-surface); border:1px dashed var(--td-border);
+  color:var(--td-mute); font-style:italic;
+}
+.tdd-empty a { color:var(--td-accent); text-decoration:underline; text-underline-offset:3px; }
+
+.tdd-lightbox {
+  position:fixed; inset:0; z-index:9999;
+  background:rgba(15,23,42,.93); backdrop-filter:blur(8px);
+  display:flex; align-items:center; justify-content:center;
+  padding:clamp(12px,3vw,32px);
+}
+.tdd-lightbox-body { position:relative; width:100%; max-width:1200px; max-height:90vh; display:flex; align-items:center; justify-content:center; }
+.tdd-lightbox video,.tdd-lightbox img { max-width:100%; max-height:90vh; border-radius:12px; box-shadow:0 30px 80px rgba(0,0,0,.5); background:#000; }
+.tdd-lightbox video { width:100%; }
+.tdd-lightbox-close {
+  position:absolute; top:-48px; right:0;
+  width:40px; height:40px; border-radius:8px;
+  background:var(--td-accent); color:#fff; border:0; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; font-size:20px; transition:.25s;
+}
+.tdd-lightbox-close:hover { transform:rotate(90deg); }
+.tdd-lightbox-caption { position:absolute; left:0; right:0; bottom:-36px; text-align:center; color:rgba(255,255,255,.75); font-size:13px; }
+[x-cloak] { display:none !important; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="tdd -mx-3 sm:-mx-6 -my-4 sm:-my-8"
+     x-data="{ lightbox:null, open(type,src,name){ this.lightbox={type,src,name:name||''}; document.body.style.overflow='hidden'; }, close(){ this.lightbox=null; document.body.style.overflow=''; } }"
+     @keydown.escape.window="close()"
+     x-init="(() => {
+       const io = new IntersectionObserver(entries => { for(const e of entries){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } } }, {threshold:.1,rootMargin:'0px 0px -40px 0px'});
+       document.querySelectorAll('.tdd-reveal').forEach(el => io.observe(el));
+     })()">
+
+  <div class="tdd-topbar">
+    <a href="{% url 'candidat:portfolio_public' candidat.id %}#portfolio" class="tdd-back">
+      <i class="bi bi-arrow-left"></i>Retour au portfolio
+    </a>
+    {% if projet.has_demo %}
+    <a href="{{ projet.lien }}" target="_blank" rel="noopener" class="tdd-topbar-cta">
+      Voir la démo<i class="bi bi-box-arrow-up-right"></i>
+    </a>
+    {% endif %}
+  </div>
+
+  <section class="tdd-hero">
+    <div class="tdd-hero-inner">
+      <div class="tdd-eyebrow tdd-reveal"><i class="bi bi-grid-3x3-gap"></i> {% trans "Réalisation ·" %} {{ candidat.prenom }} {{ candidat.nom }}</div>
+      <h1 class="tdd-title tdd-reveal d1">{{ projet.nom }}</h1>
+      <div class="tdd-meta tdd-reveal d2">
+        {% if projet.dateDebut or projet.dateFin %}
+        <span class="tdd-meta-pill">
+          <i class="bi bi-calendar3"></i><span class="key">{% trans "Période" %}</span>
+          <span>{{ projet.dateDebut|slice:":7"|default:'—' }}{% if projet.dateFin %} → {{ projet.dateFin|slice:":7" }}{% endif %}</span>
+        </span>
+        {% endif %}
+        {% if projet.tailleEquipe %}
+        <span class="tdd-meta-pill">
+          <i class="bi bi-people"></i><span class="key">{% trans "Équipe" %}</span>
+          <span>{{ projet.tailleEquipe }} personne{{ projet.tailleEquipe|pluralize }}</span>
+        </span>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  {% if projet.images.0.url %}
+  <div class="tdd-cover">
+    <div class="tdd-cover-wrap tdd-reveal d2">
+      <img src="{{ projet.images.0.url }}" alt="{{ projet.nom }}">
+    </div>
+  </div>
+  {% else %}
+  <div class="tdd-cover">
+    <div class="tdd-cover-wrap tdd-reveal d2">
+      <div class="tdd-cover-fallback"><i class="bi bi-image"></i></div>
+    </div>
+  </div>
+  {% endif %}
+
+  <section class="tdd-section">
+    <div class="tdd-content">
+
+      <aside class="tdd-aside tdd-reveal">
+        <div class="tdd-aside-title">{% trans "Fiche projet" %}</div>
+        {% if projet.dateDebut %}<div class="tdd-aside-row"><span class="icon"><i class="bi bi-clock"></i></span><div class="body"><span class="key">Démarré</span><span class="val">{{ projet.dateDebut|slice:":7" }}</span></div></div>{% endif %}
+        {% if projet.dateFin %}<div class="tdd-aside-row"><span class="icon"><i class="bi bi-check2"></i></span><div class="body"><span class="key">Terminé</span><span class="val">{{ projet.dateFin|slice:":7" }}</span></div></div>{% endif %}
+        {% if projet.tailleEquipe %}<div class="tdd-aside-row"><span class="icon"><i class="bi bi-people"></i></span><div class="body"><span class="key">Équipe</span><span class="val">{{ projet.tailleEquipe }} personne{{ projet.tailleEquipe|pluralize }}</span></div></div>{% endif %}
+        {% if projet.has_demo %}<div class="tdd-aside-row"><span class="icon"><i class="bi bi-link-45deg"></i></span><div class="body"><span class="key">Démo en ligne</span><span class="val"><a href="{{ projet.lien }}" target="_blank" rel="noopener">{{ projet.lien|truncatechars:36 }}</a></span></div></div>{% endif %}
+        {% if projet.images %}<div class="tdd-aside-row"><span class="icon"><i class="bi bi-image"></i></span><div class="body"><span class="key">Images</span><span class="val">{{ projet.images|length }} fichier{{ projet.images|length|pluralize }}</span></div></div>{% endif %}
+        {% if projet.videos %}<div class="tdd-aside-row"><span class="icon"><i class="bi bi-film"></i></span><div class="body"><span class="key">Vidéos</span><span class="val">{{ projet.videos|length }} fichier{{ projet.videos|length|pluralize }}</span></div></div>{% endif %}
+      </aside>
+
+      <div>
+        {% if projet.contexte %}
+        <div class="tdd-card tdd-reveal d1">
+          <h2 class="tdd-card-title">{% trans "Contexte" %}</h2>
+          <div class="tdd-card-text">{{ projet.contexte|linebreaks }}</div>
+        </div>
+        {% endif %}
+
+        {% if projet.realisation %}
+        <div class="tdd-card tdd-reveal d2">
+          <h2 class="tdd-card-title">{% trans "Mes contributions" %}</h2>
+          <div class="tdd-card-text">{{ projet.realisation|linebreaks }}</div>
+        </div>
+        {% endif %}
+
+        {% if projet.images|length > 1 %}
+        <div class="tdd-card tdd-reveal d3">
+          <h2 class="tdd-card-title">{% trans "Galerie" %}</h2>
+          <div class="tdd-gallery">
+            {% for img in projet.images %}{% if img.url %}
+            <button type="button" class="tdd-gallery-item"
+                    @click="open('image','{{ img.url|escapejs }}','{{ img.name|default:projet.nom|escapejs }}')">
+              <img src="{{ img.url }}" alt="{{ img.name|default:projet.nom }}" loading="lazy">
+            </button>
+            {% endif %}{% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if projet.videos %}
+        <div class="tdd-card tdd-reveal d4">
+          <h2 class="tdd-card-title">{% trans "Vidéos" %}</h2>
+          <div class="tdd-videos">
+            {% for vid in projet.videos %}{% if vid.url %}
+            <button type="button" class="tdd-video" @click="open('video','{{ vid.url|escapejs }}','{{ vid.name|default:'Vidéo'|escapejs }}')" aria-label="{% trans "Lire la vidéo" %}">
+              <video class="tdd-video-preview" preload="metadata" muted playsinline src="{{ vid.url }}#t=0.5"></video>
+              <span class="tdd-video-overlay"><span class="tdd-video-play"><i class="bi bi-play-fill"></i></span></span>
+              <span class="tdd-video-name">{{ vid.name|default:'Vidéo' }}</span>
+            </button>
+            {% endif %}{% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if projet.has_demo %}
+        <div class="tdd-bottom-cta tdd-reveal">
+          <span class="tdd-bottom-cta-text">{% trans "Découvrir" %} <em>{% trans "le projet en ligne" %}</em>.</span>
+          <a href="{{ projet.lien }}" target="_blank" rel="noopener" class="tdd-bottom-cta-btn">
+            Voir la démo<i class="bi bi-box-arrow-up-right"></i>
+          </a>
+        </div>
+        {% endif %}
+
+        {% if not projet.contexte and not projet.realisation and not projet.images and not projet.videos %}
+        <div class="tdd-empty">
+          Ce projet n'a pas encore de description détaillée.
+          {% if est_proprio %}Ajoutez son contexte, vos contributions et des médias depuis l'onglet <a href="{% url 'candidat:profil' %}?onglet=rubriques">Profil → Rubriques → Réalisations</a>.{% endif %}
+        </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </section>
+
+  <div class="tdd-lightbox" x-show="lightbox" x-cloak @click.self="close()" x-transition.opacity>
+    <div class="tdd-lightbox-body">
+      <button type="button" class="tdd-lightbox-close" @click="close()" aria-label="{% trans "Fermer" %}"><i class="bi bi-x-lg"></i></button>
+      <template x-if="lightbox && lightbox.type === 'video'">
+        <video :src="lightbox.src" controls autoplay playsinline preload="metadata"></video>
+      </template>
+      <template x-if="lightbox && lightbox.type === 'image'">
+        <img :src="lightbox.src" :alt="{% trans "lightbox.name" %}">
+      </template>
+      <div class="tdd-lightbox-caption" x-text="lightbox && lightbox.name"></div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

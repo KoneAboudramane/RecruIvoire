@@ -1,0 +1,1004 @@
+{% load i18n %}
+<style>
+/* ── Anti-flash Alpine.js : cacher les éléments x-cloak avant initialisation ── */
+[x-cloak] { display: none !important; }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ANIMATIONS DYNAMIQUES — Bouton Sauvegarder
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* Animation de rotation dynamique du spinner */
+@keyframes spin-dynamic {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-spin-dynamic {
+  animation: spin-dynamic 1.5s linear infinite;
+}
+
+/* Animation de pulsation/glow pour le bouton */
+@keyframes pulse-save {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.animate-pulse-save {
+  animation: pulse-save 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Classe pour le bouton en mode sauvegarde */
+.save-btn-pulse {
+  animation: scale-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes scale-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); }
+}
+
+/* ── Masquer navbar et footer sur la page d'édition ─────────────────────────── */
+nav, footer { display: none !important; }
+
+/* ── Position photo CV (drag-to-pan) ─────────────────────────────────────────
+   --cv-photo-pos est mis à jour en JS à chaque déplacement du curseur.
+   On cible toutes les images photo des modèles CV via alt="Photo" et les
+   classes utilitaires (*-photo) pour couvrir les 19 modèles sans les modifier. */
+img[alt="Photo"],
+img[class*="-photo"] {
+  object-position: var(--cv-photo-pos, 50% 50%) !important;
+  transform: scale(var(--cv-photo-zoom, 1)) !important;
+  transform-origin: var(--cv-photo-pos, 50% 50%) !important;
+}
+/* Masquer le wrapper fixe de la navbar (div > nav) et supprimer le padding body */
+body { padding-top: 0 !important; }
+body > div:has(> nav) { display: none !important; }
+main { padding: 0 !important; }
+.-mx-6 { margin-left: 0 !important; margin-right: 0 !important; }
+.-my-8 { margin-top: 0 !important; margin-bottom: 0 !important; }
+
+/* ── Multi-postes dans les templates CV ─────────────────────────────────────── */
+.cv-postes-list  { margin-top:4px; }
+.cv-postes-row   { display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:3px; }
+.cv-postes-row:last-child { margin-bottom:0; }
+.cv-postes-titre { font-size:9pt; font-weight:700; }
+.cv-postes-date  { font-size:7.5pt; white-space:nowrap; opacity:0.85; flex-shrink:0; }
+
+/* ── Layout builder ─────────────────────────────────────────────────────────── */
+.cv-builder   { display:flex; overflow:hidden; height:100vh; }
+.form-panel   { width:52%; overflow-y:auto; background:#f8f9fb; border-right:1px solid #e5e7eb; flex-shrink:0; }
+.preview-panel{ flex:1; overflow-y:auto; background:#B8C4CF; padding:36px 40px 56px; display:flex; justify-content:center; align-items:flex-start; }
+
+/* ── Responsive mobile ── */
+@media (max-width: 767px) {
+    .cv-builder   { flex-direction:column; height:auto; min-height:100vh; }
+    .form-panel   { width:100%; border-right:none; border-bottom:1px solid #e5e7eb; }
+    .preview-panel{ display:none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   PAGINATION — Aperçu multi-pages style document office
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* Host wrapper positionné — référentiel absolu des séparateurs */
+.cv-pages-host {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* ─── Bande de séparation entre deux pages ─────────────────────────────────── */
+.cv-pg-sep {
+  position: absolute;
+  left: -14px;
+  right: -14px;
+  height: 32px;
+  background: #B8C4CF;
+  z-index: 20;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  /* Ombres intérieures simulant les bords physiques des feuilles */
+  box-shadow:
+    inset 0  8px 10px -6px rgba(0, 0, 0, 0.26),
+    inset 0 -8px 10px -6px rgba(0, 0, 0, 0.16);
+}
+
+/* Traits fins délimitant la bande */
+.cv-pg-sep::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.13);
+}
+.cv-pg-sep::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.07);
+}
+
+/* ─── Tirets décoratifs de chaque côté du label ─────────────────────────────── */
+.cv-pg-sep-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(71, 85, 105, 0.30), transparent);
+}
+
+/* ─── Label "Page N" centré dans la bande ───────────────────────────────────── */
+.cv-pg-num-label {
+  font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+  font-size: 9px;
+  color: rgba(51, 65, 85, 0.70);
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  user-select: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ─── Badge flottant — compteur de pages ────────────────────────────────────── */
+.cv-pg-badge {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(10, 15, 30, 0.84);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: #E2E8F0;
+  font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  padding: 8px 18px 8px 14px;
+  border-radius: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.40),
+    0 2px 8px  rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(10px) scale(0.96);
+  transition: opacity 0.35s cubic-bezier(.16,1,.3,1),
+              transform 0.35s cubic-bezier(.16,1,.3,1);
+}
+
+.cv-pg-badge.cv-pg-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Icône document SVG intégrée via emoji */
+.cv-pg-badge-icon {
+  font-size: 14px;
+  opacity: 0.65;
+  line-height: 1;
+}
+
+/* Point coloré indiquant la criticité (1p = vert, 2p = orange, 3p+ = rouge) */
+.cv-pg-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background-color 0.4s ease;
+  box-shadow: 0 0 6px currentColor;
+}
+
+/* ── Form inputs ─────────────────────────────────────────────────────────────── */
+.fi { width:100%; padding:10px 14px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:15px;
+      background:white; outline:none; transition:border-color .2s, box-shadow .2s; }
+.fi:focus { border-color:#c96010; box-shadow:0 0 0 3px rgba(201,96,16,.12); }
+.fi-sm { padding:7px 10px; font-size:14px; }
+
+/* ── Toggle switch ───────────────────────────────────────────────────────────── */
+.toggle-track { width:36px; height:20px; border-radius:10px; transition:background .2s; flex-shrink:0; cursor:pointer; }
+.toggle-thumb { width:16px; height:16px; border-radius:50%; background:white; box-shadow:0 1px 3px rgba(0,0,0,.3);
+                transition:transform .2s; margin:2px; }
+
+/* ── Section accordion ───────────────────────────────────────────────────────── */
+.sec-hdr { display:flex; align-items:center; justify-content:space-between; padding:13px 18px;
+           cursor:pointer; user-select:none; transition:background .15s; border-bottom:1px solid #f0f0f0; }
+.sec-hdr:hover { background:rgba(201,96,16,.04); }
+.sec-hdr .chevron { transition:transform .3s; }
+.sec-hdr.open .chevron { transform:rotate(180deg); }
+
+/* ── Stars ───────────────────────────────────────────────────────────────────── */
+.star { font-size:18px; cursor:pointer; transition:transform .15s; line-height:1; }
+.star:hover { transform:scale(1.2); }
+
+/* ── Add / remove buttons ────────────────────────────────────────────────────── */
+.btn-add { display:flex; align-items:center; justify-content:center; gap:6px; width:100%;
+           padding:10px; border:2px dashed #ffc47a; border-radius:12px; font-size:14px; font-weight:600;
+           color:#c96010; background:transparent; cursor:pointer; transition:all .2s; }
+.btn-add:hover { border-color:#c96010; background:#FFF8F0; }
+.btn-rm  { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+           font-size:12px; font-weight:700; color:#f87171; cursor:pointer; transition:background .15s; }
+.btn-rm:hover { background:#fee2e2; }
+
+/* ── Aperçu iframe (mode prévisualisation sans formulaire) ───────────────────── */
+.apercu-page nav,
+.apercu-page footer,
+.apercu-page .bande-tricolore { display: none !important; }
+.apercu-page main { padding: 0 !important; margin: 0 !important; }
+.apercu-page .cv-builder { height: 100vh !important; }
+.apercu-page .-mx-6 { margin-left: 0 !important; margin-right: 0 !important; }
+.apercu-page .-my-8 { margin-top: 0 !important; margin-bottom: 0 !important; }
+
+/* ══ MODE SOMBRE — Éditeur CV ══════════════════════════════════════════════
+   Ciblage via html.dark (class-based, cohérent avec base.html / Tailwind).
+   On couvre uniquement les classes custom de ce fichier ; les classes Tailwind
+   (bg-white, border-gray-*, text-gray-*, inputs…) sont déjà gérées dans
+   base.html.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+html.dark .form-panel {
+  background: #0f172a;
+  border-right-color: #1e293b;
+}
+
+html.dark .preview-panel {
+  background: #0d1520;
+}
+
+/* Champs formulaire custom (.fi) */
+html.dark .fi {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-color: #334155;
+}
+html.dark .fi:focus {
+  border-color: #c96010;
+  box-shadow: 0 0 0 3px rgba(201,96,16,.15);
+}
+
+/* Accordéons de section */
+html.dark .sec-hdr {
+  border-bottom-color: #1e293b;
+}
+html.dark .sec-hdr:hover {
+  background: rgba(201,96,16,.06);
+}
+
+/* Bouton « + Ajouter » */
+html.dark .btn-add {
+  border-color: rgba(201,96,16,.38);
+  color: #fb923c;
+}
+html.dark .btn-add:hover {
+  border-color: rgba(201,96,16,.75);
+  background: rgba(201,96,16,.08);
+}
+
+/* Bouton suppression × */
+html.dark .btn-rm:hover {
+  background: rgba(239,68,68,.14);
+}
+
+/* En-têtes collantes des sections (bg-[#f8f9fb] Tailwind arbitraire) */
+html.dark .bg-\[\#f8f9fb\] {
+  background-color: #0f172a !important;
+}
+
+/* Séparateurs inter-pages */
+html.dark .cv-pg-sep {
+  background: #060d18;
+  box-shadow:
+    inset 0  8px 10px -6px rgba(0,0,0,.55),
+    inset 0 -8px 10px -6px rgba(0,0,0,.45);
+}
+html.dark .cv-pg-sep::before {
+  background: rgba(255,255,255,.05);
+}
+html.dark .cv-pg-sep::after {
+  background: rgba(255,255,255,.03);
+}
+html.dark .cv-pg-sep-line {
+  background: linear-gradient(to right, transparent, rgba(148,163,184,.18), transparent);
+}
+html.dark .cv-pg-num-label {
+  color: rgba(148,163,184,.60);
+}
+
+/* Panneau suggestions (amber) */
+html.dark .bg-amber-50        { background-color: rgba(245,158,11,.10) !important; }
+html.dark .border-amber-200   { border-color: rgba(245,158,11,.30) !important; }
+html.dark .border-amber-300   { border-color: rgba(245,158,11,.45) !important; }
+html.dark .text-amber-800     { color: #fcd34d !important; }
+html.dark .text-amber-700     { color: #fbbf24 !important; }
+html.dark .text-amber-600     { color: #f59e0b !important; }
+html.dark .hover\:bg-amber-100:hover { background-color: rgba(245,158,11,.15) !important; }
+html.dark .hover\:bg-amber-700:hover { background-color: #b45309 !important; }
+
+/* ══ MODE NOIR (OLED) — Éditeur CV ══════════════════════════════════════════ */
+html.noir .form-panel {
+  background: #000;
+  border-right-color: #0d0d0d;
+}
+
+html.noir .preview-panel {
+  background: #000;
+}
+
+html.noir .fi {
+  background: #000;
+  color: #e2e8f0;
+  border-color: #222;
+}
+html.noir .fi:focus {
+  border-color: #c96010;
+  box-shadow: 0 0 0 3px rgba(201,96,16,.12);
+}
+
+html.noir .sec-hdr {
+  border-bottom-color: #0d0d0d;
+}
+html.noir .sec-hdr:hover {
+  background: rgba(201,96,16,.05);
+}
+
+html.noir .btn-add {
+  border-color: rgba(201,96,16,.30);
+  color: #fb923c;
+}
+html.noir .btn-add:hover {
+  border-color: rgba(201,96,16,.60);
+  background: rgba(201,96,16,.06);
+}
+
+html.noir .btn-rm:hover {
+  background: rgba(239,68,68,.11);
+}
+
+html.noir .bg-\[\#f8f9fb\] {
+  background-color: #000 !important;
+}
+
+html.noir .cv-pg-sep {
+  background: #000;
+  box-shadow:
+    inset 0  8px 10px -6px rgba(0,0,0,.70),
+    inset 0 -8px 10px -6px rgba(0,0,0,.60);
+}
+html.noir .cv-pg-sep::before {
+  background: rgba(255,255,255,.04);
+}
+html.noir .cv-pg-sep::after {
+  background: rgba(255,255,255,.02);
+}
+html.noir .cv-pg-sep-line {
+  background: linear-gradient(to right, transparent, rgba(148,163,184,.12), transparent);
+}
+html.noir .cv-pg-num-label {
+  color: rgba(148,163,184,.45);
+}
+
+html.noir .bg-amber-50        { background-color: rgba(245,158,11,.08) !important; }
+html.noir .border-amber-200   { border-color: rgba(245,158,11,.24) !important; }
+html.noir .border-amber-300   { border-color: rgba(245,158,11,.36) !important; }
+html.noir .text-amber-800     { color: #fcd34d !important; }
+html.noir .text-amber-700     { color: #fbbf24 !important; }
+html.noir .text-amber-600     { color: #f59e0b !important; }
+html.noir .hover\:bg-amber-100:hover { background-color: rgba(245,158,11,.12) !important; }
+html.noir .hover\:bg-amber-700:hover { background-color: #b45309 !important; }
+
+/* ── Print (Imprimer via navigateur) ─────────────────────────────────────────── */
+@media print {
+  * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+
+  /* Masquer navbar, footer, bande tricolore (div directe body), messages flash, formulaire */
+  nav, footer, .no-print, .form-panel { display:none !important; }
+  body > div { display:none !important; }
+
+  /* Réinitialiser le layout */
+  html, body { background:white !important; margin:0 !important; padding:0 !important; }
+  main { padding:0 !important; margin:0 !important; overflow:visible !important; display:block !important; }
+
+  /* Réinitialiser les marges négatives du wrapper Alpine */
+  .-mx-6, .-my-8 { margin:0 !important; }
+
+  /* Enlever les transitions pour impression instantanée */
+  * { transition:none !important; animation:none !important; }
+
+  /* Builder → form-panel caché, preview seul visible. On GARDE display:flex
+     (pas de passage à block) : en block, les noeuds texte blancs entre les
+     balises du template redeviennent une ligne vide visible (line-height
+     hérité), ce qui crée un espace blanc parasite en haut du PDF/PNG —
+     absent de l'aperçu écran puisque le flex ignore ces noeuds texte. */
+  .cv-builder   { height:auto !important; overflow:visible !important; }
+  .preview-panel{ background:white !important; padding:0 !important;
+                  overflow:visible !important; height:auto !important; width:100% !important; }
+
+  /* Feuille CV — on RESPECTE les dimensions posées par le JS de pagination.
+     Surtout pas de width/min-height en !important ici : ça forcerait un
+     nouveau wrap du texte en print (210mm = 794.49px ≠ 794px de l'éditeur),
+     décalant le calcul du nombre de pages → l'aperçu affiche 1 page mais le
+     PDF en a 2 (le wrap décale d'une ligne). On laisse le sheet à sa
+     largeur native (794px posée par le model template), identique en
+     édition et en print. La hauteur est imposée par le JS en mm exacts. */
+  #cv-sheet, .cv-sheet-ts { box-shadow:none !important; margin:0 !important; }
+
+  /* Masquer les éléments de pagination à l'impression */
+  .cv-pages-host { display: contents !important; }
+  .cv-pg-sep, .cv-pg-badge, .cv-pg-footer, .cv-pg-header { display: none !important; }
+
+  @page { size:A4 portrait; margin:0; }
+}
+</style>
+
+<script>
+(function () {
+  'use strict';
+  /* Les règles "html.dark body" / "html.dark .bg-gray-50" (base.html) sont
+     plus spécifiques que notre reset `@media print { body{background:white} }`
+     et gagnent donc la cascade : sans ce correctif, une impression (Ctrl+P
+     ou window.print()) lancée en thème sombre affiche un fond bleu nuit/noir
+     à la place du CV. On retire simplement les classes de thème le temps de
+     l'impression plutôt que de courir après chaque règle sombre en specificité. */
+  const THEME_CLASSES = ['dark', 'noir'];
+  let savedThemeClasses = [];
+  window.addEventListener('beforeprint', function () {
+    savedThemeClasses = THEME_CLASSES.filter((c) => document.documentElement.classList.contains(c));
+    document.documentElement.classList.remove(...THEME_CLASSES);
+  });
+  window.addEventListener('afterprint', function () {
+    document.documentElement.classList.add(...savedThemeClasses);
+  });
+})();
+
+(function () {
+  'use strict';
+
+  const PAGE_H   = 1123; /* hauteur A4 en px à 96dpi */
+  const SEP_H    = 32;   /* hauteur de la bande séparatrice inter-pages */
+  const FOOT_H   = 22;   /* hauteur du pied de page */
+  const HEAD_H   = 28;   /* hauteur de l'en-tête des pages 2+ */
+  const MAX_ITER = 25;   /* garde-fou anti-boucle infinie */
+
+  /* ── Sélecteurs des blocs sémantiques (tous templates) ──────────────────── */
+  /* Utilisés uniquement pour IDENTIFIER les colonnes (leurs parents directs).
+     Ex : .ac-entry → parent = .ac-right ; .ac-skill → parent = .ac-left.
+     On ne cible PAS les sous-éléments ici — la détection de coupure se fait
+     sur les enfants DIRECTS des colonnes, pas sur des éléments imbriqués.    */
+  const BLOCK_SEL = [
+    '[class*="-entry"]', '[class*="-skill"]',  '[class*="-lang"]',
+    '[class*="-sec-l"]', '[class*="-sec-r"]',  '[class*="-mission"]',
+    '[class*="-profil"]','[class*="-certif"]',  '[class*="-interest"]',
+    /* patterns ajoutés pour dark-gold / gris-photo et futurs templates */
+    '[class*="-exp"]',       '[class*="-edu"]',      '[class*="-hobby"]',
+    '[class*="-star-item"]', '[class*="-bullet"]',  '[class*="-contact"]',
+    '[class*="-comp-item"]',
+    '.cv-mc-item', '.cv-mc-section',
+  ].join(',');
+
+  let sheet, host, dot, txt;
+  let lastPages = 0, ignoreRO = false, rafId = null;
+
+  function dotColor(p)  { return p <= 1 ? '#22C55E' : p === 2 ? '#c96010' : '#EF4444'; }
+  function badgeText(p) { return p === 1 ? '1 page' : `${p} pages`; }
+
+  /* ── Trouve les colonnes (conteneurs directs des blocs de contenu) ───────── */
+  /* En identifiant les parents des blocs BLOCK_SEL, on obtient .ac-left et
+     .ac-right (et leurs équivalents dans les autres templates) sans connaître
+     leurs noms de classes exacts. On garde uniquement les conteneurs les plus
+     extérieurs (pas imbriqués dans un autre conteneur du même ensemble).       */
+  function findColumns() {
+    const blocks = [...sheet.querySelectorAll(BLOCK_SEL)].filter(
+      el => !el.closest('.cv-pg-spacer') && !el.closest('.cv-pg-sep')
+    );
+    const parentSet = new Set(blocks.map(el => el.parentNode));
+    return [...parentSet].filter(container => {
+      let anc = container.parentNode;
+      while (anc && anc !== sheet) {
+        if (parentSet.has(anc)) return false;
+        anc = anc.parentNode;
+      }
+      return true;
+    });
+  }
+
+  /* ── Injecte les espaceurs anti-coupure ─────────────────────────────────── */
+  /* Structure DOM à trois niveaux :
+       parent  = colonne (.ac-left / .ac-right / équivalents)
+       enfants = blocs directs ou wrappers directs de la colonne
+     Algorithme :
+       1. Pour chaque enfant direct de la colonne qui chevauche la zone interdite :
+          a. Si l'enfant EST un BLOCK_SEL (dm-entry, ds-skill…) → le pousser tel
+             quel en page suivante. Jamais scindé, jamais on ne descend dedans.
+          b. Sinon (wrapper Alpine, section…) → chercher parmi ses descendants le
+             premier BLOCK_SEL "externe" (non imbriqué dans un autre BLOCK_SEL)
+             qui chevauche la zone ; pousser seulement ce bloc.
+          c. Fallback : aucun descendant trouvé → pousser l'enfant lui-même.
+       2. Injecter l'espaceur juste avant la cible dans son parent direct.
+     → Le plus petit bloc indivisible qui ne tient plus passe en page 2, entier.  */
+  function injectSpacers(cols) {
+    let changed = true, iter = 0;
+    while (changed && iter < MAX_ITER) {
+      changed = false;
+      iter++;
+      const sheetTop = sheet.getBoundingClientRect().top;
+      const pages    = Math.max(1, Math.ceil(sheet.scrollHeight / PAGE_H));
+
+      for (let p = 1; p < pages; p++) {
+        const zoneStart = p * PAGE_H - SEP_H / 2 - FOOT_H; /* début pied de page  */
+        const zoneEnd   = p * PAGE_H + SEP_H / 2 + HEAD_H; /* fin en-tête page N+1 */
+        let pushed = false;
+
+        for (const col of cols) {
+          /* Niveau 1 — enfants directs de la colonne (wrappers Alpine ou blocs) */
+          const children = [...col.children].filter(c => !c.classList.contains('cv-pg-spacer'));
+
+          for (const child of children) {
+            const cr      = child.getBoundingClientRect();
+            const cTop    = cr.top    - sheetTop;
+            const cBottom = cr.bottom - sheetTop;
+
+            if (cBottom <= zoneStart) continue; /* entièrement avant la zone */
+            if (cTop    >= zoneEnd)   break;    /* entièrement après → inutile de continuer */
+
+            /* Si l'enfant est lui-même un bloc sémantique (dm-entry, ds-skill…),
+               on le pousse entier — jamais scindé.
+               Si c'est un wrapper (div Alpine, section…), on cherche le premier
+               BLOCK_SEL "externe" (non imbriqué dans un autre BLOCK_SEL) qui
+               chevauche la zone et on pousse seulement lui.
+               Fallback : pousser l'enfant lui-même.                         */
+            let target = child;
+            let usedFallback = false;
+            if (!child.matches(BLOCK_SEL)) {
+              const outerBlocks = [...child.querySelectorAll(BLOCK_SEL)]
+                .filter(el => {
+                  if (el.closest('.cv-pg-spacer')) return false;
+                  let p = el.parentElement;
+                  while (p && p !== child) {
+                    if (p.matches(BLOCK_SEL)) return false;
+                    p = p.parentElement;
+                  }
+                  return true;
+                });
+              let found = false;
+              for (const b of outerBlocks) {
+                const br   = b.getBoundingClientRect();
+                const bTop = br.top    - sheetTop;
+                const bBot = br.bottom - sheetTop;
+                if (bBot > zoneStart && bTop < zoneEnd) { target = b; found = true; break; }
+              }
+              if (!found) {
+                usedFallback = true;
+              } else {
+                /* Garde orphelin : si un frère NON-BLOCK_SEL avant la cible
+                   (ex : titre de section .sp-sec) est dans la zone interdite,
+                   pousser toute la section d'un bloc pour ne pas laisser le
+                   titre coincé dans le séparateur.
+                   NB : on NE met PAS usedFallback=true ici — le garde ne doit
+                   pas bloquer ce push (la section entière est intentionnellement
+                   poussée, même si son top est avant la zone).               */
+                let sib = target.previousElementSibling;
+                while (sib) {
+                  if (!sib.classList.contains('cv-pg-spacer') && !sib.matches(BLOCK_SEL)) {
+                    const sibBot = sib.getBoundingClientRect().bottom - sheetTop;
+                    const sibTop = sib.getBoundingClientRect().top    - sheetTop;
+                    if (sibBot > zoneStart && sibTop < zoneEnd) {
+                      target = child; /* section entière — pas de usedFallback */
+                      break;
+                    }
+                  }
+                  sib = sib.previousElementSibling;
+                }
+              }
+            }
+
+            const targetTop = target.getBoundingClientRect().top - sheetTop;
+            const push = zoneEnd - targetTop;
+            /* Fallback guard : si aucun bloc sémantique n'était dans la zone et
+               que le wrapper a son top AVANT la zone, c'est qu'il a déjà du
+               contenu sur la page courante — ne pas le pousser entier.          */
+            if (push > 0 && (!usedFallback || targetTop >= zoneStart)) {
+              const sp = document.createElement('div');
+              sp.className     = 'cv-pg-spacer';
+              sp.style.cssText = `height:${push}px;flex-shrink:0;display:block;grid-column:1/-1;`;
+              target.parentNode.insertBefore(sp, target);
+              pushed = true;
+            }
+            break; /* un seul push par colonne par limite de page */
+          }
+
+          if (pushed) break;
+        }
+        if (pushed) { changed = true; break; } /* relancer le scan complet */
+      }
+    }
+  }
+
+  /* ── Extrait le nom du candidat depuis le DOM du CV ─────────────────────── */
+  /* Tous les templates nomment la classe du nom "[prefix]-name" (ac-name,
+     bt-name, md-name…). On tente d'abord ce sélecteur, sinon on laisse vide. */
+  function getCandidateName() {
+    const el = sheet.querySelector('[class*="-name"]');
+    return el ? el.textContent.trim() : '';
+  }
+
+  /* ── Crée une en-tête pour les pages 2, 3, … ────────────────────────────── */
+  function createHeader(pageNum, total, name) {
+    const isDark = document.documentElement.classList.contains('dark');
+    const h = document.createElement('div');
+    h.className = 'cv-pg-header';
+    h.style.cssText = [
+      'position:absolute', 'left:0', 'right:0',
+      `height:${HEAD_H}px`,
+      'display:flex', 'align-items:center', 'justify-content:space-between',
+      'padding:0 20px',
+      "font-family:-apple-system,'Segoe UI',system-ui,sans-serif",
+      'font-size:8px',
+      `color:${isDark ? 'rgba(148,163,184,0.65)' : 'rgba(100,116,139,0.60)'}`,
+      'font-weight:600',
+      'letter-spacing:1.4px', 'text-transform:uppercase',
+      'user-select:none', 'pointer-events:none', 'z-index:19',
+      `border-bottom:1px solid ${isDark ? 'rgba(51,65,85,0.50)' : 'rgba(148,163,184,0.22)'}`,
+      `background:${isDark ? 'rgba(15,23,42,0.94)' : 'rgba(255,255,255,0.92)'}`,
+    ].join(';');
+
+    const left  = document.createElement('span');
+    left.textContent = name || 'Curriculum Vitae';
+
+    const right = document.createElement('span');
+    right.textContent = `Page\u00A0${pageNum}\u00A0/\u00A0${total}`;
+
+    h.appendChild(left);
+    h.appendChild(right);
+    return h;
+  }
+
+  /* ── Crée un pied de page ────────────────────────────────────────────────── */
+  function createFooter(pageNum, total) {
+    const isDark = document.documentElement.classList.contains('dark');
+    const f = document.createElement('div');
+    f.className = 'cv-pg-footer';
+    f.style.cssText = [
+      'position:absolute', 'left:0', 'right:0',
+      `height:${FOOT_H}px`,
+      'display:flex', 'align-items:center', 'justify-content:center',
+      "font-family:-apple-system,'Segoe UI',system-ui,sans-serif",
+      'font-size:8px',
+      `color:${isDark ? 'rgba(148,163,184,0.55)' : 'rgba(100,116,139,0.55)'}`,
+      'font-weight:600',
+      'letter-spacing:1.6px', 'text-transform:uppercase',
+      'user-select:none', 'pointer-events:none', 'z-index:19',
+      `border-top:1px solid ${isDark ? 'rgba(51,65,85,0.50)' : 'rgba(148,163,184,0.22)'}`,
+    ].join(';');
+    f.textContent = `Page\u00A0${pageNum}\u00A0/\u00A0${total}`;
+    return f;
+  }
+
+  /* ── Crée un séparateur inter-pages ──────────────────────────────────────── */
+  function createSep(pageNum) {
+    const sep = document.createElement('div'); sep.className = 'cv-pg-sep';
+    const l   = document.createElement('div'); l.className   = 'cv-pg-sep-line';
+    const lb  = document.createElement('span'); lb.className = 'cv-pg-num-label';
+    lb.textContent = `\u2014 Page ${pageNum} \u2014`;
+    const r   = document.createElement('div'); r.className   = 'cv-pg-sep-line';
+    sep.appendChild(l); sep.appendChild(lb); sep.appendChild(r);
+    return sep;
+  }
+
+  /* ── Position du dernier contenu réel sur le sheet ──────────────────────── */
+  /* Retourne, en pixels depuis le top du sheet, la position du bas du dernier
+     élément « porteur de contenu » (nœud texte non-vide, image ou SVG).
+     Exclut nos injections de pagination (spacers, headers, footers, seps) qui
+     sont purement structurelles et ne représentent rien d'utile à l'utilisateur.
+
+     Précision : on mesure les nœuds texte via `Range` (et non leur parent),
+     ce qui isole le texte rendu de son éventuel padding/margin de wrapper.
+     Permet de distinguer « contenu qui s'arrête à 1100 px » d'un « wrapper qui
+     s'étend jusqu'à 1200 px par padding-bottom ». */
+  function findLastContentBottom() {
+    const sheetTop  = sheet.getBoundingClientRect().top;
+    const EXCLUDE   = '.cv-pg-spacer, .cv-pg-sep, .cv-pg-footer, .cv-pg-header';
+    let   maxBottom = 0;
+
+    const walker = document.createTreeWalker(sheet, NodeFilter.SHOW_TEXT, {
+      acceptNode(n) {
+        if (!n.textContent || !n.textContent.trim()) return NodeFilter.FILTER_REJECT;
+        const p = n.parentElement;
+        if (!p || p.closest(EXCLUDE))               return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    const range = document.createRange();
+    try {
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        range.selectNodeContents(node);
+        const r = range.getBoundingClientRect();
+        if (r.height > 0) {
+          const b = r.bottom - sheetTop;
+          if (b > maxBottom) maxBottom = b;
+        }
+      }
+    } finally {
+      range.detach && range.detach();
+    }
+
+    for (const el of sheet.querySelectorAll('img, svg')) {
+      if (el.closest(EXCLUDE)) continue;
+      const r = el.getBoundingClientRect();
+      if (r.height > 0) {
+        const b = r.bottom - sheetTop;
+        if (b > maxBottom) maxBottom = b;
+      }
+    }
+    return maxBottom;
+  }
+
+  /* ── Recalcul complet ────────────────────────────────────────────────────── */
+  /* Pipeline déterministe :
+       1. Reset des injections passées (spacers + headers/footers/seps).
+       2. Application des spacers anti-coupure (push items qui chevauchent).
+       3. Calcul du nombre de pages réel (basé sur contenu, pas scrollHeight brut).
+       4. Application de la hauteur exacte (pages × A4) + clip du débord résiduel.
+       5. Réinjection des séparateurs/headers/footers pour les pages > 1.
+
+     Garanties :
+     - 1 page de contenu → 1 page affichée (jamais d'amorce de page 2 fantôme).
+     - N pages de contenu → exactement N pages, dernière page peut être partielle.
+     - Aucun contenu réel n'est tronqué (contentBottom ≤ pages × PAGE_H par
+       construction, vérifié avec une marge de sécurité de SAFETY px). */
+  function updateBreaks() {
+    if (!sheet) return;
+    ignoreRO = true;
+
+    // 1. Table rase : on repart d'un sheet sans aucune injection précédente.
+    sheet.querySelectorAll('.cv-pg-spacer').forEach(e => e.remove());
+    host.querySelectorAll('.cv-pg-sep, .cv-pg-footer, .cv-pg-header').forEach(e => e.remove());
+    sheet.style.height    = '';
+    sheet.style.minHeight = '';
+    sheet.style.overflow  = '';
+
+    // 2. Push des items qui chevauchent les zones interdites (limite inter-pages).
+    injectSpacers(findColumns());
+
+    // 3. Calcul du nombre de pages.
+    //    `scrollHeight` peut surestimer (padding-bottom du sheet, marges du dernier
+    //    élément, spacer généreux). On corrige en se basant sur le bas du dernier
+    //    contenu réel : tant qu'une page en queue ne contient rien, on la retire.
+    const SAFETY        = 8;            // marge anti faux-positif (descenders, sub-pixel)
+    const contentBottom = findLastContentBottom();
+    let   pages         = Math.max(1, Math.ceil(sheet.scrollHeight / PAGE_H));
+    while (pages > 1 && contentBottom + SAFETY <= (pages - 1) * PAGE_H) {
+      pages--;
+    }
+
+    // 4. Hauteur exacte = pages × A4. On utilise des mm (et pas px × PAGE_H)
+    //    pour s'aligner exactement sur la définition A4 utilisée par Chromium
+    //    lors du rendu PDF. PAGE_H = 1123px ≈ 297.41mm — soit 0.41mm de plus
+    //    par page que le vrai A4 ; sans cette correction, Chromium ajoute une
+    //    page fantôme au PDF (la box dépasse imperceptiblement A4 en hauteur).
+    //    En mm, la box mesure exactement N × 297mm = N pages A4.
+    //    `overflow:hidden` clip tout résidu structurel (padding-bottom, marges
+    //    du dernier bloc). Le contenu réel rentre par construction
+    //    (contentBottom + SAFETY ≤ pages × PAGE_H).
+    const exact = (pages * 297) + 'mm';
+    sheet.style.height    = exact;
+    sheet.style.minHeight = exact;
+    sheet.style.overflow  = 'hidden';
+
+    /* 5. Badge */
+    if (pages !== lastPages) {
+      lastPages = pages;
+      txt.textContent      = badgeText(pages);
+      dot.style.background = dotColor(pages);
+    }
+
+    /* 6. En-tête, pied de page et séparateur pour chaque limite inter-pages */
+    const name = getCandidateName();
+    for (let p = 1; p < pages; p++) {
+      /* Pied de page : juste au-dessus du séparateur */
+      const foot = createFooter(p, pages);
+      foot.style.top = (p * PAGE_H - SEP_H / 2 - FOOT_H) + 'px';
+      host.appendChild(foot);
+
+      /* Séparateur : centré sur la limite */
+      const sep = createSep(p + 1);
+      sep.style.top = (p * PAGE_H - SEP_H / 2) + 'px';
+      host.appendChild(sep);
+
+      /* En-tête de la page suivante : juste après le séparateur */
+      const hdr = createHeader(p + 1, pages, name);
+      hdr.style.top = (p * PAGE_H + SEP_H / 2) + 'px';
+      host.appendChild(hdr);
+    }
+
+    /* 7. Pied de page de la dernière page (en bas du document) */
+    const lastFoot = createFooter(pages, pages);
+    lastFoot.style.top = (pages * PAGE_H - FOOT_H) + 'px';
+    host.appendChild(lastFoot);
+
+    /* 8. Réactiver le ResizeObserver après stabilisation et signaler que
+       la pagination est prête (utilisé par Playwright pour synchroniser
+       la génération PDF/PNG avec l'aperçu). */
+    setTimeout(() => {
+      ignoreRO = false;
+      window.__cvPaginationReady = true;
+    }, 300);
+  }
+
+  /* Flag exposé pour les générateurs externes (Playwright/Chromium headless).
+     Mis à `false` à chaque scheduleUpdate (recalcul en cours), repassé à `true`
+     à la fin de l'updateBreaks suivant. Permet à `cv_render.py` d'attendre
+     que la pagination soit stabilisée AVANT de capturer le PDF — garantit
+     que le téléchargement reflète exactement la pagination de l'aperçu. */
+  function scheduleUpdate() {
+    if (ignoreRO) return;
+    window.__cvPaginationReady = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(() => { rafId = null; updateBreaks(); });
+  }
+
+  /* ── Initialisation ──────────────────────────────────────────────────────── */
+  function setupPagination() {
+    sheet = document.getElementById('cv-sheet');
+    if (!sheet || sheet.dataset.pgReady) return;
+    sheet.dataset.pgReady = '1';
+
+    host = document.createElement('div');
+    host.className = 'cv-pages-host';
+    sheet.parentNode.insertBefore(host, sheet);
+    host.appendChild(sheet);
+
+    const badge = document.createElement('div');
+    badge.className = 'cv-pg-badge';
+    badge.innerHTML =
+      '<span class="cv-pg-badge-icon">&#9783;</span>' +
+      '<span class="cv-pg-dot"></span>' +
+      '<span class="cv-pg-txt">1 page</span>';
+    document.body.appendChild(badge);
+    dot = badge.querySelector('.cv-pg-dot');
+    txt = badge.querySelector('.cv-pg-txt');
+    setTimeout(() => badge.classList.add('cv-pg-visible'), 700);
+
+    /* Expose scheduleUpdate au global → permet à des consommateurs externes
+       (Playwright headless lors de la génération PDF) de forcer un recalcul
+       après un changement de média (`emulate_media('print')`) qui modifie
+       les dimensions du sheet sans toujours déclencher ResizeObserver. */
+    window.__cvScheduleUpdate = scheduleUpdate;
+
+    /* Préparation pour le rendu PDF — INSPIRÉE DE window.print().
+       Au lieu d'`emulate_media('print')` qui forcerait un recalcul de la
+       pagination (différences subtiles : wrap du texte, métriques fonts,
+       layout flex…) menant à des pages fantômes dans le PDF, on applique
+       les transformations « print » directement via JS sur la vue courante.
+       Conséquence cruciale : le JS de pagination NE recalcule PAS — le PDF
+       reflète exactement le calcul de l'aperçu (1 page aperçu = 1 page PDF).
+
+       Reproduit la sémantique du @media print de ce fichier mais sans
+       activer le media → matchMedia('print') ne tire pas → updateBreaks
+       ne re-tourne pas → height/min-height/overflow déjà posés en mm
+       restent inchangés, garantissant le pixel-perfect. */
+    window.__cvPrepareForPdfRender = function () {
+      // 0. Désactiver le moteur de pagination : stoppe le ResizeObserver et
+      //    supprime les spacers du DOM avant toute mesure de position.
+      if (window.__cvDisablePagination) window.__cvDisablePagination();
+
+      // 1. Masquer les éléments non-imprimables (équivalent display:none de @media print)
+      const HIDE = 'nav, footer, .no-print, .form-panel, .cv-pg-sep, .cv-pg-badge, .cv-pg-footer, .cv-pg-header';
+      document.querySelectorAll(HIDE).forEach(el => { el.style.display = 'none'; });
+
+      // 2. Masquer les divs directs de body (bandes tricolores décoratives)
+      for (const ch of Array.from(document.body.children)) {
+        if (ch.tagName === 'DIV') ch.style.display = 'none';
+      }
+
+      // 3. Reset html/body : pas de marge, fond blanc
+      const html = document.documentElement;
+      html.style.background = 'white';
+      html.style.setProperty('-webkit-print-color-adjust', 'exact');
+      html.style.setProperty('print-color-adjust', 'exact');
+      document.body.style.margin     = '0';
+      document.body.style.padding    = '0';
+      document.body.style.background = 'white';
+
+      // 4. Reset main : pas de padding, overflow:visible
+      const main = document.querySelector('main');
+      if (main) {
+        main.style.margin   = '0';
+        main.style.padding  = '0';
+        main.style.overflow = 'visible';
+        main.style.display  = 'block';
+      }
+
+      // 5. cv-builder / preview-panel : layout pleine largeur.
+      //    On GARDE display:flex (pas de passage à block) : le form-panel
+      //    étant caché, le flex-item restant (preview-panel, flex:1) occupe
+      //    déjà 100% de la largeur. Passer en block exposerait les noeuds
+      //    texte blancs entre les balises du template (ignorés en flex mais
+      //    rendus comme une ligne vide en block), ce qui crée un espace
+      //    blanc parasite en haut du PDF/PNG, absent de l'aperçu écran.
+      document.querySelectorAll('.cv-builder').forEach(el => {
+        el.style.height   = 'auto';
+        el.style.overflow = 'visible';
+      });
+      document.querySelectorAll('.preview-panel').forEach(el => {
+        el.style.background = 'white';
+        el.style.padding    = '0';
+        el.style.overflow   = 'visible';
+        el.style.height     = 'auto';
+        el.style.width      = '100%';
+      });
+
+      // 6. Wrapper de pagination : transparent (display:contents)
+      document.querySelectorAll('.cv-pages-host').forEach(el => {
+        el.style.display = 'contents';
+      });
+
+      // 7. Sheet : retirer l'ombre, marge à 0. La hauteur (mm exacte) et
+      //    overflow:hidden ont déjà été posés par updateBreaks → on n'y
+      //    touche pas, c'est exactement le calcul de l'aperçu qu'on
+      //    veut reproduire pixel-perfect.
+      document.querySelectorAll('#cv-sheet, .cv-sheet-ts').forEach(el => {
+        el.style.boxShadow = 'none';
+        el.style.margin    = '0';
+      });
+
+      // 8. Couper transitions/animations pour stabiliser le rendu instantanément
+      const animKill = document.createElement('style');
+      animKill.id = '__cv-print-anim-kill';
+      animKill.textContent = '*{transition:none!important;animation:none!important;}';
+      document.head.appendChild(animKill);
+    };
+
+    const ro = new ResizeObserver(scheduleUpdate);
+    ro.observe(sheet);
+
+    /* Coupe le moteur de pagination pour le rendu PDF : déconnecte le
+       ResizeObserver, annule tout rAF en attente, et supprime les spacers
+       du DOM pour que les mesures de position soient exactes. */
+    window.__cvDisablePagination = function () {
+      ro.disconnect();
+      if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+      if (sheet) sheet.querySelectorAll('.cv-pg-spacer').forEach(e => e.remove());
+    };
+
+    /* matchMedia('print') : bascule print/screen → le @media print modifie
+       l'apparence (masque navbar/form-panel, dimensions A4 strictes). On
+       force un recalcul pour que la pagination reflète le nouveau layout.
+       Indispensable pour la génération Playwright qui appelle emulate_media. */
+    try {
+      const mq = window.matchMedia('print');
+      const onMqChange = () => scheduleUpdate();
+      if (mq.addEventListener) mq.addEventListener('change', onMqChange);
+      else                     mq.addListener(onMqChange);  // fallback Safari < 14
+    } catch (_) {}
+
+    /* MutationObserver : indispensable pour réagir aux masquages d'items.
+       Le ResizeObserver seul ne suffit pas car `updateBreaks` fixe un
+       `min-height = pages * PAGE_H` sur le sheet — quand on masque un item
+       qui ne fait pas changer de tranche-page, la box garde sa taille et
+       RO ne tire pas. MO observe le DOM interne (items entrants/sortants
+       via x-show / vis(), changements x-text, etc.) et déclenche un
+       scheduleUpdate à chaque changement. Le RAF debounce limite à 1
+       recalcul par frame, et `ignoreRO` empêche la boucle pendant que
+       updateBreaks() injecte/retire ses propres espaceurs. */
+    const mo = new MutationObserver(scheduleUpdate);
+    mo.observe(sheet, {
+      childList:        true,
+      subtree:          true,
+      characterData:    true,
+      attributes:       true,
+      attributeFilter: ['style', 'class', 'hidden'],
+    });
+
+    scheduleUpdate();
+  }
+
+  document.addEventListener('alpine:initialized', setupPagination);
+  document.addEventListener('DOMContentLoaded', () => setTimeout(setupPagination, 300));
+  window.addEventListener('load', () => setTimeout(setupPagination, 600));
+})();
+</script>

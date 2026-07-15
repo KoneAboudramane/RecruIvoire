@@ -1,0 +1,599 @@
+{% extends "entreprise/base_auth.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Mot de passe oublié" %} — {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+<style>
+  /* ── Light (défaut) ─────────────────────────────────────── */
+  .emdp-page-bg         { background: linear-gradient(135deg, #F0FFF4 0%, #ffffff 55%, #F0FFF4 100%); }
+  .emdp-icon-box        { background: linear-gradient(135deg, #d1fae5, #6ee7b7) !important; }
+  .emdp-email-badge     { background: #F0FFF4 !important; border-color: #A7F3D0 !important; }
+  .emdp-badge-time      { background: #d1fae5 !important; color: #009A44 !important; }
+  .emdp-card-active     { background: linear-gradient(135deg, #F0FFF4, #d1fae5) !important; }
+  .emdp-otp-filled      { background: linear-gradient(135deg, #F0FFF4, #d1fae5) !important; color: #009A44 !important; }
+  .emdp-timer-ok-bg     { background: #d1fae5 !important; }
+  .emdp-timer-danger-bg { background: #fee2e2 !important; }
+  .emdp-info-tip        { background: #EFF6FF !important; border: 1px solid #BFDBFE !important; }
+  .emdp-resend-btn      { background: #d1fae5 !important; color: #009A44 !important; border: 1.5px solid #6ee7b7 !important; }
+  .emdp-success-box     { background: linear-gradient(135deg, #d1fae5, #6ee7b7) !important; }
+  .emdp-step-off-bg     { background: #f9fafb !important; color: #9ca3af !important; }
+  .emdp-connector-todo  { background: #e5e7eb !important; }
+  .emdp-loader-overlay  { background: rgba(255,255,255,0.8); }
+
+  /* ── Dark ────────────────────────────────────────────────── */
+  html.dark .emdp-page-bg         { background: linear-gradient(135deg, #0d2818 0%, #111827 55%, #0d2818 100%); }
+  html.dark .emdp-icon-box        { background: linear-gradient(135deg, #153d24, #1a4d2e) !important; }
+  html.dark .emdp-email-badge     { background: #0d2818 !important; border-color: #1a4d2e !important; }
+  html.dark .emdp-badge-time      { background: #153d24 !important; color: #4ade80 !important; }
+  html.dark .emdp-card-active     { background: linear-gradient(135deg, #0d2818, #153d24) !important; }
+  html.dark .emdp-otp-filled      { background: linear-gradient(135deg, #0d2818, #153d24) !important; color: #4ade80 !important; }
+  html.dark .emdp-timer-ok-bg     { background: #153d24 !important; }
+  html.dark .emdp-timer-danger-bg { background: #3b1111 !important; }
+  html.dark .emdp-info-tip        { background: #0a1f14 !important; border: 1px solid #1a4d2e !important; }
+  html.dark .emdp-resend-btn      { background: #153d24 !important; color: #4ade80 !important; border: 1.5px solid #1a4d2e !important; }
+  html.dark .emdp-success-box     { background: linear-gradient(135deg, #153d24, #1a4d2e) !important; }
+  html.dark .emdp-step-off-bg     { background: #1f2937 !important; color: #6b7280 !important; }
+  html.dark .emdp-connector-todo  { background: #374151 !important; }
+  html.dark .emdp-loader-overlay  { background: rgba(17,24,39,0.8); }
+  html.dark .shadow-green-100     { --tw-shadow-color: rgba(26,77,46,0.3); }
+  html.dark .shadow-green-50      { --tw-shadow-color: rgba(26,77,46,0.2); }
+  html.dark .text-blue-700        { color: #4ade80 !important; }
+
+  /* ── Noir ────────────────────────────────────────────────── */
+  html.noir .emdp-page-bg         { background: linear-gradient(135deg, #061a0d 0%, #000000 55%, #061a0d 100%); }
+  html.noir .emdp-icon-box        { background: linear-gradient(135deg, #0a2513, #0d3318) !important; }
+  html.noir .emdp-email-badge     { background: #061a0d !important; border-color: #0d3318 !important; }
+  html.noir .emdp-badge-time      { background: #0a2513 !important; color: #4ade80 !important; }
+  html.noir .emdp-card-active     { background: linear-gradient(135deg, #061a0d, #0a2513) !important; }
+  html.noir .emdp-otp-filled      { background: linear-gradient(135deg, #061a0d, #0a2513) !important; color: #4ade80 !important; }
+  html.noir .emdp-timer-ok-bg     { background: #0a2513 !important; }
+  html.noir .emdp-timer-danger-bg { background: #2a0a0a !important; }
+  html.noir .emdp-info-tip        { background: #041208 !important; border: 1px solid #0d3318 !important; }
+  html.noir .emdp-resend-btn      { background: #0a2513 !important; color: #4ade80 !important; border: 1.5px solid #0d3318 !important; }
+  html.noir .emdp-success-box     { background: linear-gradient(135deg, #0a2513, #0d3318) !important; }
+  html.noir .emdp-step-off-bg     { background: #111111 !important; color: #555555 !important; }
+  html.noir .emdp-connector-todo  { background: #222222 !important; }
+  html.noir .emdp-loader-overlay  { background: rgba(0,0,0,0.85); }
+  html.noir .shadow-green-100     { --tw-shadow-color: rgba(13,51,24,0.3); }
+  html.noir .shadow-green-50      { --tw-shadow-color: rgba(13,51,24,0.2); }
+  html.noir .text-blue-700        { color: #4ade80 !important; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+{% csrf_token %}
+
+<div class="min-h-[85vh] flex items-center justify-center py-12 px-80 emdp-page-bg"
+     x-data="reinitMDPEntreprise()">
+
+  <div class="w-full max-w-xl">
+
+    <!-- ── Stepper ─────────────────────────────────────────────────────── -->
+    <div class="flex items-center justify-center mb-10" x-show="etape !== '3b'">
+      <template x-for="(s, idx) in [1, 2, 3]" :key="idx">
+        <div class="flex items-center">
+          <div class="relative flex flex-col items-center">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-500 ring-2"
+                 :class="{
+                   'ring-green-500': stepActif(s) || stepFait(s),
+                   'ring-gray-200':  !stepActif(s) && !stepFait(s),
+                   'emdp-step-off-bg': !stepActif(s) && !stepFait(s)
+                 }"
+                 :style="(stepActif(s) || stepFait(s)) ? 'background:linear-gradient(135deg,#009A44,#007a36); color:white;' : ''">
+              <svg x-show="stepFait(s)" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+              </svg>
+              <span x-show="!stepFait(s)" x-text="s"></span>
+            </div>
+          </div>
+          <div x-show="idx < 2"
+               class="w-16 sm:w-24 h-1 mx-2 rounded-full transition-all duration-700"
+               :class="{'emdp-connector-todo': !stepFait(s)}"
+               :style="stepFait(s) ? 'background:linear-gradient(90deg,#009A44,#007a36)' : ''">
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!-- ÉTAPE 1 — Email                                                   -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <div x-show="etape === 1"
+         x-transition:enter="transition ease-out duration-400"
+         x-transition:enter-start="opacity-0 translate-y-8"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 -translate-y-6">
+
+      <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+        <div class="h-1.5 w-full" style="background:linear-gradient(90deg,#009A44,#00c05a,#c96010)"></div>
+        <div class="p-8">
+          <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-5 shadow-inner emdp-icon-box">
+              <span class="text-4xl">🔑</span>
+            </div>
+            <h1 class="text-2xl font-extrabold text-gray-800 tracking-tight">{% trans "Mot de passe oublié ?" %}</h1>
+            <p class="text-gray-400 text-sm mt-2">{% trans "Saisissez l'email professionnel associé à votre compte" %}</p>
+          </div>
+
+          <div class="mb-6">
+            <label class="block text-sm font-semibold text-gray-600 mb-2">{% trans "Adresse email professionnelle" %}</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <svg class="w-5 h-5 transition-colors duration-200" :class="erreurEmail ? 'text-red-400' : 'text-gray-300'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+              </div>
+              <input type="email" x-model="email" @keydown.enter.prevent="verifierEmail()"
+                     placeholder="{% trans "contact@monentreprise.ci" %}" autocomplete="email"
+                     class="w-full pl-12 pr-4 py-3.5 rounded-xl border text-sm transition-all duration-300 focus:outline-none"
+                     :class="erreurEmail
+                       ? 'border-red-300 bg-red-50 focus:border-red-400 focus:shadow-[0_0_0_3px_rgba(239,68,68,0.12)]'
+                       : 'border-gray-200 focus:border-green-400 focus:shadow-[0_0_0_3px_rgba(0,154,68,0.15)]'">
+            </div>
+            <div x-show="erreurEmail"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 -translate-y-2 scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                 class="mt-3 flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl">
+              <span class="text-red-400 text-lg flex-shrink-0">✗</span>
+              <p class="text-xs text-red-600 font-medium" x-text="erreurEmail"></p>
+            </div>
+          </div>
+
+          <button @click="verifierEmail()" :disabled="chargement || !email.trim()"
+                  class="w-full py-3.5 rounded-xl text-white font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2.5 shadow-md"
+                  :class="chargement || !email.trim() ? 'opacity-50 cursor-not-allowed shadow-none' : 'hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]'"
+                  style="background:linear-gradient(135deg,#009A44,#007a36)">
+            <svg x-show="chargement" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            <span x-text="chargement ? 'Vérification...' : 'Continuer'"></span>
+            <svg x-show="!chargement" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+            </svg>
+          </button>
+
+          <div class="mt-5 text-center">
+            <a href="{% url 'entreprise:connexion' %}"
+               class="text-sm text-gray-400 hover:text-gray-600 transition-colors duration-200 inline-flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+              </svg>
+              {% trans "Retour à la connexion" %}
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!-- ÉTAPE 2 — Choix méthode                                           -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <div x-show="etape === 2"
+         x-transition:enter="transition ease-out duration-400"
+         x-transition:enter-start="opacity-0 translate-y-8"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 -translate-y-6">
+
+      <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+        <div class="h-1.5 w-full" style="background:linear-gradient(90deg,#009A44,#00c05a,#c96010)"></div>
+        <div class="p-8">
+          <div class="text-center mb-7">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4 shadow-inner emdp-icon-box">
+              <span class="text-4xl">📧</span>
+            </div>
+            <h2 class="text-xl font-extrabold text-gray-800">{% trans "Comment réinitialiser ?" %}</h2>
+            <p class="text-sm text-gray-400 mt-1">{% trans "Choisissez votre méthode préférée" %}</p>
+            <div class="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-xl border emdp-email-badge">
+              <svg class="w-4 h-4" style="color:#009A44" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              <span class="text-sm font-semibold" style="color:#009A44" x-text="email"></span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 mb-6">
+            <button @click="choisirMethode('code')" :disabled="chargement"
+                    class="group relative flex flex-col items-start p-5 rounded-2xl border-2 text-left transition-all duration-300"
+                    :class="(methode === 'code' ? 'border-green-500 shadow-lg shadow-green-100 emdp-card-active' : 'border-gray-200 hover:border-green-300 hover:shadow-md hover:shadow-green-50')">
+              <div class="text-4xl mb-4 transition-transform duration-300 group-hover:scale-110">🔢</div>
+              <h3 class="font-bold text-gray-800 text-sm leading-tight mb-1.5">{% trans "Code à 5 chiffres" %}</h3>
+              <p class="text-xs text-gray-400 leading-relaxed mb-3">{% trans "Un code temporaire envoyé par email" %}</p>
+              <div class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full emdp-badge-time">
+                <span>⏱</span> 10 min
+              </div>
+              <div x-show="methode === 'code' && !chargement"
+                   class="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center"
+                   style="background:#009A44">
+                <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+              <div x-show="chargement && methode === 'code'"
+                   class="absolute inset-0 rounded-2xl flex items-center justify-center emdp-loader-overlay">
+                <svg class="animate-spin w-7 h-7" style="color:#009A44" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+              </div>
+            </button>
+
+            <button @click="choisirMethode('lien')" :disabled="chargement"
+                    class="group relative flex flex-col items-start p-5 rounded-2xl border-2 text-left transition-all duration-300"
+                    :class="(methode === 'lien' ? 'border-green-500 shadow-lg shadow-green-100 emdp-card-active' : 'border-gray-200 hover:border-green-300 hover:shadow-md hover:shadow-green-50')">
+              <div class="text-4xl mb-4 transition-transform duration-300 group-hover:scale-110">🔗</div>
+              <h3 class="font-bold text-gray-800 text-sm leading-tight mb-1.5">{% trans "Lien de réinitialisation" %}</h3>
+              <p class="text-xs text-gray-400 leading-relaxed mb-3">{% trans "Un lien direct pour changer votre mot de passe" %}</p>
+              <div class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full emdp-badge-time">
+                <span>⏱</span> 10 min
+              </div>
+              <div x-show="methode === 'lien' && !chargement"
+                   class="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center"
+                   style="background:#009A44">
+                <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+              <div x-show="chargement && methode === 'lien'"
+                   class="absolute inset-0 rounded-2xl flex items-center justify-center emdp-loader-overlay">
+                <svg class="animate-spin w-7 h-7" style="color:#009A44" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+              </div>
+            </button>
+          </div>
+
+          <button @click="etape = 1; methode = null; erreurEmail = ''"
+                  class="text-sm text-gray-400 hover:text-gray-600 transition-colors duration-200 inline-flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            {% trans "Modifier l'email" %}
+          </button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!-- ÉTAPE 3A — Saisie du code OTP                                     -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <div x-show="etape === '3a'"
+         x-transition:enter="transition ease-out duration-400"
+         x-transition:enter-start="opacity-0 translate-y-8"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 -translate-y-6">
+
+      <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+        <div class="h-1.5 w-full" style="background:linear-gradient(90deg,#009A44,#00c05a,#c96010)"></div>
+        <div class="p-8">
+          <div class="text-center mb-7">
+            <div class="relative inline-flex mb-4">
+              <div class="w-20 h-20 rounded-2xl flex items-center justify-center shadow-inner emdp-icon-box">
+                <span class="text-4xl">📩</span>
+              </div>
+              <span class="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-black animate-bounce"
+                    style="background:#009A44">!</span>
+            </div>
+            <h2 class="text-xl font-extrabold text-gray-800">{% trans "Entrez votre code" %}</h2>
+            <p class="text-sm text-gray-400 mt-1">{% trans "Code envoyé à" %}</p>
+            <p class="text-sm font-bold mt-0.5" style="color:#009A44" x-text="email"></p>
+          </div>
+
+          <div class="flex justify-center gap-3 mb-6">
+            <template x-for="(d, i) in digits" :key="i">
+              <input :id="'digit-' + i" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*"
+                     x-model="digits[i]"
+                     @input="onDigitInput(i, $event)"
+                     @keydown.backspace="onBackspace(i, $event)"
+                     @keydown.left.prevent="focusDigit(i - 1)"
+                     @keydown.right.prevent="focusDigit(i + 1)"
+                     @paste.prevent="collerCode($event)"
+                     @focus="$event.target.select()"
+                     class="w-12 h-14 text-center text-2xl font-black rounded-xl border-2 transition-all duration-200 focus:outline-none caret-transparent"
+                     :class="digits[i] ? 'border-green-500 shadow-[0_0_0_3px_rgba(0,154,68,0.15)] emdp-otp-filled' : 'border-gray-200 focus:border-green-400 focus:shadow-[0_0_0_3px_rgba(0,154,68,0.15)]'">
+            </template>
+          </div>
+
+          <div class="flex items-center justify-center gap-2 mb-5">
+            <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs"
+                 :class="tempsRestant < 60 ? 'emdp-timer-danger-bg' : 'emdp-timer-ok-bg'">
+              <span :style="tempsRestant < 60 ? 'color:#ef4444' : 'color:#009A44'">⏱</span>
+            </div>
+            <span class="text-sm font-semibold transition-colors duration-500"
+                  :style="tempsRestant < 60 ? 'color:#ef4444' : 'color:#6b7280'">
+              {% trans "Expire dans" %}
+              <strong x-text="minutesRestantes + ':' + String(secondesRestantes).padStart(2, '0')"></strong>
+            </span>
+          </div>
+
+          <div class="w-full h-1.5 bg-gray-100 rounded-full mb-6 overflow-hidden">
+            <div class="h-full rounded-full transition-all duration-1000"
+                 :style="`width: ${Math.round(tempsRestant / 600 * 100)}%; background: ${tempsRestant < 60 ? '#ef4444' : '#009A44'}`">
+            </div>
+          </div>
+
+          <div x-show="erreurCode"
+               x-transition:enter="transition ease-out duration-300"
+               x-transition:enter-start="opacity-0 scale-95"
+               x-transition:enter-end="opacity-100 scale-100"
+               class="mb-5 flex items-center gap-2 p-3.5 bg-red-50 border border-red-100 rounded-xl">
+            <span class="text-red-400 text-lg flex-shrink-0">✗</span>
+            <p class="text-xs text-red-600 font-medium" x-text="erreurCode"></p>
+          </div>
+
+          <button @click="verifierCode()" :disabled="codeComplet.length < 5 || chargement"
+                  class="w-full py-3.5 rounded-xl text-white font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2.5 shadow-md mb-4"
+                  :class="codeComplet.length < 5 || chargement ? 'opacity-50 cursor-not-allowed shadow-none' : 'hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98]'"
+                  style="background:linear-gradient(135deg,#009A44,#007a36)">
+            <svg x-show="chargement" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            <span x-text="chargement ? 'Vérification...' : 'Vérifier le code'"></span>
+          </button>
+
+          <div class="text-center">
+            <button @click="renvoyerCode()" :disabled="chargement"
+                    class="text-sm text-gray-400 transition-colors duration-200 hover:text-green-600">
+              {% trans "Code non reçu ?" %}
+              <span class="underline font-semibold">{% trans "Renvoyer un nouveau code" %}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!-- ÉTAPE 3B — Lien envoyé                                            -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <div x-show="etape === '3b'"
+         x-transition:enter="transition ease-out duration-500"
+         x-transition:enter-start="opacity-0 scale-90"
+         x-transition:enter-end="opacity-100 scale-100">
+
+      <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden text-center">
+        <div class="h-1.5 w-full" style="background:linear-gradient(90deg,#009A44,#00c05a,#c96010)"></div>
+        <div class="p-8">
+          <div class="relative inline-flex mb-6">
+            <div class="w-24 h-24 rounded-3xl flex items-center justify-center shadow-lg emdp-success-box">
+              <svg class="w-12 h-12" style="color:#059669" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <span class="absolute -top-1 -right-1 text-xl animate-bounce" style="animation-delay:0.1s">✨</span>
+            <span class="absolute -bottom-1 -left-1 text-lg animate-bounce" style="animation-delay:0.3s">🎉</span>
+          </div>
+
+          <h2 class="text-2xl font-extrabold text-gray-800 mb-2">{% trans "Email envoyé !" %}</h2>
+          <p class="text-sm text-gray-400">{% trans "Vérifiez votre boîte mail à" %}</p>
+          <p class="text-base font-bold mt-1 mb-5" style="color:#009A44" x-text="email"></p>
+
+          <div class="flex items-center justify-center gap-2 mb-5 text-sm font-medium" style="color:#6b7280">
+            <span>⏱</span>
+            <span>{% trans "Le lien expire dans" %} <strong>10 minutes</strong></span>
+          </div>
+
+          <div class="flex items-start gap-3 p-4 rounded-2xl text-left mb-6 emdp-info-tip">
+            <span class="text-xl flex-shrink-0">💡</span>
+            <p class="text-xs text-blue-700 leading-relaxed">
+              <strong>{% trans "Astuce :" %}</strong> {% trans "Si vous ne trouvez pas l'email, vérifiez votre dossier" %} <strong>{% trans "spam" %}</strong> {% trans "ou" %} <strong>{% trans "courrier indésirable" %}</strong>.
+            </p>
+          </div>
+
+          <button @click="renvoyerLien()" :disabled="chargement"
+                  class="w-full py-3.5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 mb-4 emdp-resend-btn"
+                  :class="chargement ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-0.5 hover:shadow-md'">
+            <svg x-show="chargement" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            <span x-text="chargement ? 'Envoi...' : '🔄 Renvoyer le lien'"></span>
+          </button>
+
+          <a href="{% url 'entreprise:connexion' %}"
+             class="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 transition-colors duration-200">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            {% trans "Retour à la connexion" %}
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<script>
+function reinitMDPEntreprise() {
+  return {
+    etape:             1,
+    email:             '',
+    methode:           null,
+    token:             null,
+    digits:            ['', '', '', '', ''],
+    chargement:        false,
+    erreurEmail:       '',
+    erreurCode:        '',
+    tempsRestant:      600,
+    minutesRestantes:  10,
+    secondesRestantes: 0,
+    timerInterval:     null,
+
+    csrf() {
+      return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    },
+
+    stepActif(s) {
+      if (s === 1) return this.etape === 1;
+      if (s === 2) return this.etape === 2;
+      if (s === 3) return this.etape === '3a' || this.etape === '3b';
+      return false;
+    },
+
+    stepFait(s) {
+      const num = (this.etape === '3a' || this.etape === '3b') ? 3 : (this.etape === 2 ? 2 : 1);
+      return s < num;
+    },
+
+    async verifierEmail() {
+      if (!this.email.trim() || this.chargement) return;
+      this.chargement  = true;
+      this.erreurEmail = '';
+      try {
+        const r    = await fetch('/entreprise/api/verifier-email/', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.csrf() },
+          body:    JSON.stringify({ email: this.email.trim() }),
+        });
+        const data = await r.json();
+        if (data.existe) {
+          this.etape = 2;
+        } else {
+          this.erreurEmail = 'Aucun compte entreprise trouvé avec cette adresse email.';
+        }
+      } catch {
+        this.erreurEmail = 'Une erreur est survenue. Veuillez réessayer.';
+      } finally {
+        this.chargement = false;
+      }
+    },
+
+    async choisirMethode(m) {
+      if (this.chargement) return;
+      this.methode    = m;
+      this.chargement = true;
+      try {
+        const r    = await fetch('/entreprise/api/envoyer-reinitialisation/', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.csrf() },
+          body:    JSON.stringify({ email: this.email.trim(), methode: m }),
+        });
+        const data = await r.json();
+        if (data.succes) {
+          if (m === 'code') {
+            this.token  = data.token;
+            this.digits = ['', '', '', '', ''];
+            this.erreurCode = '';
+            this.etape  = '3a';
+            this.demarrerTimer();
+            this.$nextTick(() => document.getElementById('digit-0')?.focus());
+          } else {
+            this.etape = '3b';
+          }
+        }
+      } catch {
+        this.methode = null;
+      } finally {
+        this.chargement = false;
+      }
+    },
+
+    onDigitInput(index, event) {
+      const val = event.target.value.replace(/\D/g, '');
+      this.digits[index] = val.slice(-1);
+      if (this.digits[index] && index < 4) {
+        this.$nextTick(() => document.getElementById(`digit-${index + 1}`)?.focus());
+      }
+      if (this.codeComplet.length === 5) {
+        this.$nextTick(() => this.verifierCode());
+      }
+    },
+
+    onBackspace(index, event) {
+      if (!this.digits[index] && index > 0) {
+        this.digits[index - 1] = '';
+        this.$nextTick(() => document.getElementById(`digit-${index - 1}`)?.focus());
+      }
+    },
+
+    focusDigit(index) {
+      if (index >= 0 && index < 5) {
+        this.$nextTick(() => document.getElementById(`digit-${index}`)?.focus());
+      }
+    },
+
+    collerCode(event) {
+      const paste    = (event.clipboardData || window.clipboardData).getData('text');
+      const chiffres = paste.replace(/\D/g, '').slice(0, 5).split('');
+      this.digits    = ['', '', '', '', ''];
+      chiffres.forEach((c, i) => { this.digits[i] = c; });
+      const nextIdx  = Math.min(chiffres.length, 4);
+      this.$nextTick(() => document.getElementById(`digit-${nextIdx}`)?.focus());
+      if (chiffres.length === 5) {
+        this.$nextTick(() => this.verifierCode());
+      }
+    },
+
+    get codeComplet() {
+      return this.digits.join('');
+    },
+
+    async verifierCode() {
+      if (this.codeComplet.length < 5 || this.chargement) return;
+      this.chargement = true;
+      this.erreurCode = '';
+      try {
+        const r    = await fetch('/entreprise/api/verifier-code/', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.csrf() },
+          body:    JSON.stringify({ token: this.token, code: this.codeComplet }),
+        });
+        const data = await r.json();
+        if (data.valide) {
+          clearInterval(this.timerInterval);
+          window.location.href = data.redirect;
+        } else {
+          this.erreurCode = data.message || 'Code incorrect. Veuillez réessayer.';
+          this.digits     = ['', '', '', '', ''];
+          this.$nextTick(() => document.getElementById('digit-0')?.focus());
+        }
+      } catch {
+        this.erreurCode = 'Une erreur est survenue. Veuillez réessayer.';
+      } finally {
+        this.chargement = false;
+      }
+    },
+
+    demarrerTimer() {
+      clearInterval(this.timerInterval);
+      this.tempsRestant      = 600;
+      this.minutesRestantes  = 10;
+      this.secondesRestantes = 0;
+      this.timerInterval = setInterval(() => {
+        this.tempsRestant--;
+        this.minutesRestantes  = Math.floor(this.tempsRestant / 60);
+        this.secondesRestantes = this.tempsRestant % 60;
+        if (this.tempsRestant <= 0) {
+          clearInterval(this.timerInterval);
+          this.erreurCode = 'Le code a expiré. Veuillez demander un nouveau code.';
+        }
+      }, 1000);
+    },
+
+    async renvoyerCode() {
+      clearInterval(this.timerInterval);
+      this.erreurCode = '';
+      await this.choisirMethode('code');
+    },
+
+    async renvoyerLien() {
+      await this.choisirMethode('lien');
+    },
+  };
+}
+</script>
+{% endblock %}

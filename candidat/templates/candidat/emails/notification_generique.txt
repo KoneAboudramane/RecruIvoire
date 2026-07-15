@@ -1,0 +1,15 @@
+RecrutePro — {{ notif.titre }}
+
+Bonjour {{ candidat.prenom|default:"" }},
+
+{{ icone }} {{ notif.titre }}
+
+{% if notif.message %}{{ notif.message }}{% endif %}
+
+{% if url_action %}Voir le détail : {{ url_action }}{% endif %}
+
+---
+Vous recevez cet email parce que vous avez activé les notifications par email.
+Pour désactiver : {{ url_prefs }}
+
+© RecrutePro — Côte d'Ivoire

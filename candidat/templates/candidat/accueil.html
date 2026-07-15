@@ -1,0 +1,1418 @@
+﻿{% extends "candidat/base.html" %}
+{% load i18n %}
+
+{% block titre %}{{ logo_site.nom_site }} — {% trans "Trouvez votre emploi en Côte d'Ivoire" %}{% endblock %}
+
+{% block css_extra %}
+<style>
+    /* ── Animations ────────────────────────────────────────────────── */
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50%       { transform: translateY(-12px); }
+    }
+    @keyframes pulse-ring {
+        0%   { box-shadow: 0 0 0 0 rgba(201,96,16,0.5); }
+        70%  { box-shadow: 0 0 0 14px rgba(201,96,16,0); }
+        100% { box-shadow: 0 0 0 0 rgba(201,96,16,0); }
+    }
+    @keyframes scrollCV {
+        0%   { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+    }
+    @keyframes ticker {
+        0%   { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+    }
+    @keyframes shineSlide {
+        0%   { transform: translateX(-100%); }
+        100% { transform: translateX(200%); }
+    }
+    @keyframes livePulse {
+        0%, 100% { transform: scale(1);   opacity: 1; }
+        50%      { transform: scale(1.5); opacity: 0.6; }
+    }
+    @keyframes softPulse {
+        0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,255,255,0.5); }
+        50%      { transform: scale(1.05); box-shadow: 0 0 0 14px rgba(255,255,255,0); }
+    }
+    @keyframes dotsRise {
+        0%   { transform: translateY(20px); opacity: 0; }
+        50%  { opacity: 0.6; }
+        100% { transform: translateY(-30px); opacity: 0; }
+    }
+    @keyframes ripple {
+        0%   { transform: scale(0.8); opacity: 0.7; }
+        100% { transform: scale(2.5); opacity: 0; }
+    }
+    .live-dot      { animation: livePulse 1.4s ease-in-out infinite; }
+    .soft-pulse    { animation: softPulse 2.5s ease-in-out infinite; }
+    .float-dot     {
+        position: absolute;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.5);
+        animation: dotsRise 4s linear infinite;
+    }
+    .ripple-ring {
+        position: absolute;
+        inset: 0;
+        border-radius: 1rem;
+        border: 2px solid rgba(255,255,255,0.4);
+        animation: ripple 2s ease-out infinite;
+    }
+
+    .fade-up  { animation: fadeUp 0.7s ease both; }
+    .delay-1  { animation-delay: 0.15s; }
+    .delay-2  { animation-delay: 0.30s; }
+    .delay-3  { animation-delay: 0.45s; }
+    .float-anim { animation: float 4s ease-in-out infinite; }
+    .pulse-btn  { animation: pulse-ring 2.2s ease-in-out infinite; }
+    .delay-4 { animation-delay: 0.60s; }
+
+    /* ── Barre de recherche hero — 3 modes ───────────────────────── */
+    .search-tag-pill {
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        color: #4b5563;
+        transition: all 0.2s;
+    }
+    .search-tag-pill:hover { border-color: #c96010; color: #c96010; background: #fff8f0; }
+
+    /* Clair : fond légèrement grisé pour ressortir du héro blanc */
+    html:not(.dark):not(.noir) .gradient-hero .search-bar-wrapper {
+        background: #f3f4f6 !important;
+        border-color: #d1d5db !important;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08) !important;
+    }
+
+    /* Sombre (dark) */
+    html.dark .gradient-hero .search-bar-wrapper {
+        background: #0f172a !important;
+        border-color: #475569 !important;
+    }
+    html.dark .gradient-hero .search-bar-wrapper input {
+        color: #f1f5f9 !important;
+    }
+    html.dark .gradient-hero .search-bar-wrapper input::placeholder { color: #64748b !important; }
+    html.dark .gradient-hero .search-bar-wrapper svg { color: #64748b !important; }
+
+    /* Noir (OLED) */
+    html.noir .gradient-hero .search-bar-wrapper {
+        background: #0a0a0a !important;
+        border-color: #2d2d2d !important;
+    }
+    html.noir .gradient-hero .search-bar-wrapper input {
+        color: #f1f5f9 !important;
+    }
+    html.noir .gradient-hero .search-bar-wrapper input::placeholder { color: #6b7280 !important; }
+    html.noir .gradient-hero .search-bar-wrapper svg { color: #6b7280 !important; }
+
+    /* Bouton Rechercher */
+    html.dark .gradient-hero .search-bar-wrapper button[type="submit"] {
+        background: #475569 !important;
+        color: #f1f5f9 !important;
+    }
+    html.dark .gradient-hero .search-bar-wrapper button[type="submit"]:hover {
+        background: #64748b !important;
+    }
+    html.noir .gradient-hero .search-bar-wrapper button[type="submit"] {
+        background: #2d2d2d !important;
+        color: #e2e8f0 !important;
+        border: 1px solid #444 !important;
+    }
+    html.noir .gradient-hero .search-bar-wrapper button[type="submit"]:hover {
+        background: #3d3d3d !important;
+    }
+
+    /* Label "Populaire :" */
+    html.dark .gradient-hero .search-label,
+    html.noir .gradient-hero .search-label { color: #94a3b8 !important; }
+
+    /* Tags — sombre */
+    html.dark .gradient-hero .search-tag-pill {
+        background: rgba(255,255,255,0.08) !important;
+        border-color: rgba(255,255,255,0.15) !important;
+        color: #cbd5e1 !important;
+    }
+    html.dark .gradient-hero .search-tag-pill:hover {
+        background: rgba(255,255,255,0.16) !important;
+        border-color: #c96010 !important;
+        color: #fdba74 !important;
+    }
+
+    /* Chips type de contrat */
+    .search-filter-pill {
+        background: #fff8f0;
+        border: 1px solid #f0cba0;
+        color: #c96010;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    .search-filter-pill:hover { background: #c96010; color: #fff; border-color: #c96010; }
+    html.dark .gradient-hero .search-filter-pill {
+        background: rgba(201,96,16,0.15) !important;
+        border-color: rgba(201,96,16,0.35) !important;
+        color: #fdba74 !important;
+    }
+    html.dark .gradient-hero .search-filter-pill:hover {
+        background: #c96010 !important;
+        color: #fff !important;
+        border-color: #c96010 !important;
+    }
+    html.noir .gradient-hero .search-filter-pill {
+        background: rgba(201,96,16,0.10) !important;
+        border-color: rgba(201,96,16,0.25) !important;
+        color: #fb923c !important;
+    }
+    html.noir .gradient-hero .search-filter-pill:hover {
+        background: #c96010 !important;
+        color: #fff !important;
+        border-color: #c96010 !important;
+    }
+
+    /* Tags — noir */
+    html.noir .gradient-hero .search-tag-pill {
+        background: rgba(255,255,255,0.05) !important;
+        border-color: rgba(255,255,255,0.10) !important;
+        color: #9ca3af !important;
+    }
+    html.noir .gradient-hero .search-tag-pill:hover {
+        background: rgba(255,255,255,0.10) !important;
+        border-color: #c96010 !important;
+        color: #fdba74 !important;
+    }
+
+    /* ── Hero ──────────────────────────────────────────────────────── */
+    .gradient-hero {
+        background: #fff;
+        color: #1f2937;
+        border: 1px solid #e5e7eb;
+    }
+    .gradient-hero .deco-cercle { display: none; }
+    .gradient-hero .text-white { color: #1f2937 !important; }
+    .gradient-hero .text-white\/80, .gradient-hero .text-white\/90 { color: #4b5563 !important; }
+    .gradient-hero .bg-white\/10, .gradient-hero .bg-white\/15 { background: rgba(0,0,0,.04) !important; }
+    .gradient-hero .bg-white\/20 { background: rgba(0,0,0,.06) !important; }
+    .gradient-hero .border-white\/30 { border-color: rgba(0,0,0,.12) !important; }
+    html.dark .gradient-hero .text-white { color: #f1f5f9 !important; }
+    html.dark .gradient-hero .text-white\/80 { color: rgba(241,245,249,.8) !important; }
+    html.dark .gradient-hero .text-white\/90 { color: rgba(241,245,249,.9) !important; }
+    html.noir .gradient-hero .text-white { color: #f1f5f9 !important; }
+    html.noir .gradient-hero .text-white\/80 { color: rgba(241,245,249,.8) !important; }
+    html.noir .gradient-hero .text-white\/90 { color: rgba(241,245,249,.9) !important; }
+
+    /* ── Hover cards ───────────────────────────────────────────────── */
+    .card-hover {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card-hover:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 16px 36px rgba(0,0,0,0.10);
+    }
+
+    /* ── Modèles CV ────────────────────────────────────────────────── */
+    .cv-card .cv-overlay { opacity: 0; transition: opacity 0.3s; }
+    .cv-card:hover .cv-overlay { opacity: 1; }
+
+    /* ── Carousel de modèles défilants ─────────────────────────────── */
+    .cv-track {
+        display: flex;
+        width: max-content;
+        animation: scrollCV 36s linear infinite;
+        gap: 20px;
+    }
+    .cv-track:hover { animation-play-state: paused; }
+
+    /* ── Cartes secteurs : couleur d'accent au hover ───────────────── */
+    .sector-card { transition: all 0.25s ease; }
+    .sector-card:hover {
+        border-color: #c96010;
+        background: linear-gradient(135deg, #FFF8F0 0%, #FFFFFF 60%);
+    }
+    .sector-card:hover .sector-arrow { transform: translateX(4px); color: #c96010; }
+
+    /* ── Ticker promo ──────────────────────────────────────────────── */
+    .promo-ticker {
+        position: relative;
+        overflow: hidden;
+        border-radius: 1rem;
+        box-shadow: 0 16px 36px rgba(201,96,16,0.25);
+    }
+    .promo-ticker .ticker-track {
+        display: flex;
+        width: max-content;
+        animation: ticker 28s linear infinite;
+        align-items: center;
+        gap: 0;
+    }
+    .promo-ticker:hover .ticker-track { animation-play-state: paused; }
+    .promo-ticker .shine {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 40%;
+        height: 100%;
+        background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%);
+        animation: shineSlide 4s ease-in-out infinite;
+        pointer-events: none;
+    }
+    .promo-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0 2.5rem;
+        white-space: nowrap;
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: white;
+    }
+    .promo-sep {
+        color: rgba(255,255,255,0.5);
+        font-weight: 400;
+        padding: 0 0.25rem;
+    }
+
+    /* ── Mode sombre — overrides spécifiques à la page d'accueil ── */
+    /* Section "Comment ça marche" — fond gris très clair */
+    html.dark [style*="background:#f5f5f5"],
+    html.dark [style*="background: #f5f5f5"] {
+        background: #162032 !important;
+    }
+    /* Section villes — fond ardoise clair */
+    html.dark [style*="background:#F8FAFC"] { background: #0f172a !important; }
+    /* Newsletter — fond blanc inline */
+    html.dark section[style*="border-color:#c96010"][style*="background:#ffffff"] { background: #0f172a !important; }
+    /* Icônes secteurs — fond orange très pâle */
+    html.dark [style*="background:#FFF3E0"],
+    html.dark [style*="background: #FFF3E0"] {
+        background: rgba(201,96,16,0.14) !important;
+    }
+    /* Cartes statistiques du compteur visiteurs — fonds blancs translucides */
+    html.dark [style*="background:rgba(255,255,255,0.95)"] {
+        background: rgba(30,41,59,0.92) !important;
+    }
+    /* Badge "X offres" sur les cartes entreprises (vert pâle) */
+    html.dark [style*="background:#DCFCE7;color:#166534;"],
+    html.dark [style*="background:#DCFCE7; color:#166534;"] {
+        background: rgba(34,197,94,0.20) !important;
+        color: #86efac !important;
+    }
+    /* Badge premium jaune (`text-yellow-700` non couvert globalement) */
+    html.dark .text-yellow-700 { color: #fde68a !important; }
+    /* Cartes secteurs — fond + hover */
+    html.dark .sector-card { background: #1e293b !important; }
+    html.dark .sector-card:hover {
+        background: linear-gradient(135deg, rgba(201,96,16,0.14) 0%, #1e293b 60%) !important;
+        border-color: #c96010 !important;
+    }
+    /* Séparateurs orange pâle des sections "villes" */
+    html.dark .bg-orange-200 { background-color: rgba(249,115,22,0.30) !important; }
+    /* Bordures blanches translucides (cartes compteur visiteurs) */
+    html.dark .border-white\/30 { border-color: rgba(255,255,255,0.10) !important; }
+    /* Ombre du ticker promo plus discrète */
+    html.dark .promo-ticker { box-shadow: 0 16px 36px rgba(0,0,0,0.45) !important; }
+    /* Hero — ombres adoucies sur fonds blancs */
+    html.dark .shadow-2xl { box-shadow: 0 20px 50px rgba(0,0,0,0.55) !important; }
+    /* Compteur visiteurs — blanc avec ombre en mode clair */
+    html:not(.dark):not(.noir) #compteur-visiteurs .rounded-3xl {
+        background: #ffffff !important;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.08) !important;
+        border: 1px solid #e5e7eb;
+    }
+    /* Masquer les halos et points décoratifs (orange/vert sur fond blanc) */
+    html:not(.dark):not(.noir) #compteur-visiteurs .absolute.inset-0 { display: none !important; }
+    html:not(.dark):not(.noir) #compteur-visiteurs .float-dot { display: none !important; }
+    /* Textes blancs → foncés */
+    html:not(.dark):not(.noir) #compteur-visiteurs [class*="text-white"] { color: #374151 !important; }
+    html:not(.dark):not(.noir) #compteur-visiteurs .text-white { color: #1f2937 !important; }
+    /* Icône bg translucide → orange pâle */
+    html:not(.dark):not(.noir) #compteur-visiteurs [style*="background:rgba(255,255,255,0.22)"] {
+        background: rgba(201,96,16,0.10) !important;
+    }
+    /* Cartes internes : bordure blanche → grise */
+    html:not(.dark):not(.noir) #compteur-visiteurs [class*="border-white"] { border-color: #e5e7eb !important; }
+    /* Cartes internes : bg blanc opaque → blanc avec bordure */
+    html:not(.dark):not(.noir) #compteur-visiteurs [style*="background:rgba(255,255,255,0.95)"] {
+        background: #f9fafb !important;
+        border: 1px solid #e5e7eb !important;
+    }
+
+    /* CTA final — blanc avec ombre en mode clair */
+    html:not(.dark):not(.noir) section[style*="background:#2e7d52"] {
+        background: #ffffff !important;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        border: 1px solid #e5e7eb;
+    }
+    html:not(.dark):not(.noir) section[style*="background:#2e7d52"] h2 {
+        color: #1f2937 !important;
+    }
+    html:not(.dark):not(.noir) section[style*="background:#2e7d52"] p {
+        color: #6b7280 !important;
+    }
+    html:not(.dark):not(.noir) section[style*="background:#2e7d52"] a {
+        background-color: #c96010 !important;
+        color: #ffffff !important;
+    }
+
+    /* Hero → ardoise unie en mode sombre */
+    html.dark .gradient-hero {
+        background: #1e293b !important;
+        color: #f1f5f9 !important;
+        border-color: #334155 !important;
+    }
+    html.dark .gradient-hero .deco-cercle { display: block !important; opacity: .25; }
+
+    /* Sections orange/vert/bleu → dégradé gris visible en mode sombre */
+    html.dark .promo-ticker,
+    html.dark section[style*="background:#009A44"],
+    html.dark div.card-hover[style*="background:#009A44"],
+    html.dark section[style*="background:#2e7d52"],
+    html.dark div.card-hover[style*="background:#2e7d52"],
+    html.dark div[style*="#c96010"] {
+        background: linear-gradient(135deg,#4B5563 0%,#6B7280 60%,#9CA3AF 100%) !important;
+    }
+
+    /* ── Mode NOIR (OLED) — overrides spécifiques à la page d'accueil ── */
+    html.noir [style*="background:#f5f5f5"],
+    html.noir [style*="background: #f5f5f5"] {
+        background: #080808 !important;
+    }
+    html.noir [style*="background:#F8FAFC"] { background: #000 !important; }
+    html.noir section[style*="border-color:#c96010"][style*="background:#ffffff"] { background: #000 !important; }
+    html.noir [style*="background:#FFF3E0"],
+    html.noir [style*="background: #FFF3E0"] {
+        background: rgba(201,96,16,0.11) !important;
+    }
+    html.noir [style*="background:rgba(255,255,255,0.95)"] {
+        background: rgba(13,13,13,0.92) !important;
+    }
+    html.noir [style*="background:#DCFCE7;color:#166534;"],
+    html.noir [style*="background:#DCFCE7; color:#166534;"] {
+        background: rgba(34,197,94,0.16) !important;
+        color: #86efac !important;
+    }
+    html.noir .text-yellow-700 { color: #fde68a !important; }
+    html.noir .sector-card { background: #0d0d0d !important; }
+    html.noir .sector-card:hover {
+        background: linear-gradient(135deg, rgba(201,96,16,0.11) 0%, #0d0d0d 60%) !important;
+        border-color: #c96010 !important;
+    }
+    html.noir .bg-orange-200 { background-color: rgba(249,115,22,0.24) !important; }
+    html.noir .border-white\/30 { border-color: rgba(255,255,255,0.08) !important; }
+    html.noir .promo-ticker { box-shadow: 0 16px 36px rgba(0,0,0,0.55) !important; }
+    html.noir .shadow-2xl { box-shadow: 0 20px 50px rgba(0,0,0,0.65) !important; }
+    /* Compteur visiteurs — fond orange → ardoise en mode nuit/noir */
+    html.dark #compteur-visiteurs .rounded-3xl { background: #1e293b !important; }
+    html.noir #compteur-visiteurs .rounded-3xl { background: #0d0d0d !important; }
+    /* Masquer halos et bande tricolore verte en dark/noir */
+    html.dark #compteur-visiteurs .absolute.inset-0,
+    html.noir #compteur-visiteurs .absolute.inset-0 { display: none !important; }
+    html.dark #compteur-visiteurs .bande-tricolore,
+    html.noir #compteur-visiteurs .bande-tricolore { display: none !important; }
+    html.dark #compteur-visiteurs [style*="background:#2e7d52"],
+    html.noir #compteur-visiteurs [style*="background:#2e7d52"] { display: none !important; }
+    /* Hero → noir OLED en mode noir */
+    html.noir .gradient-hero {
+        background: linear-gradient(135deg,#000 0%,#080808 60%,#111 100%) !important;
+        color: #f1f5f9 !important;
+        border-color: #222 !important;
+    }
+    html.noir .gradient-hero .deco-cercle { display: block !important; opacity: .12; }
+
+    /* Sections orange/vert/bleu → noir profond en mode noir */
+    html.noir .promo-ticker,
+    html.noir section[style*="background:#009A44"],
+    html.noir div.card-hover[style*="background:#009A44"],
+    html.noir section[style*="background:#2e7d52"],
+    html.noir div.card-hover[style*="background:#2e7d52"],
+    html.noir div[style*="#c96010"] {
+        background: linear-gradient(135deg, #000 0%, #080808 60%, #111 100%) !important;
+    }
+
+    /* ── Tableau de bord rapide — mode nuit / noir ───────────────────── */
+    html.dark .dashboard-bord  { background: #1e293b !important; border-color: #334155 !important; }
+    html.dark .db-card         { background: #0f172a !important; border-color: #334155 !important; }
+    html.dark .db-card:hover   { border-color: #c96010 !important; }
+    html.dark .db-card .text-gray-900  { color: #f1f5f9 !important; }
+    html.dark .db-card .text-gray-500  { color: #94a3b8 !important; }
+    html.dark .db-card .text-gray-400  { color: #64748b !important; }
+    html.dark .dashboard-bord .text-gray-400 { color: #64748b !important; }
+    html.noir .dashboard-bord  { background: #0a0a0a !important; border-color: #222 !important; }
+    html.noir .db-card         { background: #000 !important; border-color: #222 !important; }
+    html.noir .db-card:hover   { border-color: #c96010 !important; }
+    html.noir .db-card .text-gray-900  { color: #f1f5f9 !important; }
+    html.noir .db-card .text-gray-500  { color: #94a3b8 !important; }
+    html.noir .db-card .text-gray-400  { color: #6b7280 !important; }
+    html.noir .dashboard-bord .text-gray-400 { color: #6b7280 !important; }
+
+</style>
+{% endblock %}
+
+{% block contenu %}
+
+<!-- ═════════════════════════════════════════════════════════════════════
+     1. HERO — Construisez votre carrière
+═════════════════════════════════════════════════════════════════════ -->
+<section class="gradient-hero rounded-3xl px-4 sm:px-8 py-12 sm:py-16 mb-8 relative overflow-hidden shadow-sm">
+    <div class="deco-cercle absolute top-[-60px] right-[-60px] w-72 h-72 bg-white/10 rounded-full"></div>
+    <div class="deco-cercle absolute bottom-[-80px] left-[-40px] w-56 h-56 bg-white/10 rounded-full"></div>
+
+    <div class="relative flex flex-col lg:flex-row items-center gap-10">
+        <div class="flex-1 text-white text-center lg:text-left">
+            {% if request.candidat %}
+                {# ── Hero personnalisé pour candidat connecté ─────────────── #}
+                <span class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white text-sm font-semibold px-4 py-2 rounded-full mb-5 fade-up">
+                    👤 {{ request.candidat.prenom }} {{ request.candidat.nom }}
+                </span>
+                <h1 class="text-4xl lg:text-6xl font-extrabold leading-tight mb-4 fade-up delay-1">
+                    {% trans "Une nouvelle" %} <span class="underline decoration-white/40 decoration-4">{% trans "carrière" %}</span><br>{% trans "vous tend la main" %}
+                </h1>
+                <p class="text-white/80 text-base mb-5 max-w-xl fade-up delay-2">
+                    {% blocktrans %}Découvrez de nouvelles opportunités et postulez en un clic.{% endblocktrans %}
+                </p>
+            {% else %}
+                {# ── Hero générique pour visiteur anonyme ──────────────────── #}
+                <span class="inline-block bg-white/20 text-white text-xs font-semibold px-4 py-1.5 rounded-full mb-5 fade-up">
+                    🇨🇮 {% trans "Plateforme #1 de recrutement en Côte d'Ivoire" %}
+                </span>
+                <h1 class="text-4xl lg:text-6xl font-extrabold leading-tight mb-4 fade-up delay-1">
+                    {% trans "Construisez votre" %}<br>
+                    <span class="underline decoration-white/40 decoration-4">{% trans "carrière de rêve" %}</span>
+                </h1>
+                <p class="text-white/80 text-base mb-5 max-w-xl fade-up delay-2">
+                    {% blocktrans %}Créez un CV professionnel, postulez aux meilleures offres — tout en un seul endroit.{% endblocktrans %}
+                </p>
+            {% endif %}
+
+            {# ── Boutons CTA secondaires ───────────────────────────────── #}
+            {% if request.candidat %}
+                <div class="flex flex-wrap gap-3 justify-center lg:justify-start fade-up delay-3">
+                    <a href="{% url 'candidat:profil' %}" class="pulse-btn bg-white font-bold px-6 py-3 rounded-xl text-sm shadow-lg transition hover:scale-105" style="color:#c96010;">
+                        🚀 {% trans "Mon espace" %}
+                    </a>
+                    <a href="{% url 'candidat:mes_candidatures' %}" class="border border-white/50 text-white font-semibold px-6 py-3 rounded-xl text-sm hover:bg-white/10 transition">
+                        📋 {% trans "Mes candidatures" %}
+                    </a>
+                </div>
+            {% else %}
+                <div class="flex flex-wrap gap-3 justify-center lg:justify-start fade-up delay-3">
+                    <a href="{% url 'candidat:inscription' %}" class="pulse-btn bg-white font-bold px-6 py-3 rounded-xl text-sm shadow-lg transition hover:scale-105" style="color:#c96010;">
+                        🚀 {% trans "Créer mon CV gratuitement" %}
+                    </a>
+                    <a href="{% url 'candidat:connexion' %}" class="border border-white/50 text-white font-semibold px-6 py-3 rounded-xl text-sm hover:bg-white/10 transition">
+                        🔑 {% trans "Se connecter" %}
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Carte CV flottante + barre de recherche -->
+        <div class="flex-1 flex flex-col items-center gap-8">
+          <div class="float-anim">
+            <div class="relative w-72 lg:w-80">
+                <div class="bg-white rounded-3xl shadow-2xl p-6 flex flex-col gap-4">
+                    <div class="flex items-center gap-4">
+                        {% if request.candidat and request.candidat.photoProfil %}
+                            <img src="{{ request.candidat.photoProfil.url }}"
+                                 class="w-16 h-16 rounded-full object-cover flex-shrink-0" alt="">
+                        {% else %}
+                            <div class="w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-bold flex-shrink-0" style="background:#c96010;">
+                                {% if request.candidat %}{{ request.candidat.prenom|slice:":1" }}{{ request.candidat.nom|slice:":1" }}{% else %}NK{% endif %}
+                            </div>
+                        {% endif %}
+                        <div class="flex-1 min-w-0">
+                            {% if request.candidat %}
+                                <p class="font-extrabold text-gray-800 text-sm truncate">{{ request.candidat.prenom }} {{ request.candidat.nom }}</p>
+                                <p class="text-gray-400 text-xs mt-0.5 truncate">{% trans "Candidat inscrit" %}</p>
+                            {% else %}
+                                <div class="h-3 w-32 rounded-full mb-2" style="background:#c96010;"></div>
+                                <div class="h-2 w-24 bg-gray-200 rounded-full"></div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="h-2 bg-gray-100 rounded-full w-full"></div>
+                        <div class="h-2 bg-gray-100 rounded-full w-4/5"></div>
+                        <div class="h-2 bg-gray-100 rounded-full w-3/5"></div>
+                    </div>
+                    <div class="flex gap-2 flex-wrap">
+                        {% if request.candidat and tableau_bord.tags_profil %}
+                            {% for tag in tableau_bord.tags_profil %}
+                                <span class="px-3 py-1 rounded-full text-white text-xs font-semibold truncate max-w-[120px]"
+                                      style="background:{% if forloop.first %}#2e7d52{% else %}#c96010{% endif %};">{{ tag }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="px-3 py-1 rounded-full text-white text-xs font-semibold" style="background:#2e7d52;">{% trans "Design" %}</span>
+                            <span class="px-3 py-1 rounded-full text-white text-xs font-semibold" style="background:#c96010;">{% trans "Dev Web" %}</span>
+                        {% endif %}
+                    </div>
+                    {# ── Grille : stats réelles pour candidat connecté, emojis pour visiteur #}
+                    {% if request.candidat %}
+                        <div class="grid grid-cols-3 gap-2">
+                            <a href="{% url 'candidat:mes_candidatures' %}"
+                               class="bg-orange-50 rounded-lg h-14 flex flex-col items-center justify-center hover:bg-orange-100 transition relative">
+                                <p class="text-base font-extrabold text-gray-800 leading-none">{{ tableau_bord.nb_candidatures|default:"0" }}</p>
+                                <p class="text-[9px] text-gray-500 mt-0.5">{% trans "Candidatures" %}</p>
+                            </a>
+                            <a href="{% url 'candidat:conversations' %}"
+                               class="bg-blue-50 rounded-lg h-14 flex flex-col items-center justify-center hover:bg-blue-100 transition relative">
+                                <p class="text-base font-extrabold text-gray-800 leading-none">{{ tableau_bord.nb_messages|default:"0" }}</p>
+                                <p class="text-[9px] text-gray-500 mt-0.5">{% trans "Messages" %}</p>
+                                {% if tableau_bord.nb_messages > 0 %}
+                                    <span class="absolute top-1 right-1 w-2 h-2 rounded-full" style="background:#c96010;"></span>
+                                {% endif %}
+                            </a>
+                            <a href="{% url 'candidat:mes_candidatures' %}"
+                               class="bg-green-50 rounded-lg h-14 flex flex-col items-center justify-center hover:bg-green-100 transition">
+                                {% if tableau_bord.prochain_entretien %}
+                                    <p class="text-sm font-extrabold text-gray-800 leading-none">{{ tableau_bord.prochain_entretien.dateEntretien|date:"d/m" }}</p>
+                                {% else %}
+                                    <p class="text-xl">🗓️</p>
+                                {% endif %}
+                                <p class="text-[9px] text-gray-500 mt-0.5">{% trans "Entretien" %}</p>
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="bg-gray-50 rounded-lg h-14 flex items-center justify-center text-2xl">🏆</div>
+                            <div class="bg-gray-50 rounded-lg h-14 flex items-center justify-center text-2xl">📁</div>
+                            <div class="bg-gray-50 rounded-lg h-14 flex items-center justify-center text-2xl">⭐</div>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="absolute -top-4 -right-4 bg-white rounded-2xl shadow-lg px-3 py-2 text-xs font-bold"
+                     style="color:{% if request.candidat %}{% if tableau_bord.score_completion >= 80 %}#2e7d52{% elif tableau_bord.score_completion >= 50 %}#c96010{% else %}#ef4444{% endif %}{% else %}#2e7d52{% endif %};">
+                    {% if request.candidat %}{{ tableau_bord.score_completion }}% {% trans "complété" %}{% else %}✅ {% trans "Profil complet" %}{% endif %}
+                </div>
+                <div class="absolute -bottom-4 -left-4 bg-white rounded-2xl shadow-lg px-3 py-2 text-xs font-bold" style="color:#c96010;">
+                    {% if request.candidat %}🎯 {% trans "Mon espace →" %}{% else %}✅ {% trans "100% gratuit" %}{% endif %}
+                </div>
+            </div>
+          </div>
+
+          {# ── Barre de recherche — sous la carte, même largeur colonne droite #}
+          <form action="{% url 'candidat:offres' %}" method="get"
+                class="w-full fade-up delay-4">
+              <div class="search-bar-wrapper flex bg-white rounded-2xl shadow-md p-2 border border-gray-100">
+                  <div class="flex items-center gap-2 flex-1 px-3 min-w-0">
+                      <svg class="w-4 h-4 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                      </svg>
+                      <input type="text" name="q" placeholder="{% trans 'Poste ou ville…' %}"
+                             class="flex-1 text-sm text-gray-700 bg-transparent outline-none py-2.5 min-w-0"
+                             autocomplete="off">
+                  </div>
+                  <button type="submit"
+                          class="text-white font-bold text-sm px-5 py-2.5 rounded-xl transition hover:opacity-90 whitespace-nowrap flex-shrink-0"
+                          style="background:#c96010;">
+                      {% trans "Rechercher" %}
+                  </button>
+              </div>
+              {# Filtres rapides type de contrat #}
+              <div class="flex flex-wrap items-center gap-2 mt-3">
+                  <a href="{% url 'candidat:offres' %}?contrat=CDI"        class="search-filter-pill text-xs px-3 py-1 rounded-full">CDI</a>
+                  <a href="{% url 'candidat:offres' %}?contrat=CDD"        class="search-filter-pill text-xs px-3 py-1 rounded-full">CDD</a>
+                  <a href="{% url 'candidat:offres' %}?contrat=STAGE"      class="search-filter-pill text-xs px-3 py-1 rounded-full">{% trans "Stage" %}</a>
+                  <a href="{% url 'candidat:offres' %}?contrat=ALTERNANCE" class="search-filter-pill text-xs px-3 py-1 rounded-full">{% trans "Alternance" %}</a>
+              </div>
+              {# Recherches populaires #}
+              <div class="flex flex-wrap items-center gap-2 mt-2">
+                  <span class="search-label text-xs font-medium text-gray-500">{% trans "Populaire :" %}</span>
+                  <a href="{% url 'candidat:offres' %}?q=Comptable"    class="search-tag-pill text-xs px-3 py-1 rounded-full">{% trans "Comptable" %}</a>
+                  <a href="{% url 'candidat:offres' %}?q=Commercial"   class="search-tag-pill text-xs px-3 py-1 rounded-full">{% trans "Commercial" %}</a>
+                  <a href="{% url 'candidat:offres' %}?q=Informatique" class="search-tag-pill text-xs px-3 py-1 rounded-full">{% trans "Informatique" %}</a>
+                  <a href="{% url 'candidat:offres' %}?q=Chauffeur"    class="search-tag-pill text-xs px-3 py-1 rounded-full">{% trans "Chauffeur" %}</a>
+                  <a href="{% url 'candidat:offres' %}?q=Marketing"    class="search-tag-pill text-xs px-3 py-1 rounded-full">{% trans "Marketing" %}</a>
+              </div>
+          </form>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═════════════════════════════════════════════════════════════════════
+     2. BANDEAU PROMO DÉFILANT — texte animé qui fait la pub
+═════════════════════════════════════════════════════════════════════ -->
+<section class="mb-10 -mt-10 sm:-mt-12 relative z-10 px-2 sm:px-6">
+    <div class="promo-ticker py-4" style="background:linear-gradient(135deg,#c96010 0%,#d97a18 50%);">
+        <div class="shine"></div>
+        <div class="ticker-track">
+            <span class="promo-item"> </span>
+            <span class="promo-sep"></span>
+            <span class="promo-item"> </span>
+            <span class="promo-sep"></span>
+            <span class="promo-item"> </span>
+            <span class="promo-sep"></span>
+            <span class="promo-item"> </span>
+            <span class="promo-sep"></span>
+            <span class="promo-item"> </span>
+            <span class="promo-sep"></span>
+            <span class="promo-item"> </span>
+            <span class="promo-sep"></span>
+            <span class="promo-item"> </span>
+            <span class="promo-sep"></span>
+            <!-- Duplicate pour la boucle infinie -->
+            <span class="promo-item"> </span>
+            <span class="promo-sep"></span>
+            <span class="promo-item"> </span>
+            <span class="promo-sep"></span>
+            <span class="promo-item"> </span>
+            <span class="promo-sep"></span>
+            <span class="promo-item"> </span>
+            <span class="promo-sep"></span>
+            <span class="promo-item"> </span>
+            <span class="promo-sep"></span>
+            <span class="promo-item"> </span>
+            <span class="promo-sep"></span>
+            <span class="promo-item"> </span>
+            <span class="promo-sep"></span>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═════════════════════════════════════════════════════════════════════
+     3. STATISTIQUES — chiffres animés (compteur auto au scroll)
+═════════════════════════════════════════════════════════════════════ -->
+<section class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12"
+         x-data="{
+           offresTarget:     {{ nb_offres_publiees|default:0 }},
+           entreprisesTarget:{{ nb_entreprises_total|default:0 }},
+           candidatsTarget:  {{ nb_candidats_total|default:0 }},
+           satisfactionTarget: 98,
+           offres: 0, entreprises: 0, candidats: 0, satisfaction: 0,
+           done: false,
+           run() {
+             if (this.done) return;
+             this.done = true;
+             const animate = (target, setter, dur) => {
+               if (target <= 0) { setter(0); return; }
+               let start = 0;
+               const step = 16;
+               const inc = target / Math.max(1, (dur / step));
+               const t = setInterval(() => {
+                 start = Math.min(start + inc, target);
+                 setter(Math.floor(start));
+                 if (start >= target) clearInterval(t);
+               }, step);
+             };
+             animate(this.offresTarget,      v => this.offres       = v, 1400);
+             animate(this.entreprisesTarget, v => this.entreprises  = v, 1500);
+             animate(this.candidatsTarget,   v => this.candidats    = v, 1600);
+             animate(this.satisfactionTarget,v => this.satisfaction = v, 1300);
+           }
+         }"
+         x-init="
+           const obs = new IntersectionObserver(entries => {
+             if (entries[0].isIntersecting) { run(); obs.disconnect(); }
+           }, { threshold: 0.3 });
+           obs.observe($el);
+         ">
+    <div class="bg-white border border-gray-100 rounded-2xl p-6 text-center shadow-sm card-hover">
+        <div class="text-3xl lg:text-4xl font-extrabold mb-1" style="color:#2e7d52;" x-text="offres.toLocaleString('fr-FR')">0</div>
+        <div class="text-gray-500 text-sm">{% trans "Offres publiées" %}</div>
+    </div>
+    <div class="bg-white border border-gray-100 rounded-2xl p-6 text-center shadow-sm card-hover">
+        <div class="text-3xl lg:text-4xl font-extrabold mb-1" style="color:#2e7d52;" x-text="entreprises.toLocaleString('fr-FR')">0</div>
+        <div class="text-gray-500 text-sm">{% trans "Entreprises" %}</div>
+    </div>
+    <div class="bg-white border border-gray-100 rounded-2xl p-6 text-center shadow-sm card-hover">
+        <div class="text-3xl lg:text-4xl font-extrabold mb-1" style="color:#2e7d52;" x-text="candidats.toLocaleString('fr-FR')">0</div>
+        <div class="text-gray-500 text-sm">{% trans "Candidats inscrits" %}</div>
+    </div>
+    <div class="bg-white border border-gray-100 rounded-2xl p-6 text-center shadow-sm card-hover">
+        <div class="text-3xl lg:text-4xl font-extrabold mb-1" style="color:#2e7d52;"><span x-text="satisfaction">0</span>%</div>
+        <div class="text-gray-500 text-sm">{% trans "Satisfaction" %}</div>
+    </div>
+</section>
+
+
+<!-- ═════════════════════════════════════════════════════════════════════
+     3 bis. COMPTEUR DE VISITEURS (animé au scroll)
+═════════════════════════════════════════════════════════════════════ -->
+<section id="compteur-visiteurs" class="mb-12"
+         x-data="{
+           todayVal: {{ nb_visiteurs_jour|default:0 }},
+           monthVal: {{ nb_visiteurs_30j|default:0 }},
+           yearVal:  {{ nb_visiteurs_365j|default:0 }},
+           todayDisplay: 0,
+           monthDisplay: 0,
+           yearDisplay:  0,
+           animated: false,
+           runCounters() {
+             if (this.animated) return;
+             this.animated = true;
+             const animate = (target, setter, dur) => {
+               if (target <= 0) { setter(0); return; }
+               let start = 0;
+               const step = 16;
+               const inc = target / Math.max(1, (dur / step));
+               const t = setInterval(() => {
+                 start = Math.min(start + inc, target);
+                 setter(Math.floor(start));
+                 if (start >= target) clearInterval(t);
+               }, step);
+             };
+             animate(this.todayVal, v => this.todayDisplay = v, 1200);
+             animate(this.monthVal, v => this.monthDisplay = v, 1600);
+             animate(this.yearVal,  v => this.yearDisplay  = v, 2000);
+           }
+         }"
+         x-init="
+           const obs = new IntersectionObserver(entries => {
+             if (entries[0].isIntersecting) { runCounters(); obs.disconnect(); }
+           }, { threshold: 0.3 });
+           obs.observe($el);
+         ">
+  <div class="rounded-3xl overflow-hidden shadow-md relative" style="background:linear-gradient(135deg,#c96010 0%,#d97a18 60%,#e89030 100%);">
+    <!-- Halos colorés -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute -top-16 -right-16 w-64 h-64 rounded-full opacity-25" style="background:radial-gradient(circle,#c96010 0%,transparent 70%);"></div>
+      <div class="absolute -bottom-12 -left-12 w-56 h-56 rounded-full opacity-20" style="background:radial-gradient(circle,#22C55E 0%,transparent 70%);"></div>
+
+      <!-- Points blancs flottants animés -->
+      <span class="float-dot" style="left:18%; bottom:0; animation-delay:0s;"></span>
+      <span class="float-dot" style="left:32%; bottom:0; animation-delay:1.1s;"></span>
+      <span class="float-dot" style="left:47%; bottom:0; animation-delay:2.3s;"></span>
+      <span class="float-dot" style="left:63%; bottom:0; animation-delay:0.7s;"></span>
+      <span class="float-dot" style="left:78%; bottom:0; animation-delay:1.8s;"></span>
+      <span class="float-dot" style="left:88%; bottom:0; animation-delay:3.1s;"></span>
+    </div>
+
+    <!-- Bande tricolore en haut -->
+    <div class="bande-tricolore relative w-full flex h-1">
+      <div class="flex-1" style="background-color:#c96010;"></div>
+      <div class="flex-1 bg-white"></div>
+      <div class="flex-1" style="background-color:#2e7d52;"></div>
+    </div>
+
+    <div class="relative px-6 sm:px-10 py-8 sm:py-10 flex flex-col md:flex-row items-center gap-6 md:gap-10">
+
+      <!-- Bloc gauche : titre + badge live -->
+      <div class="flex items-center gap-4 flex-shrink-0">
+        <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl soft-pulse" style="background:rgba(255,255,255,0.22); backdrop-filter:blur(4px);">
+          👁️
+        </div>
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-white text-gray-700">
+              <span class="w-1.5 h-1.5 rounded-full live-dot" style="background:#22C55E;"></span>
+              {% trans "En direct" %}
+            </span>
+          </div>
+          <p class="text-white font-extrabold text-lg leading-tight">{% trans "Une plateforme vivante" %}</p>
+          <p class="text-white/75 text-sm">{% trans "Des candidats nous rejoignent chaque jour" %}</p>
+        </div>
+      </div>
+
+      <!-- Cartes blanches translucides avec les chiffres -->
+      <div class="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-4 w-full">
+
+        <div class="relative rounded-2xl p-5 backdrop-blur-md shadow-lg border border-white/30 overflow-hidden"
+             style="background:rgba(255,255,255,0.95);">
+          <div class="absolute top-0 right-0 w-16 h-16 rounded-full opacity-20 -translate-y-1/3 translate-x-1/3" style="background:#c96010;"></div>
+          <div class="relative flex items-center justify-between">
+            <div>
+              <p class="text-2xl sm:text-3xl lg:text-4xl font-extrabold leading-none" style="color:#c96010;" x-text="todayDisplay.toLocaleString('fr-FR')">0</p>
+              <p class="text-gray-600 text-[11px] sm:text-xs font-bold uppercase tracking-wider mt-2">{% trans "Aujourd'hui" %}</p>
+            </div>
+            <div class="text-2xl">📈</div>
+          </div>
+        </div>
+
+        <div class="relative rounded-2xl p-5 backdrop-blur-md shadow-lg border border-white/30 overflow-hidden"
+             style="background:rgba(255,255,255,0.95);">
+          <div class="absolute top-0 right-0 w-16 h-16 rounded-full opacity-20 -translate-y-1/3 translate-x-1/3" style="background:#2e7d52;"></div>
+          <div class="relative flex items-center justify-between">
+            <div>
+              <p class="text-2xl sm:text-3xl lg:text-4xl font-extrabold leading-none" style="color:#2e7d52;" x-text="monthDisplay.toLocaleString('fr-FR')">0</p>
+              <p class="text-gray-600 text-[11px] sm:text-xs font-bold uppercase tracking-wider mt-2">{% trans "Ce mois-ci" %}</p>
+            </div>
+            <div class="text-2xl">🗓️</div>
+          </div>
+        </div>
+
+        <div class="relative rounded-2xl p-5 backdrop-blur-md shadow-lg border border-white/30 overflow-hidden"
+             style="background:rgba(255,255,255,0.95);">
+          <div class="absolute top-0 right-0 w-16 h-16 rounded-full opacity-20 -translate-y-1/3 translate-x-1/3" style="background:#3B82F6;"></div>
+          <div class="relative flex items-center justify-between">
+            <div>
+              <p class="text-2xl sm:text-3xl lg:text-4xl font-extrabold leading-none" style="color:#1E40AF;" x-text="yearDisplay.toLocaleString('fr-FR')">0</p>
+              <p class="text-gray-600 text-[11px] sm:text-xs font-bold uppercase tracking-wider mt-2">{% trans "Cette année" %}</p>
+            </div>
+            <div class="text-2xl">🗓</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ═════════════════════════════════════════════════════════════════════
+     4. OFFRES EN VEDETTE — ce que les candidats cherchent
+═════════════════════════════════════════════════════════════════════ -->
+<section id="offres" class="mb-14">
+    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-8">
+        <div>
+            {% if request.candidat %}
+                <h2 class="text-2xl lg:text-3xl font-extrabold text-gray-800">✨ {% trans "Offres recommandées pour vous" %}</h2>
+                <p class="text-gray-500 text-sm mt-1">{% trans "Sélectionnées selon votre profil" %}</p>
+            {% else %}
+                <h2 class="text-2xl lg:text-3xl font-extrabold text-gray-800">🔥 {% trans "Offres en vedette" %}</h2>
+                <p class="text-gray-500 text-sm mt-1">{% trans "Les opportunités fraîchement publiées" %}</p>
+            {% endif %}
+        </div>
+        <a href="{% url 'candidat:offres' %}"
+           class="inline-flex items-center gap-1 text-sm font-bold hover:underline whitespace-nowrap"
+           style="color:#c96010;">
+            {% trans "Voir toutes les offres →" %}
+        </a>
+    </div>
+
+    {% if offres_vedette %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">{% if offres_vedette_avec_score %}{% for item in offres_vedette_avec_score %}{% include "candidat/partials/offre_card.html" with offre=item.offre seuil_recente=seuil_recente match_score=item.score match_couleur=item.couleur match_libelle=item.libelle %}{% endfor %}{% else %}{% for offre in offres_vedette %}{% include "candidat/partials/offre_card.html" with offre=offre seuil_recente=seuil_recente %}{% endfor %}{% endif %}</div>
+    {% else %}
+        <div class="bg-white rounded-2xl p-10 border border-dashed border-gray-200 text-center">
+            <div class="text-5xl mb-3">📭</div>
+            <p class="text-gray-500 font-semibold">{% trans "Aucune offre publiée pour le moment." %}</p>
+            <p class="text-gray-400 text-sm mt-1">{% trans "Revenez bientôt — de nouvelles opportunités arrivent chaque semaine." %}</p>
+        </div>
+    {% endif %}
+</section>
+
+
+<!-- ═════════════════════════════════════════════════════════════════════
+     5. TOP SECTEURS — où sont les offres
+═════════════════════════════════════════════════════════════════════ -->
+{% if top_secteurs %}
+<section class="mb-14">
+    <div class="text-center mb-8">
+        <h2 class="text-2xl lg:text-3xl font-extrabold text-gray-800 mb-2">{% trans "Explorez par secteur" %}</h2>
+        <p class="text-gray-500 text-sm">{% trans "Trouvez l'opportunité qui correspond à votre métier" %}</p>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        {% for s in top_secteurs %}
+        <a href="{% url 'candidat:offres' %}?secteur={{ s.entreprise__secteurActiviteRef__nomSecteur }}"
+           class="sector-card group bg-white border-2 border-gray-100 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+                 style="background:#FFF3E0;">
+                {% with sec=s.entreprise__secteurActiviteRef__nomSecteur|lower %}
+                    {% if 'tech' in sec or 'informatique' in sec or 'digital' in sec %}💻
+                    {% elif 'finance' in sec or 'banque' in sec %}💰
+                    {% elif 'santé' in sec or 'sante' in sec or 'pharma' in sec %}🏥
+                    {% elif 'éducation' in sec or 'education' in sec or 'formation' in sec %}🎓
+                    {% elif 'commerce' in sec or 'distribution' in sec %}🛍️
+                    {% elif 'industrie' in sec or 'production' in sec %}🏭
+                    {% elif 'btp' in sec or 'immobilier' in sec or 'construction' in sec %}🏗️
+                    {% elif 'telecom' in sec %}📡
+                    {% elif 'agri' in sec %}🌾
+                    {% elif 'transport' in sec or 'logistique' in sec %}🚚
+                    {% elif 'media' in sec or 'communication' in sec %}📢
+                    {% elif 'energie' in sec or 'environnement' in sec %}⚡
+                    {% elif 'tourisme' in sec or 'hôtellerie' in sec or 'hotellerie' in sec %}🏨
+                    {% else %}💼{% endif %}
+                {% endwith %}
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-bold text-gray-800 text-sm truncate">{{ s.entreprise__secteurActiviteRef__nomSecteur }}</p>
+                <p class="text-xs mt-0.5" style="color:#c96010;">
+                    <span class="font-bold">{{ s.nb }}</span> {% trans "offre" %}{{ s.nb|pluralize }}
+                </p>
+            </div>
+            <span class="sector-arrow text-gray-300 transition">→</span>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+
+<!-- ═════════════════════════════════════════════════════════════════════
+     6. OFFRES PAR VILLE — Postulez près de chez vous
+═════════════════════════════════════════════════════════════════════ -->
+<section class="mb-14 rounded-3xl px-6 sm:px-10 py-10" style="background:#F8FAFC;">
+    <div class="text-center mb-8">
+        <h2 class="text-2xl lg:text-3xl font-extrabold text-gray-800 mb-2">📍 {% trans "Postulez près de chez vous" %}</h2>
+        <p class="text-gray-500 text-sm">{% trans "Sélectionnez une ville pour filtrer les offres correspondantes" %}</p>
+    </div>
+
+    {# ── (A) Villes proches du candidat (même région, avec offres) ─────── #}
+    {% if inviter_completer_profil %}
+        <div class="max-w-2xl mx-auto bg-white border-2 border-dashed border-orange-300 rounded-2xl p-8 text-center mb-10">
+            <div class="text-5xl mb-3">🧭</div>
+            <h3 class="text-lg font-extrabold text-gray-800 mb-2">
+                {% trans "Renseignez votre ville pour voir les offres près de chez vous" %}
+            </h3>
+            <p class="text-gray-500 text-sm mb-5">
+                {% blocktrans %}Indiquez votre ville dans votre profil pour que nous puissions afficher les opportunités les plus proches de votre localité.{% endblocktrans %}
+            </p>
+            {% if request.candidat %}
+                <a href="{% url 'candidat:profil' %}"
+                   class="inline-block text-white font-bold px-6 py-3 rounded-xl text-sm shadow-sm hover:opacity-90 transition"
+                   style="background:#c96010;">
+                    ✏️ {% trans "Compléter mon profil" %}
+                </a>
+            {% else %}
+                <div class="flex flex-wrap justify-center gap-3">
+                    <a href="{% url 'candidat:inscription' %}"
+                       class="inline-block text-white font-bold px-6 py-3 rounded-xl text-sm shadow-sm hover:opacity-90 transition"
+                       style="background:#c96010;">
+                        🚀 {% trans "Créer un compte" %}
+                    </a>
+                    <a href="{% url 'candidat:connexion' %}"
+                       class="inline-block bg-white border-2 font-bold px-6 py-3 rounded-xl text-sm hover:bg-orange-50 transition"
+                       style="color:#c96010; border-color:#c96010;">
+                        🔑 {% trans "Se connecter" %}
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    {% else %}
+        <div class="mb-8">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="text-xl">🏠</span>
+                <h3 class="text-base sm:text-lg font-extrabold text-gray-800">
+                    {% if candidat_pays %}
+                        {% blocktrans %}Près de chez vous — {{ candidat_pays }}{% endblocktrans %}
+                    {% else %}
+                        {% blocktrans %}Près de chez vous — {{ candidat_ville }}{% endblocktrans %}
+                    {% endif %}
+                </h3>
+                <span class="flex-1 h-px bg-orange-200"></span>
+            </div>
+            {% if villes_proches %}
+                <div class="flex flex-wrap justify-center gap-3">
+                    {% for v in villes_proches %}
+                    <a href="{% url 'candidat:offres' %}?ville={{ v.ville }}"
+                       class="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-full px-5 py-2.5 text-sm font-semibold text-gray-700 hover:border-orange-400 hover:text-orange-600 transition shadow-sm
+                              {% if v.ville|lower == candidat_ville|lower %}ring-2 ring-orange-400 border-orange-400 text-orange-600{% endif %}">
+                        {% if v.ville|lower == candidat_ville|lower %}<span>🏠</span>{% endif %}
+                        <span>{{ v.ville }}</span>
+                        <span class="text-xs font-bold px-2 py-0.5 rounded-full text-white" style="background:#c96010;">{{ v.nb }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="bg-white rounded-2xl p-6 border border-dashed border-gray-200 text-center text-gray-500 text-sm">
+                    {% if candidat_pays %}
+                        {% blocktrans %}Aucune offre n'est actuellement publiée en <strong>{{ candidat_pays }}</strong>.{% endblocktrans %}
+                    {% else %}
+                        {% blocktrans %}Aucune offre n'est actuellement publiée à proximité de <strong>{{ candidat_ville }}</strong>.{% endblocktrans %}
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    {# ── (B) Villes avec le plus d'offres (top global) ─────────────────── #}
+    {% if villes_top %}
+        <div>
+            <div class="flex items-center gap-2 mb-4">
+                <span class="text-xl">🔥</span>
+                <h3 class="text-base sm:text-lg font-extrabold text-gray-800">{% trans "Villes les plus actives" %}</h3>
+                <span class="flex-1 h-px bg-orange-200"></span>
+            </div>
+            <div class="flex flex-wrap justify-center gap-3">
+                {% for v in villes_top %}
+                <a href="{% url 'candidat:offres' %}?ville={{ v.ville }}"
+                   class="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-full px-5 py-2.5 text-sm font-semibold text-gray-700 hover:border-orange-400 hover:text-orange-600 transition shadow-sm">
+                    <span>{{ v.ville }}</span>
+                    <span class="text-xs font-bold px-2 py-0.5 rounded-full text-white" style="background:#c96010;">{{ v.nb }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</section>
+
+
+<!-- ═════════════════════════════════════════════════════════════════════
+     7. ENTREPRISES QUI RECRUTENT
+═════════════════════════════════════════════════════════════════════ -->
+{% if top_entreprises %}
+<section class="mb-14">
+    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-8">
+        <div>
+            <h2 class="text-2xl lg:text-3xl font-extrabold text-gray-800">🏢 {% trans "Les entreprises qui recrutent" %}</h2>
+            <p class="text-gray-500 text-sm mt-1">{% trans "Découvrez les employeurs les plus actifs" %}</p>
+        </div>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        {% for ent in top_entreprises %}
+        <a href="{% url 'candidat:offres' %}?entreprise={{ ent.pk }}"
+           class="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm card-hover flex flex-col items-center text-center group">
+            {% if ent.logoEntreprise %}
+                <img src="{{ ent.logoEntreprise.url }}" alt="{{ ent.raisonSocial }}"
+                     class="w-16 h-16 object-contain rounded-xl mb-3 bg-gray-50 p-2">
+            {% else %}
+                <div class="w-16 h-16 rounded-xl flex items-center justify-center text-2xl font-extrabold text-white mb-3"
+                     style="background:linear-gradient(135deg,#2e7d52,#1e5c3a);">
+                    {{ ent.raisonSocial|first|upper }}
+                </div>
+            {% endif %}
+            <p class="font-bold text-gray-800 text-sm leading-tight truncate w-full">{{ ent.raisonSocial }}</p>
+            {% if ent.secteurActiviteRef %}
+            <p class="text-xs text-gray-400 mt-0.5 truncate w-full">{{ ent.secteurActiviteRef.nomSecteur }}</p>
+            {% endif %}
+            <span class="mt-3 inline-flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full"
+                  style="background:#DCFCE7;color:#166534;">
+                <span class="w-1.5 h-1.5 rounded-full" style="background:#22C55E;"></span>
+                {{ ent.nb_offres }} {% trans "offre" %}{{ ent.nb_offres|pluralize }}
+            </span>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+
+<!-- ═════════════════════════════════════════════════════════════════════
+     8. MODÈLES CV (grille) + carousel défilant
+═════════════════════════════════════════════════════════════════════ -->
+<section id="modeles" class="mb-14">
+    <div class="text-center mb-8">
+        <h2 class="text-2xl lg:text-3xl font-extrabold text-gray-800 mb-2">📄 {% trans "Modèles de CV professionnels" %}</h2>
+        <p class="text-gray-500 text-sm">{% trans "Démarquez-vous avec un CV qui inspire confiance aux recruteurs" %}</p>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+
+        {% for m in modeles_accueil %}
+        <div class="cv-card relative bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 card-hover cursor-pointer">
+            <div class="relative overflow-hidden bg-white" style="aspect-ratio:210/297;">
+                {% if m.apercu %}
+                <img src="{{ m.apercu.url }}" alt="{{ m.nom }}"
+                     class="absolute inset-0 w-full h-full object-contain">
+                {% else %}
+                {% include "candidat/partials/cv_preview.html" with style=m.fichier couleur=m.couleur %}
+                {% endif %}
+            </div>
+            <div class="cv-overlay absolute inset-0 bg-black/50 flex items-center justify-center">
+                {% if m.premium %}
+                <a href="{% url 'candidat:modeles_cv' %}"
+                   class="bg-white font-bold px-5 py-2.5 rounded-lg text-sm" style="color:#c96010;">
+                    👑 {% trans "Débloquer" %}
+                </a>
+                {% else %}
+                <a href="{% url 'candidat:creer_cv' m.id %}"
+                   class="bg-white font-bold px-5 py-2.5 rounded-lg text-sm" style="color:#c96010;">
+                    ✏️ {% trans "Utiliser" %}
+                </a>
+                {% endif %}
+            </div>
+            <div class="p-4 flex justify-between items-center">
+                <div>
+                    <p class="font-semibold text-gray-800 text-sm">{{ m.nom }}</p>
+                    <p class="text-xs text-gray-400">{{ m.secteur }}</p>
+                </div>
+                {% if m.premium %}
+                <span class="text-xs bg-yellow-100 text-yellow-700 font-semibold px-2 py-1 rounded-full">👑 Premium</span>
+                {% else %}
+                <span class="text-xs bg-orange-100 text-orange-600 font-semibold px-2 py-1 rounded-full">{% trans "Gratuit" %}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-4 text-center py-10 text-gray-400">
+            <p class="text-4xl mb-3">📄</p>
+            <p class="font-semibold">{% trans "Aucun modèle disponible pour le moment." %}</p>
+        </div>
+        {% endfor %}
+
+    </div>
+
+    {# Carousel défilant des modèles supplémentaires #}
+    {% if modeles_carousel %}
+    <div class="overflow-hidden mb-6">
+        <div class="cv-track py-2">
+            {% for m in modeles_carousel %}
+            <a href="{% url 'candidat:modeles_cv' %}"
+               class="flex-shrink-0 w-36 rounded-xl shadow-sm border border-gray-100 hover:border-orange-400 transition group relative block overflow-hidden">
+                {% if m.apercu %}
+                    <img src="{{ m.apercu.url }}" alt="{{ m.nom }}"
+                         class="w-full h-auto block group-hover:scale-105 transition-transform duration-500">
+                {% else %}
+                    <div class="w-full flex flex-col gap-2 p-3" style="background:{{ m.couleur }};aspect-ratio:210/297;">
+                        <div class="w-10 h-10 bg-white/30 rounded-full"></div>
+                        <div class="h-2 bg-white/70 rounded w-3/4"></div>
+                        <div class="h-1.5 bg-white/40 rounded w-1/2"></div>
+                    </div>
+                {% endif %}
+            </a>
+            {% endfor %}
+            {# Duplicate pour boucle infinie #}
+            {% for m in modeles_carousel %}
+            <a href="{% url 'candidat:modeles_cv' %}" aria-hidden="true"
+               class="flex-shrink-0 w-36 rounded-xl shadow-sm border border-gray-100 hover:border-orange-400 transition group relative block overflow-hidden">
+                {% if m.apercu %}
+                    <img src="{{ m.apercu.url }}" alt=""
+                         class="w-full h-auto block group-hover:scale-105 transition-transform duration-500">
+                {% else %}
+                    <div class="w-full flex flex-col gap-2 p-3" style="background:{{ m.couleur }};aspect-ratio:210/297;">
+                        <div class="w-10 h-10 bg-white/30 rounded-full"></div>
+                        <div class="h-2 bg-white/70 rounded w-3/4"></div>
+                        <div class="h-1.5 bg-white/40 rounded w-1/2"></div>
+                    </div>
+                {% endif %}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="text-center">
+        <a href="{% url 'candidat:modeles_cv' %}"
+           class="inline-block border-2 font-semibold px-7 py-3 rounded-xl transition hover:text-white"
+           style="border-color:#c96010; color:#c96010;"
+           onmouseover="this.style.background='#c96010'" onmouseout="this.style.background='transparent'">
+            {% trans "Voir tous les modèles →" %}
+        </a>
+    </div>
+</section>
+
+
+{% if not request.candidat %}
+<!-- ═════════════════════════════════════════════════════════════════════
+     9. COMMENT ÇA MARCHE — 4 étapes
+═════════════════════════════════════════════════════════════════════ -->
+<section class="mb-14 rounded-3xl px-6 sm:px-10 py-12" style="background:#f5f5f5;">
+    <div class="text-center mb-10">
+        <h2 class="text-2xl lg:text-3xl font-extrabold text-gray-800 mb-2">{% trans "Comment ça marche ?" %}</h2>
+        <p class="text-gray-500 text-sm">{% trans "Décrochez votre prochain emploi en 4 étapes simples" %}</p>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 relative">
+        <div class="hidden md:block absolute top-10 left-[12%] right-[12%] h-0.5 bg-gray-200 z-0"></div>
+        <div class="relative z-10 flex flex-col items-center text-center">
+            <div class="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-extrabold mb-4 shadow-lg" style="background:#c96010;">1</div>
+            <h4 class="font-bold text-gray-800 mb-1">{% trans "Inscrivez-vous" %}</h4>
+            <p class="text-gray-500 text-sm">{% trans "Création de compte gratuite en moins de 2 minutes" %}</p>
+        </div>
+        <div class="relative z-10 flex flex-col items-center text-center">
+            <div class="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-extrabold mb-4 shadow-lg" style="background:#2e7d52;">2</div>
+            <h4 class="font-bold text-gray-800 mb-1">{% trans "Construisez votre CV" %}</h4>
+            <p class="text-gray-500 text-sm">{% trans "Choisissez un modèle, remplissez vos infos et téléchargez" %}</p>
+        </div>
+        <div class="relative z-10 flex flex-col items-center text-center">
+            <div class="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-extrabold mb-4 shadow-lg" style="background:#c96010;">3</div>
+            <h4 class="font-bold text-gray-800 mb-1">{% trans "Trouvez votre offre" %}</h4>
+            <p class="text-gray-500 text-sm">{% trans "Filtrez par secteur, ville et type de contrat" %}</p>
+        </div>
+        <div class="relative z-10 flex flex-col items-center text-center">
+            <div class="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-extrabold mb-4 shadow-lg" style="background:#2e7d52;">4</div>
+            <h4 class="font-bold text-gray-800 mb-1">{% trans "Postulez !" %}</h4>
+            <p class="text-gray-500 text-sm">{% trans "Candidatez en un clic et suivez vos dossiers" %}</p>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═════════════════════════════════════════════════════════════════════
+     10. TÉMOIGNAGES
+═════════════════════════════════════════════════════════════════════ -->
+<section class="mb-14">
+    <div class="text-center mb-10">
+        <h2 class="text-2xl lg:text-3xl font-extrabold text-gray-800 mb-2">⭐ {% trans "Ils ont trouvé leur emploi" %}</h2>
+        <p class="text-gray-500 text-sm">{% trans "Des candidats ivoiriens qui nous font confiance" %}</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {% if temoignages %}
+            {% for t in temoignages %}
+            {% if t.style == 'vert' %}
+            <div class="rounded-2xl p-6 shadow-sm card-hover text-white" style="background:#2e7d52;">
+                <div class="flex gap-1 mb-4">{% for i in "12345" %}<span class="{% if forloop.counter <= t.note %}text-white{% else %}text-white/30{% endif %}">★</span>{% endfor %}</div>
+                <p class="text-white/90 italic mb-5">« {{ t.texte }} »</p>
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        {% if t.candidat and t.candidat.photoProfil %}
+                            <img src="{{ t.candidat.photoProfil.url }}" alt="{{ t.prenom_nom }}"
+                                 class="w-10 h-10 rounded-full object-cover flex-shrink-0">
+                        {% else %}
+                            <div class="w-10 h-10 rounded-full bg-white/30 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">{{ t.prenom_nom|slice:":2"|upper }}</div>
+                        {% endif %}
+                        <div class="min-w-0">
+                            <p class="font-semibold text-sm truncate">{{ t.prenom_nom }}</p>
+                            {% if t.titre_poste %}<p class="text-white/70 text-xs truncate">{{ t.titre_poste }}</p>{% endif %}
+                        </div>
+                    </div>
+                    <a href="{% url 'candidat:avis' %}?t={{ t.pk }}" class="text-xs font-bold text-white/90 whitespace-nowrap hover:underline">
+                        {% trans "Voir plus" %}
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 card-hover">
+                <div class="flex gap-1 mb-4">{% for i in "12345" %}<span {% if forloop.counter <= t.note %}style="color:#c96010;"{% else %}class="text-gray-200"{% endif %}>★</span>{% endfor %}</div>
+                <p class="text-gray-600 italic mb-5">« {{ t.texte }} »</p>
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        {% if t.candidat and t.candidat.photoProfil %}
+                            <img src="{{ t.candidat.photoProfil.url }}" alt="{{ t.prenom_nom }}"
+                                 class="w-10 h-10 rounded-full object-cover flex-shrink-0">
+                        {% else %}
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style="background:#c96010;">{{ t.prenom_nom|slice:":2"|upper }}</div>
+                        {% endif %}
+                        <div class="min-w-0">
+                            <p class="font-semibold text-gray-800 text-sm truncate">{{ t.prenom_nom }}</p>
+                            {% if t.titre_poste %}<p class="text-gray-400 text-xs truncate">{{ t.titre_poste }}</p>{% endif %}
+                        </div>
+                    </div>
+                    <a href="{% url 'candidat:avis' %}?t={{ t.pk }}" class="text-xs font-bold whitespace-nowrap hover:underline" style="color:#c96010;">
+                        {% trans "Voir plus" %}
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        {% else %}
+            {# Fallback — témoignages par défaut si aucun publié en base #}
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 card-hover">
+                <div class="flex gap-1 mb-4">{% for i in "12345" %}<span style="color:#c96010;">★</span>{% endfor %}</div>
+                <p class="text-gray-600 italic mb-5">« {% trans "Grâce à RecrutePro, j'ai créé un CV professionnel en 15 minutes et j'ai été recruté la semaine suivante. Incroyable !" %} »</p>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm" style="background:#c96010;">KD</div>
+                    <div>
+                        <p class="font-semibold text-gray-800 text-sm">{% trans "Kouadio Désiré" %}</p>
+                        <p class="text-gray-400 text-xs">{% trans "Développeur Web · Abidjan" %}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="rounded-2xl p-6 shadow-sm card-hover text-white" style="background:#2e7d52;">
+                <div class="flex gap-1 mb-4">{% for i in "12345" %}<span class="text-white">★</span>{% endfor %}</div>
+                <p class="text-white/90 italic mb-5">« {% trans "Mon portfolio a complètement changé la façon dont les recruteurs me perçoivent. Je reçois des propositions chaque semaine !" %} »</p>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-white/30 flex items-center justify-center text-white font-bold text-sm">AT</div>
+                    <div>
+                        <p class="font-semibold text-sm">{% trans "Ahou Traoré" %}</p>
+                        <p class="text-white/70 text-xs">{% trans "Designer UI/UX · Bouaké" %}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 card-hover">
+                <div class="flex gap-1 mb-4">{% for i in "12345" %}<span style="color:#c96010;">★</span>{% endfor %}</div>
+                <p class="text-gray-600 italic mb-5">« {% trans "La plateforme est simple et les modèles sont vraiment beaux. Je recommande à tous les jeunes diplômés." %} »</p>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm" style="background:#2e7d52;">YB</div>
+                    <div>
+                        <p class="font-semibold text-gray-800 text-sm">{% trans "Yao Brou" %}</p>
+                        <p class="text-gray-400 text-xs">{% trans "Comptable · San-Pédro" %}</p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    <div class="text-center mt-8">
+        <a href="{% url 'candidat:avis' %}" class="inline-flex items-center gap-2 text-sm font-bold hover:underline" style="color:#c96010;">
+            {% trans "Voir tous les avis →" %}
+        </a>
+    </div>
+</section>
+{% endif %}
+
+
+<!-- ═════════════════════════════════════════════════════════════════════
+     11. NEWSLETTER
+═════════════════════════════════════════════════════════════════════ -->
+<section class="mb-14 rounded-2xl border-2 px-6 sm:px-8 py-8 flex flex-col md:flex-row items-center gap-6"
+         style="border-color:#c96010; background:#ffffff;"
+         x-data="newsletter()">
+    <div class="text-5xl flex-shrink-0">📬</div>
+    <div class="flex-1 text-center md:text-left">
+        <h3 class="text-xl font-extrabold text-gray-800 mb-1">{% trans "Recevez les meilleures offres chaque semaine" %}</h3>
+        <p class="text-gray-500 text-sm">{% blocktrans %}Inscrivez-vous à notre newsletter et ne ratez plus aucune opportunité.{% endblocktrans %}</p>
+
+        <template x-if="msg">
+            <p class="mt-3 text-sm font-semibold" :class="ok ? 'text-green-600' : 'text-red-600'" x-text="msg"></p>
+        </template>
+    </div>
+
+    <template x-if="!ok">
+        <form class="flex flex-col sm:flex-row gap-2 w-full md:w-auto" @submit.prevent="inscrire">
+            {% csrf_token %}
+            <input type="email" x-model="email" placeholder="{% trans 'votre@email.com' %}" required
+                   class="border border-gray-300 rounded-lg px-4 py-2.5 text-sm flex-1 md:w-64 focus:outline-none focus:ring-2 focus:ring-orange-300">
+            <button type="submit" :disabled="loading"
+                    class="text-white font-bold px-5 py-2.5 rounded-lg text-sm whitespace-nowrap transition hover:opacity-90 disabled:opacity-60"
+                    style="background:#c96010;">
+                <span x-show="!loading">{% trans "S'abonner" %}</span>
+                <span x-show="loading">...</span>
+            </button>
+        </form>
+    </template>
+</section>
+
+
+<!-- ═════════════════════════════════════════════════════════════════════
+     12. CTA FINAL — Prêt à démarrer
+═════════════════════════════════════════════════════════════════════ -->
+<section class="rounded-3xl px-6 sm:px-10 py-14 sm:py-16 text-center text-white relative overflow-hidden mb-4"
+         style="background:#2e7d52;">
+    <div class="absolute top-0 left-0 w-48 h-48 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
+    <div class="absolute bottom-0 right-0 w-64 h-64 bg-white/10 rounded-full translate-x-1/3 translate-y-1/3"></div>
+    <div class="relative">
+        <h2 class="text-3xl lg:text-5xl font-extrabold mb-4">{% trans "Prêt à démarrer ?" %}</h2>
+        <p class="text-white/90 text-lg mb-8 max-w-xl mx-auto">
+            {% blocktrans %}Rejoignez {{ logo_site.nom_site }} et donnez un nouvel élan à votre carrière dès aujourd'hui.{% endblocktrans %}
+        </p>
+        {% if request.candidat %}
+        <a href="{% url 'candidat:profil' %}" class="inline-block bg-white font-extrabold text-lg px-10 py-4 rounded-2xl shadow-xl transition hover:scale-105" style="color:#c96010;">
+            🎯 {% trans "Accéder à mon espace" %}
+        </a>
+        {% else %}
+        <a href="{% url 'candidat:inscription' %}" class="inline-block bg-white font-extrabold text-lg px-10 py-4 rounded-2xl shadow-xl transition hover:scale-105" style="color:#c96010;">
+            🎯 {% trans "Commencer gratuitement" %}
+        </a>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}
+
+{% block js_extra %}
+<script>
+/* ── Alpine.js — Newsletter ──────────────────────────────────── */
+function newsletter() {
+    return {
+        email:   '',
+        loading: false,
+        ok:      false,
+        msg:     '',
+
+        async inscrire() {
+            if (!this.email) return;
+            this.loading = true;
+            this.msg = '';
+            try {
+                const resp = await fetch('{% url "candidat:api_newsletter_inscription" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]') ?.value || '',
+                    },
+                    // Toutes les options cochées par défaut pour le visiteur anonyme
+                    body: JSON.stringify({
+                        email: this.email,
+                        offres_semaine: true,
+                        conseils:       true,
+                        actualites:     true,
+                    }),
+                });
+                const data = await resp.json();
+                this.ok  = data.ok;
+                this.msg = data.message;
+            } catch (e) {
+                this.msg = 'Une erreur est survenue. Réessayez.';
+            } finally {
+                this.loading = false;
+            }
+        },
+    };
+}
+</script>
+{% endblock %}

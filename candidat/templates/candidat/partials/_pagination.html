@@ -1,0 +1,64 @@
+﻿{% load i18n %}
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
+
+    <p class="text-sm text-gray-500 order-2 sm:order-1">
+        {% trans "Page" %} <span class="font-bold text-gray-800">{{ page_obj.number }}</span>
+        {% trans "sur" %} <span class="font-bold text-gray-800">{{ page_obj.paginator.num_pages }}</span>
+        <span class="mx-2 text-gray-300">|</span>
+        <span class="font-semibold text-gray-700">{{ total_count }}</span> {{ item_label }}{{ total_count|pluralize }}
+    </p>
+
+    <div class="flex items-center gap-1 order-1 sm:order-2">
+
+        {% if page_obj.has_previous %}
+            <a href="?{% if qs %}{{ qs }}&{% endif %}page={{ page_obj.previous_page_number }}"
+               class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-200 text-gray-600 hover:border-orange-400 hover:text-orange-600 transition">
+                ← {% trans "Précédent" %}
+            </a>
+        {% else %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-100 text-gray-300 cursor-not-allowed">
+                ← {% trans "Précédent" %}
+            </span>
+        {% endif %}
+
+        {% if page_range.start > 1 %}
+            <a href="?{% if qs %}{{ qs }}&{% endif %}page=1"
+               class="w-9 h-9 flex items-center justify-center rounded-lg text-sm font-semibold border border-gray-200 text-gray-600 hover:border-orange-400 hover:text-orange-600 transition">1</a>
+            {% if page_range.start > 2 %}
+                <span class="w-9 h-9 flex items-center justify-center text-gray-400 text-sm">…</span>
+            {% endif %}
+        {% endif %}
+
+        {% for num in page_range %}
+            {% if num == page_obj.number %}
+                <span class="w-9 h-9 flex items-center justify-center rounded-lg text-sm font-extrabold text-white shadow-sm"
+                      style="background:#c96010;">{{ num }}</span>
+            {% else %}
+                <a href="?{% if qs %}{{ qs }}&{% endif %}page={{ num }}"
+                   class="w-9 h-9 flex items-center justify-center rounded-lg text-sm font-semibold border border-gray-200 text-gray-600 hover:border-orange-400 hover:text-orange-600 transition">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_range.stop <= page_obj.paginator.num_pages %}
+            {% if page_range.stop < page_obj.paginator.num_pages %}
+                <span class="w-9 h-9 flex items-center justify-center text-gray-400 text-sm">…</span>
+            {% endif %}
+            <a href="?{% if qs %}{{ qs }}&{% endif %}page={{ page_obj.paginator.num_pages }}"
+               class="w-9 h-9 flex items-center justify-center rounded-lg text-sm font-semibold border border-gray-200 text-gray-600 hover:border-orange-400 hover:text-orange-600 transition">{{ page_obj.paginator.num_pages }}</a>
+        {% endif %}
+
+        {% if page_obj.has_next %}
+            <a href="?{% if qs %}{{ qs }}&{% endif %}page={{ page_obj.next_page_number }}"
+               class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-200 text-gray-600 hover:border-orange-400 hover:text-orange-600 transition">
+                {% trans "Suivant" %} →
+            </a>
+        {% else %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-100 text-gray-300 cursor-not-allowed">
+                {% trans "Suivant" %} →
+            </span>
+        {% endif %}
+
+    </div>
+</div>
+{% endif %}

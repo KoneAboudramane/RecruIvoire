@@ -1,0 +1,331 @@
+﻿{% load i18n static %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}" {% if LANGUAGE_BIDI %}dir="rtl"{% endif %}>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block titre %}{% trans "Espace Entreprise" %} — {{ logo_site.nom_site }}{% endblock %}</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ favicon_url }}">
+    <link rel="shortcut icon" type="image/png" href="{{ favicon_url }}">
+    <!-- Anti-flash -->
+    <script>
+        (function(){
+            var t = localStorage.getItem('theme');
+            if(t === 'noir') { document.documentElement.classList.add('noir'); }
+            else if(t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)){ document.documentElement.classList.add('dark'); }
+        })();
+    </script>
+    <script src="{% static 'js/tailwind.js' %}"></script>
+    <script defer src="{% static 'js/alpine.js' %}"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { ci: { orange: '#c96010', green: '#009A44' } } } }
+        }
+    </script>
+    {% block css_extra %}{% endblock %}
+    <style>
+        html.dark { color-scheme: dark; }
+        html.dark body { background-color: #0f172a !important; color: #cbd5e1; }
+        html.dark .bg-white    { background-color: #1e293b !important; }
+        html.dark .bg-gray-50  { background-color: #162032 !important; }
+        html.dark .bg-gray-100 { background-color: #1e2d42 !important; }
+        html.dark .text-gray-900,
+        html.dark .text-gray-800 { color: #f1f5f9 !important; }
+        html.dark .text-gray-700 { color: #e2e8f0 !important; }
+        html.dark .text-gray-600 { color: #cbd5e1 !important; }
+        html.dark .text-gray-500 { color: #94a3b8 !important; }
+        html.dark .text-gray-400 { color: #64748b !important; }
+        html.dark .border-gray-100,
+        html.dark .border-gray-200 { border-color: #334155 !important; }
+        html.dark .border-gray-300 { border-color: #475569 !important; }
+        html.dark input:not([type=checkbox]):not([type=radio]),
+        html.dark textarea,
+        html.dark select {
+            background-color: #0f172a !important;
+            color: #e2e8f0 !important;
+            border-color: #475569 !important;
+        }
+        html.dark input::placeholder,
+        html.dark textarea::placeholder { color: #475569 !important; }
+        html.dark .shadow-sm { box-shadow: 0 1px 3px rgba(0,0,0,.5) !important; }
+        html.dark .shadow-md { box-shadow: 0 4px 12px rgba(0,0,0,.6) !important; }
+        html.dark .bg-green-100  { background-color: rgba(34,197,94,.12) !important; }
+        html.dark .bg-red-100    { background-color: rgba(239,68,68,.12) !important; }
+        html.dark .bg-yellow-100 { background-color: rgba(234,179,8,.12) !important; }
+        html.dark .bg-orange-100 { background-color: rgba(249,115,22,.12) !important; }
+        html.dark .bg-blue-100   { background-color: rgba(59,130,246,.15) !important; }
+        html.dark .bg-purple-100 { background-color: rgba(139,92,246,.15) !important; }
+        html.dark .bg-amber-100  { background-color: rgba(245,158,11,.15) !important; }
+        html.dark .text-green-800  { color: #86efac !important; }
+        html.dark .text-red-800    { color: #fca5a5 !important; }
+        html.dark .text-yellow-800 { color: #fde68a !important; }
+        html.dark .text-orange-800 { color: #fdba74 !important; }
+        html.dark .text-blue-800   { color: #93c5fd !important; }
+        html.dark .text-amber-800  { color: #fcd34d !important; }
+        html.dark .border-green-400  { border-color: rgba(34,197,94,.4) !important; }
+        html.dark .border-red-400    { border-color: rgba(239,68,68,.4) !important; }
+        html.dark .border-yellow-400 { border-color: rgba(234,179,8,.4) !important; }
+        html.dark .border-orange-400 { border-color: rgba(249,115,22,.4) !important; }
+
+        /* Fonds pastels (50) */
+        html.dark .bg-green-50  { background-color: rgba(34,197,94,.10) !important; }
+        html.dark .bg-red-50    { background-color: rgba(239,68,68,.10) !important; }
+        html.dark .bg-yellow-50 { background-color: rgba(234,179,8,.10) !important; }
+        html.dark .bg-orange-50 { background-color: rgba(249,115,22,.10) !important; }
+        html.dark .bg-blue-50   { background-color: rgba(59,130,246,.12) !important; }
+        html.dark .bg-purple-50 { background-color: rgba(139,92,246,.12) !important; }
+        html.dark .bg-amber-50  { background-color: rgba(245,158,11,.12) !important; }
+
+        /* Textes -700 / -600 sémantiques */
+        html.dark .text-green-700  { color: #4ade80 !important; }
+        html.dark .text-green-600  { color: #4ade80 !important; }
+        html.dark .text-red-700    { color: #f87171 !important; }
+        html.dark .text-red-600    { color: #f87171 !important; }
+        html.dark .text-orange-700 { color: #fb923c !important; }
+        html.dark .text-orange-600 { color: #fb923c !important; }
+        html.dark .text-blue-700   { color: #93c5fd !important; }
+        html.dark .text-blue-600   { color: #60a5fa !important; }
+        html.dark .text-yellow-700 { color: #fde68a !important; }
+        html.dark .text-amber-700  { color: #fcd34d !important; }
+        html.dark .text-amber-600  { color: #fcd34d !important; }
+        html.dark .text-purple-700 { color: #c4b5fd !important; }
+        html.dark .text-purple-600 { color: #c4b5fd !important; }
+
+        /* Bordures pastels */
+        html.dark .border-green-100  { border-color: rgba(34,197,94,.25) !important; }
+        html.dark .border-green-200  { border-color: rgba(34,197,94,.35) !important; }
+        html.dark .border-green-300  { border-color: rgba(34,197,94,.55) !important; }
+        html.dark .border-red-100    { border-color: rgba(239,68,68,.25) !important; }
+        html.dark .border-red-200    { border-color: rgba(239,68,68,.35) !important; }
+        html.dark .border-yellow-100 { border-color: rgba(234,179,8,.25) !important; }
+        html.dark .border-yellow-200 { border-color: rgba(234,179,8,.35) !important; }
+        html.dark .border-orange-100 { border-color: rgba(249,115,22,.25) !important; }
+        html.dark .border-orange-200 { border-color: rgba(249,115,22,.35) !important; }
+        html.dark .border-orange-300 { border-color: rgba(249,115,22,.55) !important; }
+        html.dark .border-blue-100   { border-color: rgba(59,130,246,.25) !important; }
+        html.dark .border-blue-200   { border-color: rgba(59,130,246,.35) !important; }
+        html.dark .border-purple-100 { border-color: rgba(139,92,246,.25) !important; }
+        html.dark .border-amber-100  { border-color: rgba(245,158,11,.25) !important; }
+        html.dark .border-amber-200  { border-color: rgba(245,158,11,.35) !important; }
+
+        /* Hover sur fonds pastels */
+        html.dark .hover\:bg-green-100:hover  { background-color: rgba(34,197,94,.18) !important; }
+        html.dark .hover\:bg-orange-100:hover { background-color: rgba(249,115,22,.18) !important; }
+
+        /* Ombres profondes */
+        html.dark .shadow-lg  { box-shadow: 0 8px 24px rgba(0,0,0,.55) !important; }
+        html.dark .shadow-2xl { box-shadow: 0 20px 50px rgba(0,0,0,.65) !important; }
+
+        /* Bouton thème (style inline blanc/gris) */
+        html.dark #themeToggle {
+            background: #1e293b !important;
+            color: #e2e8f0 !important;
+            border-color: #475569 !important;
+        }
+
+        /* Footer minimal */
+        html.dark .border-t.border-gray-100 { border-color: #1e293b !important; }
+
+        /* ── Mode noir ── */
+        html.noir { color-scheme: dark; }
+        html.noir body { background-color: #000 !important; color: #cbd5e1; }
+        html.noir .bg-white    { background-color: #0d0d0d !important; }
+        html.noir .bg-gray-50  { background-color: #080808 !important; }
+        html.noir .bg-gray-100 { background-color: #111 !important; }
+        html.noir .text-gray-900,
+        html.noir .text-gray-800 { color: #f1f5f9 !important; }
+        html.noir .text-gray-700 { color: #e2e8f0 !important; }
+        html.noir .text-gray-600 { color: #cbd5e1 !important; }
+        html.noir .text-gray-500 { color: #94a3b8 !important; }
+        html.noir .text-gray-400 { color: #64748b !important; }
+        html.noir .border-gray-100,
+        html.noir .border-gray-200 { border-color: #222 !important; }
+        html.noir .border-gray-300 { border-color: #333 !important; }
+        html.noir input:not([type=checkbox]):not([type=radio]),
+        html.noir textarea,
+        html.noir select {
+            background-color: #000 !important;
+            color: #e2e8f0 !important;
+            border-color: #333 !important;
+        }
+        html.noir input::placeholder,
+        html.noir textarea::placeholder { color: #333 !important; }
+        html.noir .shadow-sm { box-shadow: 0 1px 3px rgba(0,0,0,.9) !important; }
+        html.noir .shadow-md { box-shadow: 0 4px 12px rgba(0,0,0,.95) !important; }
+        html.noir .shadow-lg  { box-shadow: 0 8px 24px rgba(0,0,0,.98) !important; }
+        html.noir .shadow-2xl { box-shadow: 0 20px 50px rgba(0,0,0,.98) !important; }
+        html.noir .bg-green-100  { background-color: rgba(34,197,94,.10) !important; }
+        html.noir .bg-red-100    { background-color: rgba(239,68,68,.10) !important; }
+        html.noir .bg-yellow-100 { background-color: rgba(234,179,8,.10) !important; }
+        html.noir .bg-orange-100 { background-color: rgba(249,115,22,.10) !important; }
+        html.noir .bg-blue-100   { background-color: rgba(59,130,246,.12) !important; }
+        html.noir .bg-purple-100 { background-color: rgba(139,92,246,.12) !important; }
+        html.noir .bg-amber-100  { background-color: rgba(245,158,11,.12) !important; }
+        html.noir .text-green-800  { color: #86efac !important; }
+        html.noir .text-red-800    { color: #fca5a5 !important; }
+        html.noir .text-yellow-800 { color: #fde68a !important; }
+        html.noir .text-orange-800 { color: #fdba74 !important; }
+        html.noir .text-blue-800   { color: #93c5fd !important; }
+        html.noir .text-amber-800  { color: #fcd34d !important; }
+        html.noir .border-green-400  { border-color: rgba(34,197,94,.4) !important; }
+        html.noir .border-red-400    { border-color: rgba(239,68,68,.4) !important; }
+        html.noir .border-yellow-400 { border-color: rgba(234,179,8,.4) !important; }
+        html.noir .border-orange-400 { border-color: rgba(249,115,22,.4) !important; }
+        html.noir .bg-green-50  { background-color: rgba(34,197,94,.08) !important; }
+        html.noir .bg-red-50    { background-color: rgba(239,68,68,.08) !important; }
+        html.noir .bg-yellow-50 { background-color: rgba(234,179,8,.08) !important; }
+        html.noir .bg-orange-50 { background-color: rgba(249,115,22,.08) !important; }
+        html.noir .bg-blue-50   { background-color: rgba(59,130,246,.10) !important; }
+        html.noir .bg-purple-50 { background-color: rgba(139,92,246,.10) !important; }
+        html.noir .bg-amber-50  { background-color: rgba(245,158,11,.10) !important; }
+        html.noir .text-green-700  { color: #4ade80 !important; }
+        html.noir .text-green-600  { color: #4ade80 !important; }
+        html.noir .text-red-700    { color: #f87171 !important; }
+        html.noir .text-red-600    { color: #f87171 !important; }
+        html.noir .text-orange-700 { color: #fb923c !important; }
+        html.noir .text-orange-600 { color: #fb923c !important; }
+        html.noir .text-blue-700   { color: #93c5fd !important; }
+        html.noir .text-blue-600   { color: #60a5fa !important; }
+        html.noir .text-amber-700  { color: #fcd34d !important; }
+        html.noir .text-amber-600  { color: #fcd34d !important; }
+        html.noir .text-purple-700 { color: #c4b5fd !important; }
+        html.noir .text-purple-600 { color: #c4b5fd !important; }
+        html.noir .border-green-100  { border-color: rgba(34,197,94,.20) !important; }
+        html.noir .border-green-200  { border-color: rgba(34,197,94,.30) !important; }
+        html.noir .border-green-300  { border-color: rgba(34,197,94,.50) !important; }
+        html.noir .border-red-100    { border-color: rgba(239,68,68,.20) !important; }
+        html.noir .border-red-200    { border-color: rgba(239,68,68,.30) !important; }
+        html.noir .border-yellow-100 { border-color: rgba(234,179,8,.20) !important; }
+        html.noir .border-yellow-200 { border-color: rgba(234,179,8,.30) !important; }
+        html.noir .border-orange-100 { border-color: rgba(249,115,22,.20) !important; }
+        html.noir .border-orange-200 { border-color: rgba(249,115,22,.30) !important; }
+        html.noir .border-orange-300 { border-color: rgba(249,115,22,.50) !important; }
+        html.noir .border-blue-100   { border-color: rgba(59,130,246,.20) !important; }
+        html.noir .border-blue-200   { border-color: rgba(59,130,246,.30) !important; }
+        html.noir .border-purple-100 { border-color: rgba(139,92,246,.20) !important; }
+        html.noir .border-amber-100  { border-color: rgba(245,158,11,.20) !important; }
+        html.noir .border-amber-200  { border-color: rgba(245,158,11,.30) !important; }
+        html.noir .hover\:bg-green-100:hover  { background-color: rgba(34,197,94,.14) !important; }
+        html.noir .hover\:bg-orange-100:hover { background-color: rgba(249,115,22,.14) !important; }
+        html.noir #themeToggle {
+            background: #000 !important;
+            color: #e2e8f0 !important;
+            border-color: #333 !important;
+        }
+        html.noir .border-t.border-gray-100 { border-color: #111 !important; }
+        html.noir .bg-green-500 { background-color: #128a38 !important; }
+        html.noir .bg-green-600 { background-color: #0f7530 !important; }
+        html.noir .bg-green-700 { background-color: #0b5e25 !important; }
+        html.noir .hover\:bg-green-600:hover { background-color: #0f7530 !important; }
+        html.noir .hover\:bg-green-700:hover { background-color: #0b5e25 !important; }
+        html.noir [style*="background:#009A44"]  { background: #007A35 !important; }
+        html.noir [style*="background: #009A44"] { background: #007A35 !important; }
+        html.noir [style*="color:#009A44"] { color: #4ade80 !important; }
+        html.noir [style*="color:#009a44"] { color: #4ade80 !important; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
+
+    <!-- Bandeau logo minimal -->
+    <div class="w-full flex justify-between items-center px-4 sm:px-8 py-4">
+        <a href="{% url 'entreprise:accueil' %}" class="flex items-center gap-2">
+            {% if logo_site.afficher_image %}
+                <img src="{{ logo_site.logo_image.url }}" alt="{{ logo_site.nom_site }}" class="h-8 object-contain">
+            {% endif %}
+            {% if logo_site.afficher_texte %}
+                <span class="text-lg font-extrabold tracking-tight" style="color:#009A44;">{{ logo_site.nom_site }}</span>
+            {% endif %}
+        </a>
+        <!-- Bouton thème (cycle : clair → nuit → sombre) -->
+        <button id="themeToggle" onclick="toggleTheme()"
+                title="{% trans "Thème : clair / nuit / sombre" %}"
+                style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;border:1.5px solid #e5e7eb;background:#fff;color:#374151;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;">
+            <svg id="iconMoon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
+            </svg>
+            <svg id="iconCircle" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="display:none;">
+                <circle cx="12" cy="12" r="10"/>
+            </svg>
+            <svg id="iconSun" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="display:none;">
+                <path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2zm0 19h2v3h-2zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85 1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/>
+            </svg>
+            <span id="themeLabel" class="hidden sm:inline"></span>
+        </button>
+    </div>
+
+    <!-- Bande tricolore fine -->
+    <div class="w-full flex h-0.5">
+        <div class="flex-1" style="background-color:#c96010;"></div>
+        <div class="flex-1 bg-white"></div>
+        <div class="flex-1" style="background-color:#009A44;"></div>
+
+    </div>
+
+    <!-- Messages flash -->
+    {% if messages %}
+    <div class="w-full px-6 pt-4 space-y-2">
+        {% for message in messages %}{% if 'entreprise' in message.tags %}
+        <div class="max-w-lg mx-auto px-4 py-3 rounded-xl text-sm font-medium border flex items-center gap-2
+            {% if 'success' in message.tags %}bg-green-50 border-green-200 text-green-700
+            {% elif 'error' in message.tags %}bg-red-50 border-red-200 text-red-700
+            {% elif 'warning' in message.tags %}bg-yellow-50 border-yellow-200 text-yellow-800
+            {% else %}bg-blue-50 border-blue-200 text-blue-700{% endif %}">
+            {{ message }}
+        </div>
+        {% endif %}{% endfor %}
+    </div>
+    {% endif %}
+
+    <main class="flex-grow flex items-start justify-center px-4">
+        {% block contenu %}{% endblock %}
+    </main>
+
+    <!-- Pied de page minimal -->
+    <div class="text-center py-4 text-xs text-gray-400 border-t border-gray-100">
+        &copy; {% now "Y" %} {{ logo_site.nom_site }}
+        &nbsp;·&nbsp;
+        <a href="{% url 'candidat:accueil' %}" class="hover:underline" style="color:#009A44;">{% trans "Espace Candidat" %}</a>
+    </div>
+
+</body>
+<script>
+    function toggleTheme() {
+        var html = document.documentElement;
+        var cur = html.classList.contains('noir') ? 'noir' : html.classList.contains('dark') ? 'dark' : 'light';
+        html.classList.remove('dark', 'noir');
+        var next = cur === 'light' ? 'dark' : cur === 'dark' ? 'noir' : 'light';
+        if (next !== 'light') html.classList.add(next);
+        localStorage.setItem('theme', next);
+        _syncThemeIcons(next);
+    }
+    function _syncThemeIcons(mode) {
+        if (typeof mode !== 'string') {
+            mode = document.documentElement.classList.contains('noir') ? 'noir'
+                 : document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+        }
+        var moon   = document.getElementById('iconMoon');
+        var circle = document.getElementById('iconCircle');
+        var sun    = document.getElementById('iconSun');
+        var label  = document.getElementById('themeLabel');
+        var btn    = document.getElementById('themeToggle');
+        if (!moon) return;
+        moon.style.display   = mode === 'light' ? 'block' : 'none';
+        if (circle) circle.style.display = mode === 'dark'  ? 'block' : 'none';
+        if (sun)    sun.style.display    = mode === 'noir'  ? 'block' : 'none';
+        if (label) label.textContent = mode === 'light' ? 'Nuit' : mode === 'dark' ? 'Sombre' : 'Clair';
+        if (btn) {
+            if (mode === 'light') {
+                btn.style.background = '#fff'; btn.style.color = '#374151'; btn.style.borderColor = '#e5e7eb';
+            } else if (mode === 'dark') {
+                btn.style.background = '#1e293b'; btn.style.color = '#e2e8f0'; btn.style.borderColor = '#475569';
+            } else {
+                btn.style.background = '#000'; btn.style.color = '#e2e8f0'; btn.style.borderColor = '#333';
+            }
+        }
+    }
+    _syncThemeIcons();
+</script>
+{% block js_extra %}{% endblock %}
+</html>

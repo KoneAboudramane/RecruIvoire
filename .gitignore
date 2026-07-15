@@ -1,0 +1,44 @@
+# ── Environnement ─────────────────────────────────────────────────────────────
+.env
+*.env
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# ── Django ────────────────────────────────────────────────────────────────────
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+logs/*.log
+
+# ── Environnements virtuels ───────────────────────────────────────────────────
+venv/
+.venv/
+env/
+.env/
+# Environnement Python local du poste de dev (pas un venv standard : pas de
+# pyvenv.cfg, ces dossiers sont directement à la racine du projet) — à ne
+# jamais committer (contient torch/transformers, plusieurs Go).
+/Lib/
+/Scripts/
+/Include/
+/share/
+pyvenv.cfg
+
+# ── IDE / outils locaux ───────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+# Config locale Claude Code (contient des identifiants de dev en clair et des
+# chemins spécifiques à la machine — jamais à partager)
+.claude/
+
+# ── Système ───────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db

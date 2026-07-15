@@ -1,0 +1,289 @@
+{% extends "candidat/base.html" %}
+{% load i18n %}
+{% block titre %}Créer mon CV — {{ modele.nom }} · {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+{% include "candidat/cv/_form_styles.html" %}
+<style>
+/* ── Bicolore Sombre ── Charcoal #2A2A2A + Cuivre #A0734A + Crème #F5F0E8 ── */
+#cv-sheet {
+  width: 794px; min-height: 1123px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 10pt; line-height: 1.5;
+  box-shadow: 0 8px 48px rgba(0,0,0,.25);
+  display: flex;
+}
+
+/* ── Colonne gauche sombre ──────────────────────────────────────────────── */
+.bs-left {
+  width: 448px; flex-shrink: 0;
+  background:
+    radial-gradient(circle, rgba(255,255,255,.045) 1px, transparent 1px) 0 0 / 22px 22px,
+    radial-gradient(ellipse at 0% 100%, rgba(160,115,74,.28) 0%, transparent 55%),
+    radial-gradient(ellipse at 100% 0%, rgba(160,115,74,.12) 0%, transparent 40%),
+    linear-gradient(155deg, #181818 0%, #2E2E2E 55%, #222222 100%);
+  display: flex; flex-direction: column;
+}
+
+/* Photo pleine largeur en haut */
+.bs-photo-zone {
+  width: 448px; height: 190px; flex-shrink: 0;
+  overflow: hidden; position: relative;
+}
+.bs-photo-wrap { width: 100%; height: 100%; }
+.bs-photo { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bs-ph {
+  width: 100%; height: 100%;
+  background: #3A3A3A; display: flex; align-items: center;
+  justify-content: center; font-size: 56px; color: #555;
+}
+/* Barre cuivre en bas de la photo */
+.bs-photo-zone::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+  height: 4px; background: #A0734A;
+}
+
+/* Nom + titre dans la zone sombre */
+.bs-name-zone { padding: 18px 24px 14px; }
+.bs-name { font-size: 20pt; font-weight: 900; color: #FFFFFF; text-transform: uppercase; line-height: 1.05; }
+.bs-job  { font-size: 9pt; color: #A0734A; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 5px; }
+
+/* Sections sombres */
+.bs-sec-l {
+  font-size: 7.5pt; font-weight: 800; letter-spacing: 2px;
+  text-transform: uppercase; color: #FFFFFF;
+  padding: 0 24px; margin-top: 16px; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.bs-sec-l::before {
+  content: ''; width: 18px; height: 18px; border-radius: 50%;
+  background: #A0734A; flex-shrink: 0;
+  display: inline-block;
+}
+
+.bs-text { font-size: 8pt; color: #BBBBBB; line-height: 1.65; padding: 0 24px 6px; }
+
+/* Entrées expériences/formations (sombre) */
+.bs-entry { padding: 0 24px; margin-bottom: 13px; }
+.bs-entry-date { font-size: 7.5pt; color: #A0734A; font-weight: 700; }
+.bs-entry-title { font-size: 9.5pt; font-weight: 700; color: #FFFFFF; line-height: 1.2; }
+.bs-entry-co  { font-size: 8pt; color: #CCCCCC; font-style: italic; margin: 1px 0 3px; }
+.bs-entry-desc { font-size: 8pt; color: #AAAAAA; line-height: 1.55; }
+
+/* ── Colonne droite crème ───────────────────────────────────────────────── */
+.bs-right {
+  flex: 1;
+  background:
+    radial-gradient(ellipse at 100% 0%,   rgba(160,115,74,.13) 0%, transparent 45%),
+    radial-gradient(ellipse at 0%   100%, rgba(160,115,74,.08) 0%, transparent 40%),
+    linear-gradient(160deg, #FAF4EC 0%, #F0E8DB 60%, #EBE1D2 100%);
+  padding: 24px 20px 28px 22px;
+}
+
+.bs-sec-r {
+  font-size: 7.5pt; font-weight: 800; letter-spacing: 2px;
+  text-transform: uppercase; color: #2A2A2A;
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 20px; margin-bottom: 10px;
+}
+.bs-sec-r:first-child { margin-top: 0; }
+.bs-sec-r-icon {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #A0734A; display: flex; align-items: center;
+  justify-content: center; font-size: 10pt; flex-shrink: 0;
+}
+
+/* Contact items droite */
+.bs-contact-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 8pt; color: #444; margin-bottom: 6px;
+}
+.bs-ci-icon { color: #A0734A; flex-shrink: 0; width: 14px; text-align: center; margin-top: 1px; }
+
+/* Skill / langue avec étoiles */
+.bs-star-item {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 8.5pt; color: #333; margin-bottom: 7px;
+}
+.bs-stars { color: #A0734A; letter-spacing: 1px; font-size: 10pt; }
+.bs-stars-empty { color: #D5C5B0; }
+
+/* Bullet items droite */
+.bs-bullet {
+  font-size: 8.5pt; color: #444; margin-bottom: 4px;
+  padding-left: 12px; position: relative;
+}
+.bs-bullet::before { content: '◆'; position: absolute; left: 0; color: #A0734A; font-size: 6pt; top: 2px; }
+</style>
+{% endblock %}
+
+{% block contenu %}<div class="-mx-6 -my-8" x-data="cvBuilder()"><div class="cv-builder">
+  {% include "candidat/cv/_form_panel.html" %}
+  <div class="preview-panel">
+  <div id="cv-sheet">
+
+    <!-- GAUCHE SOMBRE -->
+    <div class="bs-left">
+
+      <!-- Photo -->
+      <div class="bs-photo-zone">
+        <div class="bs-photo-wrap">
+          <template x-if="cv.photo"><img :src="cv.photo" class="bs-photo" alt="{% trans "Photo" %}"></template>
+          <template x-if="!cv.photo"><div class="bs-ph">👤</div></template>
+        </div>
+      </div>
+
+      <!-- Nom + titre -->
+      <div class="bs-name-zone">
+        <div class="bs-name">
+          <span x-text="cv.prenom || 'Prénom'"></span>&nbsp;<span x-text="cv.nom || 'NOM'"></span>
+        </div>
+        <div class="bs-job" x-text="cv.titre || 'Titre professionnel'"></div>
+      </div>
+
+      <!-- Profil -->
+      <template x-if="cv.profil">
+        <div>
+          <div class="bs-sec-l">{% trans "Profil" %}</div>
+          <div class="bs-text" x-text="cv.profil"></div>
+        </div>
+      </template>
+
+      <!-- Expériences -->
+      <template x-if="cv.experiences.some(e => expVisible(e))">
+        <div>
+          <div class="bs-sec-l">{% trans "Expériences" %}</div>
+          <template x-for="e in cv.experiences" :key="e.id">
+            <div x-show="expVisible(e)" class="bs-entry">
+              <div class="bs-entry-date" x-text="expTitrePeriodeStr(e)"></div>
+              <div class="bs-entry-title" x-text="expTitre(e)"></div>
+              <div x-show="e.entreprise" class="bs-entry-co" x-text="e.entreprise"></div>
+              <div x-show="e.desc" class="bs-entry-desc" x-text="e.desc"></div>
+              <template x-if="e.postes && e.postes.length > 1">
+                <div class="cv-postes-list">
+                  <template x-for="p in e.postes" :key="p.id">
+                    <div x-show="p.titre" class="cv-postes-row">
+                      <span class="cv-postes-titre" x-text="p.titre"></span>
+                      <span x-show="p.debut||p.enCours" class="cv-postes-date" x-text="formatPeriode(p.debut,p.fin,p.enCours)"></span>
+                    </div>
+                  </template>
+                </div>
+              </template>
+              <template x-if="e.hasMissionsClient && e.missionsClient && e.missionsClient.filter(mc=>mc.client).length>0">
+                <div class="cv-mc-section">
+                  <div class="cv-mc-label" style="color:#A0734A">🏢 Missions clients</div>
+                  <template x-for="mc in e.missionsClient.filter(mc=>mc.client)" :key="mc.id">
+                    <div class="cv-mc-item">
+                      <div class="cv-mc-hdr">
+                        <div class="cv-mc-title" x-text="mc.client||'—'"></div>
+                        <div x-show="mc.debut||mc.enCours" class="cv-mc-badge" x-text="formatPeriode(mc.debut,mc.fin,mc.enCours)"></div>
+                      </div>
+                      <div x-show="mc.desc" class="cv-mc-desc" x-text="mc.desc"></div>
+                    </div>
+                  </template>
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Formation -->
+      <template x-if="vis(cv.formations).filter(f => f.diplome || f.ecole).length > 0">
+        <div>
+          <div class="bs-sec-l">{% trans "Formation" %}</div>
+          <template x-for="f in vis(cv.formations)" :key="f.id">
+            <div x-show="f.diplome || f.ecole" class="bs-entry">
+              <div class="bs-entry-date" x-text="(f.debut?(f.debut||'').substring(0,4)+' – ':'')+((f.fin||'').substring(0,4)||'')"></div>
+              <div class="bs-entry-title" x-text="f.diplome || '—'"></div>
+              <div x-show="f.ecole" class="bs-entry-co" x-text="f.ecole"></div>
+              <div x-show="f.desc" class="bs-entry-desc" x-text="f.desc"></div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+    </div><!-- /left -->
+
+    <!-- DROITE CRÈME -->
+    <div class="bs-right">
+
+      <!-- Contact -->
+      <div class="bs-sec-r"><span class="bs-sec-r-icon">📞</span>{% trans "Contacts" %}</div>
+      <template x-if="cv.telephone">
+        <div class="bs-contact-item"><span class="bs-ci-icon">☎</span><span x-text="cv.telephone"></span></div>
+      </template>
+      <template x-if="cv.email">
+        <div class="bs-contact-item"><span class="bs-ci-icon">✉</span><span x-text="cv.email"></span></div>
+      </template>
+      <template x-if="cvLoc()">
+        <div class="bs-contact-item"><span class="bs-ci-icon">📍</span><span x-text="cvLoc()"></span></div>
+      </template>
+      <template x-if="cv.age">
+        <div class="bs-contact-item"><span class="bs-ci-icon">📅</span><span x-text="cv.age"></span></div>
+      </template>
+      <template x-if="cv.permis">
+        <div class="bs-contact-item"><span class="bs-ci-icon">🪪</span><span x-text="cv.permis"></span></div>
+      </template>
+
+      <!-- Compétences avec étoiles -->
+      <template x-if="vis(cv.competences).filter(c=>c.nom).length > 0">
+        <div>
+          <div class="bs-sec-r"><span class="bs-sec-r-icon">⭐</span>{% trans "Compétences" %}</div>
+          <template x-for="c in vis(cv.competences)" :key="c.id">
+            <div x-show="c.nom" class="bs-star-item">
+              <span x-text="c.nom"></span>
+              <span class="bs-stars" x-text="'★'.repeat(niveauDots(c.niveau)) + '☆'.repeat(5-niveauDots(c.niveau))"></span>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Langues avec étoiles -->
+      <template x-if="vis(cv.langues).filter(l=>l.nom).length > 0">
+        <div>
+          <div class="bs-sec-r"><span class="bs-sec-r-icon">🌐</span>{% trans "Langues" %}</div>
+          <template x-for="l in vis(cv.langues)" :key="l.id">
+            <div x-show="l.nom" class="bs-star-item">
+              <span x-text="l.nom"></span>
+              <span class="bs-stars" x-text="'★'.repeat(niveauDots(l.niveau)) + '☆'.repeat(5-niveauDots(l.niveau))"></span>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Intérêts -->
+      <template x-if="cv.interets.filter((i,ii) => i && !isInteretMasque(ii)).length > 0">
+        <div>
+          <div class="bs-sec-r"><span class="bs-sec-r-icon">❤️</span>{% trans "Centres d'intérêt" %}</div>
+          <template x-for="(ci, idx) in cv.interets" :key="idx">
+            <div x-show="ci && !isInteretMasque(idx)" class="bs-bullet" x-text="ci"></div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Projets -->
+      <template x-if="cv.showProjets && vis(cv.projets).filter(p=>p.nom).length > 0">
+        <div>
+          <div class="bs-sec-r"><span class="bs-sec-r-icon">🚀</span>{% trans "Projets" %}</div>
+          <template x-for="p in vis(cv.projets)" :key="p.id">
+            <div x-show="p.nom" class="bs-bullet" x-text="p.nom"></div>
+          </template>
+        </div>
+      </template>
+
+      <template x-if="cv.showRef">
+        <div>
+          <div class="bs-sec-r"><span class="bs-sec-r-icon">📋</span>{% trans "Références" %}</div>
+          <p style="font-size:8pt;color:#888;font-style:italic">{% trans "Sur demande" %}</p>
+        </div>
+      </template>
+
+    </div><!-- /right -->
+
+  </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+{% block js_extra %}{% include "candidat/cv/_cvbuilder_js.html" %}{% endblock %}

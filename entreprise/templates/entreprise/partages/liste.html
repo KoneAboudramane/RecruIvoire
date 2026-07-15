@@ -1,0 +1,113 @@
+{% extends "entreprise/base.html" %}
+{% load i18n %}
+
+{% block titre %}Mes liens de partage — {% trans "Espace Entreprise" %}{% endblock %}
+
+{% block contenu %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-extrabold text-gray-900">🔗 Liens de partage</h1>
+            <p class="text-sm text-gray-500 mt-1">Profils candidats partagés avec des entreprises tierces</p>
+        </div>
+    </div>
+
+    {% if partages %}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-100">
+                <tr>
+                    <th class="text-left px-5 py-3 font-semibold text-gray-500 uppercase tracking-wide text-xs">Candidat</th>
+                    <th class="text-left px-5 py-3 font-semibold text-gray-500 uppercase tracking-wide text-xs">Destinataire</th>
+                    <th class="text-left px-5 py-3 font-semibold text-gray-500 uppercase tracking-wide text-xs">Créé le</th>
+                    <th class="text-left px-5 py-3 font-semibold text-gray-500 uppercase tracking-wide text-xs">Expire le</th>
+                    <th class="text-center px-5 py-3 font-semibold text-gray-500 uppercase tracking-wide text-xs">Vues</th>
+                    <th class="text-left px-5 py-3 font-semibold text-gray-500 uppercase tracking-wide text-xs">Statut</th>
+                    <th class="px-5 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for p in partages %}
+                <tr class="hover:bg-gray-50 transition" id="row-{{ p.token }}">
+                    <td class="px-5 py-4">
+                        <div class="font-semibold text-gray-900">{{ p.candidat.prenom }} {{ p.candidat.nom }}</div>
+                        <div class="text-xs text-gray-400">{{ p.candidat.titreProfessionnel|default:"—" }}</div>
+                    </td>
+                    <td class="px-5 py-4 text-gray-600">
+                        {{ p.email_destinataire|default:"Lien direct" }}
+                    </td>
+                    <td class="px-5 py-4 text-gray-500">{{ p.date_creation|date:"d/m/Y" }}</td>
+                    <td class="px-5 py-4 text-gray-500">{{ p.date_expiration|date:"d/m/Y" }}</td>
+                    <td class="px-5 py-4 text-center">
+                        <span class="font-bold {% if p.nb_vues %}text-green-600{% else %}text-gray-400{% endif %}">
+                            {{ p.nb_vues }}
+                        </span>
+                        {% if p.date_premiere_vue %}
+                        <div class="text-xs text-gray-400">1ère vue {{ p.date_premiere_vue|date:"d/m" }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="px-5 py-4">
+                        {% if not p.actif %}
+                            <span class="px-2 py-1 text-xs font-bold bg-gray-100 text-gray-500 rounded-full">Désactivé</span>
+                        {% elif p.est_expire %}
+                            <span class="px-2 py-1 text-xs font-bold bg-red-50 text-red-600 rounded-full">Expiré</span>
+                        {% else %}
+                            <span class="px-2 py-1 text-xs font-bold bg-green-50 text-green-700 rounded-full">Actif</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-5 py-4">
+                        <div class="flex items-center gap-2 justify-end">
+                            {% if p.est_valide %}
+                            <button onclick="copierLien('{{ request.scheme }}://{{ request.get_host }}{% url 'entreprise:profil_partage_public' token=p.token %}')"
+                                    class="text-xs px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 rounded-lg font-semibold transition">
+                                📋 Copier
+                            </button>
+                            <button onclick="desactiver('{{ p.token }}')"
+                                    class="text-xs px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-semibold transition">
+                                Révoquer
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-16 text-center">
+        <div class="text-5xl mb-4">🔗</div>
+        <p class="text-gray-500 font-medium">Aucun lien de partage créé pour l'instant.</p>
+        <p class="text-sm text-gray-400 mt-2">Parcourez les profils candidats et partagez-les à vos clients.</p>
+        <a href="{% url 'entreprise:candidats' %}" class="mt-6 inline-block px-5 py-2.5 bg-green-600 text-white text-sm font-bold rounded-xl hover:bg-green-700 transition">
+            Parcourir les profils →
+        </a>
+    </div>
+    {% endif %}
+
+</div>
+
+<div id="toast" class="fixed bottom-6 right-6 z-50 hidden bg-gray-900 text-white text-sm font-semibold px-5 py-3 rounded-xl shadow-xl">
+    ✅ Lien copié dans le presse-papiers
+</div>
+
+<script>
+function copierLien(url) {
+    navigator.clipboard.writeText(url).then(function() {
+        var t = document.getElementById('toast');
+        t.classList.remove('hidden');
+        setTimeout(function() { t.classList.add('hidden'); }, 2500);
+    });
+}
+function desactiver(token) {
+    if (!confirm('Révoquer ce lien ? Les personnes ayant le lien ne pourront plus consulter le profil.')) return;
+    fetch("{% url 'entreprise:partage_desactiver' token='00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', token), {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+    }).then(function(r) {
+        if (r.ok) location.reload();
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base_public.html" %}
+{% load i18n %}
+
+{% block titre %}{% if page %}{{ page.titre }}{% else %}Mentions légales{% endif %} — {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+<style>
+/* ── Mode sombre ──────────────────────────────────────────────────── */
+html.dark .legal-header h1 { color: #f1f5f9; }
+html.dark .legal-header p,
+html.dark .legal-header .text-gray-500 { color: #94a3b8; }
+html.dark .legal-card { background: #1e293b; border-color: #334155; box-shadow: 0 1px 6px rgba(0,0,0,.2); }
+html.dark .legal-card h2 { color: #f1f5f9; }
+html.dark .legal-card p,
+html.dark .legal-card li,
+html.dark .legal-card dd { color: #94a3b8; }
+html.dark .legal-card dt { color: #cbd5e1; }
+
+/* ── Mode noir ────────────────────────────────────────────────────── */
+html.noir .legal-header h1 { color: #f9fafb; }
+html.noir .legal-header p,
+html.noir .legal-header .text-gray-500 { color: #9ca3af; }
+html.noir .legal-card { background: #111827; border-color: #1f2937; box-shadow: 0 1px 6px rgba(0,0,0,.4); }
+html.noir .legal-card h2 { color: #f9fafb; }
+html.noir .legal-card p,
+html.noir .legal-card li,
+html.noir .legal-card dd { color: #9ca3af; }
+html.noir .legal-card dt { color: #d1d5db; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="max-w-3xl mx-auto px-4 py-12">
+
+    <div class="legal-header mb-8">
+        <h1 class="text-3xl font-extrabold text-gray-800 mb-2">
+            📄 {% if page %}{{ page.titre }}{% else %}{% trans "Mentions légales" %}{% endif %}
+        </h1>
+        {% if page and page.description %}
+            <p class="text-gray-500 text-sm">{{ page.description }}</p>
+        {% else %}
+            <p class="text-gray-500 text-sm">{% trans "Conformément aux dispositions légales en vigueur" %}</p>
+        {% endif %}
+    </div>
+
+    <div class="space-y-8">
+
+        {% for section in sections %}
+        <div class="legal-card bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                {{ section.icone }} {{ section.titre }}
+            </h2>
+            <div class="text-sm text-gray-600 leading-relaxed">
+                {{ section.contenu|safe }}
+            </div>
+        </div>
+        {% empty %}
+        <div class="legal-card bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center text-gray-400">
+            {% trans "Aucune section disponible." %}
+        </div>
+        {% endfor %}
+
+    </div>
+
+    <div class="mt-10 text-center">
+        <a href="{% url 'contenu:confidentialite' %}" class="text-sm text-orange-600 hover:underline">
+            → {% trans "Consulter notre Politique de confidentialité" %}
+        </a>
+    </div>
+
+</div>
+{% endblock %}

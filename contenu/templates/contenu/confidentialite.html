@@ -1,0 +1,204 @@
+{% extends "base_public.html" %}
+{% load i18n %}
+
+{% block titre %}{% if page %}{{ page.titre }}{% else %}Politique de confidentialité{% endif %} — {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+<style>
+@keyframes fadeUp {
+    from { opacity:0; transform:translateY(20px); }
+    to   { opacity:1; transform:translateY(0); }
+}
+.fade-up { animation: fadeUp .5s ease both; }
+.delay-1 { animation-delay:.1s; }
+.delay-2 { animation-delay:.2s; }
+.delay-3 { animation-delay:.3s; }
+
+.section-card {
+    background: #fff;
+    border-radius:16px;
+    padding:32px;
+}
+.section-card h2 {
+    font-size:1.1rem;
+    font-weight:800;
+    color:#1f2937;
+    margin-bottom:14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+.section-card h2 .icon {
+    width:36px; height:36px;
+    border-radius:10px;
+    background:#FFF3E0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:17px; flex-shrink:0;
+}
+.section-card p, .section-card li {
+    font-size:.9rem;
+    color:#4b5563;
+    line-height:1.7;
+}
+.section-card ul {
+    list-style:none;
+    padding:0; margin:0;
+    display:flex; flex-direction:column; gap:8px;
+}
+.section-card ul li::before {
+    content:'›';
+    color:#c96010;
+    font-weight:700;
+    margin-right:8px;
+}
+.toc-link {
+    display:flex; align-items:center; gap:8px;
+    font-size:.85rem; font-weight:600; color:#374151;
+    padding:8px 12px; border-radius:10px;
+    transition:background .15s, color .15s;
+    text-decoration:none;
+}
+.toc-link:hover { background:#FFF3E0; color:#c96010; }
+.toc-link .num {
+    width:22px; height:22px; border-radius:50%;
+    background:#c96010; color:#fff;
+    font-size:.7rem; font-weight:800;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+}
+
+/* ── Mode sombre ──────────────────────────────────────────────────── */
+html.dark .section-card { background: #1e293b; border-color: #334155; }
+html.dark .section-card h2 { color: #f1f5f9; }
+html.dark .section-card h2 .icon { background: #334155; }
+html.dark .section-card p,
+html.dark .section-card li { color: #94a3b8; }
+html.dark .section-card code {
+    background: #334155; color: #e2e8f0;
+    border-radius: 3px; padding: 1px 5px;
+}
+html.dark .toc-link { color: #cbd5e1; }
+html.dark .toc-link:hover { background: #334155; color: #fb923c; }
+html.dark .toc-card { background: #1e293b; border-color: #334155; }
+html.dark .toc-card .text-gray-400 { color: #64748b; }
+html.dark aside h1 { color: #f1f5f9; }
+html.dark aside > div > p { color: #94a3b8; }
+html.dark aside .text-gray-400 { color: #64748b; }
+html.dark aside .text-gray-600 { color: #94a3b8; }
+html.dark .action-banner { background: #1e293b; border-color: #334155; }
+html.dark .action-banner .text-gray-800 { color: #f1f5f9; }
+html.dark .action-banner .text-gray-400 { color: #64748b; }
+html.dark .action-banner .border-gray-200 { border-color: #334155; color: #94a3b8; }
+html.dark .action-banner .hover\:bg-gray-50:hover { background: #334155; }
+
+/* ── Mode noir ────────────────────────────────────────────────────── */
+html.noir .section-card { background: #111827; border-color: #1f2937; }
+html.noir .section-card h2 { color: #f9fafb; }
+html.noir .section-card h2 .icon { background: #1f2937; }
+html.noir .section-card p,
+html.noir .section-card li { color: #9ca3af; }
+html.noir .section-card code {
+    background: #1f2937; color: #e5e7eb;
+    border-radius: 3px; padding: 1px 5px;
+}
+html.noir .toc-link { color: #d1d5db; }
+html.noir .toc-link:hover { background: #1f2937; color: #fb923c; }
+html.noir .toc-card { background: #111827; border-color: #1f2937; }
+html.noir .toc-card .text-gray-400 { color: #6b7280; }
+html.noir aside h1 { color: #f9fafb; }
+html.noir aside > div > p { color: #9ca3af; }
+html.noir aside .text-gray-400 { color: #6b7280; }
+html.noir aside .text-gray-600 { color: #9ca3af; }
+html.noir .action-banner { background: #111827; border-color: #1f2937; }
+html.noir .action-banner .text-gray-800 { color: #f9fafb; }
+html.noir .action-banner .text-gray-400 { color: #6b7280; }
+html.noir .action-banner .border-gray-200 { border-color: #1f2937; color: #9ca3af; }
+html.noir .action-banner .hover\:bg-gray-50:hover { background: #1f2937; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="grid lg:grid-cols-4 gap-10 items-start">
+
+    <!-- ── Colonne gauche : en-tête + sommaire (sticky) ─────────────────── -->
+    <aside class="lg:col-span-1 fade-up delay-1 sticky top-6 self-start flex flex-col gap-5">
+
+        <!-- En-tête -->
+        <div>
+            <div class="flex items-center gap-1.5 text-xs text-gray-400 mb-3 flex-wrap">
+                <a href="{% url 'candidat:accueil' %}" class="hover:underline" style="color:#c96010;">{% trans "Accueil" %}</a>
+                <span>/</span>
+                <span class="text-gray-600 font-medium">{% trans "Confidentialité" %}</span>
+            </div>
+            <h1 class="text-2xl font-extrabold text-gray-800 mb-1 leading-snug">
+                {% if page %}
+                    {{ page.titre }}
+                {% else %}
+                    {% trans "Politique de" %} <span style="color:#c96010;">{% trans "confidentialité" %}</span>
+                {% endif %}
+            </h1>
+            {% if page and page.description %}
+                <p class="text-gray-500 text-sm leading-relaxed">{{ page.description }}</p>
+            {% else %}
+                <p class="text-gray-500 text-sm leading-relaxed">{% trans "Comment nous collectons, utilisons et protégeons vos données personnelles." %}</p>
+            {% endif %}
+            {% if page and page.mise_a_jour %}
+                <p class="text-xs text-gray-400 mt-2">{% trans "Mise à jour :" %} <strong>{{ page.mise_a_jour|date:"F Y" }}</strong><br>{{ logo_site.nom_site }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Sommaire dynamique -->
+        {% if sections %}
+        <div class="toc-card bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+            <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">{% trans "Sommaire" %}</p>
+            <nav class="flex flex-col gap-1">
+                {% for section in sections %}
+                <a href="#{{ section.ancre }}" class="toc-link">
+                    <span class="num">{{ forloop.counter }}</span>
+                    {{ section.titre }}
+                </a>
+                {% endfor %}
+            </nav>
+        </div>
+        {% endif %}
+    </aside>
+
+    <!-- ── Contenu ──────────────────────────────────────────────────────── -->
+    <div class="lg:col-span-3 flex flex-col gap-6 fade-up delay-2">
+
+        {% for section in sections %}
+        <div id="{{ section.ancre }}" class="section-card border border-gray-100 shadow-sm">
+            <h2>
+                <span class="icon">{{ section.icone }}</span>
+                {{ section.titre }}
+            </h2>
+            {{ section.contenu|safe }}
+        </div>
+        {% empty %}
+        <div class="section-card border border-gray-100 shadow-sm text-center text-gray-400 py-12">
+            {% trans "Aucune section disponible." %}
+        </div>
+        {% endfor %}
+
+        <!-- Bannière actions rapides -->
+        <div class="action-banner fade-up delay-3 flex flex-col sm:flex-row gap-4 p-6 rounded-2xl border-2 border-dashed border-gray-200 items-center justify-between">
+            <div>
+                <p class="font-bold text-gray-800 text-sm mb-1">{% trans "Une question sur vos données ?" %}</p>
+                <p class="text-xs text-gray-400">{% trans "Notre équipe répond sous 24–48h ouvrées." %}</p>
+            </div>
+            <div class="flex gap-3 flex-shrink-0">
+                <a href="{% url 'contenu:contact' %}"
+                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-bold transition hover:opacity-90"
+                   style="background:#c96010;">
+                    {% trans "Nous contacter" %}
+                </a>
+                <a href="{% url 'contenu:faq' %}"
+                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold border border-gray-200 text-gray-600 hover:bg-gray-50 transition">
+                    {% trans "Voir la FAQ" %}
+                </a>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

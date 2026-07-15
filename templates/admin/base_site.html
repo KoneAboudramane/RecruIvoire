@@ -1,0 +1,1546 @@
+{% extends "admin/base.html" %}
+{% load i18n admin_extras %}
+
+{% block title %}{{ title }} — {{ logo_site.nom_site }} Admin{% endblock %}
+
+{% block branding %}
+<a href="{% url 'admin:index' %}" id="site-name" class="rp-brand">
+    {% if logo_site.afficher_image and logo_site.logo_image %}
+        <img src="{{ logo_site.logo_image.url }}" alt="{{ logo_site.nom_site }}" class="rp-brand-logo">
+    {% endif %}
+    {% if logo_site.afficher_texte %}
+    <span class="rp-brand-text">
+        <span class="rp-brand-name">{{ logo_site.nom_site }}</span>
+        <span class="rp-brand-sub">ADMINISTRATION</span>
+    </span>
+    {% endif %}
+</a>
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="icon" type="image/png" href="{{ favicon_url }}">
+<link rel="shortcut icon" type="image/png" href="{{ favicon_url }}">
+<style>
+/* ══════════════════════════════════════════════════════════════════════
+   RecrutePro Admin Theme  |  vert #009A44  orange #F77F00
+   ══════════════════════════════════════════════════════════════════════ */
+
+:root {
+    --primary:                 #F77F00;
+    --secondary:               #e06a00;
+    --accent:                  #F77F00;
+    --primary-fg:              #fff;
+    --header-color:            #475569;
+    --header-branding-color:   #F77F00;
+    --header-bg:               #ffffff;
+    --header-link-color:       #475569;
+    --breadcrumbs-fg:          #64748b;
+    --breadcrumbs-link-fg:     #F77F00;
+    --breadcrumbs-bg:          #ffffff;
+    --link-fg:                 #007a36;
+    --link-hover-color:        #F77F00;
+    --link-selected-fg:        #007a36;
+    --hairline-color:          #f1f5f9;
+    --border-color:            #e2e8f0;
+    --darkened-bg:             #f8fafc;
+    --selected-bg:             #fff7ed;
+    --selected-row:            #fff7ed;
+    --button-fg:               #fff;
+    --button-bg:               #009A44;
+    --button-hover-bg:         #007a36;
+    --default-button-bg:       #F77F00;
+    --default-button-hover-bg: #e06a00;
+    --delete-button-bg:        #ef4444;
+    --delete-button-hover-bg:  #dc2626;
+    --object-tools-bg:         #F77F00;
+    --object-tools-hover-bg:   #e06a00;
+    --body-bg:                 #f8fafc;
+    --body-fg:                 #334155;
+    --body-quiet-color:        #64748b;
+    /* ── Typographie personnalisable ─────────────────────────── */
+    /* La police est appliquée via JS (CSS variable).           */
+    /* La taille est appliquée via html { font-size } en JS,   */
+    /* ce qui fait scaler tous les rem proportionnellement.     */
+    --admin-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* 1rem = font-size de html (modifiable via JS) — base : 13px */
+body { font-family: var(--admin-font); font-size: 1rem; background: #f1f5f9; color: #334155; }
+h1, h2, h3, h4, h5, h6 { color: #1e293b; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   NAVBAR — style espace candidat (fond blanc, logo orange, bande tricolore)
+   ══════════════════════════════════════════════════════════════════════ */
+#header {
+    background: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
+    box-shadow: 0 1px 4px rgba(15,23,42,.04);
+    padding: 14px 28px;
+    line-height: 1.4;
+    color: #475569;
+    position: relative;
+}
+/* Bande tricolore ivoirienne (sous le header) */
+#header::after {
+    content: '';
+    display: block;
+    position: absolute;
+    left: 0; right: 0; bottom: -4px;
+    height: 4px;
+    background: linear-gradient(90deg, #F77F00 33.33%, #fff 33.33% 66.66%, #009A44 66.66%);
+    border-top: 1px solid rgba(0,0,0,.03);
+}
+
+/* Branding (logo + nom) */
+#branding { display: flex; align-items: center; }
+#branding h1 { margin: 0; padding: 0; font-weight: inherit; }
+#branding h1 a, #branding h1 a:link, #branding h1 a:visited { color: #F77F00; text-decoration: none; }
+.rp-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+.rp-brand-logo { height: 36px; max-width: 130px; object-fit: contain; }
+.rp-brand-text { display: flex; flex-direction: column; line-height: 1; }
+.rp-brand-name { font-size: 1.4rem; font-weight: 900; letter-spacing: -.3px; color: #F77F00; }
+.rp-brand-sub  { font-size: 0.68rem; font-weight: 700; letter-spacing: .12em; color: #94a3b8; margin-top: 4px; }
+
+/* User tools (droite du header) */
+#user-tools {
+    font-size: 0.92rem;
+    color: #64748b;
+    font-weight: 600;
+    letter-spacing: 0.1px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+#user-tools strong { color: #1e293b; font-weight: 800; }
+#user-tools a, #user-tools a:link, #user-tools a:visited,
+#user-tools button, #user-tools form button,
+#user-tools form#logout-form button {
+    color: #F77F00 !important;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    padding: 6px 12px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    margin-left: 4px;
+    transition: all .15s;
+    text-decoration: none;
+    cursor: pointer;
+    font-family: inherit;
+    line-height: 1.2;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+#user-tools a:hover,
+#user-tools button:hover,
+#user-tools form#logout-form button:hover {
+    background: #fff7ed;
+    border-color: #fed7aa;
+    color: #e06a00 !important;
+}
+/* Bouton Déconnexion : style "bouton plein" pour bien le distinguer */
+#user-tools form#logout-form button,
+#user-tools button[type="submit"] {
+    background: #F77F00;
+    color: #fff !important;
+    border-color: #F77F00;
+    margin-left: 8px;
+}
+#user-tools form#logout-form button:hover,
+#user-tools button[type="submit"]:hover {
+    background: #e06a00;
+    border-color: #e06a00;
+    color: #fff !important;
+}
+/* Icônes / SVG dans le user-tools : juste agrandir, ne pas changer la couleur */
+#user-tools svg,
+#user-tools img,
+#user-tools img.icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+/* Form logout : inline */
+#user-tools form#logout-form {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+}
+
+/* ── Breadcrumbs ─────────────────────────────────────────────────────── */
+div.breadcrumbs {
+    background: #f8fafc;
+    border-bottom: 1px solid #e8eef5;
+    padding: 11px 28px;
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-top: 4px;
+}
+div.breadcrumbs a, div.breadcrumbs a:link, div.breadcrumbs a:visited {
+    color: #F77F00;
+    text-decoration: none;
+    font-weight: 600;
+}
+div.breadcrumbs a:hover { color: #e06a00; text-decoration: underline; }
+
+/* ── Sidebar (orange clair ivoirien) ─────────────────────────────────── */
+#nav-sidebar {
+    background: #fff7ed;
+    border-right: 1px solid #fed7aa;
+    box-shadow: 2px 0 10px rgba(247,127,0,.06);
+}
+#nav-sidebar .module caption, #nav-sidebar h2 {
+    background: transparent; color: #94a3b8;
+    font-size: 0.77rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em;
+    padding: 14px 16px 6px; border-bottom: none;
+}
+/* Titres de sections (Candidat, Entreprise, Authentification…) */
+#nav-sidebar .module caption a,
+#nav-sidebar .module caption a:link,
+#nav-sidebar .module caption a:visited {
+    color: #F77F00 !important;
+    font-size: 0.77rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em;
+    text-decoration: none;
+}
+#nav-sidebar .module caption a:hover { color: #c2410c !important; }
+/* Section active : fond orange plein quand un modèle de ce module est sélectionné */
+#nav-sidebar .module:has(tr.selected) caption {
+    background: #F77F00 !important;
+    border-radius: 8px;
+    margin: 4px 8px 2px;
+    padding: 6px 10px;
+}
+#nav-sidebar .module:has(tr.selected) caption a,
+#nav-sidebar .module:has(tr.selected) caption a:link,
+#nav-sidebar .module:has(tr.selected) caption a:visited { color: #fff !important; }
+#nav-sidebar .module:has(tr.selected) caption a:hover { color: rgba(255,255,255,.85) !important; }
+#nav-sidebar .module { border: none; margin-bottom: 2px; }
+#nav-sidebar th[scope="row"] a, #nav-sidebar .module a {
+    color: #374151; font-size: 1rem; font-weight: 500;
+    padding: 7px 14px; display: block; border-radius: 9px;
+    margin: 1px 8px; transition: all .15s; text-decoration: none;
+}
+#nav-sidebar th[scope="row"] a:hover, #nav-sidebar .module a:hover {
+    background: #ffedd5; color: #c2410c;
+}
+#nav-sidebar tr.selected a {
+    background: #ffedd5; color: #c2410c; font-weight: 700;
+}
+
+/* ── Contenu ─────────────────────────────────────────────────────────── */
+#content { padding: 24px 28px; }
+
+/* ── Modules / cartes ────────────────────────────────────────────────── */
+.module {
+    background: #fafafa; border-radius: 16px;
+    border: 1px solid #e8f0ec; box-shadow: 0 1px 6px rgba(0,0,0,.05);
+    overflow: hidden; margin-bottom: 20px;
+}
+.module caption, .module > h2 {
+    background: #f8fafc; border-bottom: 1px solid #f1f5f9;
+    color: #475569; font-size: 0.85rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .06em; padding: 13px 18px;
+}
+
+/* ── Changelist ──────────────────────────────────────────────────────── */
+#changelist .results {
+    background: #fafafa; border-radius: 16px;
+    border: 1px solid #e8f0ec; box-shadow: 0 1px 6px rgba(0,0,0,.05); overflow: hidden;
+}
+#changelist table { border-collapse: collapse; width: 100%; }
+#changelist table thead th {
+    background: #f8fafc; color: #94a3b8;
+    font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+    padding: 12px 16px; border-bottom: 1px solid #f1f5f9; white-space: nowrap;
+}
+#changelist table thead th a { color: #94a3b8 !important; }
+#changelist table thead th.sorted a,
+#changelist table thead th a:hover { color: #009A44 !important; }
+#changelist table tbody td, #changelist table tbody th {
+    padding: 11px 16px; font-size: 1rem; color: #334155;
+    border-bottom: 1px solid #f8fafc; vertical-align: middle;
+}
+#changelist table tbody tr:hover td,
+#changelist table tbody tr:hover th { background: #f8fafc; }
+#changelist table tbody tr:last-child td,
+#changelist table tbody tr:last-child th { border-bottom: none; }
+#changelist table input[type="checkbox"] { accent-color: #009A44; width: 15px; height: 15px; }
+tr.selected td, tr.selected th { background: #f0fdf4 !important; }
+
+/* ── Filtres ─────────────────────────────────────────────────────────── */
+#changelist-filter {
+    background: #fafafa; border-radius: 16px;
+    border: 1px solid #e8f0ec; box-shadow: 0 1px 6px rgba(0,0,0,.05);
+    overflow: hidden; padding: 0;
+    min-width: 260px;
+}
+#changelist-filter h2 {
+    background: #f8fafc; color: #94a3b8; font-size: 0.77rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .08em; padding: 13px 16px 10px;
+    border-bottom: 1px solid #f1f5f9; margin: 0;
+}
+#changelist-filter h3 { font-size: 0.85rem; font-weight: 700; color: #475569; padding: 10px 16px 4px; margin: 0; text-transform: uppercase; letter-spacing: .05em; }
+#changelist-filter ul { padding: 0 8px 8px; margin: 0; list-style: none; }
+#changelist-filter ul li a { display: block; padding: 5px 10px; border-radius: 8px; color: #475569; font-size: 0.92rem; text-decoration: none; transition: all .15s; }
+#changelist-filter ul li a:hover { background: #f0fdf4; color: #009A44; }
+#changelist-filter ul li.selected a { background: #f0fdf4; color: #009A44; font-weight: 700; }
+
+/* Input de recherche dans les filtres (Django ≥ 5 — "Écrivez ici pour filtrer") */
+#changelist-filter .admin-filter-search-input-wrapper,
+#changelist-filter .filter-search,
+#changelist-filter form.filter-search {
+    display: block;
+    width: 100%;
+    padding: 8px 12px 4px;
+    margin: 0;
+    box-sizing: border-box;
+}
+#changelist-filter .admin-filter-search-input,
+#changelist-filter input[type="text"][placeholder],
+#changelist-filter input[type="search"] {
+    width: 100% !important;
+    box-sizing: border-box;
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    font-size: 0.92rem;
+    color: #334155;
+    background: #fff;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+}
+#changelist-filter .admin-filter-search-input::placeholder,
+#changelist-filter input[type="text"]::placeholder,
+#changelist-filter input[type="search"]::placeholder {
+    color: #94a3b8;
+    font-style: normal;
+}
+#changelist-filter .admin-filter-search-input:focus,
+#changelist-filter input[type="text"]:focus,
+#changelist-filter input[type="search"]:focus {
+    border-color: #009A44;
+    box-shadow: 0 0 0 3px rgba(0,154,68,.12);
+}
+
+/* ── Recherche ───────────────────────────────────────────────────────── */
+#toolbar { background: transparent; padding: 0 0 14px; border: none; }
+#changelist-search { display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 6px 12px; gap: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+#changelist-search input[type="search"] { border: none; outline: none; background: transparent; font-size: 1rem; color: #334155; flex: 1; }
+#changelist-search input[type="submit"] { background: #009A44; color: #fff; border: none; border-radius: 8px; padding: 5px 14px; font-size: 0.92rem; font-weight: 600; cursor: pointer; transition: background .15s; }
+#changelist-search input[type="submit"]:hover { background: #007a36; }
+
+/* ── Boutons ─────────────────────────────────────────────────────────── */
+.button, input[type=submit], input[type=button], .submit-row input, a.button {
+    border-radius: 10px; font-weight: 700; font-size: 1rem;
+    padding: 8px 16px; border: none; cursor: pointer; transition: all .15s;
+}
+.button.default, input[type=submit].default { background: #F77F00; color: #fff; }
+.button.default:hover, input[type=submit].default:hover { background: #e06a00; }
+ul.object-tools li a { background: #F77F00; color: #fff !important; border-radius: 10px; font-size: 0.92rem; font-weight: 700; padding: 7px 14px; transition: background .15s; }
+ul.object-tools li a:hover { background: #e06a00; }
+ul.object-tools li a.addlink { background: #009A44; }
+ul.object-tools li a.addlink:hover { background: #007a36; }
+
+/* ── Bouton "📊 Statistiques" dans les changelists ─────────────────── */
+ul.object-tools li a.rp-stats-link {
+    background: #009A44 !important;
+    color: #ffffff !important;
+    border: 1px solid #007a36 !important;
+    box-shadow: 0 1px 3px rgba(0,154,68,.25);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+ul.object-tools li a.rp-stats-link:hover {
+    background: #007a36 !important;
+    box-shadow: 0 3px 8px rgba(0,154,68,.4);
+    transform: translateY(-1px);
+}
+html.rp-dark ul.object-tools li a.rp-stats-link {
+    background: #22c55e !important;
+    border-color: #16a34a !important;
+    color: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(34,197,94,.4);
+}
+html.rp-dark ul.object-tools li a.rp-stats-link:hover {
+    background: #16a34a !important;
+    box-shadow: 0 3px 8px rgba(34,197,94,.55);
+}
+
+/* ── Bouton "📅 Planification newsletter" ────────────────────────── */
+ul.object-tools li a.rp-planif-link {
+    background: #F77F00 !important;
+    color: #ffffff !important;
+    border: 1px solid #e06a00 !important;
+    box-shadow: 0 1px 3px rgba(247,127,0,.25);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+ul.object-tools li a.rp-planif-link:hover {
+    background: #e06a00 !important;
+    box-shadow: 0 3px 8px rgba(247,127,0,.4);
+    transform: translateY(-1px);
+}
+html.rp-dark ul.object-tools li a.rp-planif-link {
+    background: #fb923c !important;
+    border-color: #F77F00 !important;
+    color: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(251,146,60,.4);
+}
+html.rp-dark ul.object-tools li a.rp-planif-link:hover {
+    background: #F77F00 !important;
+    box-shadow: 0 3px 8px rgba(251,146,60,.55);
+}
+
+/* ── Actions ─────────────────────────────────────────────────────────── */
+.actions { background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 10px; padding: 9px 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.actions select { border: 1px solid #e2e8f0; border-radius: 8px; padding: 5px 10px; font-size: 0.92rem; color: #374151; background: #fff; outline: none; }
+.actions select:focus { border-color: #009A44; box-shadow: 0 0 0 3px rgba(0,154,68,.1); }
+
+/* ── Formulaires ─────────────────────────────────────────────────────── */
+.form-row { padding: 12px 18px; border-bottom: 1px solid #f8fafc; }
+.form-row:last-child { border-bottom: none; }
+.form-row label { font-weight: 600; font-size: 1rem; color: #475569; }
+.form-row input[type="text"], .form-row input[type="email"], .form-row input[type="url"],
+.form-row input[type="password"], .form-row input[type="number"], .form-row input[type="date"],
+.form-row textarea, .form-row select {
+    border: 1px solid #e2e8f0; border-radius: 9px; padding: 8px 12px;
+    font-size: 1rem; color: #334155; background: #fff; transition: border-color .15s, box-shadow .15s;
+}
+.form-row input:focus, .form-row textarea:focus, .form-row select:focus {
+    border-color: #009A44; box-shadow: 0 0 0 3px rgba(0,154,68,.1); outline: none;
+}
+.submit-row { background: #f8fafc; border-top: 1px solid #f1f5f9; padding: 14px 18px; border-radius: 0 0 16px 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.submit-row input[type="submit"] { background: #009A44; color: #fff; }
+.submit-row input[type="submit"]:hover { background: #007a36; }
+.submit-row p.deletelink-box a.deletelink { background: #ef4444; color: #fff; border-radius: 10px; padding: 8px 16px; font-weight: 700; font-size: 1rem; text-decoration: none; transition: background .15s; }
+.submit-row p.deletelink-box a.deletelink:hover { background: #dc2626; }
+
+/* ── Fieldsets ───────────────────────────────────────────────────────── */
+fieldset { border: none; background: #fafafa; border-radius: 14px; border: 1px solid #e8f0ec; margin-bottom: 16px; overflow: hidden; }
+fieldset h2 { background: #f8fafc; color: #475569; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; padding: 12px 18px; margin: 0; border-bottom: 1px solid #f1f5f9; }
+
+/* ── Pagination ──────────────────────────────────────────────────────── */
+.paginator { background: transparent; padding: 12px 0; font-size: 0.92rem; color: #64748b; }
+.paginator a { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 5px 11px; color: #374151; text-decoration: none; font-weight: 600; transition: all .15s; }
+.paginator a:hover { background: #f0fdf4; border-color: #009A44; color: #009A44; }
+.paginator .this-page { background: #009A44; color: #fff; border: 1px solid #009A44; border-radius: 8px; padding: 5px 11px; font-weight: 700; }
+
+/* ── Messages ────────────────────────────────────────────────────────── */
+ul.messagelist { margin: 0 0 14px; padding: 0; list-style: none; }
+ul.messagelist li { border-radius: 12px; padding: 11px 16px; font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+ul.messagelist li.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+ul.messagelist li.warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+ul.messagelist li.error   { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+/* ── Liens ───────────────────────────────────────────────────────────── */
+a:link, a:visited { color: #007a36; }
+a:hover { color: #F77F00; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   DARK MODE — palette sombre douce, textes toujours lisibles
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Surcharge des variables CSS Django (source des fonds blancs natifs) */
+html.rp-dark {
+    --primary:                 #4ade80;
+    --secondary:               #22c55e;
+    --accent:                  #F77F00;
+    --body-bg:                 #0f172a;
+    --body-fg:                 #e2e8f0;
+    --body-quiet-color:        #94a3b8;
+    --header-bg:               #131c2b;
+    --header-color:            #cbd5e1;
+    --header-branding-color:   #F77F00;
+    --header-link-color:       #cbd5e1;
+    --breadcrumbs-bg:          #0f172a;
+    --breadcrumbs-fg:          #94a3b8;
+    --breadcrumbs-link-fg:     #F77F00;
+    --link-fg:                 #4ade80;
+    --link-hover-color:        #F77F00;
+    --link-selected-fg:        #4ade80;
+    --hairline-color:          #334155;
+    --border-color:            #334155;
+    --darkened-bg:             #162032;
+    --selected-bg:             #1a3a2a;
+    --selected-row:            #1a3a2a;
+    --button-fg:               #fff;
+    --button-bg:               #009A44;
+    --button-hover-bg:         #007a36;
+    --default-button-bg:       #F77F00;
+    --default-button-hover-bg: #e06a00;
+    --delete-button-bg:        #ef4444;
+    --close-button-bg:         #334155;
+    --close-button-hover-bg:   #475569;
+    --object-tools-fg:         #fff;
+    --object-tools-bg:         #F77F00;
+    --object-tools-hover-bg:   #e06a00;
+    --form-input-bg:           #0f172a;
+    --input-border:            #334155;
+    --input-focus-border:      #4ade80;
+    --error-fg:                #fca5a5;
+}
+
+html.rp-dark { background: #0f172a; color: #e2e8f0; }
+html.rp-dark h1, html.rp-dark h2, html.rp-dark h3,
+html.rp-dark h4, html.rp-dark h5, html.rp-dark h6 { color: #f8fafc; }
+/* On laisse Django gérer ses widgets (autocomplete, calendrier, tooltips…)
+   pour ne pas écraser leur couleur sur fond blanc. On force la couleur claire
+   uniquement dans les zones qu'on a explicitement assombries. */
+html.rp-dark #content p,
+html.rp-dark #content li,
+html.rp-dark #content label,
+html.rp-dark #content fieldset,
+html.rp-dark #content > h1,
+html.rp-dark #content > h2,
+html.rp-dark #content > h3 { color: #e2e8f0; }
+html.rp-dark #content .help,
+html.rp-dark #content .help-tooltip,
+html.rp-dark #content .form-row .help,
+html.rp-dark #content small { color: #94a3b8; }
+
+/* Garde-fou : si un widget Django (autocomplete, dropdown Select2,
+   calendrier) reste sur fond blanc en dark mode, on garde son texte foncé. */
+html.rp-dark .select2-dropdown,
+html.rp-dark .select2-results,
+html.rp-dark .calendarbox,
+html.rp-dark .clockbox,
+html.rp-dark .timezonewarning,
+html.rp-dark .help-tooltip {
+    color: #1e293b;
+}
+html.rp-dark .select2-results__option { color: #1e293b; }
+
+/* Header — dark slate, logo orange préservé */
+html.rp-dark #header {
+    background: #131c2b;
+    border-bottom: 1px solid #1e293b;
+    box-shadow: 0 1px 4px rgba(0,0,0,.4);
+    color: #cbd5e1;
+}
+html.rp-dark .rp-brand-name { color: #F77F00; }
+html.rp-dark .rp-brand-sub  { color: #64748b; }
+html.rp-dark #branding h1 a,
+html.rp-dark #branding h1 a:link,
+html.rp-dark #branding h1 a:visited { color: #F77F00; }
+html.rp-dark #user-tools { color: #cbd5e1; }
+html.rp-dark #user-tools strong { color: #f8fafc; }
+html.rp-dark #user-tools a,
+html.rp-dark #user-tools a:link,
+html.rp-dark #user-tools a:visited,
+html.rp-dark #user-tools button {
+    color: #fdba74 !important;
+    background: transparent;
+    border-color: transparent;
+}
+html.rp-dark #user-tools a:hover,
+html.rp-dark #user-tools button:hover {
+    background: rgba(247,127,0,.15);
+    border-color: rgba(247,127,0,.4);
+    color: #fed7aa !important;
+}
+/* Bouton Déconnexion en sombre : reste orange plein, bien visible */
+html.rp-dark #user-tools form#logout-form button,
+html.rp-dark #user-tools button[type="submit"] {
+    background: #F77F00 !important;
+    color: #fff !important;
+    border-color: #F77F00 !important;
+    box-shadow: 0 2px 8px rgba(247,127,0,.35);
+}
+html.rp-dark #user-tools form#logout-form button:hover,
+html.rp-dark #user-tools button[type="submit"]:hover {
+    background: #fb923c !important;
+    border-color: #fb923c !important;
+    color: #fff !important;
+    box-shadow: 0 4px 12px rgba(247,127,0,.5);
+}
+
+/* Breadcrumbs dark */
+html.rp-dark div.breadcrumbs {
+    background: #0f172a;
+    border-bottom: 1px solid #1e293b;
+    color: #94a3b8;
+}
+html.rp-dark div.breadcrumbs a,
+html.rp-dark div.breadcrumbs a:link,
+html.rp-dark div.breadcrumbs a:visited { color: #F77F00; }
+html.rp-dark div.breadcrumbs a:hover { color: #fb923c; }
+html.rp-dark #nav-sidebar {
+    background: #2a1f10;
+    border-color: rgba(247,127,0,.25);
+    box-shadow: 2px 0 10px rgba(0,0,0,.3);
+}
+html.rp-dark #nav-sidebar th[scope="row"] a,
+html.rp-dark #nav-sidebar .module a { color: #e2e8f0; }
+html.rp-dark #nav-sidebar .module caption a,
+html.rp-dark #nav-sidebar .module caption a:link,
+html.rp-dark #nav-sidebar .module caption a:visited { color: #fb923c !important; }
+html.rp-dark #nav-sidebar .module caption a:hover { color: #fdba74 !important; }
+html.rp-dark #nav-sidebar .module:has(tr.selected) caption { background: #F77F00 !important; }
+html.rp-dark #nav-sidebar .module:has(tr.selected) caption a,
+html.rp-dark #nav-sidebar .module:has(tr.selected) caption a:link,
+html.rp-dark #nav-sidebar .module:has(tr.selected) caption a:visited { color: #fff !important; }
+html.rp-dark #nav-sidebar th[scope="row"] a:hover,
+html.rp-dark #nav-sidebar .module a:hover { background: rgba(247,127,0,.15); color: #fdba74; }
+html.rp-dark #nav-sidebar tr.selected a  { background: #F77F00; color: #fff; }
+
+html.rp-dark .module,
+html.rp-dark #changelist .results,
+html.rp-dark #changelist-filter,
+html.rp-dark fieldset { background: #1e293b; border-color: #334155; }
+
+html.rp-dark .module caption,
+html.rp-dark .module > h2,
+html.rp-dark #changelist table thead th,
+html.rp-dark #changelist-filter h2,
+html.rp-dark fieldset h2 { background: #162032; color: #94a3b8; border-color: #334155; }
+
+html.rp-dark #changelist table tbody td,
+html.rp-dark #changelist table tbody th { color: #e2e8f0; border-color: #1e293b; }
+html.rp-dark #changelist table tbody td a,
+html.rp-dark #changelist table tbody th a { color: #fb923c; }
+html.rp-dark #changelist table tbody td a:hover,
+html.rp-dark #changelist table tbody th a:hover { color: #fdba74; }
+html.rp-dark #changelist table tbody tr:hover td,
+html.rp-dark #changelist table tbody tr:hover th { background: #162032; }
+html.rp-dark tr.selected td,
+html.rp-dark tr.selected th { background: #1a3a2a !important; }
+
+html.rp-dark #changelist-filter ul li a { color: #94a3b8; }
+html.rp-dark #changelist-filter ul li a:hover,
+html.rp-dark #changelist-filter ul li.selected a { background: #1a3a2a; color: #4ade80; }
+html.rp-dark #changelist-filter h3 { color: #cbd5e1; }
+html.rp-dark #changelist-filter .admin-filter-search-input,
+html.rp-dark #changelist-filter input[type="text"][placeholder],
+html.rp-dark #changelist-filter input[type="search"] {
+    background: #0f172a;
+    color: #f1f5f9;
+    border-color: #334155;
+}
+html.rp-dark #changelist-filter input::placeholder { color: #64748b; }
+
+html.rp-dark #changelist-search { background: #1e293b; border-color: #334155; }
+html.rp-dark #changelist-search input[type="search"] { color: #cbd5e1; }
+
+html.rp-dark .actions { background: #162032; border-color: #334155; }
+html.rp-dark .actions select { background: #1e293b; color: #cbd5e1; border-color: #334155; }
+
+html.rp-dark .form-row { border-color: #1e293b; }
+html.rp-dark .form-row label { color: #cbd5e1; }
+html.rp-dark .form-row input[type="text"],
+html.rp-dark .form-row input[type="email"],
+html.rp-dark .form-row input[type="url"],
+html.rp-dark .form-row input[type="password"],
+html.rp-dark .form-row input[type="number"],
+html.rp-dark .form-row input[type="date"],
+html.rp-dark .form-row textarea,
+html.rp-dark .form-row select { background: #0f172a; color: #f1f5f9; border-color: #334155; }
+html.rp-dark .form-row input[type="text"]::placeholder,
+html.rp-dark .form-row input[type="email"]::placeholder,
+html.rp-dark .form-row input[type="url"]::placeholder,
+html.rp-dark .form-row input[type="password"]::placeholder,
+html.rp-dark .form-row input[type="number"]::placeholder,
+html.rp-dark .form-row textarea::placeholder { color: #64748b; }
+
+html.rp-dark .submit-row { background: #162032; border-color: #334155; }
+html.rp-dark .paginator a { background: #1e293b; border-color: #334155; color: #cbd5e1; }
+html.rp-dark a:link, html.rp-dark a:visited { color: #4ade80; }
+html.rp-dark a:hover { color: #F77F00; }
+
+/* ── Dropdowns & select : textes lisibles en mode sombre ──────────────── */
+
+/* Tous les <select> non couverts par les règles spécifiques */
+html.rp-dark select {
+    background-color: #0f172a !important;
+    color: #e2e8f0 !important;
+    border-color: #334155 !important;
+}
+/* Options dans les <select> (liste déroulante native) */
+html.rp-dark select option {
+    background-color: #1e293b;
+    color: #e2e8f0;
+}
+html.rp-dark select option:hover,
+html.rp-dark select option:checked {
+    background-color: #1a3a2a;
+    color: #4ade80;
+}
+
+/* Filtre latéral : améliorer la lisibilité des liens par défaut */
+html.rp-dark #changelist-filter ul li a { color: #cbd5e1; }  /* plus clair que #94a3b8 */
+html.rp-dark #changelist-filter ul li a:hover,
+html.rp-dark #changelist-filter ul li.selected a { background: #1a3a2a; color: #4ade80; }
+
+/* Listes déroulantes du sélecteur multi (filter_horizontal / filter_vertical) */
+html.rp-dark .selector select { background: #0f172a !important; color: #e2e8f0 !important; border-color: #334155 !important; }
+html.rp-dark .selector select option { background-color: #1e293b; color: #e2e8f0; }
+html.rp-dark .selector select option:hover,
+html.rp-dark .selector select option:checked { background-color: #162032; color: #4ade80; }
+
+/* Related lookups (loupe icône à côté des FK) */
+html.rp-dark .related-widget-wrapper select { background: #0f172a !important; color: #e2e8f0 !important; border-color: #334155 !important; }
+
+/* Autocomplete dropdown (Django's autocomplete_fields) */
+html.rp-dark .select2-container--default .select2-selection--single,
+html.rp-dark .select2-container--default .select2-selection--multiple {
+    background-color: #0f172a !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+html.rp-dark .select2-container--default .select2-selection--single .select2-selection__rendered { color: #e2e8f0 !important; }
+html.rp-dark .select2-dropdown { background-color: #1e293b !important; border-color: #334155 !important; }
+html.rp-dark .select2-results__option { color: #e2e8f0 !important; background-color: #1e293b !important; }
+html.rp-dark .select2-results__option--highlighted { background-color: #1a3a2a !important; color: #4ade80 !important; }
+html.rp-dark .select2-search--dropdown input { background: #0f172a !important; color: #e2e8f0 !important; border-color: #334155 !important; }
+
+/* Changelist : liens dans les cellules du tableau */
+html.rp-dark #changelist table tbody td a,
+html.rp-dark #changelist table tbody th a { color: #93c5fd !important; }
+html.rp-dark #changelist table tbody td a:hover,
+html.rp-dark #changelist table tbody th a:hover { color: #fb923c !important; }
+
+/* ── Zones fréquemment blanches non couvertes ──────────────────────────── */
+html.rp-dark #content        { background: #0f172a; }
+html.rp-dark #container      { background: #0f172a; }
+html.rp-dark #content-main   { background: #0f172a; }
+html.rp-dark #content-related { background: #0f172a; }
+html.rp-dark #footer { background: #0a1628; color: #64748b; border-top: 1px solid #1e293b; }
+
+/* Inputs génériques hors .form-row */
+html.rp-dark input[type="text"],
+html.rp-dark input[type="email"],
+html.rp-dark input[type="url"],
+html.rp-dark input[type="password"],
+html.rp-dark input[type="number"],
+html.rp-dark input[type="date"],
+html.rp-dark input[type="time"],
+html.rp-dark input[type="datetime-local"],
+html.rp-dark input[type="search"],
+html.rp-dark textarea,
+html.rp-dark select {
+    background: #0f172a !important;
+    color: #e2e8f0 !important;
+    border-color: #334155 !important;
+}
+
+/* Messages d'erreur */
+html.rp-dark .errornote { background: rgba(239,68,68,.12); color: #fca5a5; border-color: rgba(239,68,68,.35); }
+html.rp-dark ul.errorlist li { background: rgba(239,68,68,.12); color: #fca5a5; padding: 6px 12px; border-radius: 6px; }
+
+/* Labels et textes de formulaire */
+html.rp-dark .aligned label { color: #cbd5e1; }
+html.rp-dark label { color: #cbd5e1; }
+
+/* Collapse sections */
+html.rp-dark .collapse-toggle { color: #4ade80; }
+html.rp-dark fieldset.collapsed h2 { background: #162032; color: #94a3b8; }
+
+/* Popup / related-objects popup */
+html.rp-dark #related-objects { background: #1e293b; border-color: #334155; }
+html.rp-dark .related-popup { background: #1e293b; }
+
+/* Object history table */
+html.rp-dark table.change-history td,
+html.rp-dark table.change-history th { background: #1e293b; color: #e2e8f0; border-color: #334155; }
+html.rp-dark table.change-history thead th { background: #162032; }
+
+/* Prep-populated fields */
+html.rp-dark .prepopulated_field .prepopulated_field_input { background: #0f172a; color: #e2e8f0; }
+
+/* Result list (changelist) */
+html.rp-dark #result_list { background: #1e293b; }
+html.rp-dark #result_list tr.row1 td,
+html.rp-dark #result_list tr.row1 th { background: #1e293b; }
+html.rp-dark #result_list tr.row2 td,
+html.rp-dark #result_list tr.row2 th { background: #162032; }
+
+/* Date/time shortcuts */
+html.rp-dark .datetimeshortcuts a { color: #4ade80; }
+html.rp-dark .timezonewarning { background: rgba(234,179,8,.12); color: #fde68a; border-color: rgba(234,179,8,.3); }
+
+/* ── Mode sombre : compléments d'harmonisation ─────────────────────────── */
+
+/* Messages (success / warning / error) */
+html.rp-dark ul.messagelist li.success { background: rgba(34,197,94,.12); color: #86efac; border-color: rgba(34,197,94,.3); }
+html.rp-dark ul.messagelist li.warning { background: rgba(234,179,8,.12); color: #fde68a; border-color: rgba(234,179,8,.3); }
+html.rp-dark ul.messagelist li.error   { background: rgba(239,68,68,.12); color: #fca5a5; border-color: rgba(239,68,68,.3); }
+
+/* Textes d'aide & description (help) */
+html.rp-dark .help, html.rp-dark p.help, html.rp-dark .help-tooltip { color: #94a3b8 !important; }
+html.rp-dark .form-row .help { background: transparent; color: #94a3b8; }
+
+/* Inlines (TabularInline / StackedInline) */
+html.rp-dark .inline-group, html.rp-dark .inline-related { background: #1e293b; border-color: #334155; }
+html.rp-dark .inline-related h3 { background: #162032; color: #94a3b8; border-color: #334155; }
+html.rp-dark .add-row a, html.rp-dark .add-row { background: #162032; border-color: #334155; color: #4ade80; }
+
+/* Tabular header */
+html.rp-dark table.tabular thead th { background: #162032; color: #94a3b8; border-color: #334155; }
+
+/* Checkboxes / radios — couleur d'accent */
+html.rp-dark input[type="checkbox"],
+html.rp-dark input[type="radio"] { accent-color: #4ade80; }
+
+/* Sélections en mode sombre (text selection) */
+html.rp-dark ::selection { background: rgba(34,197,94,.35); color: #f1f5f9; }
+
+/* Boutons défaut (Enregistrer / Continuer) — vert ivoirien en clair, vert plus clair en sombre */
+html.rp-dark .button.default, html.rp-dark input[type=submit].default { background: #009A44; color: #fff; }
+html.rp-dark .button.default:hover, html.rp-dark input[type=submit].default:hover { background: #00b84f; }
+
+/* Champ readonly */
+html.rp-dark .readonly, html.rp-dark .field-readonly { color: #cbd5e1 !important; }
+
+/* Login page */
+html.rp-dark .login #header { background: linear-gradient(135deg, #003d1a 0%, #007a36 100%); }
+html.rp-dark .login #content { background: #1e293b; }
+html.rp-dark .login #container { background: #1e293b; }
+html.rp-dark .login .form-row input[type="text"],
+html.rp-dark .login .form-row input[type="password"] { background: #162032 !important; color: #cbd5e1 !important; border-color: #334155 !important; }
+
+/* Calendriers / DateTimeShortcuts */
+html.rp-dark .calendar caption, html.rp-dark .calendarbox h2 { background: #162032; color: #94a3b8; }
+html.rp-dark .calendar table { background: #1e293b; color: #cbd5e1; }
+html.rp-dark .calendar td a { color: #cbd5e1; }
+html.rp-dark .calendar td.selected a { background: #009A44; color: #fff; }
+html.rp-dark .module.clockbox h2 { background: #162032; color: #94a3b8; }
+
+/* Sélecteur multi (filter_horizontal) */
+html.rp-dark .selector .selector-available,
+html.rp-dark .selector .selector-chosen { background: #162032; border-color: #334155; }
+html.rp-dark .selector h2 { background: #1e293b; color: #cbd5e1; border-color: #334155; }
+html.rp-dark .selector-filter { background: #1e293b; border-color: #334155; }
+html.rp-dark .selector select { background: #0f172a; color: #cbd5e1; border-color: #334155; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   Override Tailwind CDN — couleurs gray/slate utilisées sur les pages
+   admin custom (tableau_bord, verifications_liste, verification_detail).
+   !important nécessaire car Tailwind charge ses classes après nos règles.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Textes Tailwind en mode sombre */
+html.rp-dark .text-gray-900,
+html.rp-dark .text-gray-800,
+html.rp-dark .text-slate-900,
+html.rp-dark .text-slate-800,
+html.rp-dark .text-zinc-900,
+html.rp-dark .text-zinc-800,
+html.rp-dark .text-neutral-900,
+html.rp-dark .text-neutral-800 { color: #f1f5f9 !important; }
+
+html.rp-dark .text-gray-700,
+html.rp-dark .text-slate-700,
+html.rp-dark .text-zinc-700,
+html.rp-dark .text-neutral-700 { color: #e2e8f0 !important; }
+
+html.rp-dark .text-gray-600,
+html.rp-dark .text-slate-600,
+html.rp-dark .text-zinc-600,
+html.rp-dark .text-neutral-600 { color: #cbd5e1 !important; }
+
+html.rp-dark .text-gray-500,
+html.rp-dark .text-slate-500,
+html.rp-dark .text-zinc-500,
+html.rp-dark .text-neutral-500 { color: #94a3b8 !important; }
+
+html.rp-dark .text-gray-400,
+html.rp-dark .text-slate-400 { color: #64748b !important; }
+
+/* Fonds Tailwind */
+html.rp-dark .bg-white     { background-color: #1e293b !important; }
+html.rp-dark .bg-gray-50,
+html.rp-dark .bg-slate-50  { background-color: #162032 !important; }
+html.rp-dark .bg-gray-100,
+html.rp-dark .bg-slate-100 { background-color: #1e2d42 !important; }
+html.rp-dark .bg-gray-200,
+html.rp-dark .bg-slate-200 { background-color: #243348 !important; }
+
+/* Bordures Tailwind */
+html.rp-dark .border-gray-100,
+html.rp-dark .border-gray-200,
+html.rp-dark .border-slate-100,
+html.rp-dark .border-slate-200 { border-color: #334155 !important; }
+html.rp-dark .border-gray-300,
+html.rp-dark .border-slate-300 { border-color: #475569 !important; }
+
+/* Hover Tailwind */
+html.rp-dark .hover\:bg-gray-50:hover,
+html.rp-dark .hover\:bg-slate-50:hover  { background-color: #1e2d42 !important; }
+html.rp-dark .hover\:bg-gray-100:hover,
+html.rp-dark .hover\:bg-slate-100:hover { background-color: #243348 !important; }
+
+/* ── Pages Stats (.sp-*, .donut-*, .record-*) ────────────────────────── */
+html.rp-dark .sp-title { color: #f1f5f9; }
+html.rp-dark .sp-subtitle { color: #94a3b8; }
+html.rp-dark .sp-back {
+    background: rgba(0,154,68,.15);
+    color: #4ade80;
+    border-color: rgba(0,154,68,.3);
+}
+html.rp-dark .sp-back:hover {
+    background: rgba(0,154,68,.25);
+    color: #86efac;
+}
+html.rp-dark .sp-kpi,
+html.rp-dark .sp-card {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 1px 6px rgba(0,0,0,.3);
+}
+html.rp-dark .sp-kpi-val { color: #f1f5f9; }
+html.rp-dark .sp-kpi-lbl { color: #94a3b8; }
+html.rp-dark .sp-kpi-sub { color: #4ade80; }
+html.rp-dark .sp-kpi-sub.orange { color: #fb923c; }
+html.rp-dark .sp-card-title { color: #cbd5e1; }
+html.rp-dark .sp-card-sub { color: #94a3b8; }
+html.rp-dark .donut-center strong { color: #f1f5f9; }
+html.rp-dark .donut-center span { color: #94a3b8; }
+html.rp-dark .record-val { color: #fb923c; }
+html.rp-dark .record-label { color: #94a3b8; }
+html.rp-dark .big-pct { color: #f1f5f9; }
+
+/* ── Masquer le toggle natif Django (conflit avec notre système 3 modes) ── */
+#user-tools .theme-toggle,
+#user-tools button.theme-toggle { display: none !important; }
+
+/* ── Bouton paramètres ───────────────────────────────────────────────── */
+#rp-settings-btn {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 1.54rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,.2);
+    transition: all .2s;
+    z-index: 9999;
+    background: #009A44;
+    color: #fff;
+}
+#rp-settings-btn:hover { transform: scale(1.1); background: #007a36; }
+html.rp-dark #rp-settings-btn { background: #F77F00; }
+html.rp-dark #rp-settings-btn:hover { background: #e06a00; }
+
+/* ── Panneau de paramètres ───────────────────────────────────────────── */
+#rp-settings-panel {
+    position: fixed;
+    bottom: 90px;
+    right: 28px;
+    width: 268px;
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.16);
+    padding: 20px 18px;
+    z-index: 9998;
+    border: 1px solid #e8f0ec;
+    opacity: 0;
+    transform: translateY(10px) scale(.97);
+    pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+}
+#rp-settings-panel.rp-open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+.rp-panel-sep {
+    border: none;
+    border-top: 1px solid #f1f5f9;
+    margin: 14px 0;
+}
+.rp-panel-label {
+    font-size: 0.77rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #94a3b8;
+    margin: 0 0 10px;
+}
+/* Toggle thème sombre */
+.rp-theme-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.rp-theme-name { font-size: 1rem; font-weight: 600; color: #374151; }
+.rp-toggle-wrap {
+    background: #e2e8f0;
+    border: none;
+    border-radius: 20px;
+    width: 44px;
+    height: 24px;
+    cursor: pointer;
+    position: relative;
+    transition: background .2s;
+    flex-shrink: 0;
+}
+.rp-toggle-wrap::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform .2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,.2);
+}
+.rp-toggle-wrap.rp-on { background: #009A44; }
+.rp-toggle-wrap.rp-on::after { transform: translateX(20px); }
+
+/* Boutons police & taille */
+.rp-btn-group { display: flex; flex-wrap: wrap; gap: 6px; }
+.rp-opt-btn {
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 5px 11px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: all .15s;
+    color: #475569;
+}
+.rp-opt-btn:hover { border-color: #009A44; color: #009A44; background: #f0fdf4; }
+.rp-opt-btn.rp-on { border-color: #009A44; background: #009A44; color: #fff; }
+
+/* Aperçu de la taille courante */
+.rp-size-preview {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    margin-top: 8px;
+}
+
+/* Dark mode du panneau */
+html.rp-dark #rp-settings-panel     { background: #1e293b; border-color: #334155; }
+html.rp-dark .rp-panel-sep          { border-color: #334155; }
+html.rp-dark .rp-theme-name         { color: #cbd5e1; }
+html.rp-dark .rp-opt-btn            { background: #162032; border-color: #334155; color: #94a3b8; }
+html.rp-dark .rp-opt-btn:hover      { border-color: #4ade80; color: #4ade80; background: #1a3a2a; }
+html.rp-dark .rp-opt-btn.rp-on      { border-color: #009A44; background: #009A44; color: #fff; }
+html.rp-dark .rp-toggle-wrap        { background: #334155; }
+html.rp-dark .rp-toggle-wrap.rp-on  { background: #009A44; }
+html.rp-dark .rp-size-preview       { color: #64748b; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   MODE NOIR (OLED / pur noir)
+   ══════════════════════════════════════════════════════════════════════ */
+/* ── Variables CSS Django en mode noir */
+html.rp-noir {
+    --body-bg:       #000;
+    --body-fg:       #e2e8f0;
+    --darkened-bg:   #080808;
+    --selected-bg:   #0d1a0a;
+    --selected-row:  #0d1a0a;
+    --hairline-color:#222;
+    --border-color:  #222;
+    --header-bg:     #000;
+    --breadcrumbs-bg:#000;
+    --form-input-bg: #000;
+    --input-border:  #333;
+}
+
+html.rp-noir { background: #000; color: #e2e8f0; }
+html.rp-noir h1, html.rp-noir h2, html.rp-noir h3,
+html.rp-noir h4, html.rp-noir h5, html.rp-noir h6 { color: #f8fafc; }
+html.rp-noir #content p,
+html.rp-noir #content li,
+html.rp-noir #content label,
+html.rp-noir #content fieldset,
+html.rp-noir #content > h1,
+html.rp-noir #content > h2,
+html.rp-noir #content > h3 { color: #e2e8f0; }
+html.rp-noir #content .help,
+html.rp-noir #content .help-tooltip,
+html.rp-noir #content .form-row .help,
+html.rp-noir #content small { color: #94a3b8; }
+html.rp-noir .select2-dropdown,
+html.rp-noir .select2-results,
+html.rp-noir .calendarbox,
+html.rp-noir .clockbox { color: #1e293b; }
+
+html.rp-noir #header {
+    background: #000;
+    border-bottom: 1px solid #111;
+    box-shadow: 0 1px 4px rgba(0,0,0,.8);
+    color: #cbd5e1;
+}
+html.rp-noir .rp-brand-name { color: #F77F00; }
+html.rp-noir .rp-brand-sub  { color: #4b5563; }
+html.rp-noir #branding h1 a,
+html.rp-noir #branding h1 a:link,
+html.rp-noir #branding h1 a:visited { color: #F77F00; }
+html.rp-noir #user-tools { color: #cbd5e1; }
+html.rp-noir #user-tools strong { color: #f8fafc; }
+html.rp-noir #user-tools a,
+html.rp-noir #user-tools a:link,
+html.rp-noir #user-tools a:visited,
+html.rp-noir #user-tools button { color: #fb923c !important; background: transparent; border-color: transparent; }
+html.rp-noir #user-tools a:hover,
+html.rp-noir #user-tools button:hover { background: rgba(204,106,0,.15); border-color: rgba(204,106,0,.4); color: #fdba74 !important; }
+html.rp-noir #user-tools form#logout-form button,
+html.rp-noir #user-tools button[type="submit"] {
+    background: #CC6A00 !important; color: #fff !important; border-color: #CC6A00 !important;
+    box-shadow: 0 2px 8px rgba(204,106,0,.4);
+}
+html.rp-noir #user-tools form#logout-form button:hover,
+html.rp-noir #user-tools button[type="submit"]:hover {
+    background: #b85200 !important; border-color: #b85200 !important;
+}
+
+html.rp-noir div.breadcrumbs { background: #000; border-bottom: 1px solid #111; color: #94a3b8; }
+html.rp-noir div.breadcrumbs a,
+html.rp-noir div.breadcrumbs a:link,
+html.rp-noir div.breadcrumbs a:visited { color: #fb923c; }
+html.rp-noir div.breadcrumbs a:hover { color: #fdba74; }
+
+html.rp-noir #nav-sidebar { background: #0a0600; border-color: rgba(204,106,0,.2); box-shadow: 2px 0 10px rgba(0,0,0,.6); }
+html.rp-noir #nav-sidebar th[scope="row"] a,
+html.rp-noir #nav-sidebar .module a { color: #e2e8f0; }
+html.rp-noir #nav-sidebar .module caption a,
+html.rp-noir #nav-sidebar .module caption a:link,
+html.rp-noir #nav-sidebar .module caption a:visited { color: #fb923c !important; }
+html.rp-noir #nav-sidebar .module caption a:hover { color: #fdba74 !important; }
+html.rp-noir #nav-sidebar .module:has(tr.selected) caption { background: #CC6A00 !important; }
+html.rp-noir #nav-sidebar .module:has(tr.selected) caption a,
+html.rp-noir #nav-sidebar .module:has(tr.selected) caption a:link,
+html.rp-noir #nav-sidebar .module:has(tr.selected) caption a:visited { color: #fff !important; }
+html.rp-noir #nav-sidebar th[scope="row"] a:hover,
+html.rp-noir #nav-sidebar .module a:hover { background: rgba(204,106,0,.12); color: #fdba74; }
+html.rp-noir #nav-sidebar tr.selected a { background: #CC6A00; color: #fff; }
+
+html.rp-noir .module,
+html.rp-noir #changelist .results,
+html.rp-noir #changelist-filter,
+html.rp-noir fieldset { background: #0d0d0d; border-color: #222; }
+html.rp-noir .module caption,
+html.rp-noir .module > h2,
+html.rp-noir #changelist table thead th,
+html.rp-noir #changelist-filter h2,
+html.rp-noir fieldset h2 { background: #080808; color: #94a3b8; border-color: #222; }
+html.rp-noir #changelist table tbody td,
+html.rp-noir #changelist table tbody th { color: #e2e8f0; border-color: #0d0d0d; }
+html.rp-noir #changelist table tbody td a,
+html.rp-noir #changelist table tbody th a { color: #fb923c; }
+html.rp-noir #changelist table tbody td a:hover,
+html.rp-noir #changelist table tbody th a:hover { color: #fdba74; }
+html.rp-noir #changelist table tbody tr:hover td,
+html.rp-noir #changelist table tbody tr:hover th { background: #080808; }
+html.rp-noir tr.selected td,
+html.rp-noir tr.selected th { background: #0d1a0a !important; }
+
+html.rp-noir #changelist-filter ul li a { color: #94a3b8; }
+html.rp-noir #changelist-filter ul li a:hover,
+html.rp-noir #changelist-filter ul li.selected a { background: #0d1a0a; color: #4ade80; }
+html.rp-noir #changelist-filter h3 { color: #cbd5e1; }
+html.rp-noir #changelist-filter .admin-filter-search-input,
+html.rp-noir #changelist-filter input[type="text"][placeholder],
+html.rp-noir #changelist-filter input[type="search"] { background: #000; color: #f1f5f9; border-color: #222; }
+html.rp-noir #changelist-filter input::placeholder { color: #4b5563; }
+
+html.rp-noir #changelist-search { background: #0d0d0d; border-color: #222; }
+html.rp-noir #changelist-search input[type="search"] { color: #cbd5e1; }
+html.rp-noir #changelist-search input[type="submit"] { background: #007A35; }
+html.rp-noir #changelist-search input[type="submit"]:hover { background: #005F29; }
+
+html.rp-noir .actions { background: #080808; border-color: #222; }
+html.rp-noir .actions select { background: #0d0d0d; color: #cbd5e1; border-color: #222; }
+
+html.rp-noir .form-row { border-color: #111; }
+html.rp-noir .form-row label { color: #cbd5e1; }
+html.rp-noir .form-row input[type="text"],
+html.rp-noir .form-row input[type="email"],
+html.rp-noir .form-row input[type="url"],
+html.rp-noir .form-row input[type="password"],
+html.rp-noir .form-row input[type="number"],
+html.rp-noir .form-row input[type="date"],
+html.rp-noir .form-row textarea,
+html.rp-noir .form-row select { background: #000; color: #f1f5f9; border-color: #333; }
+html.rp-noir .form-row input::placeholder,
+html.rp-noir .form-row textarea::placeholder { color: #4b5563; }
+
+html.rp-noir .submit-row { background: #080808; border-color: #222; }
+html.rp-noir .submit-row input[type="submit"] { background: #007A35; }
+html.rp-noir .submit-row input[type="submit"]:hover { background: #005F29; }
+
+html.rp-noir .paginator a { background: #0d0d0d; border-color: #222; color: #cbd5e1; }
+html.rp-noir .paginator a:hover { background: #0d1a0a; border-color: #4ade80; color: #4ade80; }
+html.rp-noir .paginator .this-page { background: #007A35; border-color: #007A35; }
+
+html.rp-noir a:link, html.rp-noir a:visited { color: #4ade80; }
+html.rp-noir a:hover { color: #fb923c; }
+
+html.rp-noir ul.messagelist li.success { background: rgba(34,197,94,.10); color: #86efac; border-color: rgba(34,197,94,.25); }
+html.rp-noir ul.messagelist li.warning { background: rgba(234,179,8,.10); color: #fde68a; border-color: rgba(234,179,8,.25); }
+html.rp-noir ul.messagelist li.error   { background: rgba(239,68,68,.10); color: #fca5a5; border-color: rgba(239,68,68,.25); }
+
+html.rp-noir .help, html.rp-noir p.help { color: #94a3b8 !important; }
+html.rp-noir .inline-group, html.rp-noir .inline-related { background: #0d0d0d; border-color: #222; }
+html.rp-noir .inline-related h3 { background: #080808; color: #94a3b8; border-color: #222; }
+html.rp-noir .add-row a, html.rp-noir .add-row { background: #080808; border-color: #222; color: #4ade80; }
+html.rp-noir table.tabular thead th { background: #080808; color: #94a3b8; border-color: #222; }
+html.rp-noir input[type="checkbox"],
+html.rp-noir input[type="radio"] { accent-color: #4ade80; }
+html.rp-noir ::selection { background: rgba(34,197,94,.3); color: #f1f5f9; }
+html.rp-noir .button.default, html.rp-noir input[type=submit].default { background: #007A35; color: #fff; }
+html.rp-noir .button.default:hover, html.rp-noir input[type=submit].default:hover { background: #005F29; }
+html.rp-noir .readonly, html.rp-noir .field-readonly { color: #cbd5e1 !important; }
+
+html.rp-noir .login #header { background: linear-gradient(135deg, #000 0%, #003318 100%); }
+html.rp-noir .login #content,
+html.rp-noir .login #container { background: #0d0d0d; }
+html.rp-noir .login .form-row input[type="text"],
+html.rp-noir .login .form-row input[type="password"] { background: #000 !important; color: #cbd5e1 !important; border-color: #333 !important; }
+
+/* Dropdowns & select : textes lisibles en mode sombre OLED */
+html.rp-noir select {
+    background-color: #000 !important;
+    color: #e2e8f0 !important;
+    border-color: #333 !important;
+}
+html.rp-noir select option { background-color: #0d0d0d; color: #e2e8f0; }
+html.rp-noir select option:hover,
+html.rp-noir select option:checked { background-color: #0d1a0a; color: #4ade80; }
+
+html.rp-noir #changelist-filter ul li a { color: #cbd5e1; }
+html.rp-noir #changelist-filter ul li a:hover,
+html.rp-noir #changelist-filter ul li.selected a { background: #0d1a0a; color: #4ade80; }
+
+html.rp-noir .related-widget-wrapper select { background: #000 !important; color: #e2e8f0 !important; border-color: #333 !important; }
+
+html.rp-noir .select2-container--default .select2-selection--single,
+html.rp-noir .select2-container--default .select2-selection--multiple {
+    background-color: #000 !important; border-color: #333 !important; color: #e2e8f0 !important;
+}
+html.rp-noir .select2-container--default .select2-selection--single .select2-selection__rendered { color: #e2e8f0 !important; }
+html.rp-noir .select2-dropdown { background-color: #0d0d0d !important; border-color: #222 !important; }
+html.rp-noir .select2-results__option { color: #e2e8f0 !important; background-color: #0d0d0d !important; }
+html.rp-noir .select2-results__option--highlighted { background-color: #0d1a0a !important; color: #4ade80 !important; }
+html.rp-noir .select2-search--dropdown input { background: #000 !important; color: #e2e8f0 !important; border-color: #333 !important; }
+
+html.rp-noir #changelist table tbody td a,
+html.rp-noir #changelist table tbody th a { color: #93c5fd !important; }
+html.rp-noir #changelist table tbody td a:hover,
+html.rp-noir #changelist table tbody th a:hover { color: #fb923c !important; }
+
+html.rp-noir .selector .selector-available,
+html.rp-noir .selector .selector-chosen { background: #080808; border-color: #222; }
+html.rp-noir .selector h2 { background: #0d0d0d; color: #cbd5e1; border-color: #222; }
+html.rp-noir .selector-filter { background: #0d0d0d; border-color: #222; }
+html.rp-noir .selector select { background: #000 !important; color: #e2e8f0 !important; border-color: #222 !important; }
+html.rp-noir .selector select option { background-color: #0d0d0d; color: #e2e8f0; }
+
+/* Tailwind overrides noir */
+html.rp-noir .text-gray-900, html.rp-noir .text-gray-800,
+html.rp-noir .text-slate-900, html.rp-noir .text-slate-800 { color: #f1f5f9 !important; }
+html.rp-noir .text-gray-700, html.rp-noir .text-slate-700  { color: #e2e8f0 !important; }
+html.rp-noir .text-gray-600, html.rp-noir .text-slate-600  { color: #cbd5e1 !important; }
+html.rp-noir .text-gray-500, html.rp-noir .text-slate-500  { color: #94a3b8 !important; }
+html.rp-noir .text-gray-400, html.rp-noir .text-slate-400  { color: #64748b !important; }
+html.rp-noir .bg-white     { background-color: #0d0d0d !important; }
+html.rp-noir .bg-gray-50,  html.rp-noir .bg-slate-50  { background-color: #080808 !important; }
+html.rp-noir .bg-gray-100, html.rp-noir .bg-slate-100 { background-color: #111 !important; }
+html.rp-noir .bg-gray-200, html.rp-noir .bg-slate-200 { background-color: #1a1a1a !important; }
+html.rp-noir .border-gray-100, html.rp-noir .border-gray-200,
+html.rp-noir .border-slate-100, html.rp-noir .border-slate-200 { border-color: #222 !important; }
+html.rp-noir .border-gray-300, html.rp-noir .border-slate-300  { border-color: #333 !important; }
+html.rp-noir .hover\:bg-gray-50:hover, html.rp-noir .hover\:bg-slate-50:hover   { background-color: #111 !important; }
+html.rp-noir .hover\:bg-gray-100:hover, html.rp-noir .hover\:bg-slate-100:hover { background-color: #1a1a1a !important; }
+
+/* Zones fréquemment blanches */
+html.rp-noir #content        { background: #000; }
+html.rp-noir #container      { background: #000; }
+html.rp-noir #content-main   { background: #000; }
+html.rp-noir #content-related { background: #000; }
+html.rp-noir #footer { background: #000; color: #4b5563; border-top: 1px solid #111; }
+html.rp-noir input[type="text"],
+html.rp-noir input[type="email"],
+html.rp-noir input[type="url"],
+html.rp-noir input[type="password"],
+html.rp-noir input[type="number"],
+html.rp-noir input[type="date"],
+html.rp-noir input[type="time"],
+html.rp-noir input[type="datetime-local"],
+html.rp-noir input[type="search"],
+html.rp-noir textarea,
+html.rp-noir select { background: #000 !important; color: #e2e8f0 !important; border-color: #333 !important; }
+html.rp-noir .errornote { background: rgba(239,68,68,.10); color: #fca5a5; border-color: rgba(239,68,68,.28); }
+html.rp-noir ul.errorlist li { background: rgba(239,68,68,.10); color: #fca5a5; }
+html.rp-noir label { color: #cbd5e1; }
+html.rp-noir #result_list tr.row1 td, html.rp-noir #result_list tr.row1 th { background: #0d0d0d; }
+html.rp-noir #result_list tr.row2 td, html.rp-noir #result_list tr.row2 th { background: #080808; }
+
+/* Panneau paramètres noir */
+html.rp-noir #rp-settings-panel  { background: #0d0d0d; border-color: #222; }
+html.rp-noir .rp-panel-sep       { border-color: #222; }
+html.rp-noir .rp-theme-name      { color: #cbd5e1; }
+html.rp-noir .rp-opt-btn         { background: #080808; border-color: #222; color: #94a3b8; }
+html.rp-noir .rp-opt-btn:hover   { border-color: #4ade80; color: #4ade80; background: #0d1a0a; }
+html.rp-noir .rp-opt-btn.rp-on   { border-color: #007A35; background: #007A35; color: #fff; }
+html.rp-noir .rp-toggle-wrap     { background: #222; }
+html.rp-noir .rp-toggle-wrap.rp-on { background: #007A35; }
+html.rp-noir .rp-size-preview    { color: #4b5563; }
+
+/* Stats pages */
+html.rp-noir .sp-kpi, html.rp-noir .sp-card { background: #0d0d0d; border-color: #222; box-shadow: 0 1px 6px rgba(0,0,0,.6); }
+html.rp-noir .sp-kpi-val { color: #f1f5f9; }
+html.rp-noir .sp-kpi-lbl { color: #94a3b8; }
+html.rp-noir .sp-kpi-sub { color: #4ade80; }
+html.rp-noir .sp-kpi-sub.orange { color: #fb923c; }
+html.rp-noir .sp-card-title { color: #cbd5e1; }
+html.rp-noir .record-val { color: #fb923c; }
+html.rp-noir .record-label { color: #94a3b8; }
+
+html.rp-noir #rp-settings-btn { background: #CC6A00; }
+html.rp-noir #rp-settings-btn:hover { background: #b85200; }
+
+/* ── Sections / grandes zones orange & vert → dégradé gris (mode sombre) ── */
+html.rp-dark .rounded-3xl[style*="#F77F00"],
+html.rp-dark .rounded-3xl[style*="#009A44"],
+html.rp-dark [style*="#c05500"],
+html.rp-dark [style*="#005c29"],
+html.rp-dark [style*="background: linear-gradient(145deg"],
+html.rp-dark section[style*="background:#009A44"],
+html.rp-dark section[style*="background:#F77F00"] {
+    background: linear-gradient(135deg,#4B5563 0%,#6B7280 60%,#9CA3AF 100%) !important;
+}
+
+/* ── Sections / grandes zones orange & vert → noir profond (mode noir) ── */
+html.rp-noir .rounded-3xl[style*="#F77F00"],
+html.rp-noir .rounded-3xl[style*="#009A44"],
+html.rp-noir [style*="#c05500"],
+html.rp-noir [style*="#005c29"],
+html.rp-noir [style*="background: linear-gradient(145deg"],
+html.rp-noir section[style*="background:#009A44"],
+html.rp-noir section[style*="background:#F77F00"] {
+    background: linear-gradient(135deg, #000 0%, #080808 60%, #111 100%) !important;
+}
+</style>
+
+<!-- Bouton paramètres -->
+<button id="rp-settings-btn" title="Paramètres d'affichage" onclick="rpTogglePanel(event)">⚙️</button>
+
+<!-- Panneau de paramètres -->
+<div id="rp-settings-panel" role="dialog" aria-label="Paramètres d'affichage">
+
+    <!-- Thème -->
+    <p class="rp-panel-label">Thème</p>
+    <div class="rp-btn-group" id="rp-theme-group">
+        <button class="rp-opt-btn" data-theme-mode="light" onclick="rpSetTheme(this)">☀ Clair</button>
+        <button class="rp-opt-btn" data-theme-mode="dark"  onclick="rpSetTheme(this)">🌙 Nuit</button>
+        <button class="rp-opt-btn" data-theme-mode="noir"  onclick="rpSetTheme(this)">⚫ Sombre</button>
+    </div>
+
+    <hr class="rp-panel-sep">
+
+    <!-- Police -->
+    <p class="rp-panel-label">Police de caractères</p>
+    <div class="rp-btn-group" id="rp-font-group">
+        <button class="rp-opt-btn" data-font="systeme"  onclick="rpSetFont(this)">Système</button>
+        <button class="rp-opt-btn" data-font="inter"    onclick="rpSetFont(this)">Inter</button>
+        <button class="rp-opt-btn" data-font="roboto"   onclick="rpSetFont(this)">Roboto</button>
+        <button class="rp-opt-btn" data-font="opensans" onclick="rpSetFont(this)">Open Sans</button>
+        <button class="rp-opt-btn" data-font="lato"     onclick="rpSetFont(this)">Lato</button>
+        <button class="rp-opt-btn" data-font="poppins"  onclick="rpSetFont(this)">Poppins</button>
+    </div>
+
+    <hr class="rp-panel-sep">
+
+    <!-- Taille du texte -->
+    <p class="rp-panel-label">Taille du texte</p>
+    <div class="rp-btn-group" id="rp-size-group">
+        <button class="rp-opt-btn" data-size="xs" onclick="rpSetSize(this)">Petite</button>
+        <button class="rp-opt-btn" data-size="sm" onclick="rpSetSize(this)">Normale</button>
+        <button class="rp-opt-btn" data-size="md" onclick="rpSetSize(this)">Grande</button>
+        <button class="rp-opt-btn" data-size="lg" onclick="rpSetSize(this)">Très grande</button>
+    </div>
+    <p class="rp-size-preview" id="rp-size-preview">Taille courante : 13 px</p>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   RecrutePro Admin — Paramètres d'affichage (thème, police, taille)
+   Stockés dans localStorage, appliqués avant le rendu (pas de flash).
+   ═══════════════════════════════════════════════════════════════ */
+
+var RP_FONTS = {
+    systeme:  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    inter:    "'Inter', sans-serif",
+    roboto:   "'Roboto', sans-serif",
+    opensans: "'Open Sans', sans-serif",
+    lato:     "'Lato', sans-serif",
+    poppins:  "'Poppins', sans-serif",
+};
+var RP_GFONTS = {
+    inter:    'Inter:ital,wght@0,400;0,500;0,600;0,700;0,800',
+    roboto:   'Roboto:wght@400;500;700',
+    opensans: 'Open+Sans:wght@400;600;700',
+    lato:     'Lato:wght@400;700',
+    poppins:  'Poppins:wght@400;500;600;700',
+};
+var RP_SIZES = { xs: '12px', sm: '13px', md: '14px', lg: '15px' };
+var RP_SIZE_LABELS = { xs: '12 px', sm: '13 px', md: '14 px', lg: '15 px' };
+
+/* ── Chargement d'une Google Font ────────────────────────────── */
+function rpLoadGFont(fontKey) {
+    if (!RP_GFONTS[fontKey]) return;
+    var id = 'rp-gf-' + fontKey;
+    if (document.getElementById(id)) return;
+    var link = document.createElement('link');
+    link.id   = id;
+    link.rel  = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=' + RP_GFONTS[fontKey] + '&display=swap';
+    document.head.appendChild(link);
+}
+
+/* ── Appliquer police ────────────────────────────────────────── */
+function rpApplyFont(fontKey) {
+    rpLoadGFont(fontKey);
+    document.documentElement.style.setProperty(
+        '--admin-font', RP_FONTS[fontKey] || RP_FONTS.systeme
+    );
+}
+
+/* ── Appliquer taille ────────────────────────────────────────── */
+function rpApplySize(sizeKey) {
+    /* On modifie font-size sur <html> : comme notre CSS utilise rem,
+       tous les éléments scalent proportionnellement (CSS natif Django inclus). */
+    document.documentElement.style.fontSize = RP_SIZES[sizeKey] || '13px';
+    var preview = document.getElementById('rp-size-preview');
+    if (preview) preview.textContent = 'Taille courante : ' + (RP_SIZE_LABELS[sizeKey] || '13 px');
+}
+
+/* ── Actions boutons ─────────────────────────────────────────── */
+function rpSetFont(btn) {
+    var key = btn.dataset.font;
+    rpApplyFont(key);
+    localStorage.setItem('rp_admin_font', key);
+    document.querySelectorAll('#rp-font-group .rp-opt-btn').forEach(function(b) {
+        b.classList.toggle('rp-on', b === btn);
+    });
+}
+
+function rpSetSize(btn) {
+    var key = btn.dataset.size;
+    rpApplySize(key);
+    localStorage.setItem('rp_admin_size', key);
+    document.querySelectorAll('#rp-size-group .rp-opt-btn').forEach(function(b) {
+        b.classList.toggle('rp-on', b === btn);
+    });
+}
+
+/* ── Thème : 3 modes clair / sombre / noir ───────────────────── */
+function rpApplyTheme(mode) {
+    /* 1. Nos classes custom sur <html> — effet immédiat sans attendre DOMContentLoaded */
+    document.documentElement.classList.remove('rp-dark', 'rp-noir');
+    if (mode === 'dark') document.documentElement.classList.add('rp-dark');
+    if (mode === 'noir') document.documentElement.classList.add('rp-noir');
+
+    /* 2. Sync Django natif — widgets/formulaires utilisent data-theme + localStorage.theme */
+    var djangoMode = (mode === 'light') ? 'light' : 'dark';  /* nuit→dark, sombre→dark */
+    document.documentElement.dataset.theme = djangoMode;
+    localStorage.setItem('theme', djangoMode);  /* valeur valide pour theme.js Django */
+
+    /* 3. Notre clé propre pour mémoriser le 3e mode (noir) que Django ne connaît pas */
+    localStorage.setItem('rp_theme', mode);
+}
+
+function rpSetTheme(btn) {
+    var mode = btn.dataset.themeMode;
+    rpApplyTheme(mode);
+    document.querySelectorAll('#rp-theme-group .rp-opt-btn').forEach(function(b) {
+        b.classList.toggle('rp-on', b === btn);
+    });
+}
+
+function rpSyncTheme() {
+    var saved = localStorage.getItem('rp_theme') || 'light';
+    rpApplyTheme(saved);
+}
+
+/* ── Panneau ─────────────────────────────────────────────────── */
+function rpTogglePanel(e) {
+    e.stopPropagation();
+    document.getElementById('rp-settings-panel').classList.toggle('rp-open');
+}
+document.addEventListener('click', function(e) {
+    var panel = document.getElementById('rp-settings-panel');
+    var btn   = document.getElementById('rp-settings-btn');
+    if (panel && !panel.contains(e.target) && btn && !btn.contains(e.target)) {
+        panel.classList.remove('rp-open');
+    }
+});
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.getElementById('rp-settings-panel').classList.remove('rp-open');
+    }
+});
+
+/* ── Initialisation (IIFE — avant rendu pour éviter le flash) ── */
+(function () {
+    /* 1. Thème — appliquer avant le rendu (anti-flash) */
+    /* Anti-flash : appliquer notre mode APRES que theme.js Django a tourné.
+       theme.js s'exécute immédiatement — on lit rp_theme pour connaître notre choix,
+       puis on re-applique la bonne valeur à Django aussi. */
+    var savedTheme = localStorage.getItem('rp_theme') || 'light';
+    var initMode = savedTheme === 'noir' ? 'noir' : savedTheme === 'dark' ? 'dark' : 'light';
+    /* Appliquer immédiatement sur <html> — pas de flash blanc */
+    document.documentElement.classList.remove('rp-dark', 'rp-noir');
+    if (initMode === 'dark') document.documentElement.classList.add('rp-dark');
+    if (initMode === 'noir') document.documentElement.classList.add('rp-noir');
+    var djangoEquiv = (initMode === 'light') ? 'light' : 'dark';
+    document.documentElement.dataset.theme = djangoEquiv;
+    localStorage.setItem('theme', djangoEquiv);
+    document.addEventListener('DOMContentLoaded', function() {
+        /* Sync boutons thème */
+        document.querySelectorAll('#rp-theme-group .rp-opt-btn').forEach(function(b) {
+            b.classList.toggle('rp-on', b.dataset.themeMode === initMode);
+        });
+    });
+
+    /* 2. Police — appliquer la CSS variable immédiatement */
+    var savedFont = localStorage.getItem('rp_admin_font') || 'systeme';
+    rpApplyFont(savedFont);
+
+    /* 3. Taille — modifier font-size sur <html> immédiatement pour éviter le flash */
+    var savedSize = localStorage.getItem('rp_admin_size') || 'sm';
+    document.documentElement.style.fontSize = RP_SIZES[savedSize] || '13px';
+
+    /* 4. Synchroniser l'état des boutons + observer le toggle natif Django */
+    window.addEventListener('DOMContentLoaded', function() {
+        /* Sync initial (notre système est maître du thème) */
+        rpSyncTheme();
+
+        /* Observer le storage si changement dans un autre onglet/page du site */
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'theme') rpSyncTheme();
+        });
+
+        /* Police */
+        document.querySelectorAll('#rp-font-group .rp-opt-btn').forEach(function(b) {
+            b.classList.toggle('rp-on', b.dataset.font === savedFont);
+        });
+        /* Taille */
+        document.querySelectorAll('#rp-size-group .rp-opt-btn').forEach(function(b) {
+            b.classList.toggle('rp-on', b.dataset.size === savedSize);
+        });
+        /* Aperçu taille */
+        var preview = document.getElementById('rp-size-preview');
+        if (preview) preview.textContent = 'Taille courante : ' + (RP_SIZE_LABELS[savedSize] || '13 px');
+    });
+})();
+</script>
+{% endblock %}

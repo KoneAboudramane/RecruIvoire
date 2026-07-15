@@ -1,0 +1,252 @@
+{% extends "entreprise/base.html" %}
+{% load i18n %}
+
+{% block titre %}Modifier {{ membre.nomComplet }} — {{ request.entreprise.raisonSocial }}{% endblock %}
+
+{% block css_extra %}
+<style>
+    .f-input { width:100%; padding:.625rem .875rem; border-radius:.75rem; border:1px solid #e5e7eb; background:#f9fafb; font-size:.8125rem; color:#1f2937; transition:all .2s; }
+    .f-input:focus { outline:none; border-color:#009A44; background:#fff; box-shadow:0 0 0 3px rgba(0,154,68,.12); }
+    .f-input.err { border-color:#f87171; background:#fff5f5; }
+    .f-label { display:block; font-size:.675rem; font-weight:700; color:#6b7280; margin-bottom:.35rem; text-transform:uppercase; letter-spacing:.05em; }
+    .f-err { color:#dc2626; font-size:.7rem; margin-top:.25rem; }
+    .role-card input[type=radio]:checked + label { border-color:#009A44; background:#f0fdf4; }
+    .role-card label { cursor:pointer; transition:all .2s; }
+
+    /* ── Mode sombre : ajustements spécifiques à la page Modifier membre ── */
+    /* Champs formulaire custom */
+    html.dark .f-input {
+        background: #0f172a !important;
+        border-color: #334155 !important;
+        color: #e2e8f0 !important;
+    }
+    html.dark .f-input:focus {
+        background: #1e293b !important;
+        border-color: #4ade80 !important;
+        box-shadow: 0 0 0 3px rgba(74,222,128,.18) !important;
+    }
+    html.dark .f-input.err {
+        background: rgba(239,68,68,.10) !important;
+        border-color: rgba(239,68,68,.55) !important;
+    }
+    html.dark .f-input::placeholder { color: #475569 !important; }
+
+    /* Labels & erreurs */
+    html.dark .f-label { color: #94a3b8 !important; }
+    html.dark .f-err   { color: #f87171 !important; }
+
+    /* Cartes de rôle */
+    html.dark .role-card label {
+        background: #1e293b !important;
+        border-color: #334155 !important;
+    }
+    html.dark .role-card label:hover {
+        border-color: rgba(34,197,94,.5) !important;
+    }
+    html.dark .role-card input[type=radio]:checked + label {
+        background: rgba(34,197,94,.12) !important;
+        border-color: #4ade80 !important;
+    }
+
+    /* Bandeau erreurs (bg-red-50) */
+    html.dark .bg-red-50      { background-color: rgba(239,68,68,.10) !important; }
+    html.dark .border-red-200 { border-color: rgba(239,68,68,.35) !important; }
+    html.dark .text-red-700   { color: #fca5a5 !important; }
+    html.dark .text-red-400   { color: #fb7185 !important; }
+
+    /* Bandeau auto-modification (bg-amber-50) */
+    html.dark .bg-amber-50      { background-color: rgba(245,158,11,.10) !important; }
+    html.dark .border-amber-200 { border-color: rgba(245,158,11,.35) !important; }
+    html.dark .text-amber-700   { color: #fcd34d !important; }
+
+    /* Bloc "Réinitialiser le mot de passe" */
+    html.dark .hover\:text-green-600:hover { color: #4ade80 !important; }
+
+    /* Bouton "Retour" */
+    html.dark .border-gray-300         { border-color: #475569 !important; }
+    html.dark .hover\:bg-gray-50:hover { background-color: #1e2d42 !important; }
+
+    /* ── MODE NOIR (OLED) ─────────────────────────────────────────── */
+    html.noir .f-input {
+        background: #000 !important;
+        border-color: #222 !important;
+        color: #e2e8f0 !important;
+    }
+    html.noir .f-input:focus {
+        background: #0d0d0d !important;
+        border-color: #4ade80 !important;
+        box-shadow: 0 0 0 3px rgba(74,222,128,.14) !important;
+    }
+    html.noir .f-input.err {
+        background: rgba(239,68,68,.08) !important;
+        border-color: rgba(239,68,68,.44) !important;
+    }
+    html.noir .f-input::placeholder { color: #333 !important; }
+
+    html.noir .f-label { color: #94a3b8 !important; }
+    html.noir .f-err   { color: #f87171 !important; }
+
+    html.noir .role-card label {
+        background: #0d0d0d !important;
+        border-color: #222 !important;
+    }
+    html.noir .role-card label:hover {
+        border-color: rgba(34,197,94,.4) !important;
+    }
+    html.noir .role-card input[type=radio]:checked + label {
+        background: rgba(34,197,94,.09) !important;
+        border-color: #4ade80 !important;
+    }
+
+    html.noir .bg-red-50      { background-color: rgba(239,68,68,.08) !important; }
+    html.noir .border-red-200 { border-color: rgba(239,68,68,.28) !important; }
+    html.noir .text-red-700   { color: #fca5a5 !important; }
+    html.noir .text-red-400   { color: #fb7185 !important; }
+
+    html.noir .bg-amber-50      { background-color: rgba(245,158,11,.08) !important; }
+    html.noir .border-amber-200 { border-color: rgba(245,158,11,.28) !important; }
+    html.noir .text-amber-700   { color: #fcd34d !important; }
+
+    html.noir .hover\:text-green-600:hover { color: #4ade80 !important; }
+
+    html.noir .border-gray-300         { border-color: #333 !important; }
+    html.noir .hover\:bg-gray-50:hover { background-color: #1a1a1a !important; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="w-full" x-data="{ showPass: false, resetMdp: false }">
+
+    <!-- Fil d'Ariane -->
+    <nav class="flex items-center gap-2 text-sm text-gray-500 mb-6">
+        <a href="{% url 'entreprise:membres_liste' %}" class="hover:text-green-600 transition">{% trans "Membres" %}</a>
+        <span class="text-gray-300">/</span>
+        <span class="text-gray-800 font-medium">{% trans "Modifier" %} {{ membre.nomComplet }}</span>
+    </nav>
+
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+
+        <!-- En-tête avec avatar -->
+        <div class="px-8 pt-8 pb-5 border-b border-gray-50 flex items-center gap-4">
+            {% if membre.photoProfil %}
+                <img src="{{ membre.photoProfil.url }}" alt="" class="w-12 h-12 rounded-xl object-cover">
+            {% else %}
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold text-white"
+                     style="background: linear-gradient(135deg, #009A44, #007a36);">
+                    {{ membre.nomComplet|slice:":1"|upper }}
+                </div>
+            {% endif %}
+            <div>
+                <h1 class="text-xl font-extrabold text-gray-900">{% trans "Modifier le membre" %}</h1>
+                <p class="text-sm text-gray-500">{{ membre.emailProfessionnel }}</p>
+            </div>
+        </div>
+
+        <form method="post" class="px-8 py-6 space-y-6">
+            {% csrf_token %}
+
+            {% if errors %}
+            <div class="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                <ul class="list-disc list-inside text-xs space-y-0.5">
+                    {% for champ, msg in errors.items %}<li>{{ msg }}</li>{% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Identité & accès -->
+            <div>
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">{% trans "Identité &amp; accès" %}</h2>
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                    <div class="md:col-span-5">
+                        <label class="f-label">{% trans "Nom complet" %} <span class="text-red-400">*</span></label>
+                        <input type="text" name="nomComplet"
+                               value="{{ data.nomComplet|default:membre.nomComplet }}"
+                               class="f-input {% if errors.nomComplet %}err{% endif %}">
+                        {% if errors.nomComplet %}<p class="f-err">{{ errors.nomComplet }}</p>{% endif %}
+                    </div>
+                    <div class="md:col-span-3">
+                        <label class="f-label">{% trans "Téléphone" %}</label>
+                        <input type="tel" name="telephone"
+                               value="{{ data.telephone|default:membre.telephone }}" class="f-input">
+                    </div>
+                    <div class="md:col-span-4">
+                        <label class="f-label">{% trans "Email professionnel" %} <span class="text-red-400">*</span></label>
+                        <input type="email" name="emailProfessionnel"
+                               value="{{ data.emailProfessionnel|default:membre.emailProfessionnel }}"
+                               class="f-input {% if errors.emailProfessionnel %}err{% endif %}">
+                        {% if errors.emailProfessionnel %}<p class="f-err">{{ errors.emailProfessionnel }}</p>{% endif %}
+                    </div>
+                    <div class="md:col-span-4">
+                        <label class="f-label">{% trans "Date d'embauche" %}</label>
+                        <input type="date" name="dateEmbauche"
+                               value="{{ data.dateEmbauche|default:membre.dateEmbauche|date:'Y-m-d' }}" class="f-input">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rôle -->
+            <div>
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">{% trans "Rôle" %}</h2>
+                {% if se_modifie_lui_meme %}
+                <div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-700 mb-3">
+                    🔒 Vous ne pouvez pas modifier votre propre rôle. Demandez à un autre administrateur ou à l'administrateur principal.
+                </div>
+                {% endif %}
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {% for val, lbl in roles %}
+                    <div class="role-card">
+                        <input type="radio" name="roleMembre" value="{{ val }}" id="role_{{ val }}"
+                               class="sr-only"
+                               {% if data.roleMembre == val or not data and membre.roleMembre == val %}checked{% endif %}
+                               {% if se_modifie_lui_meme and val != membre.roleMembre %}disabled{% endif %}>
+                        <label for="role_{{ val }}"
+                               class="block p-3 rounded-xl border-2 border-gray-100 hover:border-green-200 {% if se_modifie_lui_meme and val != membre.roleMembre %}opacity-40 cursor-not-allowed{% endif %}"
+                               {% if not se_modifie_lui_meme or val == membre.roleMembre %}onclick="document.getElementById('role_{{ val }}').checked=true"{% endif %}>
+                            <div class="flex items-center gap-2">
+                                <span>{% if val == 'ADMIN' %}👑{% elif val == 'RH' %}👤{% elif val == 'MANAGER' %}📋{% else %}👁️{% endif %}</span>
+                                <span class="text-sm font-bold text-gray-800">{{ lbl }}</span>
+                            </div>
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Reset mot de passe (optionnel) -->
+            <div>
+                <button type="button" @click="resetMdp = !resetMdp"
+                        class="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-green-600 transition">
+                    <span x-text="resetMdp ? '▼' : '▶'"></span>
+                    <span x-text="resetMdp ? 'Annuler la réinitialisation' : 'Réinitialiser le mot de passe'"></span>
+                </button>
+                <div x-show="resetMdp" x-transition class="mt-3">
+                    <label class="f-label">{% trans "Nouveau mot de passe" %}</label>
+                    <div class="relative">
+                        <input :type="showPass ? 'text' : 'password'" name="nouveauMotPasse"
+                               placeholder="{% trans "Laisser vide pour ne pas changer" %}"
+                               class="f-input pr-9">
+                        <button type="button" @click="showPass = !showPass"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm">
+                            <span x-text="showPass ? '🙈' : '👁️'"></span>
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">{% trans "Min. 8 caractères. Laisser vide pour conserver le mot de passe actuel." %}</p>
+                </div>
+            </div>
+
+            <!-- Boutons -->
+            <div class="flex justify-between items-center pt-2 border-t border-gray-100">
+                <a href="{% url 'entreprise:membres_liste' %}"
+                   class="px-5 py-2.5 rounded-xl text-sm font-bold text-gray-600 border border-gray-300 hover:bg-gray-50 transition">
+                    ← Retour
+                </a>
+                <button type="submit"
+                        class="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90 hover:shadow-md"
+                        style="background: linear-gradient(135deg, #009A44, #007a36);">
+                    💾 Enregistrer les modifications
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

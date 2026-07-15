@@ -1,0 +1,108 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% trans "Lettre de motivation —" %} {{ lettre.prenom }} {{ lettre.nom }}</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:794px; min-height:1123px; background:#fff; }
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 11.5px;
+    line-height: 1.68;
+    color: #1a1a1a;
+}
+
+/* En-tête minimaliste — deux colonnes */
+.lp-top {
+    padding: 38px 58px 26px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid #e5e7eb;
+}
+.lp-name    { font-size: 16px; font-weight: 700; color: #111; margin-bottom: 4px; }
+.lp-contact { font-size: 9.5px; color: #9ca3af; margin-top: 3px; }
+.lp-top-right { text-align: right; }
+
+/* Corps */
+.lp-main { padding: 22px 58px 44px; }
+.lp-date {
+    text-align: right;
+    font-size: 10px;
+    color: #666;
+    margin-bottom: 22px;
+}
+.lp-recipient { margin-bottom: 22px; line-height: 1.6; }
+.lp-rcp-name  { font-weight: bold; }
+.lp-rcp-fn, .lp-rcp-addr, .lp-rcp-city { font-size: 10px; color: #555; }
+
+.lp-objet {
+    margin-bottom: 20px;
+    font-weight: 600;
+    color: #374151;
+}
+.lp-objet-lbl { color: #9ca3af; font-weight: 400; }
+.lp-salut   { margin-bottom: 14px; font-weight: 600; }
+.lp-para    { margin-bottom: 13px; white-space: pre-wrap; word-break: break-word; }
+.lp-formule { margin-top: 22px; margin-bottom: 44px; }
+.lp-sig     { font-weight: 600; color: #111; }
+</style>
+</head>
+<body>
+
+<!-- En-tête minimaliste -->
+<div class="lp-top">
+    <div>
+        <div class="lp-name">{{ lettre.prenom }} {{ lettre.nom }}</div>
+        {% if lettre.adresse %}<div class="lp-contact">{{ lettre.adresse }}</div>{% endif %}
+        {% if lettre.codePostal or lettre.ville %}
+        <div class="lp-contact">{{ lettre.codePostal }} {{ lettre.ville }}</div>
+        {% endif %}
+        {% if lettre.telephone %}<div class="lp-contact">{{ lettre.telephone }}</div>{% endif %}
+        {% if lettre.email %}<div class="lp-contact">{{ lettre.email }}</div>{% endif %}
+    </div>
+    <div class="lp-top-right">
+        {% if lettre.titreDestinataire or lettre.nomDestinataire %}
+        <div class="lp-contact" style="font-weight:600; color:#374151;">
+            {{ lettre.titreDestinataire }} {{ lettre.nomDestinataire }}
+        </div>
+        {% endif %}
+        {% if lettre.fonctionDestinataire %}<div class="lp-contact">{{ lettre.fonctionDestinataire }}</div>{% endif %}
+        {% if lettre.entreprise %}<div class="lp-contact" style="font-weight:600; color:#374151;">{{ lettre.entreprise }}</div>{% endif %}
+        {% if lettre.villeEntreprise %}<div class="lp-contact">{{ lettre.villeEntreprise }}</div>{% endif %}
+    </div>
+</div>
+
+<!-- Corps principal -->
+<div class="lp-main">
+    <div class="lp-date">{{ lettre.lieu|default:"Abidjan" }}, le {{ lettre.date }}</div>
+
+    <!-- Objet -->
+    {% if lettre.objet %}
+    <div class="lp-objet"><span class="lp-objet-lbl">{% trans "Objet :" %} </span>{{ lettre.objet }}</div>
+    {% endif %}
+
+    <!-- Corps de la lettre -->
+    <p class="lp-salut">
+        {% if lettre.titreDestinataire == "M." or lettre.titreDestinataire == "M" %}Monsieur
+        {% elif lettre.titreDestinataire == "Mme" or lettre.titreDestinataire == "Mme." %}Madame
+        {% elif lettre.titreDestinataire == "Dr." %}Docteur
+        {% elif lettre.titreDestinataire == "Pr." %}Professeur
+        {% else %}{{ lettre.titreDestinataire }}{% endif %},
+    </p>
+    {% if lettre.accroche %}<p class="lp-para">{{ lettre.accroche }}</p>{% endif %}
+    {% if lettre.corps1 %}<p class="lp-para">{{ lettre.corps1 }}</p>{% endif %}
+    {% if lettre.corps2 %}<p class="lp-para">{{ lettre.corps2 }}</p>{% endif %}
+    {% if lettre.corps3 %}<p class="lp-para">{{ lettre.corps3 }}</p>{% endif %}
+
+    <p class="lp-formule">{{ lettre.formuleFull }}</p>
+
+    <!-- Signature -->
+    <div class="lp-sig">{{ lettre.prenom }} {{ lettre.nom }}</div>
+</div>
+
+</body>
+</html>

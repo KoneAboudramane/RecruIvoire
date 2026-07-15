@@ -1,0 +1,217 @@
+﻿{% extends "base_public.html" %}
+{% load i18n %}
+
+{% block titre %}{% if page %}{{ page.titre }}{% else %}FAQ{% endif %} — {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+<style>
+@keyframes fadeUp {
+    from { opacity:0; transform:translateY(20px); }
+    to   { opacity:1; transform:translateY(0); }
+}
+.fade-up { animation: fadeUp .5s ease both; }
+
+.faq-item { border-bottom: 1px solid #f3f4f6; }
+.faq-item:last-child { border-bottom: none; }
+
+.faq-answer a { color: #c96010; text-decoration: underline; }
+.faq-answer a:hover { opacity: .8; }
+
+/* Filtres catégories */
+.cat-btn { transition: all .2s; }
+.cat-btn.active { color: #fff; }
+
+/* Barre de recherche */
+#faqSearch:focus { box-shadow: 0 0 0 3px rgba(201,96,16,.15); }
+
+.faq-highlight { background: #fff3cd; border-radius: 2px; padding: 0 2px; }
+</style>
+{% endblock %}
+
+
+{% block contenu %}
+<div x-data="faqApp()" x-cloak>
+
+<!-- ══ EN-TÊTE ═══════════════════════════════════════════════════════════════ -->
+<div class="fade-up mb-10">
+    <div class="flex items-center gap-2 text-sm text-gray-400 mb-4">
+        <a href="{% url 'candidat:accueil' %}" class="hover:underline" style="color:#c96010;">{% trans "Accueil" %}</a>
+        <span>/</span>
+        <span class="text-gray-600 font-medium">FAQ</span>
+    </div>
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
+        <div>
+            <h1 class="text-4xl font-extrabold text-gray-800 mb-2">
+                {% if page %}{{ page.titre }}{% else %}Questions <span style="color:#c96010;">{% trans "fréquentes" %}</span>{% endif %}
+            </h1>
+            <p class="text-gray-500 text-lg">{% if page and page.description %}{{ page.description }}{% else %}{% trans "Trouvez rapidement une réponse à votre question." %}{% endif %}</p>
+        </div>
+        <a href="{% url 'contenu:contact' %}"
+           class="inline-flex items-center gap-2 text-white font-bold px-5 py-2.5 rounded-xl transition hover:opacity-90 text-sm"
+           style="background:#c96010;">
+            ✉️ Contacter le support
+        </a>
+    </div>
+</div>
+
+
+<!-- ══ BARRE RECHERCHE ═══════════════════════════════════════════════════════ -->
+<div class="relative mb-6 fade-up">
+    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg">🔍</span>
+    <input id="faqSearch" type="text" x-model="search"
+           placeholder="{% trans "Rechercher une question…" %}"
+           class="w-full pl-12 pr-4 py-3.5 border border-gray-200 rounded-2xl text-sm focus:outline-none transition bg-white">
+    <template x-if="search">
+        <button @click="search=''"
+                class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg transition">✕</button>
+    </template>
+</div>
+
+
+
+<!-- ══ CORPS : 2 COLONNES ════════════════════════════════════════════════════ -->
+<div class="flex flex-col lg:flex-row gap-8">
+
+    <!-- Sommaire latéral (desktop) -->
+    <aside class="hidden lg:block w-56 flex-shrink-0">
+        <div class="sticky top-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">{% trans "Catégories" %}</p>
+            <template x-for="cat in categories" :key="cat.id">
+                <button @click="activecat = cat.id; search = ''"
+                        class="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition mb-1"
+                        :class="activecat === cat.id
+                            ? 'font-bold text-white'
+                            : 'text-gray-600 hover:bg-gray-50'"
+                        :style="activecat === cat.id ? 'background:#c96010' : ''">
+                    <span x-text="cat.icone"></span>
+                    <span x-text="cat.label"></span>
+                </button>
+            </template>
+        </div>
+    </aside>
+
+    <!-- Liste des questions -->
+    <div class="flex-1">
+
+        <!-- Compteur résultats -->
+        <p class="text-sm text-gray-400 mb-4" x-show="search">
+            <span x-text="filtered.length"></span> {% trans "résultat(s) pour \"" %}<span class="font-semibold text-gray-600" x-text="search"></span>"
+        </p>
+
+        <!-- Pas de résultats -->
+        <div x-show="filtered.length === 0" class="text-center py-16 bg-white rounded-2xl border border-gray-100">
+            <div class="text-5xl mb-4">😕</div>
+            <p class="text-gray-500 font-semibold mb-1">{% trans "Aucune question trouvée" %}</p>
+            <p class="text-gray-400 text-sm">{% trans "Essayez d'autres mots-clés ou" %} <a href="{% url 'contenu:contact' %}" class="underline" style="color:#c96010;">{% trans "contactez le support" %}</a>.</p>
+        </div>
+
+        <!-- Groupes par catégorie -->
+        <template x-for="cat in catsVisible" :key="cat.id">
+            <div class="mb-8">
+                <!-- Titre catégorie (uniquement si "Tous" sélectionné) -->
+                <template x-if="activecat === 'tous'">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="text-2xl" x-text="cat.icone"></span>
+                        <h2 class="text-lg font-extrabold text-gray-800" x-text="cat.label"></h2>
+                        <div class="flex-1 h-px bg-gray-100"></div>
+                    </div>
+                </template>
+
+                <!-- Questions -->
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <template x-for="(item, idx) in cat.items" :key="item.id">
+                        <div class="faq-item">
+                            <button @click="toggle(item.id)"
+                                    class="w-full flex items-center justify-between gap-4 px-6 py-4 text-left hover:bg-gray-50 transition">
+                                <span class="font-semibold text-gray-800 text-sm" x-html="highlight(item.q)"></span>
+                                <svg class="flex-shrink-0 w-5 h-5 text-gray-400 transition-transform duration-200"
+                                     :class="open === item.id ? 'rotate-180' : ''"
+                                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            <div x-show="open === item.id" x-collapse>
+                                <div class="faq-answer px-6 pb-5 text-sm text-gray-600 leading-relaxed border-t border-gray-50 pt-4"
+                                     x-html="item.a"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+
+    </div>
+</div>
+
+
+<!-- ══ BANNIÈRE CONTACT ══════════════════════════════════════════════════════ -->
+<section class="mt-12 rounded-3xl overflow-hidden shadow-lg" style="background:#1a1a2e;">
+    <div class="flex flex-col md:flex-row items-center gap-8 px-10 py-10">
+        <div class="text-6xl">💬</div>
+        <div class="flex-1 text-white">
+            <h3 class="text-2xl font-extrabold mb-2">{% trans "Vous n'avez pas trouvé votre réponse ?" %}</h3>
+            <p class="text-white/70 text-sm">{% trans "Notre équipe est disponible du lundi au vendredi, de 8h à 18h (GMT)." %}</p>
+        </div>
+        <div class="flex flex-col gap-3 shrink-0 w-full md:w-auto">
+            <a href="{% url 'contenu:contact' %}" class="inline-flex items-center justify-center gap-2 font-bold px-6 py-3 rounded-xl text-white transition hover:opacity-90 text-sm" style="background:#c96010;">
+                ✉️ Envoyer un message
+            </a>
+            <a href="{% url 'candidat:newsletter_gerer' %}" class="inline-flex items-center justify-center gap-2 font-semibold px-6 py-3 rounded-xl border border-white/20 text-white/80 hover:bg-white/10 transition text-sm">
+                📬 Gérer ma newsletter
+            </a>
+        </div>
+    </div>
+</section>
+
+</div>{# /x-data #}
+{% endblock %}
+
+
+{% block js_extra %}
+<script>
+const FAQ_NEWSLETTER_URL = '{% url "candidat:newsletter_gerer" %}';
+
+function faqApp() {
+    const FAQS       = {{ faqs_json|safe }};
+    const CATEGORIES = {{ categories_json|safe }};
+
+    return {
+        categories: CATEGORIES,
+        activecat:  'tous',
+        search:     '',
+        open:       null,
+
+        get filtered() {
+            const q = this.search.toLowerCase().trim();
+            return FAQS.filter(item => {
+                const matchCat  = this.activecat === 'tous' || item.cat === this.activecat;
+                const matchText = !q || item.q.toLowerCase().includes(q) || item.a.toLowerCase().includes(q);
+                return matchCat && matchText;
+            });
+        },
+
+        get catsVisible() {
+            const items = this.filtered;
+            if (this.activecat !== 'tous') {
+                return [{ ...CATEGORIES.find(c => c.id === this.activecat), items }];
+            }
+            return CATEGORIES.filter(c => c.id !== 'tous').map(cat => ({
+                ...cat,
+                items: items.filter(i => i.cat === cat.id),
+            })).filter(cat => cat.items.length > 0);
+        },
+
+        toggle(id) {
+            this.open = this.open === id ? null : id;
+        },
+
+        highlight(text) {
+            const q = this.search.trim();
+            if (!q) return text;
+            const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            return text.replace(new RegExp(escaped, 'gi'), m => `<mark class="faq-highlight">${m}</mark>`);
+        },
+    };
+}
+</script>
+{% endblock %}

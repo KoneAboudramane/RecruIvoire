@@ -1,0 +1,382 @@
+{% extends "candidat/base.html" %}
+{% load i18n %}
+{% block titre %}Créer mon CV — {{ modele.nom }} · {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+{% include "candidat/cv/_form_styles.html" %}
+<style>
+/* ── Gris & Photo ── sidebar gris + grande photo droite + icônes cercle ─── */
+#cv-sheet {
+  width: 794px; min-height: 1123px;
+  background: #FFFFFF;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 10pt; color: #333; line-height: 1.5;
+  box-shadow: 0 8px 48px rgba(0,0,0,.18);
+  display: flex;
+}
+
+/* ─── Sidebar gauche ─────────────────────────────────────────────────────── */
+.gp-sidebar {
+  width: 214px; flex-shrink: 0;
+  background: #3D3D3D;
+  display: flex; flex-direction: column;
+  padding: 0 0 28px 0;
+}
+
+.gp-name-zone {
+  padding: 32px 20px 20px;
+  border-bottom: 1px solid #555;
+}
+.gp-name { font-size: 16pt; font-weight: 900; color: #FFFFFF; text-transform: uppercase; line-height: 1.05; }
+.gp-job  { font-size: 8pt; color: #BBBBBB; font-weight: 500; margin-top: 5px; letter-spacing: .5px; }
+
+.gp-sec {
+  font-size: 7pt; font-weight: 800; letter-spacing: 2px;
+  text-transform: uppercase; color: #FFFFFF;
+  padding: 14px 20px 6px;
+  border-bottom: 1px solid #555;
+  margin-bottom: 8px;
+}
+
+.gp-contact-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 3px 20px; font-size: 7.5pt; color: #BBBBBB;
+  word-break: break-word;
+}
+.gp-contact-icon { color: #E8A030; flex-shrink: 0; width: 14px; text-align: center; margin-top: 1px; }
+
+/* PRO SKILL bars */
+.gp-skill-item { padding: 4px 20px 6px; }
+.gp-skill-hdr { display: flex; justify-content: space-between; font-size: 7pt; color: #CCCCCC; margin-bottom: 3px; }
+.gp-skill-bg { height: 5px; background: #555; border-radius: 3px; overflow: hidden; }
+.gp-skill-fill { height: 100%; background: #E8A030; border-radius: 3px; }
+
+/* Compétences texte */
+.gp-comp-item {
+  display: flex; align-items: center; gap: 7px;
+  padding: 2px 20px; font-size: 7.5pt; color: #BBBBBB;
+}
+.gp-comp-dot { width: 5px; height: 5px; border-radius: 50%; background: #E8A030; flex-shrink: 0; }
+
+/* ─── Corps droit ────────────────────────────────────────────────────────── */
+.gp-main {
+  flex: 1; display: flex; flex-direction: column;
+}
+
+/* Zone haute : About Me + Photo côte à côte */
+.gp-top-row {
+  display: flex; gap: 0; min-height: 160px;
+}
+.gp-top-left {
+  flex: 1; padding: 28px 20px 20px 24px;
+}
+.gp-top-right {
+  width: 194px; flex-shrink: 0; padding: 20px 20px 0 0;
+  display: flex; align-items: flex-start; justify-content: center;
+}
+.gp-photo-wrap {
+  width: 170px; height: 190px;
+  overflow: hidden; border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.15);
+}
+.gp-photo { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gp-ph {
+  width: 170px; height: 190px; border-radius: 4px;
+  background: #E5E5E5; display: flex; align-items: center;
+  justify-content: center; font-size: 40px; color: #BBB;
+}
+
+/* Sections droite avec icône cercle */
+.gp-content { flex: 1; padding: 0 20px 28px 24px; }
+
+.gp-sec-r {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 12px; margin-top: 22px;
+}
+.gp-sec-r:first-child { margin-top: 0; }
+.gp-sec-icon {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #E8A030; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0; font-size: 12px; color: #fff;
+}
+.gp-sec-label {
+  font-size: 9pt; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 1.5px; color: #2D2D2D;
+}
+.gp-sec-line { flex: 1; height: 1px; background: #E0E0E0; }
+
+/* About text */
+.gp-about { font-size: 8.5pt; color: #555; line-height: 1.65; }
+
+/* Expériences — ligne gauche timeline */
+.gp-exp { display: flex; gap: 16px; margin-bottom: 13px; }
+.gp-exp-side {
+  display: flex; flex-direction: column; align-items: center;
+  padding-top: 3px;
+}
+.gp-exp-dot { width: 10px; height: 10px; border-radius: 50%; background: #E8A030; flex-shrink: 0; }
+.gp-exp-line { width: 2px; flex: 1; background: #E5E5E5; margin-top: 4px; min-height: 20px; }
+.gp-exp-content { flex: 1; }
+.gp-exp-company { font-size: 7.5pt; color: #E8A030; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+.gp-exp-title { font-size: 9.5pt; font-weight: 700; color: #1A1A1A; line-height: 1.2; }
+.gp-exp-date { font-size: 7.5pt; color: #888; font-style: italic; margin-bottom: 3px; }
+.gp-exp-desc { font-size: 8pt; color: #555; line-height: 1.55; }
+
+/* Formation */
+.gp-edu { display: flex; gap: 16px; margin-bottom: 11px; }
+.gp-edu-side { display: flex; flex-direction: column; align-items: center; padding-top: 3px; }
+.gp-edu-dot { width: 10px; height: 10px; border-radius: 50%; background: #E8A030; flex-shrink: 0; }
+.gp-edu-line { width: 2px; flex: 1; background: #E5E5E5; margin-top: 4px; min-height: 16px; }
+.gp-edu-content { flex: 1; }
+.gp-edu-title { font-size: 9pt; font-weight: 700; color: #1A1A1A; }
+.gp-edu-sub { font-size: 8pt; color: #666; font-style: italic; margin: 1px 0; }
+.gp-edu-date { font-size: 7.5pt; color: #888; margin-bottom: 2px; }
+.gp-edu-desc { font-size: 8pt; color: #555; line-height: 1.5; }
+
+/* Référence */
+.gp-ref { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 6px; }
+.gp-ref-item { flex: 1; min-width: 160px; }
+.gp-ref-name { font-size: 8.5pt; font-weight: 700; color: #1A1A1A; }
+.gp-ref-role { font-size: 7.5pt; color: #666; font-style: italic; }
+.gp-ref-contact { font-size: 7.5pt; color: #555; }
+
+/* ── Sauts de page ─────────────────────────────────────────────────────────── */
+/* Empêche le titre de section de rester seul en bas de page */
+.gp-sec { break-after: avoid; page-break-after: avoid; }
+/* Empêche chaque élément d'être coupé entre deux pages */
+.gp-contact-item,
+.gp-skill-item,
+.gp-comp-item,
+.gp-exp,
+.gp-edu,
+.gp-sec-r { break-inside: avoid; page-break-inside: avoid; }
+</style>
+{% endblock %}
+
+{% block contenu %}<div class="-mx-6 -my-8" x-data="cvBuilder()"><div class="cv-builder">
+  {% include "candidat/cv/_form_panel.html" %}
+  <div class="preview-panel">
+  <div id="cv-sheet">
+
+    <!-- SIDEBAR -->
+    <div class="gp-sidebar">
+
+      <!-- Nom + titre -->
+      <div class="gp-name-zone">
+        <div class="gp-name">
+          <span x-text="cv.prenom || 'Prénom'"></span><br>
+          <span x-text="cv.nom || 'NOM'"></span>
+        </div>
+        <div class="gp-job" x-text="cv.titre || 'Titre professionnel'"></div>
+      </div>
+
+      <!-- Contact -->
+      <div class="gp-sec">{% trans "Contact" %}</div>
+      <template x-if="cv.telephone">
+        <div class="gp-contact-item">
+          <span class="gp-contact-icon">☎</span><span x-text="cv.telephone"></span>
+        </div>
+      </template>
+      <template x-if="cv.email">
+        <div class="gp-contact-item">
+          <span class="gp-contact-icon">✉</span><span x-text="cv.email"></span>
+        </div>
+      </template>
+      <template x-if="cvLoc()">
+        <div class="gp-contact-item">
+          <span class="gp-contact-icon">📍</span><span x-text="cvLoc()"></span>
+        </div>
+      </template>
+      <template x-if="cv.age">
+        <div class="gp-contact-item">
+          <span class="gp-contact-icon">📅</span><span x-text="cv.age"></span>
+        </div>
+      </template>
+      <template x-if="cv.permis">
+        <div class="gp-contact-item">
+          <span class="gp-contact-icon">🪪</span><span x-text="cv.permis"></span>
+        </div>
+      </template>
+
+      <!-- PRO SKILL -->
+      <template x-if="vis(cv.competences).filter(c => c.nom).length > 0">
+        <div>
+          <div class="gp-sec">{% trans "Pro Skill" %}</div>
+          <template x-for="(c, idx) in vis(cv.competences)" :key="c.id">
+            <div x-show="c.nom" class="gp-skill-item">
+              <div class="gp-skill-hdr">
+                <span x-text="c.nom"></span>
+              </div>
+              <div class="gp-skill-bg">
+                <div class="gp-skill-fill" :style="`width:${niveauDots(c.niveau)*20}%`"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Langues -->
+      <template x-if="vis(cv.langues).filter(l => l.nom).length > 0">
+        <div>
+          <div class="gp-sec">{% trans "Langues" %}</div>
+          <template x-for="l in vis(cv.langues)" :key="l.id">
+            <div x-show="l.nom" class="gp-comp-item">
+              <span class="gp-comp-dot"></span><span x-text="l.nom"></span>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Intérêts -->
+      <template x-if="cv.interets.filter((i,ii) => i && !isInteretMasque(ii)).length > 0">
+        <div>
+          <div class="gp-sec">{% trans "Centres d'intérêt" %}</div>
+          <template x-for="(ci, idx) in cv.interets" :key="idx">
+            <div x-show="ci && !isInteretMasque(idx)" class="gp-comp-item">
+              <span class="gp-comp-dot"></span><span x-text="ci"></span>
+            </div>
+          </template>
+        </div>
+      </template>
+
+    </div><!-- /sidebar -->
+
+    <!-- MAIN -->
+    <div class="gp-main">
+
+      <!-- Ligne du haut : About + Photo -->
+      <div class="gp-top-row">
+        <div class="gp-top-left">
+          <div class="gp-sec-r">
+            <div class="gp-sec-icon">👤</div>
+            <span class="gp-sec-label">{% trans "À propos" %}</span>
+            <div class="gp-sec-line"></div>
+          </div>
+          <div class="gp-about" x-text="cv.profil || 'Décrivez votre profil professionnel ici...'"></div>
+        </div>
+        <div class="gp-top-right">
+          <template x-if="cv.photo"><div class="gp-photo-wrap"><img :src="cv.photo" class="gp-photo" alt="{% trans "Photo" %}"></div></template>
+          <template x-if="!cv.photo"><div class="gp-ph">👤</div></template>
+        </div>
+      </div>
+
+      <!-- Contenu principal -->
+      <div class="gp-content">
+
+        <!-- Expériences -->
+        <template x-if="cv.experiences.some(e => expVisible(e))">
+          <div>
+            <div class="gp-sec-r">
+              <div class="gp-sec-icon">💼</div>
+              <span class="gp-sec-label">{% trans "Expérience" %}</span>
+              <div class="gp-sec-line"></div>
+            </div>
+            <template x-for="e in cv.experiences" :key="e.id">
+              <div x-show="expVisible(e)" class="gp-exp">
+                <div class="gp-exp-side">
+                  <div class="gp-exp-dot"></div>
+                  <div class="gp-exp-line"></div>
+                </div>
+                <div class="gp-exp-content">
+                  <div class="gp-exp-company" x-text="e.entreprise || ''"></div>
+                  <div class="gp-exp-title" x-text="expTitre(e)"></div>
+                  <div class="gp-exp-date" x-text="expTitrePeriodeStr(e)"></div>
+                  <div x-show="e.desc" class="gp-exp-desc" x-text="e.desc"></div>
+                  <template x-if="e.postes && e.postes.length > 1">
+                    <div class="cv-postes-list">
+                      <template x-for="p in e.postes" :key="p.id">
+                        <div x-show="p.titre" class="cv-postes-row">
+                          <span class="cv-postes-titre" x-text="p.titre"></span>
+                          <span x-show="p.debut||p.enCours" class="cv-postes-date" x-text="formatPeriode(p.debut,p.fin,p.enCours)"></span>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                  <template x-if="e.hasMissionsClient && e.missionsClient && e.missionsClient.filter(mc=>mc.client).length>0">
+                    <div class="cv-mc-section">
+                      <div class="cv-mc-label">🏢 Missions clients</div>
+                      <template x-for="mc in e.missionsClient.filter(mc=>mc.client)" :key="mc.id">
+                        <div class="cv-mc-item">
+                          <div class="cv-mc-hdr">
+                            <div class="cv-mc-title" x-text="mc.client||'—'"></div>
+                            <div x-show="mc.debut||mc.enCours" class="cv-mc-badge" x-text="formatPeriode(mc.debut,mc.fin,mc.enCours)"></div>
+                          </div>
+                          <div x-show="mc.desc" class="cv-mc-desc" x-text="mc.desc"></div>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Formation -->
+        <template x-if="vis(cv.formations).filter(f => f.diplome || f.ecole).length > 0">
+          <div>
+            <div class="gp-sec-r">
+              <div class="gp-sec-icon">🎓</div>
+              <span class="gp-sec-label">{% trans "Formation" %}</span>
+              <div class="gp-sec-line"></div>
+            </div>
+            <template x-for="f in vis(cv.formations)" :key="f.id">
+              <div x-show="f.diplome || f.ecole" class="gp-edu">
+                <div class="gp-edu-side">
+                  <div class="gp-edu-dot"></div>
+                  <div class="gp-edu-line"></div>
+                </div>
+                <div class="gp-edu-content">
+                  <div class="gp-edu-title" x-text="f.diplome || '—'"></div>
+                  <div x-show="f.ecole" class="gp-edu-sub" x-text="f.ecole"></div>
+                  <div class="gp-edu-date" x-text="(f.debut ? (f.debut||'').substring(0,4)+' – ' : '') + ((f.fin||'').substring(0,4) || '')"></div>
+                  <div x-show="f.domaine" class="gp-edu-desc" style="font-style:italic" x-text="f.domaine"></div>
+                  <div x-show="f.desc" class="gp-edu-desc" x-text="f.desc"></div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Projets -->
+        <template x-if="cv.showProjets && vis(cv.projets).filter(p=>p.nom).length > 0">
+          <div>
+            <div class="gp-sec-r">
+              <div class="gp-sec-icon">🚀</div>
+              <span class="gp-sec-label">{% trans "Projets" %}</span>
+              <div class="gp-sec-line"></div>
+            </div>
+            <template x-for="p in vis(cv.projets)" :key="p.id">
+              <div x-show="p.nom" class="gp-edu">
+                <div class="gp-edu-side"><div class="gp-edu-dot"></div><div class="gp-edu-line"></div></div>
+                <div class="gp-edu-content">
+                  <div class="gp-edu-title" x-text="p.nom"></div>
+                  <div class="gp-edu-date" x-text="p.annee || ''"></div>
+                  <div x-show="p.desc" class="gp-edu-desc" x-text="p.desc"></div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Références -->
+        <template x-if="cv.showRef">
+          <div>
+            <div class="gp-sec-r">
+              <div class="gp-sec-icon">📋</div>
+              <span class="gp-sec-label">{% trans "Références" %}</span>
+              <div class="gp-sec-line"></div>
+            </div>
+            <p style="font-size:8pt;color:#888;font-style:italic">{% trans "Disponibles sur demande" %}</p>
+          </div>
+        </template>
+
+      </div>
+    </div><!-- /main -->
+
+  </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+{% block js_extra %}{% include "candidat/cv/_cvbuilder_js.html" %}{% endblock %}

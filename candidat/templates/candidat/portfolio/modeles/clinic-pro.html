@@ -1,0 +1,1299 @@
+{% extends base_template|default:"candidat/base.html" %}
+{% load i18n static %}
+
+{% block titre %}{{ candidat.prenom }} {{ candidat.nom }} — Portfolio{% endblock %}
+
+{% block css_extra %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════════════════════════════════════
+   Clinic Pro — Portfolio
+   Prefix : .cp-
+   Inspiré du template Clinic (ThemeWagon)
+═══════════════════════════════════════════════════════════ */
+.cp {
+  --cp-blue:     {{ couleur_accent|default:'#0d6efd' }};
+  --cp-blue-d:   color-mix(in srgb, var(--cp-blue) 80%, #000);
+  --cp-blue-l:   color-mix(in srgb, var(--cp-blue) 10%, #fff);
+  --cp-blue-2:   color-mix(in srgb, var(--cp-blue) 18%, transparent);
+  --cp-dark:     #0f1d35;
+  --cp-text:     #4a5568;
+  --cp-mute:     #8a9ab5;
+  --cp-border:   #e2eaf5;
+  --cp-bg:       #ffffff;
+  --cp-alt:      #f4f7fd;
+  --cp-shadow:   0 5px 30px rgba(0,0,0,.07);
+  --cp-shadow-lg:0 18px 60px rgba(0,0,0,.12);
+  --cp-head:     'Plus Jakarta Sans', system-ui, sans-serif;
+  --cp-body:     'Inter', system-ui, sans-serif;
+  --cp-radius:   12px;
+
+  font-family: var(--cp-body);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--cp-text);
+  background: var(--cp-bg);
+  min-height: 100vh;
+}
+.cp *, .cp *::before, .cp *::after { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+.cp a  { text-decoration: none; transition: .3s; color: inherit; }
+.cp h1,.cp h2,.cp h3,.cp h4,.cp h5 { font-family: var(--cp-head); color: var(--cp-dark); margin: 0; line-height: 1.2; }
+.cp ul { margin: 0; padding: 0; list-style: none; }
+.cp img { max-width: 100%; display: block; }
+.cp p  { margin: 0; }
+
+/* ── Container ── */
+.cp-container { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+/* ── Owner banner ── */
+.cp-owner {
+  background: var(--cp-blue); color: #fff;
+  padding: 8px 24px; font-size: 13px; font-weight: 600;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  position: relative; z-index: 45;
+}
+.cp-owner a {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 14px; border-radius: 50px;
+  background: #fff; color: var(--cp-blue);
+  font-size: 12px; font-weight: 700;
+}
+.cp-owner a:hover { opacity: .85; }
+
+/* ── Top info bar (desktop) ── */
+.cp-topbar {
+  background: var(--cp-dark); color: rgba(255,255,255,.65);
+  padding: 7px 0; font-size: 13px; display: none;
+}
+@media (min-width: 768px) { .cp-topbar { display: block; } }
+.cp-topbar-inner {
+  max-width: 1180px; margin: 0 auto; padding: 0 24px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.cp-topbar-left  { display: flex; gap: 22px; flex-wrap: wrap; }
+.cp-topbar-left a, .cp-topbar-left span {
+  color: rgba(255,255,255,.65);
+  display: flex; align-items: center; gap: 5px;
+}
+.cp-topbar-left a:hover { color: #fff; }
+.cp-topbar-right { display: flex; gap: 6px; }
+.cp-topbar-right a {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: rgba(255,255,255,.08);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; color: rgba(255,255,255,.65); transition: .2s;
+}
+.cp-topbar-right a:hover { background: var(--cp-blue); color: #fff; }
+
+/* ══ NAVBAR INTERNE ══ */
+.cp-navbar {
+  position: sticky;
+  top: 60px;
+  z-index: 44;
+  background: #fff;
+  border-bottom: 1px solid var(--cp-border);
+  box-shadow: 0 2px 16px rgba(0,0,0,.06);
+  transition: top .1s linear;
+}
+@media (min-width: 768px) { .cp-navbar { top: 76px; } }
+
+.cp-nav-inner {
+  max-width: 1180px; margin: 0 auto; padding: 0 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.cp-nav-logo {
+  display: flex; align-items: center; gap: 10px; padding: 10px 0;
+  font-family: var(--cp-head); font-size: 18px; font-weight: 800;
+  color: var(--cp-dark); white-space: nowrap;
+}
+.cp-nav-logo-badge {
+  width: 36px; height: 36px; border-radius: 9px;
+  background: var(--cp-blue); color: #fff;
+  font-size: 14px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.cp-nav-logo span { color: var(--cp-blue); }
+
+.cp-nav-links { display: none; }
+@media (min-width: 768px) {
+  .cp-nav-links { display: flex; gap: 0; }
+}
+.cp-nav-links a {
+  padding: 18px 13px; font-size: 14px; font-weight: 600;
+  color: var(--cp-text); border-bottom: 2px solid transparent;
+  transition: color .2s, border-color .2s; white-space: nowrap;
+}
+.cp-nav-links a:hover,
+.cp-nav-links a.active { color: var(--cp-blue); border-color: var(--cp-blue); }
+
+.cp-nav-right { display: flex; align-items: center; gap: 10px; }
+.cp-nav-cta {
+  display: none;
+  padding: 8px 20px; border-radius: 7px;
+  background: var(--cp-blue); color: #fff;
+  font-size: 13px; font-weight: 700; align-items: center; gap: 6px;
+  transition: .2s;
+}
+@media (min-width: 960px) { .cp-nav-cta { display: inline-flex; } }
+.cp-nav-cta:hover { background: var(--cp-blue-d); transform: translateY(-1px); }
+
+.cp-hamburger {
+  width: 38px; height: 38px; border-radius: 8px;
+  background: var(--cp-alt); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: var(--cp-dark);
+}
+@media (min-width: 768px) { .cp-hamburger { display: none; } }
+
+.cp-mobile-nav {
+  display: none; flex-direction: column;
+  padding: 6px 24px 14px; background: #fff;
+  border-top: 1px solid var(--cp-border);
+}
+.cp-mobile-nav.open { display: flex; }
+.cp-mobile-nav a {
+  padding: 10px 0; font-size: 14px; font-weight: 600;
+  color: var(--cp-text); border-bottom: 1px solid var(--cp-border);
+}
+.cp-mobile-nav a:last-child { border-bottom: none; }
+.cp-mobile-nav a.active, .cp-mobile-nav a:hover { color: var(--cp-blue); }
+
+/* ── Section base ── */
+.cp-section { padding: 90px 0; }
+.cp-section-alt { background: var(--cp-alt); }
+.cp-section-head { text-align: center; margin-bottom: 56px; }
+.cp-label {
+  display: inline-block;
+  font-size: 11px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase;
+  color: var(--cp-blue); background: var(--cp-blue-l);
+  padding: 4px 16px; border-radius: 50px; margin-bottom: 12px;
+}
+.cp-section-head h2 {
+  font-size: clamp(26px, 3.5vw, 40px); font-weight: 800; color: var(--cp-dark);
+}
+.cp-section-head p {
+  margin-top: 12px; color: var(--cp-mute);
+  max-width: 520px; margin-left: auto; margin-right: auto; font-size: 15px;
+}
+
+/* ── Buttons ── */
+.cp-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 26px; border-radius: 8px;
+  font-family: var(--cp-head); font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: .25s; border: 2px solid transparent;
+}
+.cp-btn-primary { background: var(--cp-blue); color: #fff; }
+.cp-btn-primary:hover {
+  background: var(--cp-blue-d); transform: translateY(-2px);
+  box-shadow: 0 8px 24px var(--cp-blue-2);
+}
+.cp-btn-outline { background: transparent; border-color: var(--cp-blue); color: var(--cp-blue); }
+.cp-btn-outline:hover { background: var(--cp-blue); color: #fff; transform: translateY(-2px); }
+.cp-btn-white  { background: #fff; color: var(--cp-blue); }
+.cp-btn-white:hover  { background: var(--cp-alt); transform: translateY(-2px); }
+
+/* ══ HERO (split layout) ══ */
+.cp-hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 86vh;
+  overflow: hidden;
+}
+@media (min-width: 900px) {
+  .cp-hero { grid-template-columns: 1fr 1fr; min-height: 84vh; }
+}
+
+.cp-hero-left {
+  background: #fff;
+  display: flex; align-items: center;
+  justify-content: flex-end;
+}
+.cp-hero-left-inner {
+  width: 100%; max-width: 590px;
+  padding: 70px 48px 70px 24px;
+}
+@media (max-width: 899px) {
+  .cp-hero-left { justify-content: center; }
+  .cp-hero-left-inner { padding: 48px 24px; max-width: 100%; }
+}
+
+.cp-hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--cp-blue); margin-bottom: 16px;
+}
+.cp-hero-eyebrow::before {
+  content: ''; width: 28px; height: 2px; background: var(--cp-blue); flex-shrink: 0;
+}
+.cp-hero-name {
+  font-size: clamp(36px, 5vw, 62px); font-weight: 800;
+  color: var(--cp-dark); line-height: 1.08; margin-bottom: 10px;
+}
+.cp-hero-name span { color: var(--cp-blue); display: block; }
+.cp-hero-typed {
+  font-size: clamp(15px, 1.8vw, 19px); font-weight: 500;
+  color: var(--cp-text); margin-bottom: 22px; min-height: 28px;
+}
+.cp-typed-cursor { color: var(--cp-blue); animation: cpBlink .7s step-end infinite; }
+@keyframes cpBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+.cp-hero-desc {
+  color: var(--cp-text); font-size: 15px; line-height: 1.78;
+  margin-bottom: 32px; max-width: 430px;
+}
+.cp-hero-btns { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 30px; }
+.cp-social-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.cp-social-row a {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 1.5px solid var(--cp-border);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 15px; color: var(--cp-text); transition: .25s;
+}
+.cp-social-row a:hover { border-color: var(--cp-blue); background: var(--cp-blue); color: #fff; }
+
+/* Hero right (blue panel) */
+.cp-hero-right {
+  background: var(--cp-blue);
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden; min-height: 380px;
+  padding: 60px 40px;
+}
+.cp-hero-deco {
+  position: absolute; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.12); pointer-events: none;
+}
+.cp-hero-deco.d1 { width: 360px; height: 360px; top: -100px; right: -100px; }
+.cp-hero-deco.d2 { width: 220px; height: 220px; bottom: 30px; left: -60px; }
+.cp-hero-deco.d3 { width: 120px; height: 120px; top: 40px; left: 60px; background: rgba(255,255,255,.04); border: none; }
+
+.cp-hero-photo-wrap {
+  position: relative; z-index: 1;
+  width: clamp(240px, 28vw, 360px);
+  height: clamp(300px, 35vw, 440px);
+}
+.cp-hero-photo {
+  width: 100%; height: 100%; border-radius: 20px;
+  overflow: hidden;
+  background: rgba(255,255,255,.15);
+  border: 4px solid rgba(255,255,255,.22);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--cp-head); font-size: 72px; font-weight: 800;
+  color: rgba(255,255,255,.28);
+  box-shadow: 0 30px 80px rgba(0,0,0,.28);
+}
+.cp-hero-photo img { width: 100%; height: 100%; object-fit: cover; }
+
+.cp-hero-badge {
+  position: absolute; z-index: 2;
+  background: #fff; border-radius: 14px; padding: 12px 16px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.22);
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--cp-head);
+}
+.cp-hero-badge.top-left  { top: -20px; left: -28px; }
+.cp-hero-badge.bot-right { bottom: -20px; right: -20px; }
+@media (max-width: 899px) {
+  .cp-hero-badge.top-left  { top: 12px; left: 12px; }
+  .cp-hero-badge.bot-right { bottom: 12px; right: 12px; }
+}
+.cp-badge-icon {
+  width: 42px; height: 42px; border-radius: 11px;
+  background: var(--cp-blue); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 19px; flex-shrink: 0;
+}
+.cp-badge-num  { font-size: 22px; font-weight: 800; color: var(--cp-dark); line-height: 1; }
+.cp-badge-lbl  { font-size: 11px; color: var(--cp-mute); font-weight: 500; }
+
+/* ══ STATS STRIP ══ */
+.cp-stats-strip {
+  background: #fff;
+  box-shadow: 0 6px 40px rgba(0,0,0,.08);
+  position: relative; z-index: 2;
+}
+.cp-stats-inner {
+  max-width: 1180px; margin: 0 auto; padding: 0 24px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+}
+@media (min-width: 640px) {
+  .cp-stats-inner { grid-template-columns: repeat(4, 1fr); }
+}
+.cp-stat-item {
+  padding: 28px 20px; text-align: center;
+  border-right: 1px solid var(--cp-border);
+  border-bottom: 1px solid var(--cp-border);
+  transition: background .3s;
+}
+@media (min-width: 640px) {
+  .cp-stat-item { border-bottom: none; }
+  .cp-stat-item:last-child { border-right: none; }
+  .cp-stat-item:nth-child(2) { border-right: 1px solid var(--cp-border); }
+}
+@media (max-width: 639px) {
+  .cp-stat-item:nth-child(2n) { border-right: none; }
+}
+.cp-stat-item:hover { background: var(--cp-alt); }
+.cp-stat-icon { font-size: 26px; color: var(--cp-blue); margin-bottom: 8px; }
+.cp-stat-num  {
+  font-family: var(--cp-head); font-size: 36px; font-weight: 800;
+  color: var(--cp-dark); line-height: 1;
+}
+.cp-stat-lbl  { font-size: 12px; color: var(--cp-mute); font-weight: 500; margin-top: 6px; }
+
+/* ══ ABOUT ══ */
+.cp-about-grid {
+  display: grid; grid-template-columns: 1fr; gap: 64px; align-items: center;
+}
+@media (min-width: 900px) { .cp-about-grid { grid-template-columns: 1fr 1fr; } }
+
+.cp-about-photo-wrap { position: relative; max-width: 420px; margin: 0 auto; }
+.cp-about-photo {
+  width: 100%; border-radius: 16px; overflow: hidden;
+  background: var(--cp-alt); aspect-ratio: 4/5;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 80px; color: var(--cp-mute);
+  box-shadow: var(--cp-shadow-lg);
+}
+.cp-about-photo img { width: 100%; height: 100%; object-fit: cover; }
+.cp-exp-badge {
+  position: absolute; bottom: -20px; right: -18px;
+  background: var(--cp-blue); color: #fff;
+  padding: 16px 20px; border-radius: 14px; text-align: center;
+  box-shadow: 0 8px 28px var(--cp-blue-2);
+}
+.cp-exp-badge .exp-num { font-family: var(--cp-head); font-size: 34px; font-weight: 800; line-height: 1; }
+.cp-exp-badge .exp-lbl { font-size: 11px; font-weight: 600; opacity: .85; }
+
+.cp-about-content h2 { font-size: clamp(22px, 3vw, 32px); font-weight: 800; margin-bottom: 16px; }
+.cp-about-content .cp-about-bio { color: var(--cp-text); margin-bottom: 24px; line-height: 1.78; }
+.cp-about-content .cp-about-bio p { margin-bottom: 10px; }
+.cp-about-feats { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+.cp-about-feat  { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: var(--cp-text); }
+.cp-about-feat i { color: var(--cp-blue); font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+.cp-lang-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.cp-tag {
+  padding: 5px 14px; border-radius: 50px;
+  font-size: 12px; font-weight: 600;
+  background: var(--cp-blue-l); color: var(--cp-blue);
+}
+
+/* ══ SKILLS ══ */
+.cp-skills-grid {
+  display: grid; grid-template-columns: 1fr; gap: 56px;
+}
+@media (min-width: 900px) { .cp-skills-grid { grid-template-columns: 1fr 1fr; } }
+.cp-skills-col h3 { font-size: 20px; font-weight: 700; margin-bottom: 28px; }
+
+.cp-skill-item  { margin-bottom: 22px; }
+.cp-skill-hdr   { display: flex; justify-content: space-between; margin-bottom: 8px; }
+.cp-skill-name  { font-size: 14px; font-weight: 600; color: var(--cp-dark); }
+.cp-skill-pct   { font-size: 13px; font-weight: 700; color: var(--cp-blue); }
+.cp-skill-track {
+  height: 7px; border-radius: 7px;
+  background: var(--cp-border); overflow: hidden;
+}
+.cp-skill-bar {
+  height: 100%; border-radius: 7px;
+  background: linear-gradient(90deg, var(--cp-blue), color-mix(in srgb, var(--cp-blue) 65%, #fff));
+  width: 0; transition: width 1.1s cubic-bezier(.4,0,.2,1);
+}
+
+/* Tabs */
+.cp-tab-nav {
+  display: flex; gap: 4px; margin-bottom: 24px;
+  background: var(--cp-alt); border-radius: 10px; padding: 4px;
+}
+.cp-tab-btn {
+  flex: 1; padding: 9px 10px; border-radius: 7px; border: none; cursor: pointer;
+  font-family: var(--cp-head); font-size: 13px; font-weight: 600;
+  color: var(--cp-text); background: transparent; transition: .25s;
+}
+.cp-tab-btn.active { background: #fff; color: var(--cp-blue); box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+
+/* Timeline */
+.cp-timeline { position: relative; padding-left: 22px; }
+.cp-timeline::before {
+  content: ''; position: absolute; left: 5px; top: 6px; bottom: 6px;
+  width: 2px; background: var(--cp-border);
+}
+.cp-tl-item { position: relative; margin-bottom: 26px; }
+.cp-tl-item::before {
+  content: ''; position: absolute; left: -20px; top: 5px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--cp-blue); border: 2px solid #fff;
+  box-shadow: 0 0 0 2px var(--cp-blue);
+}
+.cp-tl-item h4    { font-size: 15px; font-weight: 700; color: var(--cp-dark); margin-bottom: 4px; }
+.cp-tl-item .tl-meta  { font-size: 12px; font-weight: 600; color: var(--cp-blue); margin-bottom: 3px; }
+.cp-tl-item .tl-place { font-size: 13px; color: var(--cp-mute); }
+
+/* ══ SERVICES ══ */
+.cp-services-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 24px;
+}
+.cp-svc-card {
+  background: #fff; border-radius: var(--cp-radius); padding: 36px 28px;
+  border: 1px solid var(--cp-border); box-shadow: var(--cp-shadow);
+  position: relative; overflow: hidden; transition: .35s;
+}
+.cp-svc-card::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+  background: var(--cp-blue); transform: scaleX(0); transform-origin: left; transition: .35s;
+}
+.cp-svc-card:hover { transform: translateY(-6px); box-shadow: var(--cp-shadow-lg); }
+.cp-svc-card:hover::after { transform: scaleX(1); }
+.cp-svc-icon {
+  width: 62px; height: 62px; border-radius: 14px;
+  background: var(--cp-blue-l); color: var(--cp-blue);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; margin-bottom: 20px; transition: .3s;
+}
+.cp-svc-card:hover .cp-svc-icon { background: var(--cp-blue); color: #fff; }
+.cp-svc-card h3   { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+.cp-svc-card p    { font-size: 14px; color: var(--cp-text); line-height: 1.7; margin-bottom: 18px; }
+.cp-svc-level     { display: flex; align-items: center; gap: 5px; }
+.cp-svc-dot       { width: 8px; height: 8px; border-radius: 50%; background: var(--cp-border); }
+.cp-svc-dot.filled { background: var(--cp-blue); }
+
+/* ══ PROJECTS (doctor-card style) ══ */
+.cp-proj-filters {
+  display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 40px;
+}
+.cp-filter-btn {
+  padding: 8px 22px; border-radius: 50px;
+  border: 2px solid var(--cp-border); background: transparent;
+  font-family: var(--cp-head); font-size: 13px; font-weight: 600;
+  color: var(--cp-text); cursor: pointer; transition: .25s;
+}
+.cp-filter-btn:hover, .cp-filter-btn.active {
+  border-color: var(--cp-blue); background: var(--cp-blue); color: #fff;
+}
+
+.cp-proj-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px,1fr)); gap: 24px;
+}
+.cp-proj-card {
+  background: #fff; border-radius: var(--cp-radius);
+  border: 1px solid var(--cp-border); overflow: hidden;
+  box-shadow: var(--cp-shadow); transition: .35s; display: flex; flex-direction: column;
+}
+.cp-proj-card:hover { transform: translateY(-6px); box-shadow: var(--cp-shadow-lg); }
+
+.cp-proj-img {
+  height: 215px; overflow: hidden; background: var(--cp-alt); position: relative; flex-shrink: 0;
+}
+.cp-proj-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s; }
+.cp-proj-card:hover .cp-proj-img img { transform: scale(1.05); }
+.cp-proj-fallback {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 54px; color: color-mix(in srgb, var(--cp-blue) 25%, #fff);
+}
+.cp-proj-overlay {
+  position: absolute; inset: 0;
+  background: color-mix(in srgb, var(--cp-blue) 88%, #000);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: .3s;
+}
+.cp-proj-card:hover .cp-proj-overlay { opacity: 1; }
+.cp-proj-overlay-links { display: flex; gap: 10px; }
+.cp-proj-overlay-links a {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: #fff; color: var(--cp-blue);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 17px; transition: .2s;
+}
+.cp-proj-overlay-links a:hover { background: var(--cp-alt); transform: scale(1.1); }
+
+.cp-proj-body { padding: 20px; flex: 1; }
+.cp-proj-cat  {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--cp-blue); margin-bottom: 5px;
+}
+.cp-proj-body h4 { font-size: 16px; font-weight: 700; color: var(--cp-dark); margin-bottom: 6px; }
+.cp-proj-body p  { font-size: 13px; color: var(--cp-mute); line-height: 1.6; }
+
+.cp-proj-footer {
+  padding: 14px 20px; border-top: 1px solid var(--cp-border);
+  display: flex; gap: 8px;
+}
+.cp-proj-footer a {
+  flex: 1; padding: 8px 0; border-radius: 7px;
+  font-family: var(--cp-head); font-size: 13px; font-weight: 700;
+  text-align: center; transition: .2s; border: 1.5px solid transparent;
+}
+.cp-proj-btn-main { background: var(--cp-blue); color: #fff !important; }
+.cp-proj-btn-main:hover { background: var(--cp-blue-d); }
+.cp-proj-btn-alt  { border-color: var(--cp-border) !important; color: var(--cp-text) !important; }
+.cp-proj-btn-alt:hover { border-color: var(--cp-blue) !important; color: var(--cp-blue) !important; }
+
+/* ══ TESTIMONIALS ══ */
+.cp-testi-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px,1fr)); gap: 24px;
+}
+.cp-testi-card {
+  background: #fff; border-radius: var(--cp-radius); padding: 28px;
+  border: 1px solid var(--cp-border); box-shadow: var(--cp-shadow);
+  transition: .3s; position: relative;
+}
+.cp-testi-card:hover { transform: translateY(-4px); box-shadow: var(--cp-shadow-lg); }
+.cp-testi-quote {
+  font-size: 60px; line-height: .75; color: var(--cp-blue-l);
+  font-family: Georgia, serif; margin-bottom: 10px; user-select: none;
+}
+.cp-testi-text  { font-size: 14px; color: var(--cp-text); line-height: 1.75; font-style: italic; margin-bottom: 18px; }
+.cp-testi-stars { display: flex; gap: 3px; margin-bottom: 14px; }
+.cp-testi-stars i { font-size: 14px; color: #f59e0b; }
+.cp-testi-author { display: flex; align-items: center; gap: 12px; }
+.cp-testi-photo {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--cp-blue); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--cp-head); font-size: 16px; font-weight: 700;
+  overflow: hidden; flex-shrink: 0;
+}
+.cp-testi-photo img { width: 100%; height: 100%; object-fit: cover; }
+.cp-testi-name { font-size: 14px; font-weight: 700; color: var(--cp-dark); }
+.cp-testi-role { font-size: 12px; color: var(--cp-mute); }
+
+/* ══ CONTACT (dark) ══ */
+.cp-contact-section { background: var(--cp-dark); }
+.cp-contact-section .cp-section-head h2 { color: #fff; }
+.cp-contact-section .cp-section-head p  { color: rgba(255,255,255,.55); }
+.cp-contact-cards {
+  display: grid; gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(240px,1fr));
+}
+.cp-contact-card {
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+  border-radius: var(--cp-radius); padding: 28px 22px; text-align: center; transition: .3s;
+}
+.cp-contact-card:hover { background: rgba(255,255,255,.10); transform: translateY(-4px); }
+.cp-contact-card-icon {
+  width: 54px; height: 54px; border-radius: 14px;
+  background: var(--cp-blue); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 21px; margin: 0 auto 14px;
+}
+.cp-contact-card h4 {
+  font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  color: rgba(255,255,255,.45); margin-bottom: 8px;
+}
+.cp-contact-card p, .cp-contact-card a {
+  font-size: 14px; color: #fff; word-break: break-all;
+}
+.cp-contact-card a:hover { color: color-mix(in srgb, var(--cp-blue) 60%, #fff); }
+
+.cp-socials-row {
+  display: flex; gap: 10px; justify-content: center; margin-top: 44px; flex-wrap: wrap;
+}
+.cp-socials-row a {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,.15);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 17px; color: rgba(255,255,255,.65); transition: .25s;
+}
+.cp-socials-row a:hover { background: var(--cp-blue); border-color: var(--cp-blue); color: #fff; }
+
+/* ══ FOOTER ══ */
+.cp-footer {
+  background: color-mix(in srgb, var(--cp-dark) 92%, #000);
+  padding: 18px 24px; text-align: center;
+  font-size: 13px; color: rgba(255,255,255,.3);
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+
+/* ══ SCROLL TOP ══ */
+.cp-scroll-top {
+  position: fixed; bottom: 28px; right: 28px; z-index: 999;
+  width: 44px; height: 44px; border-radius: 10px;
+  background: var(--cp-blue); color: #fff; border: none;
+  display: flex; align-items: center; justify-content: center; font-size: 21px;
+  cursor: pointer; box-shadow: 0 6px 20px var(--cp-blue-2);
+  transform: translateY(80px); opacity: 0; transition: .3s;
+}
+.cp-scroll-top.show  { transform: translateY(0); opacity: 1; }
+.cp-scroll-top:hover { background: var(--cp-blue-d); }
+
+/* ── Responsive tweaks ── */
+@media (max-width: 899px) {
+  .cp-hero { min-height: auto; }
+  .cp-hero-right { order: -1; }
+  .cp-section { padding: 60px 0; }
+  .cp-section-head { margin-bottom: 36px; }
+}
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="cp" x-data="clinicPro()" x-init="init()">
+
+  {% if est_proprio %}
+  <div class="cp-owner">
+    <span><i class="bi bi-eye" style="margin-right:6px;"></i>{% trans "Vous consultez votre portfolio —" %} <strong>{% trans "Clinic Pro" %}</strong></span>
+    <a href="{% url 'candidat:profil' %}?onglet=portfolio">
+      <i class="bi bi-pencil-square"></i>Modifier
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- Top bar -->
+  {% if not masquer_contact and candidat.email or candidat.telephone %}
+  <div class="cp-topbar">
+    <div class="cp-topbar-inner">
+      <div class="cp-topbar-left">
+        {% if not masquer_contact and candidat.email %}
+        <a href="mailto:{{ candidat.email }}"><i class="bi bi-envelope"></i>{{ candidat.email }}</a>
+        {% endif %}
+        {% if not masquer_contact and candidat.telephone %}
+        <a href="tel:{{ candidat.telephone }}"><i class="bi bi-telephone"></i>{{ candidat.telephone }}</a>
+        {% endif %}
+        {% if candidat.ville %}
+        <span><i class="bi bi-geo-alt"></i>{{ candidat.ville }}</span>
+        {% endif %}
+      </div>
+      {% if liens_sociaux %}
+      <div class="cp-topbar-right">
+        {% for lien in liens_sociaux|slice:":5" %}
+        <a href="{{ lien.url }}" target="_blank" rel="noopener" title="{{ lien.reseau.libelle }}">
+          <i class="bi {{ lien.reseau.bi_class }}"></i>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ══ NAVBAR INTERNE ══ -->
+  <div class="cp-navbar" id="cp-nav">
+    <div class="cp-nav-inner">
+      <a href="#cp-home" class="cp-nav-logo">
+        <div class="cp-nav-logo-badge">{{ candidat.prenom|slice:":1"|upper }}</div>
+        {{ candidat.prenom }} <span>{{ candidat.nom|slice:":1"|upper }}.</span>
+      </a>
+
+      <nav class="cp-nav-links">
+        <a href="#cp-home"     :class="{ active: active==='home' }">{% trans "Accueil" %}</a>
+        {% if params.showAbout %}
+        <a href="#cp-about"    :class="{ active: active==='about' }">{% trans "À propos" %}</a>
+        {% endif %}
+        {% if params.showCompetences and rubriques.competences %}
+        <a href="#cp-skills"   :class="{ active: active==='skills' }">{% trans "Compétences" %}</a>
+        <a href="#cp-services" :class="{ active: active==='services' }">{% trans "Services" %}</a>
+        {% endif %}
+        {% if params.showProjets and rubriques.projets %}
+        <a href="#cp-projects" :class="{ active: active==='projects' }">{% trans "Projets" %}</a>
+        {% endif %}
+        {% if params.showContact and candidat.email %}
+        <a href="#cp-contact"  :class="{ active: active==='contact' }">{% trans "Contact" %}</a>
+        {% endif %}
+      </nav>
+
+      <div class="cp-nav-right">
+        {% if not masquer_contact and candidat.email %}
+        <a href="#cp-contact" class="cp-nav-cta">
+          <i class="bi bi-chat-dots"></i>Me contacter
+        </a>
+        {% endif %}
+        <button class="cp-hamburger" @click="navOpen=!navOpen" aria-label="{% trans "Menu" %}">
+          <i class="bi" :class="navOpen ? 'bi-x-lg' : 'bi-list'"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="cp-mobile-nav" :class="{ open: navOpen }" @click.away="navOpen=false">
+      <a href="#cp-home"     @click="navOpen=false" :class="{ active: active==='home' }">{% trans "Accueil" %}</a>
+      {% if params.showAbout %}
+      <a href="#cp-about"    @click="navOpen=false" :class="{ active: active==='about' }">{% trans "À propos" %}</a>
+      {% endif %}
+      {% if params.showCompetences and rubriques.competences %}
+      <a href="#cp-skills"   @click="navOpen=false" :class="{ active: active==='skills' }">{% trans "Compétences" %}</a>
+      <a href="#cp-services" @click="navOpen=false" :class="{ active: active==='services' }">{% trans "Services" %}</a>
+      {% endif %}
+      {% if params.showProjets and rubriques.projets %}
+      <a href="#cp-projects" @click="navOpen=false" :class="{ active: active==='projects' }">{% trans "Projets" %}</a>
+      {% endif %}
+      {% if params.showContact and candidat.email %}
+      <a href="#cp-contact"  @click="navOpen=false" :class="{ active: active==='contact' }">{% trans "Contact" %}</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ══ HERO ══ -->
+  <section id="cp-home" class="cp-hero">
+    <!-- Gauche : texte -->
+    <div class="cp-hero-left">
+      <div class="cp-hero-left-inner" data-aos="fade-right">
+        <p class="cp-hero-eyebrow">
+          {% if candidat.titreProfessionnel %}{{ candidat.titreProfessionnel }}{% else %}Portfolio professionnel{% endif %}
+        </p>
+        <h1 class="cp-hero-name">
+          {{ candidat.prenom|default:"Mon" }}
+          <span>{{ candidat.nom|default:"Portfolio" }}</span>
+        </h1>
+        <div class="cp-hero-typed">
+          Je suis&nbsp;<span x-text="typedWord"></span><span class="cp-typed-cursor">|</span>
+        </div>
+        {% if candidat.biographie %}
+        <p class="cp-hero-desc">{{ candidat.biographie|truncatewords:28 }}</p>
+        {% elif candidat.sloganPortfolio %}
+        <p class="cp-hero-desc">{{ candidat.sloganPortfolio }}</p>
+        {% endif %}
+        <div class="cp-hero-btns">
+          {% if not masquer_contact and candidat.email %}
+          <a href="#cp-contact" class="cp-btn cp-btn-primary">
+            <i class="bi bi-chat-dots"></i>Me contacter
+          </a>
+          {% endif %}
+          {% if params.showProjets and rubriques.projets %}
+          <a href="#cp-projects" class="cp-btn cp-btn-outline">{% trans "Voir mes projets" %}</a>
+          {% endif %}
+        </div>
+        {% if liens_sociaux %}
+        <div class="cp-social-row">
+          {% for lien in liens_sociaux|slice:":6" %}
+          <a href="{{ lien.url }}" target="_blank" rel="noopener" title="{{ lien.reseau.libelle }}">
+            <i class="bi {{ lien.reseau.bi_class }}"></i>
+          </a>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Droite : photo sur fond bleu -->
+    <div class="cp-hero-right">
+      <div class="cp-hero-deco d1"></div>
+      <div class="cp-hero-deco d2"></div>
+      <div class="cp-hero-deco d3"></div>
+      <div class="cp-hero-photo-wrap" data-aos="zoom-in" data-aos-delay="200">
+        {% if rubriques.projets %}
+        <div class="cp-hero-badge top-left">
+          <div class="cp-badge-icon"><i class="bi bi-folder2-open"></i></div>
+          <div>
+            <div class="cp-badge-num">{{ rubriques.projets|length }}+</div>
+            <div class="cp-badge-lbl">{% trans "Projets" %}</div>
+          </div>
+        </div>
+        {% endif %}
+        <div class="cp-hero-photo">
+          {% if candidat.photoProfil %}
+          <img src="{{ candidat.photoProfil.url }}" alt="{{ candidat.prenom }} {{ candidat.nom }}">
+          {% else %}
+          {{ candidat.prenom|slice:":1"|upper }}{{ candidat.nom|slice:":1"|upper }}
+          {% endif %}
+        </div>
+        {% if annees_xp is not None %}
+        <div class="cp-hero-badge bot-right">
+          <div class="cp-badge-icon"><i class="bi bi-award"></i></div>
+          <div>
+            <div class="cp-badge-num">{{ annees_xp }}+</div>
+            <div class="cp-badge-lbl">{% trans "Ans d'exp." %}</div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ STATS STRIP ══ -->
+  <div class="cp-stats-strip">
+    <div class="cp-stats-inner">
+      {% if rubriques.projets %}
+      <div class="cp-stat-item" data-aos="fade-up">
+        <div class="cp-stat-icon"><i class="bi bi-folder2-open"></i></div>
+        <div class="cp-stat-num"><span data-count="{{ rubriques.projets|length }}">0</span>+</div>
+        <div class="cp-stat-lbl">{% trans "Projets réalisés" %}</div>
+      </div>
+      {% endif %}
+      {% if annees_xp is not None %}
+      <div class="cp-stat-item" data-aos="fade-up" data-aos-delay="100">
+        <div class="cp-stat-icon"><i class="bi bi-briefcase"></i></div>
+        <div class="cp-stat-num"><span data-count="{{ annees_xp }}">0</span>+</div>
+        <div class="cp-stat-lbl">{% trans "Ans d'expérience" %}</div>
+      </div>
+      {% endif %}
+      {% if rubriques.competences %}
+      <div class="cp-stat-item" data-aos="fade-up" data-aos-delay="200">
+        <div class="cp-stat-icon"><i class="bi bi-tools"></i></div>
+        <div class="cp-stat-num"><span data-count="{{ rubriques.competences|length }}">0</span></div>
+        <div class="cp-stat-lbl">{% trans "Compétences" %}</div>
+      </div>
+      {% endif %}
+      {% if rubriques.experiences %}
+      <div class="cp-stat-item" data-aos="fade-up" data-aos-delay="300">
+        <div class="cp-stat-icon"><i class="bi bi-building"></i></div>
+        <div class="cp-stat-num"><span data-count="{{ rubriques.experiences|length }}">0</span></div>
+        <div class="cp-stat-lbl">{% trans "Expériences" %}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ══ ABOUT ══ -->
+  {% if params.showAbout %}
+  <section id="cp-about" class="cp-section">
+    <div class="cp-container">
+      <div class="cp-section-head" data-aos="fade-up">
+        <span class="cp-label">{% trans "À propos" %}</span>
+        <h2>{% trans "Qui suis-je ?" %}</h2>
+      </div>
+      <div class="cp-about-grid">
+
+        <div class="cp-about-photo-wrap" data-aos="fade-right">
+          <div class="cp-about-photo">
+            {% if candidat.photoProfil %}
+            <img src="{{ candidat.photoProfil.url }}" alt="{{ candidat.prenom }}">
+            {% else %}
+            <i class="bi bi-person-fill"></i>
+            {% endif %}
+          </div>
+          {% if annees_xp is not None %}
+          <div class="cp-exp-badge">
+            <div class="exp-num">{{ annees_xp }}+</div>
+            <div class="exp-lbl">{% trans "Ans d'expérience" %}</div>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="cp-about-content" data-aos="fade-left" data-aos-delay="100">
+          {% if candidat.titreProfessionnel %}
+          <span class="cp-label" style="margin-bottom:12px;display:inline-block;">{{ candidat.titreProfessionnel }}</span>
+          {% endif %}
+          <h2>{% trans "Bienvenue sur mon portfolio" %}</h2>
+          <div class="cp-about-bio" style="margin-top:14px;">
+            {% if candidat.biographie %}
+            {{ candidat.biographie|linebreaks }}
+            {% else %}
+            <p>{% trans "Je suis" %} {{ candidat.titreProfessionnel|default:"un professionnel" }} passionné par mon métier. Découvrez mes compétences, mon parcours et mes réalisations.</p>
+            {% if candidat.sloganPortfolio %}<p>{{ candidat.sloganPortfolio }}</p>{% endif %}
+            {% endif %}
+          </div>
+          <div class="cp-about-feats">
+            <div class="cp-about-feat"><i class="bi bi-check-circle-fill"></i><span>{% trans "Disponible pour des opportunités professionnelles et des collaborations." %}</span></div>
+            <div class="cp-about-feat"><i class="bi bi-check-circle-fill"></i><span>{% trans "Engagement total dans chaque projet pour un résultat de qualité." %}</span></div>
+            <div class="cp-about-feat"><i class="bi bi-check-circle-fill"></i><span>{% trans "Communication transparente et réactivité tout au long des projets." %}</span></div>
+          </div>
+          {% if rubriques.langues %}
+          <div class="cp-lang-tags">
+            {% for lang in rubriques.langues %}
+            <span class="cp-tag"><i class="bi bi-translate" style="font-size:11px;"></i> {{ lang.nom }}{% if lang.niveau %} — {{ lang.niveau }}{% endif %}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% if not masquer_contact and candidat.email %}
+          <a href="mailto:{{ candidat.email }}" class="cp-btn cp-btn-primary" style="margin-top:4px;">
+            <i class="bi bi-envelope"></i>Contactez-moi
+          </a>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ══ SKILLS & PARCOURS ══ -->
+  {% if params.showCompetences and rubriques.competences or params.showExperiences and rubriques.experiences or params.showFormations and formations_groupees.diplome %}
+  <section id="cp-skills" class="cp-section cp-section-alt">
+    <div class="cp-container">
+      <div class="cp-section-head" data-aos="fade-up">
+        <span class="cp-label">{% trans "Compétences & Parcours" %}</span>
+        <h2>{% trans "Mon expertise" %}</h2>
+      </div>
+      <div class="cp-skills-grid">
+
+        {% if params.showCompetences and rubriques.competences %}
+        <div data-aos="fade-right">
+          <div class="cp-skills-col">
+            <h3>{% trans "Compétences techniques" %}</h3>
+            {% for c in rubriques.competences %}
+            <div class="cp-skill-item">
+              <div class="cp-skill-hdr">
+                <span class="cp-skill-name">{{ c.nom }}</span>
+                <span class="cp-skill-pct">{% widthratio c.niveau 5 100 %}%</span>
+              </div>
+              <div class="cp-skill-track">
+                <div class="cp-skill-bar" data-width="{% widthratio c.niveau 5 100 %}"></div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if params.showExperiences and rubriques.experiences or params.showFormations and formations_groupees.diplome or params.showFormations and formations_groupees.certification %}
+        <div data-aos="fade-left" data-aos-delay="100">
+          <div class="cp-tab-nav">
+            {% if params.showExperiences and rubriques.experiences %}
+            <button class="cp-tab-btn" :class="{ active: tab==='exp' }" @click="tab='exp'">{% trans "Expérience" %}</button>
+            {% endif %}
+            {% if params.showFormations and formations_groupees.diplome %}
+            <button class="cp-tab-btn" :class="{ active: tab==='edu' }" @click="tab='edu'">{% trans "Formation" %}</button>
+            {% endif %}
+            {% if params.showFormations and formations_groupees.certification %}
+            <button class="cp-tab-btn" :class="{ active: tab==='cert' }" @click="tab='cert'">{% trans "Certifications" %}</button>
+            {% endif %}
+          </div>
+
+          {% if params.showExperiences and rubriques.experiences %}
+          <div x-show="tab==='exp'" x-transition>
+            <div class="cp-timeline">
+              {% for exp in rubriques.experiences %}
+              <div class="cp-tl-item">
+                <h4>{% for p in exp.postes %}{{ p.titre }}{% if not forloop.last %} / {% endif %}{% endfor %}{% if not exp.postes %}{{ exp.entreprise }}{% endif %}</h4>
+                {% if exp.periodeFR %}<div class="tl-meta">{{ exp.periodeFR }}</div>{% endif %}
+                {% if exp.entreprise %}<div class="tl-place">{{ exp.entreprise }}{% if exp.lieu %} — {{ exp.lieu }}{% endif %}</div>{% endif %}
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if params.showFormations and formations_groupees.diplome %}
+          <div x-show="tab==='edu'" x-transition>
+            <div class="cp-timeline">
+              {% for f in formations_groupees.diplome %}
+              <div class="cp-tl-item">
+                <h4>{{ f.diplome|default:f.domaine|default:"Diplôme" }}</h4>
+                {% if f.debut or f.fin %}
+                <div class="tl-meta">{{ f.debut|slice:":4" }}{% if f.fin %} — {{ f.fin|slice:":4" }}{% else %} — En cours{% endif %}</div>
+                {% endif %}
+                {% if f.ecole %}<div class="tl-place">{{ f.ecole }}{% if f.lieu %} — {{ f.lieu }}{% endif %}</div>{% endif %}
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if params.showFormations and formations_groupees.certification %}
+          <div x-show="tab==='cert'" x-transition>
+            <div class="cp-timeline">
+              {% for f in formations_groupees.certification %}
+              <div class="cp-tl-item">
+                <h4>{{ f.diplome|default:f.domaine|default:"Certification" }}</h4>
+                {% if f.fin %}<div class="tl-meta">{{ f.fin|slice:":4" }}</div>{% endif %}
+                {% if f.ecole %}<div class="tl-place">{{ f.ecole }}</div>{% endif %}
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ══ SERVICES ══ -->
+  {% if params.showCompetences and rubriques.competences %}
+  <section id="cp-services" class="cp-section">
+    <div class="cp-container">
+      <div class="cp-section-head" data-aos="fade-up">
+        <span class="cp-label">{% trans "Services" %}</span>
+        <h2>{% trans "Ce que je propose" %}</h2>
+        <p>{% trans "Des solutions sur mesure, portées par l'expertise et l'engagement professionnel." %}</p>
+      </div>
+      <div class="cp-services-grid">
+        {% for c in rubriques.competences|slice:":6" %}
+        <div data-aos="fade-up" data-aos-delay="{{ forloop.counter0 }}00">
+          <div class="cp-svc-card">
+            <div class="cp-svc-icon">
+              <i class="bi bi-{% cycle 'code-slash' 'palette2' 'graph-up-arrow' 'gear-wide-connected' 'shield-check' 'megaphone' %}"></i>
+            </div>
+            <h3>{{ c.nom }}</h3>
+            <p>{% if c.niveau >= 4 %}Expertise avancée ({{ c.niveau }}/5). Disponible pour vos projets nécessitant cette spécialité.{% else %}Maîtrise solide ({{ c.niveau }}/5). Prêt à contribuer efficacement à vos besoins.{% endif %}</p>
+            <div class="cp-svc-level">
+              {% for i in "12345" %}
+              <div class="cp-svc-dot{% if forloop.counter <= c.niveau %} filled{% endif %}"></div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ══ PROJETS ══ -->
+  {% if params.showProjets and rubriques.projets %}
+  <section id="cp-projects" class="cp-section cp-section-alt">
+    <div class="cp-container">
+      <div class="cp-section-head" data-aos="fade-up">
+        <span class="cp-label">{% trans "Portfolio" %}</span>
+        <h2>{% trans "Mes réalisations" %}</h2>
+        <p>{% trans "Une sélection de projets illustrant mon savoir-faire et ma créativité." %}</p>
+      </div>
+
+      <div class="cp-proj-filters" data-aos="fade-up">
+        <button class="cp-filter-btn" :class="{ active: filter==='*' }" @click="filter='*'">{% trans "Tous" %}</button>
+        <template x-for="cat in projCategories" :key="cat">
+          <button class="cp-filter-btn" :class="{ active: filter===cat }" @click="filter=cat" x-text="cat"></button>
+        </template>
+      </div>
+
+      <div class="cp-proj-grid" data-aos="fade-up" data-aos-delay="100">
+        {% for projet in rubriques.projets %}{% if projet.nom %}
+        {% with cover=projet.images.0 %}
+        <div class="cp-proj-card"
+             x-show="filter==='*' || filter==='{{ projet.dateDebut|slice:":4"|default:"" }}'"
+             x-transition>
+          <div class="cp-proj-img">
+            {% if cover.url %}
+            <img src="{{ cover.url }}" alt="{{ projet.nom }}" loading="lazy">
+            {% else %}
+            <div class="cp-proj-fallback"><i class="bi bi-image"></i></div>
+            {% endif %}
+            <div class="cp-proj-overlay">
+              <div class="cp-proj-overlay-links">
+                {% if cover.url %}<a href="{{ cover.url }}" target="_blank" title="Aperçu"><i class="bi bi-zoom-in"></i></a>{% endif %}
+                {% if projet.db_id %}<a href="{% url 'candidat:portfolio_projet_detail' candidat.id projet.db_id %}" title="Détails"><i class="bi bi-arrow-right"></i></a>{% endif %}
+                {% if projet.has_demo %}<a href="{{ projet.lien }}" target="_blank" rel="noopener" title="Démo"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="cp-proj-body">
+            <div class="cp-proj-cat">{{ projet.dateDebut|slice:":4"|default:"Projet" }}</div>
+            <h4>{{ projet.nom }}</h4>
+            {% if projet.description %}<p>{{ projet.description|truncatewords:12 }}</p>{% endif %}
+          </div>
+          <div class="cp-proj-footer">
+            {% if projet.db_id %}
+            <a href="{% url 'candidat:portfolio_projet_detail' candidat.id projet.db_id %}" class="cp-proj-btn-main">{% trans "Voir le projet" %}</a>
+            {% endif %}
+            {% if projet.has_demo %}
+            <a href="{{ projet.lien }}" target="_blank" rel="noopener" class="cp-proj-btn-alt">{% trans "Démo" %} <i class="bi bi-arrow-up-right"></i></a>
+            {% endif %}
+          </div>
+        </div>
+        {% endwith %}
+        {% endif %}{% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ══ TÉMOIGNAGES ══ -->
+  {% if temoignages %}
+  <section id="cp-temoignages" class="cp-section">
+    <div class="cp-container">
+      <div class="cp-section-head" data-aos="fade-up">
+        <span class="cp-label">{% trans "Témoignages" %}</span>
+        <h2>{% trans "Ce qu'ils disent" %}</h2>
+      </div>
+      <div class="cp-testi-grid">
+        {% for t in temoignages %}
+        <div class="cp-testi-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0 }}00">
+          <div class="cp-testi-quote">"</div>
+          <p class="cp-testi-text">{{ t.texte }}</p>
+          {% if t.note %}
+          <div class="cp-testi-stars">
+            {% for i in "12345" %}
+            <i class="bi bi-star{% if forloop.counter <= t.note %}-fill{% endif %}"></i>
+            {% endfor %}
+          </div>
+          {% endif %}
+          <div class="cp-testi-author">
+            <div class="cp-testi-photo">
+              {% if t.photo %}<img src="{{ t.photo.url }}" alt="{{ t.nom }}">
+              {% else %}{{ t.nom|slice:":1"|upper }}{% endif %}
+            </div>
+            <div>
+              <div class="cp-testi-name">{{ t.nom }}</div>
+              <div class="cp-testi-role">
+                {% if t.poste %}{{ t.poste }}{% endif %}
+                {% if t.poste and t.entreprise %} — {% endif %}
+                {% if t.entreprise %}{{ t.entreprise }}{% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ══ CONTACT ══ -->
+  {% if params.showContact and candidat.email %}
+  <section id="cp-contact" class="cp-section cp-contact-section">
+    <div class="cp-container">
+      <div class="cp-section-head" data-aos="fade-up">
+        <span class="cp-label">{% trans "Contact" %}</span>
+        <h2>{% trans "Travaillons ensemble" %}</h2>
+        <p>{% trans "N'hésitez pas à me contacter. Je réponds sous 48 h ouvrées." %}</p>
+      </div>
+
+      <div class="cp-contact-cards" data-aos="fade-up" data-aos-delay="100">
+        {% if candidat.email %}
+        <div class="cp-contact-card">
+          <div class="cp-contact-card-icon"><i class="bi bi-envelope"></i></div>
+          <h4>{% trans "Email" %}</h4>
+          <p><a href="mailto:{{ candidat.email }}">{{ candidat.email }}</a></p>
+        </div>
+        {% endif %}
+        {% if candidat.telephone %}
+        <div class="cp-contact-card">
+          <div class="cp-contact-card-icon"><i class="bi bi-telephone"></i></div>
+          <h4>{% trans "Téléphone" %}</h4>
+          <p><a href="tel:{{ candidat.telephone }}">{{ candidat.telephone }}</a></p>
+        </div>
+        {% endif %}
+        {% if candidat.ville or candidat.adresse %}
+        <div class="cp-contact-card">
+          <div class="cp-contact-card-icon"><i class="bi bi-geo-alt"></i></div>
+          <h4>{% trans "Localisation" %}</h4>
+          <p>{% if candidat.ville %}{{ candidat.ville }}{% if candidat.adresse %}, {{ candidat.adresse }}{% endif %}{% else %}{{ candidat.adresse }}{% endif %}</p>
+        </div>
+        {% endif %}
+        {% if candidat.titreProfessionnel %}
+        <div class="cp-contact-card">
+          <div class="cp-contact-card-icon"><i class="bi bi-person-badge"></i></div>
+          <h4>{% trans "Spécialité" %}</h4>
+          <p>{{ candidat.titreProfessionnel }}</p>
+        </div>
+        {% endif %}
+      </div>
+
+      {% if liens_sociaux %}
+      <div class="cp-socials-row" data-aos="fade-up" data-aos-delay="200">
+        {% for lien in liens_sociaux %}
+        <a href="{{ lien.url }}" target="_blank" rel="noopener" title="{{ lien.reseau.libelle }}">
+          <i class="bi {{ lien.reseau.bi_class }}"></i>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ══ FOOTER ══ -->
+  <footer class="cp-footer">
+    <p>© {% now "Y" %} {{ candidat.prenom }} {{ candidat.nom }} — Clinic Pro Portfolio</p>
+  </footer>
+
+  <!-- Scroll top -->
+  <button class="cp-scroll-top" :class="{ show: scrollTop }"
+          @click="window.scrollTo({top:0,behavior:'smooth'})" aria-label="{% trans "Haut de page" %}">
+    <i class="bi bi-arrow-up-short"></i>
+  </button>
+
+</div><!-- .cp -->
+{% endblock %}
+
+{% block js_extra %}
+<script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+<script>
+window.addEventListener('load', function() {
+  if (window.AOS) AOS.init({ duration: 700, once: true, offset: 60, easing: 'ease-in-out' });
+});
+</script>
+<script>
+function clinicPro() {
+  return {
+    navOpen:   false,
+    scrollTop: false,
+    active:    'home',
+    tab: '{% if params.showExperiences and rubriques.experiences %}exp{% elif params.showFormations and formations_groupees.diplome %}edu{% else %}cert{% endif %}',
+    filter:    '*',
+    typedWord: '',
+    typedItems: [
+      {% for c in rubriques.competences|slice:":6" %}'{{ c.nom|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}
+      {% if not rubriques.competences %}'{{ candidat.titreProfessionnel|default:"Professionnel"|escapejs }}'{% endif %}
+    ],
+    projCategories: (() => {
+      const s = new Set();
+      {% for p in rubriques.projets %}{% if p.dateDebut %}s.add('{{ p.dateDebut|slice:":4" }}');{% endif %}{% endfor %}
+      return Array.from(s);
+    })(),
+
+    init() {
+      // Sync navbar top with main site fixed navbar
+      const cpNav = document.getElementById('cp-nav');
+      const syncTop = () => {
+        const main = document.querySelector('.fixed.top-0') || document.querySelector('header.fixed');
+        if (cpNav && main) cpNav.style.top = main.getBoundingClientRect().height + 'px';
+      };
+      window.addEventListener('resize', syncTop);
+      syncTop();
+
+      // Scroll state + scrollspy
+      const sections = document.querySelectorAll('section[id]');
+      const onScroll = () => {
+        this.scrollTop = window.scrollY > 300;
+        let cur = 'home';
+        sections.forEach(s => {
+          if (s.getBoundingClientRect().top < 150) cur = s.id.replace('cp-', '');
+        });
+        this.active = cur;
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+
+      // Skill bars via IntersectionObserver
+      document.querySelectorAll('.cp-skill-bar').forEach(bar => {
+        const io = new IntersectionObserver(([e]) => {
+          if (e.isIntersecting) { bar.style.width = (bar.dataset.width || '0') + '%'; io.disconnect(); }
+        }, { threshold: 0.3 });
+        io.observe(bar);
+      });
+
+      // Counter animation
+      document.querySelectorAll('[data-count]').forEach(el => {
+        const io = new IntersectionObserver(([e]) => {
+          if (!e.isIntersecting) return;
+          const target = +el.dataset.count;
+          let cur = 0;
+          const step = Math.max(1, target / 60);
+          const timer = setInterval(() => {
+            cur = Math.min(cur + step, target);
+            el.textContent = Math.round(cur);
+            if (cur >= target) clearInterval(timer);
+          }, 25);
+          io.disconnect();
+        }, { threshold: 0.5 });
+        io.observe(el);
+      });
+
+      // Smooth scroll for internal links
+      document.querySelectorAll('a[href^="#cp-"]').forEach(a => {
+        a.addEventListener('click', e => {
+          const target = document.getElementById(a.getAttribute('href').slice(1));
+          if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
+        });
+      });
+
+      if (this.typedItems.length) this.startTyped();
+    },
+
+    startTyped() {
+      let i = 0, j = 0, del = false;
+      const sp = 80, pause = 2000, dsp = 40;
+      const tick = () => {
+        const w = this.typedItems[i];
+        if (!del) {
+          this.typedWord = w.slice(0, j++);
+          if (j > w.length) { del = true; setTimeout(tick, pause); return; }
+        } else {
+          this.typedWord = w.slice(0, j--);
+          if (j < 0) { del = false; j = 0; i = (i + 1) % this.typedItems.length; }
+        }
+        setTimeout(tick, del ? dsp : sp);
+      };
+      tick();
+    },
+  };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,20 @@
+Bonjour {{ candidat.prenom|default:"" }},
+
+Nous avons trouvé une nouvelle offre qui correspond à votre profil !
+
+📍 {{ offre.titre }}
+🏢 {{ offre.entreprise.raisonSocial }}{% if offre.ville %} — {{ offre.ville }}{% endif %}
+🎯 Score de compatibilité : {{ score }} %
+
+{{ offre.missions|truncatechars:300|default:"" }}
+
+Consultez l'offre et postulez ici :
+{{ url_offre }}
+
+—
+Vous recevez cet email parce que vous avez activé les alertes d'offres dans
+votre espace candidat. Pour ne plus en recevoir, désactivez l'option dans
+votre profil :
+{{ url_prefs }}
+
+L'équipe RecrutePro

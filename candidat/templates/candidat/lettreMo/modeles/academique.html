@@ -1,0 +1,78 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% trans "Lettre de motivation —" %} {{ lettre.prenom }} {{ lettre.nom }}</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:794px; min-height:1123px; background:#fff; }
+body {
+    font-family: 'Cambria', Georgia, serif;
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: #26241f;
+}
+
+.ac-header { text-align:center; padding:50px 60px 20px; border-bottom:2px double #26241f; }
+.ac-name   { font-size:19px; font-weight:700; letter-spacing:1px; text-transform:uppercase; }
+.ac-contact { font-size:10px; color:#555; margin-top:8px; }
+.ac-contact span { margin:0 8px; }
+
+.ac-main { padding: 30px 70px 50px; }
+.ac-date { text-align:right; font-size:10.5px; font-style:italic; margin-bottom:26px; }
+
+.ac-recipient { margin-bottom:24px; }
+.ac-rcp-name  { font-weight:700; }
+.ac-rcp-fn, .ac-rcp-addr, .ac-rcp-city { font-size:10.5px; color:#555; }
+
+.ac-objet { text-align:center; font-weight:700; font-size:12px; margin-bottom:24px; text-transform:uppercase; letter-spacing:.5px; }
+
+.ac-salut { margin-bottom:16px; font-weight:600; }
+.ac-para  { margin-bottom:14px; text-align:justify; text-indent:32px; white-space:pre-wrap; word-break:break-word; }
+.ac-formule { margin-top:26px; margin-bottom:48px; text-align:justify; }
+.ac-sig   { font-weight:700; text-align:center; }
+</style>
+</head>
+<body>
+
+<div class="ac-header">
+    <div class="ac-name">{{ lettre.prenom }} {{ lettre.nom }}</div>
+    <div class="ac-contact">
+        {% if lettre.adresse %}<span>{{ lettre.adresse }}</span>{% endif %}
+        {% if lettre.codePostal or lettre.ville %}<span>{{ lettre.codePostal }} {{ lettre.ville }}</span>{% endif %}
+        {% if lettre.telephone %}<span>{{ lettre.telephone }}</span>{% endif %}
+        {% if lettre.email %}<span>{{ lettre.email }}</span>{% endif %}
+    </div>
+</div>
+
+<div class="ac-main">
+    <div class="ac-date">{{ lettre.lieu|default:"Abidjan" }}, le {{ lettre.date }}</div>
+
+    <div class="ac-recipient">
+        <div class="ac-rcp-name">{{ lettre.titreDestinataire }} {{ lettre.nomDestinataire }}</div>
+        {% if lettre.posteDestinataire %}<div class="ac-rcp-fn">{{ lettre.posteDestinataire }}</div>{% endif %}
+        {% if lettre.entreprise %}<div style="font-weight:600;">{{ lettre.entreprise }}</div>{% endif %}
+        {% if lettre.villeEntreprise %}<div class="ac-rcp-city">{{ lettre.villeEntreprise }}</div>{% endif %}
+    </div>
+
+    {% if lettre.objet %}
+    <div class="ac-objet">{{ lettre.objet }}</div>
+    {% endif %}
+
+    <p class="ac-salut">
+        {% if lettre.titreDestinataire == "M." or lettre.titreDestinataire == "M" %}Monsieur
+        {% elif lettre.titreDestinataire == "Mme" or lettre.titreDestinataire == "Mme." %}Madame
+        {% elif lettre.titreDestinataire == "Dr." %}Docteur
+        {% elif lettre.titreDestinataire == "Pr." %}Professeur
+        {% else %}{{ lettre.titreDestinataire }}{% endif %},
+    </p>
+    {% if lettre.corps %}<p class="ac-para">{{ lettre.corps }}</p>{% endif %}
+
+    <p class="ac-formule">{{ lettre.formuleFull }}</p>
+    <div class="ac-sig">{{ lettre.prenom }} {{ lettre.nom }}</div>
+</div>
+
+</body>
+</html>

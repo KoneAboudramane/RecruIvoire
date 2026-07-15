@@ -1,0 +1,228 @@
+﻿{% load i18n %}
+{% comment %}Preview visuel de chaque modèle CV selon son style{% endcomment %}
+
+{% if style == "orange-plain" %}
+<div class="p-4 h-full flex flex-col gap-2" style="background:#c96010;">
+    <div class="flex items-center gap-2"><div class="w-12 h-12 bg-white/30 rounded-full"></div><div><div class="h-2.5 w-24 bg-white/70 rounded mb-1"></div><div class="h-1.5 w-16 bg-white/40 rounded"></div></div></div>
+    <div class="h-px bg-white/20 my-1"></div>
+    <div class="space-y-1"><div class="h-1.5 bg-white/30 rounded w-full"></div><div class="h-1.5 bg-white/30 rounded w-5/6"></div><div class="h-1.5 bg-white/30 rounded w-4/6"></div></div>
+    <div class="flex gap-1 mt-1"><span class="text-white text-xs bg-white/20 px-2 py-0.5 rounded-full">{% trans "Design" %}</span><span class="text-white text-xs bg-white/20 px-2 py-0.5 rounded-full">{% trans "Web" %}</span></div>
+    <div class="mt-auto space-y-1"><div class="h-4 bg-white/20 rounded w-full"></div><div class="h-4 bg-white/20 rounded w-4/5"></div></div>
+</div>
+
+{% elif style == "white-minimal" %}
+<div class="p-4 h-full flex flex-col gap-2 bg-white">
+    <div class="flex items-center gap-2"><div class="w-12 h-12 rounded-full" style="background:#c96010;opacity:0.15;"></div><div><div class="h-2.5 w-24 rounded mb-1" style="background:#c96010;"></div><div class="h-1.5 w-16 bg-gray-200 rounded"></div></div></div>
+    <div class="h-px bg-gray-100 my-1"></div>
+    <div class="space-y-1"><div class="h-1.5 bg-gray-200 rounded w-full"></div><div class="h-1.5 bg-gray-100 rounded w-5/6"></div><div class="h-1.5 bg-gray-100 rounded w-3/4"></div></div>
+    <div class="mt-auto grid grid-cols-2 gap-1"><div class="h-3 bg-gray-100 rounded"></div><div class="h-3 bg-gray-100 rounded"></div><div class="h-3 bg-gray-100 rounded"></div><div class="h-3 bg-gray-100 rounded"></div></div>
+</div>
+
+{% elif style == "dark-side" %}
+<div class="flex h-full" style="background:#1a1a2e;">
+    <div class="w-2/5 p-3 flex flex-col gap-2" style="background:#2e7d52;">
+        <div class="w-10 h-10 bg-white/30 rounded-full mx-auto"></div>
+        <div class="h-1.5 bg-white/60 rounded"></div><div class="h-1.5 bg-white/40 rounded w-4/5"></div>
+        <div class="h-px bg-white/20 my-1"></div>
+        <div class="space-y-1"><div class="h-1 bg-white/30 rounded w-full"></div><div class="h-1 bg-white/30 rounded w-3/4"></div><div class="h-1 bg-white/30 rounded w-2/3"></div></div>
+    </div>
+    <div class="flex-1 p-3 flex flex-col gap-2">
+        <div class="h-2 bg-white/20 rounded w-3/4"></div><div class="h-1.5 bg-white/10 rounded w-full"></div><div class="h-1.5 bg-white/10 rounded w-5/6"></div>
+        <div class="h-px bg-white/10 my-1"></div>
+        <div class="space-y-1"><div class="h-1.5 bg-white/10 rounded"></div><div class="h-1.5 bg-white/10 rounded w-4/5"></div></div>
+        <div class="mt-auto flex gap-1"><div class="h-4 flex-1 bg-white/10 rounded"></div><div class="h-4 flex-1 bg-white/10 rounded"></div></div>
+    </div>
+</div>
+
+{% elif style == "green-top" %}
+<div class="flex flex-col h-full" style="background:#f8f8f8;">
+    <div class="h-14 w-full flex items-end pb-2 px-4" style="background:#2e7d52;"><div class="h-2 w-20 bg-white/60 rounded"></div></div>
+    <div class="p-3 flex gap-3 flex-1">
+        <div class="w-12 h-12 rounded-full -mt-6 border-4 border-white shrink-0" style="background:#c96010;"></div>
+        <div class="flex-1 flex flex-col gap-2 mt-1">
+            <div class="h-2 rounded w-3/4" style="background:#2e7d52;"></div><div class="h-1.5 bg-gray-300 rounded w-1/2"></div>
+            <div class="space-y-1 mt-1"><div class="h-1.5 bg-gray-200 rounded"></div><div class="h-1.5 bg-gray-200 rounded w-5/6"></div><div class="h-1.5 bg-gray-200 rounded w-4/6"></div></div>
+        </div>
+    </div>
+</div>
+
+{% elif style == "orange-band" %}
+<div class="flex h-full bg-white">
+    <div class="w-5 h-full" style="background:#c96010;"></div>
+    <div class="flex-1 p-3 flex flex-col gap-2">
+        <div class="w-10 h-10 rounded-full bg-gray-200"></div>
+        <div class="h-2 rounded w-3/4" style="background:#c96010;"></div><div class="h-1.5 bg-gray-200 rounded w-1/2"></div>
+        <div class="h-px bg-gray-100 my-1"></div>
+        <div class="space-y-1"><div class="h-1.5 bg-gray-100 rounded"></div><div class="h-1.5 bg-gray-100 rounded w-5/6"></div><div class="h-1.5 bg-gray-100 rounded w-4/6"></div></div>
+        <div class="mt-auto space-y-1"><div class="h-3 bg-gray-50 rounded w-full"></div><div class="h-3 bg-gray-50 rounded w-4/5"></div></div>
+    </div>
+</div>
+
+{% elif style == "academic" %}
+<div class="flex flex-col h-full bg-white" style="border-top:6px solid #1a1a2e;">
+    <div class="p-4 text-center border-b border-gray-100">
+        <div class="w-12 h-12 rounded-full mx-auto mb-2 bg-gray-200"></div>
+        <div class="h-2 w-28 mx-auto rounded bg-gray-800 mb-1"></div><div class="h-1.5 w-20 mx-auto bg-gray-300 rounded"></div>
+    </div>
+    <div class="p-3 space-y-2">
+        <div class="h-1.5 bg-gray-200 rounded"></div><div class="h-1.5 bg-gray-100 rounded w-5/6"></div><div class="h-1.5 bg-gray-100 rounded w-4/6"></div>
+    </div>
+</div>
+
+{% elif style == "bicolor" %}
+<div class="flex h-full bg-white">
+    <div class="w-1/2 p-3 flex flex-col gap-2" style="background:#c96010;">
+        <div class="w-10 h-10 bg-white/30 rounded-full"></div>
+        <div class="h-1.5 bg-white/60 rounded"></div><div class="h-1.5 bg-white/40 rounded w-3/4"></div>
+        <div class="h-px bg-white/20 my-1"></div>
+        <div class="space-y-1"><div class="h-4 bg-white/20 rounded"></div><div class="h-4 bg-white/20 rounded"></div></div>
+    </div>
+    <div class="w-1/2 p-3 flex flex-col gap-2" style="background:#2e7d52;">
+        <div class="h-2 bg-white/30 rounded w-3/4"></div><div class="h-1.5 bg-white/20 rounded"></div>
+        <div class="h-px bg-white/20 my-1"></div>
+        <div class="space-y-1"><div class="h-1.5 bg-white/20 rounded"></div><div class="h-1.5 bg-white/20 rounded w-5/6"></div></div>
+    </div>
+</div>
+
+{% elif style == "executive" %}
+<div class="flex flex-col h-full" style="background:#1a1a2e;">
+    <div class="p-4 flex items-center gap-3">
+        <div class="w-14 h-14 rounded-xl flex items-center justify-center text-white font-extrabold text-lg shrink-0" style="background:#c96010;">EX</div>
+        <div><div class="h-2.5 w-24 bg-white/70 rounded mb-1"></div><div class="h-1.5 w-16 bg-white/30 rounded"></div></div>
+    </div>
+    <div class="flex-1 bg-white/5 mx-4 mb-4 rounded-xl p-3 space-y-2">
+        <div class="h-1.5 bg-white/20 rounded"></div><div class="h-1.5 bg-white/15 rounded w-5/6"></div><div class="h-1.5 bg-white/15 rounded w-4/6"></div>
+        <div class="h-px bg-white/10 my-1"></div>
+        <div class="h-1.5 bg-white/10 rounded"></div><div class="h-1.5 bg-white/10 rounded w-3/4"></div>
+    </div>
+</div>
+
+{% elif style == "tech-side" %}
+<div class="flex h-full" style="background:#f0faf4;">
+    <div class="w-1/3 p-3 flex flex-col gap-2" style="background:#2e7d52;">
+        <div class="w-9 h-9 bg-white/30 rounded-full mx-auto"></div>
+        <div class="h-1.5 bg-white/60 rounded"></div>
+        <div class="space-y-0.5 mt-1">
+            {% for i in "12345" %}<div class="flex items-center gap-1"><div class="w-1 h-1 rounded-full bg-white/60"></div><div class="h-1 bg-white/30 rounded flex-1"></div></div>{% endfor %}
+        </div>
+    </div>
+    <div class="flex-1 p-3 flex flex-col gap-2">
+        <div class="h-2 rounded w-3/4" style="background:#2e7d52;"></div>
+        <div class="h-1.5 bg-gray-200 rounded w-1/2"></div>
+        <div class="space-y-1 mt-1"><div class="h-1.5 bg-gray-100 rounded"></div><div class="h-1.5 bg-gray-100 rounded w-4/5"></div></div>
+        <div class="mt-auto flex gap-1"><span class="text-xs px-2 py-0.5 rounded text-white text-center" style="background:#2e7d52;">{% trans "Python" %}</span><span class="text-xs px-2 py-0.5 rounded text-white" style="background:#c96010;">{% trans "Django" %}</span></div>
+    </div>
+</div>
+
+{% elif style == "artistic" %}
+<div class="flex flex-col h-full" style="background:#fff8f0;">
+    <div class="h-2 w-full flex"><div class="flex-1" style="background:#c96010;"></div><div class="flex-1 bg-white"></div><div class="flex-1" style="background:#2e7d52;"></div></div>
+    <div class="p-4 flex flex-col gap-2 flex-1">
+        <div class="flex gap-3 items-center"><div class="w-12 h-12 rounded-2xl" style="background:#c96010;opacity:0.8;"></div><div><div class="h-2 w-20 rounded mb-1" style="background:#c96010;"></div><div class="h-1.5 w-14 bg-gray-300 rounded"></div></div></div>
+        <div class="mt-2 space-y-1"><div class="h-1.5 bg-gray-200 rounded"></div><div class="h-1.5 bg-gray-100 rounded w-5/6"></div></div>
+        <div class="flex gap-1 mt-1"><div class="h-12 flex-1 rounded-xl" style="background:#c96010;opacity:0.3;"></div><div class="h-12 flex-1 rounded-xl" style="background:#2e7d52;opacity:0.3;"></div><div class="h-12 flex-1 rounded-xl bg-gray-200"></div></div>
+    </div>
+</div>
+
+{% elif style == "corporate-green" %}
+<div class="flex flex-col h-full bg-white">
+    <div class="h-12 w-full flex items-center px-4 gap-3" style="background:#2e7d52;">
+        <div class="w-6 h-6 bg-white/30 rounded"></div><div class="h-2 w-20 bg-white/60 rounded"></div>
+        <div class="ml-auto h-1.5 w-10 bg-white/30 rounded"></div>
+    </div>
+    <div class="flex-1 flex gap-2 p-3">
+        <div class="w-1/3 space-y-1"><div class="h-12 bg-gray-50 rounded-lg"></div><div class="h-12 bg-gray-50 rounded-lg"></div></div>
+        <div class="flex-1 space-y-1.5"><div class="h-2 rounded w-3/4" style="background:#2e7d52;"></div><div class="h-1.5 bg-gray-200 rounded"></div><div class="h-1.5 bg-gray-100 rounded w-4/5"></div><div class="h-1.5 bg-gray-100 rounded w-3/5"></div></div>
+    </div>
+</div>
+
+{% elif style == "medical" %}
+<div class="flex h-full bg-white" style="border-left:6px solid #2e7d52;">
+    <div class="flex-1 p-3 flex flex-col gap-2">
+        <div class="flex items-center gap-2"><div class="w-10 h-10 rounded-full bg-gray-100"></div><div><div class="h-2 w-20 rounded mb-1" style="background:#2e7d52;"></div><div class="h-1.5 w-14 bg-gray-200 rounded"></div></div></div>
+        <div class="h-px bg-gray-100 my-1"></div>
+        <div class="space-y-1"><div class="h-1.5 bg-gray-100 rounded"></div><div class="h-1.5 bg-gray-100 rounded w-5/6"></div><div class="h-1.5 bg-gray-100 rounded w-4/6"></div></div>
+        <div class="mt-auto grid grid-cols-3 gap-1"><div class="h-8 bg-green-50 rounded text-center text-xs pt-1.5" style="color:#2e7d52;">+5</div><div class="h-8 bg-green-50 rounded"></div><div class="h-8 bg-green-50 rounded"></div></div>
+    </div>
+</div>
+
+{% elif style == "infographic" %}
+<div class="flex flex-col h-full" style="background:#c96010;">
+    <div class="p-3 flex gap-3 items-center">
+        <div class="w-12 h-12 rounded-full bg-white/30 flex items-center justify-center text-white font-bold">IN</div>
+        <div><div class="h-2 w-20 bg-white/70 rounded mb-1"></div><div class="h-1.5 w-12 bg-white/40 rounded"></div></div>
+    </div>
+    <div class="flex-1 px-3 pb-3 grid grid-cols-2 gap-2">
+        <div class="bg-white/20 rounded-xl p-2 flex flex-col items-center justify-center"><div class="text-white font-extrabold text-lg">5</div><div class="h-1 w-8 bg-white/40 rounded mt-1"></div></div>
+        <div class="bg-white/20 rounded-xl p-2 flex flex-col items-center justify-center"><div class="text-white font-extrabold text-lg">3</div><div class="h-1 w-8 bg-white/40 rounded mt-1"></div></div>
+        <div class="col-span-2 bg-white/20 rounded-xl p-2 space-y-1"><div class="h-2 bg-white/50 rounded w-full"></div><div class="h-2 bg-white/30 rounded w-3/4"></div></div>
+    </div>
+</div>
+
+{% elif style == "legal" %}
+<div class="flex flex-col h-full bg-white" style="border-top:4px solid #1a1a2e;">
+    <div class="p-4 text-center border-b border-gray-100">
+        <div class="w-10 h-10 mx-auto rounded bg-gray-100 mb-2"></div>
+        <div class="h-2 w-24 mx-auto bg-gray-800 rounded mb-1"></div><div class="h-1.5 w-16 mx-auto bg-gray-300 rounded"></div>
+    </div>
+    <div class="p-3 space-y-1.5">
+        <div class="h-1.5 bg-gray-200 rounded"></div><div class="h-1.5 bg-gray-100 rounded w-5/6"></div><div class="h-1.5 bg-gray-100 rounded w-4/6"></div>
+        <div class="h-px bg-gray-100 my-1"></div>
+        <div class="h-1.5 bg-gray-100 rounded"></div><div class="h-1.5 bg-gray-100 rounded w-3/4"></div>
+    </div>
+</div>
+
+{% elif style == "btp" %}
+<div class="flex flex-col h-full" style="background:#1a1a2e;">
+    <div class="h-16 flex items-center px-4 gap-3" style="background:#c96010;">
+        <div class="w-8 h-8 bg-white/30 rounded"></div>
+        <div><div class="h-2 w-20 bg-white/80 rounded mb-1"></div><div class="h-1.5 w-14 bg-white/50 rounded"></div></div>
+    </div>
+    <div class="flex-1 p-3 flex gap-2">
+        <div class="flex-1 space-y-1.5"><div class="h-1.5 bg-white/20 rounded"></div><div class="h-1.5 bg-white/15 rounded w-5/6"></div><div class="h-1.5 bg-white/15 rounded w-4/6"></div></div>
+        <div class="w-12 space-y-1"><div class="h-6 bg-white/10 rounded"></div><div class="h-6 bg-white/10 rounded"></div><div class="h-6 bg-white/10 rounded"></div></div>
+    </div>
+</div>
+
+{% elif style == "accountant" %}
+<div class="flex flex-col h-full bg-white">
+    <div class="flex items-center gap-3 px-4 py-3 border-b" style="border-color:#1a1a2e;">
+        <div class="w-10 h-10 rounded" style="background:#1a1a2e;"></div>
+        <div><div class="h-2 w-20 rounded mb-1" style="background:#1a1a2e;"></div><div class="h-1.5 w-14 bg-gray-200 rounded"></div></div>
+    </div>
+    <div class="flex flex-1 p-3 gap-2">
+        <div class="flex-1 space-y-1.5"><div class="h-1.5 bg-gray-200 rounded"></div><div class="h-1.5 bg-gray-100 rounded w-5/6"></div><div class="h-1.5 bg-gray-100 rounded w-4/6"></div></div>
+        <div class="w-14 space-y-1"><div class="h-4 bg-gray-100 rounded"></div><div class="h-4 bg-gray-100 rounded"></div><div class="h-4" style="background:#c96010;border-radius:4px;"></div></div>
+    </div>
+</div>
+
+{% else %}
+{# Aperçu générique pour tout nouveau modèle ajouté par l'admin #}
+<div class="h-full flex flex-col" style="background:{{ couleur|default:'#c96010' }}">
+    <div class="p-4 flex items-center gap-2 border-b" style="border-color:rgba(255,255,255,.2)">
+        <div class="w-10 h-10 bg-white/30 rounded-full flex-shrink-0"></div>
+        <div>
+            <div class="h-2 bg-white/70 rounded w-20 mb-1"></div>
+            <div class="h-1.5 bg-white/40 rounded w-14"></div>
+        </div>
+    </div>
+    <div class="flex flex-1 gap-0">
+        <div class="w-1/3 p-3 space-y-1.5" style="background:rgba(0,0,0,.15)">
+            <div class="h-1.5 bg-white/40 rounded"></div>
+            <div class="h-1.5 bg-white/30 rounded w-4/5"></div>
+            <div class="h-1.5 bg-white/20 rounded w-3/5"></div>
+            <div class="h-px bg-white/10 my-1"></div>
+            <div class="h-1 bg-white/30 rounded w-full"></div>
+            <div class="h-1 bg-white/20 rounded w-4/5"></div>
+        </div>
+        <div class="flex-1 p-3 space-y-1.5">
+            <div class="h-2 bg-white/50 rounded w-3/4"></div>
+            <div class="h-1.5 bg-white/30 rounded w-full"></div>
+            <div class="h-1.5 bg-white/20 rounded w-5/6"></div>
+            <div class="h-px bg-white/10 my-1"></div>
+            <div class="h-1.5 bg-white/20 rounded"></div>
+            <div class="h-1.5 bg-white/20 rounded w-4/5"></div>
+        </div>
+    </div>
+</div>
+{% endif %}

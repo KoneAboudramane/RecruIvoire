@@ -1,0 +1,101 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% trans "Lettre de motivation —" %} {{ lettre.prenom }} {{ lettre.nom }}</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:794px; min-height:1123px; background:#fff; }
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 11.5px;
+    line-height: 1.65;
+    color: #202124;
+}
+
+.gr-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 3px solid #202124;
+}
+.gr-cell-name { padding: 40px 30px 24px 60px; }
+.gr-cell-contact { padding: 40px 60px 24px 30px; border-left:1px solid #e0e0e0; text-align:right; }
+.gr-name { font-size:21px; font-weight:800; }
+.gr-contact div { font-size:10px; color:#5f6368; margin-top:5px; }
+
+.gr-main { padding: 34px 60px 50px; }
+.gr-meta {
+    display:grid; grid-template-columns:1fr 1fr; gap:14px;
+    background:#f6f7f8; border-radius:8px; padding:16px 20px; margin-bottom:26px;
+}
+.gr-meta-label { font-size:9px; text-transform:uppercase; letter-spacing:.6px; color:#9aa0a6; font-weight:700; }
+.gr-meta-val   { font-size:11px; font-weight:600; margin-top:3px; }
+
+.gr-objet { font-weight:700; font-size:12px; margin-bottom:22px; padding-bottom:10px; border-bottom:1px solid #e0e0e0; }
+
+.gr-salut { margin-bottom:14px; font-weight:600; }
+.gr-para  { margin-bottom:13px; text-align:justify; white-space:pre-wrap; word-break:break-word; }
+.gr-formule { margin-top:24px; margin-bottom:46px; }
+.gr-sig   { font-weight:800; }
+</style>
+</head>
+<body>
+
+<div class="gr-grid">
+    <div class="gr-cell-name">
+        <div class="gr-name">{{ lettre.prenom }}<br>{{ lettre.nom }}</div>
+    </div>
+    <div class="gr-cell-contact">
+        <div class="gr-contact">
+            {% if lettre.email %}<div>{{ lettre.email }}</div>{% endif %}
+            {% if lettre.telephone %}<div>{{ lettre.telephone }}</div>{% endif %}
+            {% if lettre.ville %}<div>{{ lettre.codePostal }} {{ lettre.ville }}</div>{% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="gr-main">
+    <div class="gr-meta">
+        <div>
+            <div class="gr-meta-label">{% trans "Lieu et date" %}</div>
+            <div class="gr-meta-val">{{ lettre.lieu|default:"Abidjan" }}, {{ lettre.date }}</div>
+        </div>
+        <div>
+            <div class="gr-meta-label">{% trans "Destinataire" %}</div>
+            <div class="gr-meta-val">{{ lettre.titreDestinataire }} {{ lettre.nomDestinataire }}</div>
+        </div>
+        {% if lettre.posteDestinataire %}
+        <div>
+            <div class="gr-meta-label">{% trans "Fonction" %}</div>
+            <div class="gr-meta-val">{{ lettre.posteDestinataire }}</div>
+        </div>
+        {% endif %}
+        {% if lettre.entreprise %}
+        <div>
+            <div class="gr-meta-label">{% trans "Entreprise" %}</div>
+            <div class="gr-meta-val">{{ lettre.entreprise }}{% if lettre.villeEntreprise %} — {{ lettre.villeEntreprise }}{% endif %}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if lettre.objet %}
+    <div class="gr-objet">{% trans "Objet :" %} {{ lettre.objet }}</div>
+    {% endif %}
+
+    <p class="gr-salut">
+        {% if lettre.titreDestinataire == "M." or lettre.titreDestinataire == "M" %}Monsieur
+        {% elif lettre.titreDestinataire == "Mme" or lettre.titreDestinataire == "Mme." %}Madame
+        {% elif lettre.titreDestinataire == "Dr." %}Docteur
+        {% elif lettre.titreDestinataire == "Pr." %}Professeur
+        {% else %}{{ lettre.titreDestinataire }}{% endif %},
+    </p>
+    {% if lettre.corps %}<p class="gr-para">{{ lettre.corps }}</p>{% endif %}
+
+    <p class="gr-formule">{{ lettre.formuleFull }}</p>
+    <div class="gr-sig">{{ lettre.prenom }} {{ lettre.nom }}</div>
+</div>
+
+</body>
+</html>

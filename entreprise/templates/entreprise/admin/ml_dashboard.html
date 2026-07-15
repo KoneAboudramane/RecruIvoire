@@ -1,0 +1,419 @@
+﻿{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Dashboard ML | {{ site_title|default:'Django site admin' }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<script>(function(){var t=localStorage.getItem('rp_theme')||'light';if(t==='noir')document.documentElement.classList.add('rp-noir');else if(t==='dark')document.documentElement.classList.add('rp-dark');})();</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+    #content { background:#f8fafc; }
+    #content-main { max-width:1400px; margin:0 auto; }
+
+    .ml-card {
+        background:#fff; border:1px solid #e2e8f0; border-radius:1.25rem;
+        padding:1.5rem; transition:box-shadow .2s;
+    }
+    .ml-card:hover { box-shadow:0 4px 20px rgba(0,0,0,.06); }
+
+    .kpi-card {
+        background:#fff; border:1px solid #e2e8f0; border-radius:1rem;
+        padding:1.25rem 1.5rem; display:flex; align-items:center; gap:1rem;
+    }
+    .kpi-icon {
+        width:2.75rem; height:2.75rem; border-radius:.875rem;
+        display:flex; align-items:center; justify-content:center;
+        font-size:1.4rem; flex-shrink:0;
+    }
+    .kpi-val { font-size:1.7rem; font-weight:900; color:#0f172a; line-height:1; }
+    .kpi-lbl { font-size:.7rem; font-weight:700; color:#64748b;
+               text-transform:uppercase; letter-spacing:.04em; margin-top:.25rem; }
+
+    .chart-title {
+        font-size:.75rem; font-weight:800; color:#475569;
+        text-transform:uppercase; letter-spacing:.06em; margin-bottom:.875rem;
+    }
+    .chart-wrap { position:relative; height:280px; }
+    .chart-wrap-sm { position:relative; height:240px; }
+
+    /* Dark mode */
+    html.rp-dark #content { background:#0f172a; }
+    html.rp-dark .ml-card,
+    html.rp-dark .kpi-card { background:#1e293b; border-color:#334155; }
+    html.rp-dark .kpi-val { color:#f1f5f9; }
+    html.rp-dark .kpi-lbl { color:#94a3b8; }
+    html.rp-dark .chart-title { color:#cbd5e1; }
+    html.rp-dark h1, html.rp-dark h2 { color:#f1f5f9; }
+    html.rp-dark .text-slate-500, html.rp-dark .text-slate-600 { color:#cbd5e1 !important; }
+    html.rp-dark .text-slate-400 { color:#94a3b8 !important; }
+
+    /* ── Mode NOIR (OLED) ────────────────────────────────────────────── */
+    html.rp-noir #content { background:#000; }
+    html.rp-noir .ml-card,
+    html.rp-noir .kpi-card { background:#000; border-color:#1a1a1a; }
+    html.rp-noir .ml-card:hover,
+    html.rp-noir .kpi-card:hover { box-shadow:0 4px 20px rgba(0,0,0,.8); }
+    html.rp-noir .kpi-val { color:#f1f5f9; }
+    html.rp-noir .kpi-lbl { color:#64748b; }
+    html.rp-noir .chart-title { color:#94a3b8; }
+    html.rp-noir h1, html.rp-noir h2 { color:#f1f5f9; }
+    html.rp-noir .text-slate-500, html.rp-noir .text-slate-600 { color:#94a3b8 !important; }
+    html.rp-noir .text-slate-400 { color:#64748b !important; }
+    html.rp-noir .text-slate-900 { color:#f1f5f9 !important; }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans "Accueil" %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='entreprise' %}">{% trans "Entreprise" %}</a>
+    &rsaquo; <a href="{% url 'admin:entreprise_demandeverification_ml_status' %}">{% trans "Modèles ML" %}</a>
+    &rsaquo; Dashboard
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── En-tête ─────────────────────────────────────────────────────── -->
+<div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-8">
+    <div>
+        <div class="flex items-center gap-3 mb-1">
+            <div class="w-11 h-11 rounded-xl flex items-center justify-center text-2xl"
+                 style="background:linear-gradient(135deg,#c96010,#e06a00); color:white;">
+                📊
+            </div>
+            <h1 class="text-2xl font-extrabold text-slate-900">{% trans "Dashboard ML — Évolution des modèles" %}</h1>
+        </div>
+        <p class="text-sm text-slate-500 ml-14">
+            Historique d'entraînement, distributions des datasets et importance des features.
+        </p>
+    </div>
+    <a href="{% url 'admin:entreprise_demandeverification_ml_status' %}"
+       class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 border border-slate-200 hover:bg-slate-100 transition">
+        ← Retour aux modèles
+    </a>
+</div>
+
+<!-- ── 4 KPIs principaux ───────────────────────────────────────────── -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background:rgba(201,96,16,.12);">🎯</div>
+        <div>
+            <div class="kpi-val">{{ matching_meta.metriques.r2|default:0|floatformat:2 }}</div>
+            <div class="kpi-lbl">{% trans "R² Matching" %}</div>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background:rgba(34,197,94,.12);">📊</div>
+        <div>
+            <div class="kpi-val">{{ ats_meta.metriques.r2|default:0|floatformat:2 }}</div>
+            <div class="kpi-lbl">{% trans "R² ATS" %}</div>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background:rgba(59,130,246,.12);">📈</div>
+        <div>
+            <div class="kpi-val">{{ matching_meta.nb_exemples|default:0 }}</div>
+            <div class="kpi-lbl">{% trans "Exemples matching" %}</div>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background:rgba(139,92,246,.12);">🤖</div>
+        <div>
+            <div class="kpi-val">{{ ats_meta.nb_exemples|default:0 }}</div>
+            <div class="kpi-lbl">{% trans "Exemples ATS" %}</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Évolution des métriques (courbes) ──────────────────────────── -->
+<div class="grid lg:grid-cols-2 gap-6 mb-8">
+    <div class="ml-card">
+        <p class="chart-title">📈 Évolution R² — Matching ({{ nb_snaps_matching }} entraînement{{ nb_snaps_matching|pluralize }})</p>
+        <div class="chart-wrap"><canvas id="chartR2Matching"></canvas></div>
+    </div>
+    <div class="ml-card">
+        <p class="chart-title">📈 Évolution R² — ATS ({{ nb_snaps_ats }} entraînement{{ nb_snaps_ats|pluralize }})</p>
+        <div class="chart-wrap"><canvas id="chartR2Ats"></canvas></div>
+    </div>
+</div>
+
+<div class="grid lg:grid-cols-2 gap-6 mb-8">
+    <div class="ml-card">
+        <p class="chart-title">📉 Évolution MAE / RMSE — Matching</p>
+        <div class="chart-wrap"><canvas id="chartErrMatching"></canvas></div>
+    </div>
+    <div class="ml-card">
+        <p class="chart-title">📉 Évolution MAE / RMSE — ATS</p>
+        <div class="chart-wrap"><canvas id="chartErrAts"></canvas></div>
+    </div>
+</div>
+
+<!-- ── Distribution des datasets (doughnuts) ──────────────────────── -->
+<div class="grid lg:grid-cols-2 gap-6 mb-8">
+    <div class="ml-card">
+        <p class="chart-title">🍩 Distribution des candidatures (par statut)</p>
+        <div class="chart-wrap-sm"><canvas id="chartDistMatching"></canvas></div>
+    </div>
+    <div class="ml-card">
+        <p class="chart-title">🍩 Distribution des actions recruteur</p>
+        <div class="chart-wrap-sm"><canvas id="chartDistAts"></canvas></div>
+    </div>
+</div>
+
+<!-- ── Top features (bar charts horizontaux) ──────────────────────── -->
+<div class="grid lg:grid-cols-2 gap-6 mb-8">
+    <div class="ml-card">
+        <p class="chart-title">🏆 Top features Matching (importance)</p>
+        <div class="chart-wrap"><canvas id="chartFeatMatching"></canvas></div>
+    </div>
+    <div class="ml-card">
+        <p class="chart-title">🏆 Top features ATS (importance)</p>
+        <div class="chart-wrap"><canvas id="chartFeatAts"></canvas></div>
+    </div>
+</div>
+
+<!-- ── Nombre d'exemples par entraînement ──────────────────────────── -->
+<div class="ml-card mb-8">
+    <p class="chart-title">📊 Nombre d'exemples par entraînement</p>
+    <div class="chart-wrap"><canvas id="chartNbExemples"></canvas></div>
+</div>
+
+{{ matching_snaps_json|json_script:"data-matching-snaps" }}
+{{ ats_snaps_json|json_script:"data-ats-snaps" }}
+{{ dist_matching_json|json_script:"data-dist-matching" }}
+{{ dist_ats_json|json_script:"data-dist-ats" }}
+{{ top_matching_json|json_script:"data-top-matching" }}
+{{ top_ats_json|json_script:"data-top-ats" }}
+
+<script>
+(function() {
+    // Détection thème
+    const isDark = () => document.body.classList.contains('rp-dark');
+    const txt = () => isDark() ? '#cbd5e1' : '#475569';
+    const grid = () => isDark() ? '#334155' : '#e2e8f0';
+
+    // Chart.js defaults
+    Chart.defaults.color = txt();
+    Chart.defaults.borderColor = grid();
+    Chart.defaults.font.family = 'system-ui, -apple-system, sans-serif';
+
+    // Helpers
+    const parse = id => JSON.parse(document.getElementById(id).textContent || '[]');
+
+    const matchingSnaps = parse('data-matching-snaps');
+    const atsSnaps      = parse('data-ats-snaps');
+    const distMatching  = parse('data-dist-matching');
+    const distAts       = parse('data-dist-ats');
+    const topMatching   = parse('data-top-matching');
+    const topAts        = parse('data-top-ats');
+
+    // Labels lisibles pour les statuts/actions
+    const LABEL_STATUT = {
+        'EMBAUCHEE': 'Embauchée', 'ACCEPTEE': 'Acceptée', 'ENTRETIEN': 'Entretien',
+        'TEST': 'Test', 'PRESELECTIONNEE': 'Présélectionnée', 'VUE': 'Vue', 'REFUSEE': 'Refusée',
+    };
+    const LABEL_ACTION = {
+        'invite': 'Invité', 'contacte': 'Contacté', 'vu': 'Vu',
+        'propose': 'Proposé', 'ignore': 'Ignoré',
+    };
+
+    // Palettes
+    const PALETTE_VERT   = ['#16a34a','#22c55e','#4ade80','#86efac','#bbf7d0','#dcfce7','#f0fdf4'];
+    const PALETTE_ORANGE = ['#c2410c','#ea580c','#d97a18','#fb923c','#fdba74','#fed7aa'];
+    const PALETTE_DEGRADE_RV = ['#16a34a','#65a30d','#ca8a04','#ea580c','#dc2626'];
+
+    function fmtDate(iso) {
+        if (!iso) return '?';
+        try {
+            const d = new Date(iso);
+            return d.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+        } catch(e) { return iso.slice(0,16); }
+    }
+
+    // ── 1. R² Matching
+    new Chart(document.getElementById('chartR2Matching'), {
+        type: 'line',
+        data: {
+            labels: matchingSnaps.map(s => fmtDate(s.date)),
+            datasets: [{
+                label: 'R²',
+                data: matchingSnaps.map(s => s.r2),
+                borderColor: '#c96010',
+                backgroundColor: 'rgba(201,96,16,.12)',
+                fill: true, tension: .3, pointRadius: 5,
+                pointBackgroundColor: '#c96010',
+            }]
+        },
+        options: {
+            responsive:true, maintainAspectRatio:false,
+            scales: {
+                y: { min: -0.2, max: 1.0, grid:{color: grid()} },
+                x: { grid: {display:false} }
+            },
+            plugins: { legend: {display:false} }
+        }
+    });
+
+    // ── 2. R² ATS
+    new Chart(document.getElementById('chartR2Ats'), {
+        type: 'line',
+        data: {
+            labels: atsSnaps.map(s => fmtDate(s.date)),
+            datasets: [{
+                label: 'R²',
+                data: atsSnaps.map(s => s.r2),
+                borderColor: '#009A44',
+                backgroundColor: 'rgba(0,154,68,.12)',
+                fill: true, tension: .3, pointRadius: 5,
+                pointBackgroundColor: '#009A44',
+            }]
+        },
+        options: {
+            responsive:true, maintainAspectRatio:false,
+            scales: {
+                y: { min: -0.2, max: 1.0, grid:{color: grid()} },
+                x: { grid: {display:false} }
+            },
+            plugins: { legend: {display:false} }
+        }
+    });
+
+    // ── 3. MAE / RMSE Matching
+    new Chart(document.getElementById('chartErrMatching'), {
+        type: 'line',
+        data: {
+            labels: matchingSnaps.map(s => fmtDate(s.date)),
+            datasets: [
+                { label:'MAE', data: matchingSnaps.map(s=>s.mae), borderColor:'#dc2626', backgroundColor:'rgba(220,38,38,.1)', tension:.3, pointRadius:4 },
+                { label:'RMSE', data: matchingSnaps.map(s=>s.rmse), borderColor:'#ea580c', backgroundColor:'rgba(234,88,12,.1)', tension:.3, pointRadius:4 },
+            ]
+        },
+        options: { responsive:true, maintainAspectRatio:false,
+                   scales:{y:{grid:{color:grid()}}, x:{grid:{display:false}}}, plugins:{legend:{position:'bottom'}} }
+    });
+
+    // ── 4. MAE / RMSE ATS
+    new Chart(document.getElementById('chartErrAts'), {
+        type: 'line',
+        data: {
+            labels: atsSnaps.map(s => fmtDate(s.date)),
+            datasets: [
+                { label:'MAE', data: atsSnaps.map(s=>s.mae), borderColor:'#dc2626', backgroundColor:'rgba(220,38,38,.1)', tension:.3, pointRadius:4 },
+                { label:'RMSE', data: atsSnaps.map(s=>s.rmse), borderColor:'#ea580c', backgroundColor:'rgba(234,88,12,.1)', tension:.3, pointRadius:4 },
+            ]
+        },
+        options: { responsive:true, maintainAspectRatio:false,
+                   scales:{y:{grid:{color:grid()}}, x:{grid:{display:false}}}, plugins:{legend:{position:'bottom'}} }
+    });
+
+    // ── 5. Doughnut distribution Matching
+    new Chart(document.getElementById('chartDistMatching'), {
+        type: 'doughnut',
+        data: {
+            labels: distMatching.map(d => LABEL_STATUT[d[0]] || d[0]),
+            datasets: [{
+                data: distMatching.map(d => d[1]),
+                backgroundColor: PALETTE_DEGRADE_RV,
+                borderColor: isDark() ? '#1e293b' : '#fff',
+                borderWidth: 3,
+            }]
+        },
+        options: { responsive:true, maintainAspectRatio:false, cutout:'62%',
+                   plugins:{legend:{position:'right', labels:{boxWidth:14, padding:10}}} }
+    });
+
+    // ── 6. Doughnut distribution ATS
+    new Chart(document.getElementById('chartDistAts'), {
+        type: 'doughnut',
+        data: {
+            labels: distAts.map(d => LABEL_ACTION[d[0]] || d[0]),
+            datasets: [{
+                data: distAts.map(d => d[1]),
+                backgroundColor: PALETTE_DEGRADE_RV,
+                borderColor: isDark() ? '#1e293b' : '#fff',
+                borderWidth: 3,
+            }]
+        },
+        options: { responsive:true, maintainAspectRatio:false, cutout:'62%',
+                   plugins:{legend:{position:'right', labels:{boxWidth:14, padding:10}}} }
+    });
+
+    // ── 7. Bar horizontal top features Matching
+    new Chart(document.getElementById('chartFeatMatching'), {
+        type: 'bar',
+        data: {
+            labels: topMatching.map(f => f[0]),
+            datasets: [{
+                label: 'Importance',
+                data: topMatching.map(f => f[1] * 100),
+                backgroundColor: 'rgba(201,96,16,.85)',
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            indexAxis: 'y', responsive:true, maintainAspectRatio:false,
+            scales: { x: { grid:{color:grid()}, ticks:{callback:v=>v+'%'} },
+                      y: { grid:{display:false} } },
+            plugins: { legend:{display:false},
+                       tooltip:{callbacks:{label: ctx => ctx.parsed.x.toFixed(2)+'%'}} }
+        }
+    });
+
+    // ── 8. Bar horizontal top features ATS
+    new Chart(document.getElementById('chartFeatAts'), {
+        type: 'bar',
+        data: {
+            labels: topAts.map(f => f[0]),
+            datasets: [{
+                label: 'Importance',
+                data: topAts.map(f => f[1] * 100),
+                backgroundColor: 'rgba(0,154,68,.85)',
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            indexAxis: 'y', responsive:true, maintainAspectRatio:false,
+            scales: { x: { grid:{color:grid()}, ticks:{callback:v=>v+'%'} },
+                      y: { grid:{display:false} } },
+            plugins: { legend:{display:false},
+                       tooltip:{callbacks:{label: ctx => ctx.parsed.x.toFixed(2)+'%'}} }
+        }
+    });
+
+    // ── 9. Nb exemples par entraînement (combiné)
+    new Chart(document.getElementById('chartNbExemples'), {
+        type: 'bar',
+        data: {
+            labels: Array.from(new Set([
+                ...matchingSnaps.map(s => fmtDate(s.date)),
+                ...atsSnaps.map(s => fmtDate(s.date))
+            ])).sort(),
+            datasets: [
+                {
+                    label: 'Matching',
+                    data: matchingSnaps.map(s => ({x: fmtDate(s.date), y: s.nb})),
+                    backgroundColor: 'rgba(201,96,16,.75)',
+                    borderRadius: 6,
+                },
+                {
+                    label: 'ATS',
+                    data: atsSnaps.map(s => ({x: fmtDate(s.date), y: s.nb})),
+                    backgroundColor: 'rgba(0,154,68,.75)',
+                    borderRadius: 6,
+                },
+            ]
+        },
+        options: {
+            responsive:true, maintainAspectRatio:false,
+            scales: { y:{grid:{color:grid()}, beginAtZero:true}, x:{grid:{display:false}} },
+            plugins: { legend:{position:'bottom'} }
+        }
+    });
+})();
+</script>
+
+{% endblock %}
+

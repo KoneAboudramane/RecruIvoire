@@ -1,0 +1,239 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<style>
+.sp-title    { font-size: 22px; font-weight: 900; color: #1e293b; margin-bottom: 4px; }
+.sp-subtitle { font-size: 13px; color: #94a3b8; margin-bottom: 28px; }
+.sp-back     { display: inline-flex; align-items: center; gap: 8px; background: #f0fdf4; color: #009A44; border: 1px solid #bbf7d0; padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 700; text-decoration: none; margin-bottom: 20px; transition: all .15s; }
+.sp-back:hover { background: #dcfce7; color: #007a36; }
+
+.sp-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 14px; margin-bottom: 28px; }
+.sp-kpi      { background: #fff; border: 1px solid #e8f0ec; border-radius: 18px; padding: 20px 22px; box-shadow: 0 1px 6px rgba(0,0,0,.05); }
+.sp-kpi-val  { font-size: 32px; font-weight: 900; color: #1e293b; line-height: 1; }
+.sp-kpi-lbl  { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; margin-top: 6px; }
+.sp-kpi-sub  { font-size: 11px; color: #009A44; font-weight: 600; margin-top: 4px; }
+.sp-kpi-sub.orange { color: #F77F00; }
+
+.sp-row      { display: grid; gap: 18px; margin-bottom: 18px; }
+.sp-row-2    { grid-template-columns: 2fr 1fr; }
+.sp-row-2b   { grid-template-columns: 1fr 1fr; }
+.sp-row-3    { grid-template-columns: 1fr 1fr 1fr; }
+.sp-card     { background: #fff; border: 1px solid #e8f0ec; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 6px rgba(0,0,0,.05); }
+.sp-card-title { font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+.sp-card-sub   { font-size: 11px; color: #94a3b8; margin-bottom: 18px; }
+.donut-wrap  { position: relative; max-width: 220px; margin: 0 auto; }
+.donut-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; pointer-events: none; }
+.donut-center strong { font-size: 22px; font-weight: 900; color: #1e293b; display: block; line-height: 1; }
+.donut-center span { font-size: 10px; color: #94a3b8; }
+.big-pct { font-size: 52px; font-weight: 900; line-height: 1; }
+
+@media (max-width: 1100px) { .sp-row-3 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 900px)  { .sp-row-2, .sp-row-2b, .sp-row-3 { grid-template-columns: 1fr; } }
+
+/* ── Mode sombre ─────────────────────────────────────────────── */
+html.rp-dark .sp-title    { color: #f1f5f9; }
+html.rp-dark .sp-subtitle { color: #94a3b8; }
+html.rp-dark .sp-back     { background: rgba(0,154,68,.15); color: #4ade80; border-color: rgba(0,154,68,.3); }
+html.rp-dark .sp-back:hover { background: rgba(0,154,68,.25); color: #86efac; }
+html.rp-dark .sp-kpi, html.rp-dark .sp-card { background: #1e293b; border-color: #334155; }
+html.rp-dark .sp-kpi-val  { color: #f1f5f9; }
+html.rp-dark .sp-kpi-lbl  { color: #94a3b8; }
+html.rp-dark .sp-kpi-sub  { color: #4ade80; }
+html.rp-dark .sp-kpi-sub.orange { color: #fb923c; }
+html.rp-dark .sp-card-title { color: #cbd5e1; }
+html.rp-dark .sp-card-sub   { color: #94a3b8; }
+html.rp-dark .donut-center strong { color: #f1f5f9; }
+html.rp-dark .donut-center span   { color: #94a3b8; }
+html.rp-dark .big-pct { color: #f1f5f9; }
+
+/* ── Mode noir (OLED) ────────────────────────────────────────── */
+html.rp-noir .sp-title    { color: #f1f5f9; }
+html.rp-noir .sp-subtitle { color: #64748b; }
+html.rp-noir .sp-back     { background: rgba(0,122,53,.10); color: #4ade80; border-color: rgba(0,122,53,.25); }
+html.rp-noir .sp-back:hover { background: rgba(0,122,53,.20); color: #86efac; }
+html.rp-noir .sp-kpi, html.rp-noir .sp-card { background: #000; border-color: #1a1a1a; box-shadow: 0 1px 6px rgba(0,0,0,.6); }
+html.rp-noir .sp-kpi-val  { color: #f1f5f9; }
+html.rp-noir .sp-kpi-lbl  { color: #64748b; }
+html.rp-noir .sp-kpi-sub  { color: #4ade80; }
+html.rp-noir .sp-kpi-sub.orange { color: #fb923c; }
+html.rp-noir .sp-card-title { color: #cbd5e1; }
+html.rp-noir .sp-card-sub   { color: #64748b; }
+html.rp-noir .donut-center strong { color: #f1f5f9; }
+html.rp-noir .donut-center span   { color: #64748b; }
+html.rp-noir .big-pct { color: #f1f5f9; }
+</style>
+
+<a href="/admin/candidat/candidat/" class="sp-back">← Retour à la liste</a>
+
+<div class="sp-title">Statistiques — Candidats</div>
+<div class="sp-subtitle">Vue d'ensemble de l'évolution et de la répartition des candidats inscrits.</div>
+
+<!-- KPIs -->
+<div class="sp-kpi-grid">
+    <div class="sp-kpi">
+        <div class="sp-kpi-val">{{ total }}</div>
+        <div class="sp-kpi-lbl">Total candidats</div>
+    </div>
+    <div class="sp-kpi">
+        <div class="sp-kpi-val" style="color:#009A44;">{{ actifs }}</div>
+        <div class="sp-kpi-lbl">Comptes actifs</div>
+        <div class="sp-kpi-sub">en ligne</div>
+    </div>
+    <div class="sp-kpi">
+        <div class="sp-kpi-val" style="color:#F77F00;">{{ new_7j }}</div>
+        <div class="sp-kpi-lbl">Nouveaux 7 jours</div>
+        <div class="sp-kpi-sub orange">cette semaine</div>
+    </div>
+    <div class="sp-kpi">
+        <div class="sp-kpi-val">{{ new_30j }}</div>
+        <div class="sp-kpi-lbl">Nouveaux 30 jours</div>
+        <div class="sp-kpi-sub">ce mois</div>
+    </div>
+</div>
+
+<!-- Graphe 1 : courbe inscriptions + donut statut -->
+<div class="sp-row sp-row-2">
+    <div class="sp-card">
+        <div class="sp-card-title">Inscriptions par mois</div>
+        <div class="sp-card-sub">Nouveaux candidats inscrits sur les 6 derniers mois</div>
+        <canvas id="chartMois" height="100"></canvas>
+    </div>
+    <div class="sp-card" style="display:flex;flex-direction:column;align-items:center;">
+        <div class="sp-card-title" style="align-self:flex-start;">Statut des comptes</div>
+        <div class="sp-card-sub" style="align-self:flex-start;">Répartition actuelle</div>
+        <div class="donut-wrap" style="width:100%;">
+            <canvas id="chartStatut" height="220"></canvas>
+            <div class="donut-center">
+                <strong>{{ total }}</strong>
+                <span>candidats</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Graphe 2 : bar disponibilité + taux activation + bar type contrat recherché -->
+<div class="sp-row sp-row-3">
+    <div class="sp-card">
+        <div class="sp-card-title">Disponibilité</div>
+        <div class="sp-card-sub">Statut de recherche des candidats</div>
+        <canvas id="chartDispo" height="160"></canvas>
+    </div>
+    <div class="sp-card" style="display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;">
+        <div style="width:100%;">
+            <div class="sp-card-title">Taux d'activation</div>
+            <div class="sp-card-sub">Comptes actifs / total</div>
+        </div>
+        {% if total %}
+        <div class="big-pct" style="color:#009A44;">{% widthratio actifs total 100 %}<span style="font-size:26px;">%</span></div>
+        <div style="font-size:12px;color:#94a3b8;text-align:center;">{{ actifs }} actifs sur {{ total }}</div>
+        {% else %}
+        <div style="color:#94a3b8;font-size:13px;">Aucun candidat</div>
+        {% endif %}
+    </div>
+    <div class="sp-card">
+        <div class="sp-card-title">Type de contrat recherché</div>
+        <div class="sp-card-sub">Préférences des candidats</div>
+        <canvas id="chartContrat" height="160"></canvas>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+    const GREEN = '#009A44', ORANGE = '#F77F00';
+    const GREEN_T = 'rgba(0,154,68,.13)', ORANGE_T = 'rgba(247,127,0,.13)';
+    const PALETTE = [GREEN, ORANGE, 'rgba(0,154,68,.5)', 'rgba(247,127,0,.5)', 'rgba(0,154,68,.25)', 'rgba(247,127,0,.25)', '#e2e8f0'];
+    const isNoir = document.documentElement.classList.contains('rp-noir');
+    const isDark = isNoir || document.documentElement.classList.contains('rp-dark');
+    Chart.defaults.font.family = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";
+    Chart.defaults.font.size = 11;
+    Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
+    const grid = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.05)';
+
+    /* Inscriptions par mois */
+    new Chart(document.getElementById('chartMois'), {
+        type: 'line',
+        data: {
+            labels: {{ mois_labels|safe }},
+            datasets: [{
+                label: 'Inscriptions',
+                data: {{ mois_data|safe }},
+                borderColor: GREEN, backgroundColor: GREEN_T,
+                fill: true, tension: .4,
+                pointBackgroundColor: GREEN, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+            scales: {
+                x: { grid: { color: grid }, ticks: { color: '#94a3b8' } },
+                y: { grid: { color: grid }, ticks: { color: '#94a3b8' }, beginAtZero: true }
+            }
+        }
+    });
+
+    /* Statut des comptes (donut) */
+    new Chart(document.getElementById('chartStatut'), {
+        type: 'doughnut',
+        data: {
+            labels: {{ labels_statut|safe }},
+            datasets: [{
+                data: {{ data_statut|safe }},
+                backgroundColor: PALETTE,
+                borderWidth: 2, borderColor: '#fff', hoverOffset: 6,
+            }]
+        },
+        options: {
+            responsive: true, cutout: '68%',
+            plugins: { legend: { position: 'bottom', labels: { padding: 8, boxWidth: 10 } } }
+        }
+    });
+
+    /* Disponibilité (bar horizontal) */
+    new Chart(document.getElementById('chartDispo'), {
+        type: 'bar',
+        data: {
+            labels: {{ labels_dispo|safe }},
+            datasets: [{
+                label: 'Candidats',
+                data: {{ data_dispo|safe }},
+                backgroundColor: GREEN_T, borderColor: GREEN, borderWidth: 2,
+                borderRadius: 6, borderSkipped: false,
+            }]
+        },
+        options: {
+            indexAxis: 'y', responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: grid }, ticks: { color: '#94a3b8' }, beginAtZero: true },
+                y: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+            }
+        }
+    });
+
+    /* Type de contrat recherché */
+    new Chart(document.getElementById('chartContrat'), {
+        type: 'bar',
+        data: {
+            labels: {{ labels_contrat|safe }},
+            datasets: [{
+                label: 'Candidats',
+                data: {{ data_contrat|safe }},
+                backgroundColor: ORANGE_T, borderColor: ORANGE, borderWidth: 2,
+                borderRadius: 6, borderSkipped: false,
+            }]
+        },
+        options: {
+            indexAxis: 'y', responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: grid }, ticks: { color: '#94a3b8' }, beginAtZero: true },
+                y: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+            }
+        }
+    });
+})();
+</script>
+{% endblock %}

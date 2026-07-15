@@ -1,0 +1,862 @@
+﻿{% extends "entreprise/base.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Candidatures" %} — {{ offre.titre }}{% endblock %}
+
+{% block css_extra %}
+<style>
+  [x-cloak]{display:none!important}
+  /* Bordure modale décision visible en mode sombre/noir */
+  html.dark .msg-decision-dialog { border: 2px solid rgba(201,96,16,.55) !important; }
+  html.noir .msg-decision-dialog { border: 2px solid rgba(201,96,16,.7)  !important; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<section class="mb-10"
+         x-data="decisionsCandidatures()"
+         x-init="init()">
+
+  {# ── Fil d'Ariane ── #}
+  <nav class="text-sm text-gray-500 mb-4 flex items-center gap-2 flex-wrap">
+    <a href="{% url 'entreprise:recruteur_tableau_bord' %}" class="hover:underline">{% trans "Tableau de bord" %}</a>
+    <span>›</span>
+    <a href="{% url 'entreprise:offres_liste' %}" class="hover:underline">{% trans "Offres" %}</a>
+    <span>›</span>
+    <a href="{% url 'entreprise:offre_detail' offre.pk %}" class="hover:underline">{{ offre.titre|truncatechars:40 }}</a>
+    <span>›</span>
+    <span class="text-gray-700 font-semibold">{% trans "Candidatures" %}</span>
+  </nav>
+
+  {# ── En-tête : offre ciblée ── #}
+  <div class="bg-white rounded-2xl p-6 sm:p-8 border border-gray-100 shadow-sm mb-6">
+    <div class="flex items-start gap-4">
+      <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl shadow-md flex-shrink-0"
+           style="background:#009A44;">
+        📋
+      </div>
+      <div class="flex-1 min-w-0">
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-800">{{ offre.titre }}</h1>
+        <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 mt-2">
+          <span>🔖 <span class="font-mono">{{ offre.reference|default:"—" }}</span></span>
+          {% if offre.ville %}<span>📍 {{ offre.ville }}</span>{% endif %}
+          <span>📋 {{ offre.get_typeContrat_display }}</span>
+          <span>📊 {{ offre.get_statutOffre_display }}</span>
+          <span>📅 {{ offre.dateCreation|date:"d M Y" }}</span>
+        </div>
+        <p class="text-gray-500 text-sm mt-3">
+          {% blocktrans count nb=total %}
+            {{ nb }} candidature reçue pour cette offre.
+          {% plural %}
+            {{ nb }} candidatures reçues pour cette offre.
+          {% endblocktrans %}
+        </p>
+      </div>
+      <div class="flex flex-col gap-2 flex-shrink-0">
+        <a href="{% url 'entreprise:offre_detail' offre.pk %}"
+           class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 transition">
+          👁️ {% trans "Voir l'offre" %}
+        </a>
+        <a href="{% url 'entreprise:entretiens_offre' offre.pk %}"
+           class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-white transition"
+           style="background:#009A44;">
+          🤝 {% trans "Entretiens" %}
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {# ── Stats — cliquables pour filtrer ── #}
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+    <button type="button" @click="filtreStatut='tous'"
+            :class="filtreStatut==='tous' ? 'ring-2 ring-gray-400 dark:ring-gray-300' : 'hover:shadow-md'"
+            class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm text-left transition cursor-pointer w-full">
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wide mb-1">{% trans "Total" %}</p>
+      <p class="text-3xl font-extrabold text-gray-800 dark:text-white">{{ total }}</p>
+      <p class="text-xs text-gray-400 mt-1" x-show="filtreStatut==='tous'" x-cloak>▶ {% trans "actif" %}</p>
+    </button>
+
+    <button type="button" @click="filtreStatut='attente'"
+            :class="filtreStatut==='attente' ? 'ring-2 ring-blue-400' : 'hover:shadow-md'"
+            class="bg-white dark:bg-gray-800 rounded-2xl p-5 border-l-4 border border-gray-100 dark:border-gray-700 shadow-sm text-left transition cursor-pointer w-full" style="border-left-color:#3B82F6;">
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wide mb-1">📨 {% trans "En attente" %}</p>
+      <p class="text-3xl font-extrabold" style="color:#3B82F6;">{{ en_attente }}</p>
+      <p class="text-xs text-blue-400 mt-1" x-show="filtreStatut==='attente'" x-cloak>▶ {% trans "actif" %}</p>
+    </button>
+
+    <button type="button" @click="filtreStatut='acceptees'"
+            :class="filtreStatut==='acceptees' ? 'ring-2 ring-green-400' : 'hover:shadow-md'"
+            class="bg-white dark:bg-gray-800 rounded-2xl p-5 border-l-4 border border-gray-100 dark:border-gray-700 shadow-sm text-left transition cursor-pointer w-full" style="border-left-color:#009A44;">
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wide mb-1">✅ {% trans "Acceptées" %}</p>
+      <p class="text-3xl font-extrabold" style="color:#009A44;">{{ acceptees }}</p>
+      <p class="text-xs text-green-500 mt-1" x-show="filtreStatut==='acceptees'" x-cloak>▶ {% trans "actif" %}</p>
+    </button>
+
+    <button type="button" @click="filtreStatut='refusees'"
+            :class="filtreStatut==='refusees' ? 'ring-2 ring-red-400' : 'hover:shadow-md'"
+            class="bg-white dark:bg-gray-800 rounded-2xl p-5 border-l-4 border border-gray-100 dark:border-gray-700 shadow-sm text-left transition cursor-pointer w-full border-l-red-500">
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wide mb-1">❌ {% trans "Refusées" %}</p>
+      <p class="text-3xl font-extrabold text-red-600 dark:text-red-400">{{ refusees }}</p>
+      <p class="text-xs text-red-400 mt-1" x-show="filtreStatut==='refusees'" x-cloak>▶ {% trans "actif" %}</p>
+    </button>
+
+  </div>
+
+  {# ── Barre de tri — juste sous les cartes stats ─────────────────────── #}
+  {% if candidatures %}
+  <div class="flex items-center gap-2 mb-4">
+      <span class="text-xs text-gray-400 dark:text-gray-500 font-semibold">{% trans "Trier par" %} :</span>
+      {% for val, label in tri_options %}
+      <a href="?tri={{ val }}"
+         class="px-2.5 py-1.5 rounded-lg text-xs font-semibold transition
+         {% if tri == val %}bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900{% else %}bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600{% endif %}">
+          {{ label }}
+      </a>
+      {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Bandeau global (full-width) : état finalisé + reset ────────────── #}
+  {% if offre_finalisee or nb_decisions_prises > 0 %}
+  <div class="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+    {% if offre_finalisee %}
+    <div class="flex-1 px-4 py-3 rounded-2xl bg-green-50 border border-green-200 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-lg flex-shrink-0"
+           style="background:#009A44;">
+        ✅
+      </div>
+      <div class="min-w-0">
+        <p class="font-bold text-green-800 text-sm">{% trans "Offre finalisée" %}</p>
+        <p class="text-xs text-green-700/80">
+          {% blocktrans %}Toutes les candidatures ont été traitées.{% endblocktrans %}
+        </p>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if nb_decisions_prises > 0 and request.recruteur.roleMembre in 'RH,MANAGER' %}
+    <form method="post" action="{% url 'entreprise:candidatures_offre_reinitialiser' offre.pk %}"
+          onsubmit="return confirm('Réinitialiser {{ nb_decisions_prises }} décision(s) ? Toutes les candidatures acceptées/refusées repasseront en attente. Action traçable mais non automatiquement réversible.')"
+          class="flex-shrink-0">
+      {% csrf_token %}
+      <button type="submit"
+              class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-bold text-gray-700 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 transition"
+              title="{% trans 'Tout remettre à zéro pour cette offre' %}">
+        🔄 {% trans "Réinitialiser toutes les décisions" %} ({{ nb_decisions_prises }})
+      </button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ── Liste candidatures : 2 colonnes permanentes ────────────────────── #}
+  {# Gauche = candidatures ; Droite = bandeau IA + Top N (sticky).         #}
+  {% if candidatures %}
+  <div class="flex flex-col lg:flex-row gap-6 items-start">
+
+    {# ─── Colonne GAUCHE : candidatures ──────────────────────────── #}
+    <div class="flex-1 min-w-0 w-full order-2 lg:order-1">
+      <div x-show="triActif" x-cloak class="mb-3 flex items-baseline justify-between">
+        <h3 class="font-bold text-gray-700 text-sm uppercase tracking-wider">
+          📋 {% trans "Autres candidatures" %}
+        </h3>
+        <span class="text-xs text-gray-500"
+              x-text="(resultatsGlobaux.length - topN) + ' candidature(s)'"></span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {% for c in candidatures %}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border-2 shadow-sm p-5 sm:p-6 flex flex-col gap-4 transition-all"
+         :class="estSelectionne({{ c.id }}) ? 'border-green-400 dark:border-green-600' : 'border-gray-100 dark:border-gray-700'"
+         x-show="(!triActif || !estDansTopN({{ c.id }})) && estVisible('{{ c.statut.code|default:"" }}')">
+
+      {# Identité candidat + checkbox #}
+      <div class="flex items-start gap-3 flex-1 min-w-0">
+        {% if not request.recruteur.est_lecteur %}
+        <input type="checkbox"
+               :checked="estSelectionne({{ c.id }})"
+               @change="toggleSelection({{ c.id }})"
+               class="mt-1 w-4 h-4 rounded accent-green-600 flex-shrink-0 cursor-pointer"
+               x-show="!triActif">
+        {% endif %}
+        {% if c.candidat.photoProfil %}
+          <img src="{{ c.candidat.photoProfil.url }}"
+               alt="{{ c.candidat.prenom }} {{ c.candidat.nom }}"
+               class="w-12 h-12 rounded-full object-cover border-2 border-gray-200 flex-shrink-0">
+        {% else %}
+          <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm flex-shrink-0"
+               style="background:#009A44;">
+            {{ c.candidat.prenom|slice:":1"|upper }}{{ c.candidat.nom|slice:":1"|upper }}
+          </div>
+        {% endif %}
+        <div class="flex-1 min-w-0">
+          <p class="font-bold text-gray-800 truncate">
+            {{ c.candidat.prenom }} {{ c.candidat.nom }}
+          </p>
+          {% if c.candidat.titreProfessionnel %}
+            <p class="text-sm font-medium truncate" style="color:#c96010;">
+              {{ c.candidat.titreProfessionnel }}
+            </p>
+          {% endif %}
+          <div class="flex flex-wrap gap-3 text-xs text-gray-500 mt-1">
+            <span>🔖 <span class="font-mono">{{ c.reference }}</span></span>
+            <span>📅 {{ c.dateCandidature|date:"d M Y, H:i" }}</span>
+            {% if c.candidat.email %}<span>📧 {{ c.candidat.email }}</span>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      {# Statut courant + Score IA — statut masqué pendant le tri IA #}
+      <div class="flex-shrink-0 flex flex-wrap items-center gap-2">
+        {% if c.statut %}
+        <span x-show="!triActif"
+              class="inline-flex items-center gap-1.5 font-bold px-3 py-1.5 rounded-full text-xs text-white shadow-sm"
+              style="background:{{ c.statut.couleur }};">
+          <span>{{ c.statut.icone|default:'•' }}</span>
+          <span>{{ c.statut.libelle }}</span>
+        </span>
+        {% endif %}
+
+        {# Score IA — badge si déjà calculé, sinon bouton #}
+        <template x-if="scoresIA[{{ c.id }}]">
+          <span class="inline-flex items-center gap-1.5 font-bold px-3 py-1.5 rounded-full text-xs text-white shadow-sm"
+                :style="'background:' + niveauCouleur(scoresIA[{{ c.id }}].niveau)"
+                :title="'Modèle : ' + scoresIA[{{ c.id }}].modele + ' — Niveau : ' + scoresIA[{{ c.id }}].niveau">
+            🤖 <span x-text="'Score IA ' + scoresIA[{{ c.id }}].score + '%'"></span>
+          </span>
+        </template>
+        {% if not request.recruteur.est_lecteur %}
+        <template x-if="!scoresIA[{{ c.id }}] && !loadingIA[{{ c.id }}] && !erreursIA[{{ c.id }}]">
+          <button type="button"
+                  @click="analyserIA({{ c.id }})"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold text-xs text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 transition">
+            🤖 {% trans "Analyser IA" %}
+          </button>
+        </template>
+        <template x-if="loadingIA[{{ c.id }}]">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-gray-500 bg-gray-50 border border-gray-200">
+            ⏳ {% trans "Analyse…" %}
+          </span>
+        </template>
+        <template x-if="erreursIA[{{ c.id }}]">
+          <button type="button" @click="analyserIA({{ c.id }})"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition"
+                  :title="erreursIA[{{ c.id }}]">
+            ⚠ {% trans "Erreur — réessayer" %}
+          </button>
+        </template>
+        {% endif %}
+      </div>
+
+      {# Actions #}
+      <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
+        {% if c.cv_url %}
+        <a href="{{ c.cv_url }}" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 transition">
+          📄 {% trans "CV" %}
+        </a>
+        {% endif %}
+        {% if c.lettreMotivation %}
+        <a href="{{ c.lettreMotivation.url }}" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 transition">
+          ✉️ {% trans "Lettre" %}
+        </a>
+        {% endif %}
+        <a href="{% url 'entreprise:voir_portfolio' c.candidat.id %}"
+           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 transition">
+          🌐 {% trans "Portfolio" %}
+        </a>
+
+        {# Décision — masquée pendant le tri IA.                              #}
+        {# ACCEPTEE / REFUSEE = décision prise → "Annuler la décision".       #}
+        {# Autres (POSTULEE, VUE, PRESELECTIONNEE, ENTRETIEN, TEST) = ouvert. #}
+        <template x-if="!triActif">
+          <div class="contents">
+            {% if c.statut.code == 'ACCEPTEE' or c.statut.code == 'REFUSEE' %}
+            {# Décision déjà prise — option d'annulation pour RH / MANAGER #}
+            {% if request.recruteur.roleMembre == 'RH' or request.recruteur.roleMembre == 'MANAGER' %}
+            <form method="post"
+                  action="{% url 'entreprise:candidature_annuler_decision' c.id %}"
+                  onsubmit="return confirm('Réouvrir cette candidature ? Le statut « {{ c.statut.libelle|escapejs }} » sera annulé et la candidature reviendra en attente.')">
+              {% csrf_token %}
+              <button type="submit"
+                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 transition"
+                      title="{% trans 'Annuler la décision et remettre la candidature en attente' %}">
+                ↺ {% trans "Annuler la décision" %}
+              </button>
+            </form>
+            {% else %}
+            <span class="text-xs italic text-gray-400">{% trans "Décision déjà prise" %}</span>
+            {% endif %}
+            {% else %}
+            {% if request.recruteur.roleMembre == 'RH' or request.recruteur.roleMembre == 'MANAGER' %}
+            <button type="button"
+                    @click="ouvrirDecision('ACCEPTER', {{ c.id }}, '{{ c.candidat.prenom|escapejs }} {{ c.candidat.nom|escapejs }}')"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs text-white shadow-sm hover:shadow transition"
+                    style="background:#009A44;">
+              ✅ {% trans "Accepter" %}
+            </button>
+            <button type="button"
+                    @click="ouvrirDecision('REFUSER', {{ c.id }}, '{{ c.candidat.prenom|escapejs }} {{ c.candidat.nom|escapejs }}')"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs text-white bg-red-600 hover:bg-red-700 transition">
+              ❌ {% trans "Refuser" %}
+            </button>
+            {% else %}
+            <span class="text-xs italic text-gray-400">{% trans "Lecture seule" %}</span>
+            {% endif %}
+            {% endif %}
+          </div>
+        </template>
+      </div>
+    </div>
+    {% endfor %}
+      </div>
+    </div>
+    {# ─── fin colonne GAUCHE ─────────────────────────────────────── #}
+
+    {# ─── Colonne DROITE : bandeau IA + Top N ────────────────────── #}
+    <aside class="w-full lg:w-[460px] xl:w-[520px] 2xl:w-[560px] flex-shrink-0 order-1 lg:order-2
+                  lg:sticky lg:top-[80px] space-y-4">
+
+      {# ── Bandeau IA compact (titre + bouton sur la même ligne) ── #}
+      <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-white text-xl shadow-md flex-shrink-0"
+                 style="background:#c96010;">
+              🤖
+            </div>
+            <div class="min-w-0">
+              <h2 class="font-extrabold text-gray-800 text-base leading-tight">{% trans "Tri intelligent" %}</h2>
+              <p class="text-xs text-gray-500 mt-0.5" x-show="!triActif">
+                {% if offre_finalisee %}
+                  {% trans "Consultation seule — toutes les décisions sont prises." %}
+                {% else %}
+                  {% trans "Classement par IA sémantique." %}
+                {% endif %}
+              </p>
+            </div>
+          </div>
+
+          {# Bouton lancement (même ligne que le titre) — caché en tri IA #}
+          {% if not request.recruteur.est_lecteur %}
+          <button type="button"
+                  @click="lancerScoringGlobal()"
+                  x-show="!triActif"
+                  x-cloak
+                  :disabled="scoringEnCours"
+                  :class="scoringEnCours ? 'opacity-60 cursor-wait' : ''"
+                  class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm hover:shadow transition flex-shrink-0"
+                  style="background:#c96010;">
+            <span x-show="!scoringEnCours">🤖 {% trans "Trier par IA" %}</span>
+            <span x-show="scoringEnCours" x-cloak>⏳ {% trans "Analyse…" %}</span>
+          </button>
+          {% endif %}
+
+          {# Bouton ACCEPTER LE TOP — désactivé si offre finalisée #}
+          {% if not offre_finalisee %}
+          <button type="button"
+                  @click="accepterTopN()"
+                  x-show="triActif"
+                  x-cloak
+                  :disabled="acceptEnCours || !resultatsGlobaux.length"
+                  :class="acceptEnCours ? 'opacity-60 cursor-wait' : ''"
+                  class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm hover:shadow transition flex-shrink-0"
+                  style="background:#009A44;"
+                  :title="{% trans "'Accepter le Top ' + topN + ' · refuser les ' + (resultatsGlobaux.length - topN) + ' autre(s)'" %}">
+            <span x-show="!acceptEnCours">✅ {% trans "Accepter" %}</span>
+            <span x-show="acceptEnCours" x-cloak>⏳ {% trans "Envoi…" %}</span>
+          </button>
+          {% else %}
+          <span x-show="triActif" x-cloak
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-gray-400 bg-gray-100 border border-gray-200 flex-shrink-0 cursor-not-allowed"
+                title="{% trans 'Toutes les candidatures sont déjà traitées' %}">
+            🔒 {% trans "Verrouillé" %}
+          </span>
+          {% endif %}
+        </div>
+
+        {# Sélecteur top N + actions (tout sur une seule ligne) #}
+        <div x-show="triActif" x-cloak class="flex items-center gap-2 mt-3 flex-wrap">
+          <div class="flex items-center bg-white dark:bg-slate-800 rounded-xl border border-gray-200 shadow-sm overflow-hidden flex-1 min-w-[160px]">
+            <button type="button" @click="ajusterTopN(-1)"
+                    class="px-3 py-2 text-gray-600 hover:bg-gray-50 font-bold text-base disabled:opacity-30 disabled:cursor-not-allowed"
+                    :disabled="topN <= 1">−</button>
+            <div class="flex-1 px-2 py-2 border-x border-gray-200 text-center">
+              <span class="font-extrabold text-gray-800 text-base" x-text="topN"></span>
+              <span class="text-[11px] text-gray-500 ml-1">{% trans "meilleur(s)" %}</span>
+            </div>
+            <button type="button" @click="ajusterTopN(1)"
+                    class="px-3 py-2 text-gray-600 hover:bg-gray-50 font-bold text-base disabled:opacity-30 disabled:cursor-not-allowed"
+                    :disabled="topN >= resultatsGlobaux.length">+</button>
+          </div>
+          <button type="button" @click="lancerScoringGlobal()"
+                  :disabled="scoringEnCours"
+                  class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 transition flex-shrink-0"
+                  title="{% trans 'Relancer l’analyse' %}">
+            🔄 <span class="hidden sm:inline">{% trans "Relancer" %}</span>
+          </button>
+          <button type="button" @click="reinitialiserScoring()"
+                  class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 transition flex-shrink-0"
+                  title="{% trans 'Fermer' %}">
+            ✕ <span class="hidden sm:inline">{% trans "Fermer" %}</span>
+          </button>
+        </div>
+
+        {# Erreur scoring global #}
+        <div x-show="erreurScoringGlobal" x-cloak class="mt-3 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
+          ⚠ <span x-text="erreurScoringGlobal"></span>
+        </div>
+      </div>
+
+      {# ── Panel Top N (visible quand triActif) ── #}
+      <div x-show="triActif" x-cloak
+           class="bg-white rounded-2xl border-2 shadow-md overflow-hidden"
+           style="border-color:#c96010;">
+        <div class="px-5 py-3 flex items-baseline justify-between"
+             style="background:#c96010;">
+          <h3 class="font-extrabold text-white text-sm uppercase tracking-wider">
+            🏆 <span x-text="'Top ' + topN"></span>
+          </h3>
+          <span class="text-[11px] text-white/90 font-semibold"
+                x-text="'sur ' + resultatsGlobaux.length"></span>
+        </div>
+        <div class="p-3 space-y-3 max-h-[calc(100vh-260px)] overflow-y-auto">
+          <template x-for="(r, idx) in resultatsGlobaux.slice(0, topN)" :key="r.candidature_id">
+            <div class="bg-white dark:bg-slate-800
+                        rounded-xl border-2 shadow-sm p-3 flex flex-col gap-2"
+                 :style="'border-color:' + niveauCouleur(r.niveau)">
+
+              {# Ligne haute : rang + identité + score #}
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-extrabold text-sm flex-shrink-0"
+                     :style="'background:' + niveauCouleur(r.niveau)"
+                     x-text="(idx + 1)"></div>
+                <div class="flex-1 min-w-0">
+                  <p class="font-bold text-gray-800 truncate text-sm" x-text="r.candidat"></p>
+                  <p class="text-[11px] text-gray-500 font-mono truncate" x-text="r.reference"></p>
+                </div>
+                <div class="text-right flex-shrink-0">
+                  <p class="text-xl font-extrabold leading-none"
+                     :style="'color:' + niveauCouleur(r.niveau)"
+                     x-text="r.score + '%'"></p>
+                  <p class="text-[9px] font-bold uppercase tracking-wider mt-0.5"
+                     :style="'color:' + niveauCouleur(r.niveau)"
+                     x-text="r.niveau"></p>
+                </div>
+              </div>
+
+              {# Ligne basse : liens documents (CV / Lettre / Portfolio) #}
+              <div class="flex flex-wrap items-center gap-1.5 pl-[52px]">
+                <template x-if="r.cv_url">
+                  <a :href="r.cv_url" target="_blank" rel="noopener"
+                     class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 transition">
+                    📄 {% trans "CV" %}
+                  </a>
+                </template>
+                <template x-if="r.lettre_url">
+                  <a :href="r.lettre_url" target="_blank" rel="noopener"
+                     class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 transition">
+                    ✉️ {% trans "Lettre" %}
+                  </a>
+                </template>
+                <template x-if="r.portfolio_url">
+                  <a :href="r.portfolio_url"
+                     class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 transition">
+                    🌐 {% trans "Portfolio" %}
+                  </a>
+                </template>
+                <template x-if="!r.cv_url && !r.lettre_url">
+                  <span class="text-[11px] italic text-gray-400">
+                    {% trans "Aucun document joint" %}
+                  </span>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </aside>
+  </div>
+  {% else %}
+  <div class="bg-white rounded-2xl p-10 sm:p-14 border border-gray-100 shadow-sm text-center">
+    <div class="w-20 h-20 mx-auto rounded-full flex items-center justify-center text-4xl mb-4" style="background:#F0FAF4;">
+      📭
+    </div>
+    <h2 class="text-xl font-extrabold text-gray-800 mb-2">{% trans "Aucune candidature pour le moment" %}</h2>
+    <p class="text-gray-500 text-sm max-w-md mx-auto">
+      {% trans "Personne n'a encore postulé à cette offre. Revenez plus tard ou partagez le lien de l'annonce pour augmenter sa visibilité." %}
+    </p>
+  </div>
+  {% endif %}
+
+  {# ── Barre d'actions bulk (flottante, apparaît si sélection > 0) ──────── #}
+  {% if not request.recruteur.est_lecteur %}
+  <div x-show="selectionnes.length > 0 && !triActif" x-cloak x-transition
+       class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-2xl shadow-2xl px-5 py-3">
+      <span class="text-sm font-bold" x-text="selectionnes.length + ' sélectionnée(s)'"></span>
+      <div class="w-px h-5 bg-white/30 dark:bg-gray-400"></div>
+      <button @click="bulkAction('ACCEPTER')" :disabled="bulkEnCours"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-green-600 hover:bg-green-500 text-white transition disabled:opacity-50">
+          <span x-show="!bulkEnCours">✅ {% trans "Accepter" %}</span>
+          <span x-show="bulkEnCours" x-cloak>⏳</span>
+      </button>
+      <button @click="bulkAction('REFUSER')" :disabled="bulkEnCours"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-500 text-white transition disabled:opacity-50">
+          ❌ {% trans "Refuser" %}
+      </button>
+      <button @click="selectionnes = []"
+              class="text-white/60 dark:text-gray-500 hover:text-white dark:hover:text-gray-900 text-xs transition">
+          ✕
+      </button>
+  </div>
+  {% endif %}
+
+  {# ── Toast de feedback bulk accept ──────────────────────────────────── #}
+  <div x-show="acceptToast.message" x-cloak x-transition
+       class="fixed top-4 right-4 z-[110] max-w-sm rounded-xl shadow-2xl p-4 border-2"
+       :style="acceptToast.type === 'success'
+                ? 'background:#F0FAF4;border-color:#009A44;color:#065F2D'
+                : 'background:#FEF2F2;border-color:#dc2626;color:#7F1D1D'">
+    <div class="flex items-start gap-3">
+      <span class="text-xl flex-shrink-0" x-text="acceptToast.type === 'success' ? '✅' : '⚠'"></span>
+      <p class="text-sm font-semibold flex-1" x-text="acceptToast.message"></p>
+      <button type="button" @click="acceptToast = { type:'', message:'' }"
+              class="text-gray-500 hover:text-gray-700 flex-shrink-0">✕</button>
+    </div>
+  </div>
+
+  {# ── Modal de décision (acceptation / refus) ─────────────────────────── #}
+  <div x-show="modalOuvert" x-cloak x-transition.opacity
+       class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+       @keydown.escape.window="modalOuvert = false"
+       @click.self="modalOuvert = false">
+    <div class="msg-decision-dialog bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <form method="post" :action="actionUrl" enctype="multipart/form-data" class="flex flex-col flex-1 overflow-hidden">
+        {% csrf_token %}
+        <input type="hidden" name="decision" :value="decision">
+        <input type="hidden" name="next_url" value="{% url 'entreprise:candidatures_offre' offre.pk %}">
+        <input type="hidden" name="modele_id" :value="modeleSelectionne ? modeleSelectionne.id : ''">
+
+        {# En-tête #}
+        <div class="px-6 py-4 border-b border-gray-100 flex items-start gap-3 flex-shrink-0"
+             :class="decision === 'ACCEPTER' ? 'bg-green-50' : 'bg-red-50'">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center text-xl text-white flex-shrink-0"
+               :style="decision === 'ACCEPTER' ? 'background:#009A44' : 'background:#dc2626'">
+            <span x-text="decision === 'ACCEPTER' ? '✅' : '❌'"></span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <h3 class="font-extrabold text-gray-800 text-lg leading-tight"
+                x-text="decision === 'ACCEPTER' ? 'Accepter la candidature' : 'Refuser la candidature'"></h3>
+            <p class="text-sm text-gray-600 mt-0.5" x-text="'Candidat : ' + candidatNom"></p>
+          </div>
+        </div>
+
+        {# Corps : choix du modèle + prévisualisation #}
+        <div class="flex-1 overflow-y-auto p-6 space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+              📝 {% trans "Modèle de message à envoyer (optionnel)" %}
+            </label>
+            <select x-model="modeleId" @change="onModeleChange()"
+                    class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none">
+              <option value="">— {% trans "Ne pas envoyer de message" %} —</option>
+              <template x-for="m in modelesDisponibles" :key="m.id">
+                <option :value="m.id" x-text="m.sujet + ' (' + m.type_libelle + ')'"></option>
+              </template>
+            </select>
+            <p class="text-xs text-gray-400 mt-1" x-show="!modelesDisponibles.length" x-cloak>
+              {% trans "Aucun modèle disponible. L'admin peut en créer dans la section Modèles." %}
+            </p>
+          </div>
+
+          {# Aperçu du message rendu #}
+          <div x-show="modeleSelectionne" x-cloak class="border border-gray-200 rounded-xl overflow-hidden">
+            <div class="px-4 py-2 bg-gray-50 border-b border-gray-100">
+              <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">{% trans "Aperçu (sujet)" %}</p>
+              <p class="text-sm font-bold text-gray-800" x-text="apercuSujet"></p>
+            </div>
+            <div class="p-4 max-h-48 overflow-y-auto">
+              <pre class="text-sm text-gray-700 whitespace-pre-wrap font-sans" x-text="apercuCorps"></pre>
+            </div>
+          </div>
+
+          {# Pièce jointe optionnelle #}
+          <div x-show="modeleSelectionne" x-cloak>
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+              📎 {% trans "Pièce jointe (optionnel)" %}
+            </label>
+            <input type="file" name="piece_jointe"
+                   class="text-sm text-gray-600 file:mr-2 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-gray-100 file:text-gray-700 file:font-semibold hover:file:bg-gray-200">
+          </div>
+        </div>
+
+        {# Pied #}
+        <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-end gap-2 flex-shrink-0">
+          <button type="button" @click="modalOuvert = false"
+                  class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-white border border-gray-200 transition">
+            {% trans "Annuler" %}
+          </button>
+          <button type="submit"
+                  class="px-5 py-2 rounded-lg text-sm font-bold text-white shadow-sm hover:shadow transition"
+                  :style="decision === 'ACCEPTER' ? 'background:#009A44' : 'background:#dc2626'">
+            <span x-text="decision === 'ACCEPTER' ? '✅ Confirmer l\'acceptation' : '❌ Confirmer le refus'"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</section>
+
+<script>
+function decisionsCandidatures() {
+  return {
+    init() {},
+
+    // ── Filtre statut (client-side) ───────────────────────────────────
+    filtreStatut: 'tous',   // 'tous' | 'attente' | 'acceptees' | 'refusees'
+    estVisible(code) {
+      if (this.filtreStatut === 'tous') return true;
+      if (this.filtreStatut === 'attente')   return !['ACCEPTEE','REFUSEE','EMBAUCHEE'].includes(code);
+      if (this.filtreStatut === 'acceptees') return ['ACCEPTEE','EMBAUCHEE'].includes(code);
+      if (this.filtreStatut === 'refusees')  return code === 'REFUSEE';
+      return true;
+    },
+
+    // ── Sélection manuelle (checkbox) ────────────────────────────────
+    selectionnes: [],
+    bulkEnCours: false,
+
+    toggleSelection(id) {
+      const idx = this.selectionnes.indexOf(id);
+      if (idx === -1) this.selectionnes.push(id);
+      else this.selectionnes.splice(idx, 1);
+    },
+    estSelectionne(id) {
+      return this.selectionnes.includes(id);
+    },
+
+    async bulkAction(action) {
+      if (!this.selectionnes.length || this.bulkEnCours) return;
+      this.bulkEnCours = true;
+      try {
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const fd = new FormData();
+        fd.append('candidature_ids', JSON.stringify(this.selectionnes));
+        fd.append('refuser_autres', 'false');
+        fd.append('action', action);
+        const r = await fetch(`/entreprise/candidatures/offre/{{ offre.pk }}/accepter-bulk/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+          body: fd,
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.erreur || 'Erreur HTTP ' + r.status);
+        const nb = action === 'ACCEPTER'
+          ? (data.acceptees || []).length
+          : (data.refusees  || []).length;
+        const label = action === 'ACCEPTER' ? 'acceptée(s)' : 'refusée(s)';
+        this.acceptToast = { type: 'success', message: `✅ ${nb} ${label}` };
+        setTimeout(() => window.location.reload(), 1200);
+      } catch(e) {
+        this.acceptToast = { type: 'error', message: e.message || String(e) };
+      } finally {
+        this.bulkEnCours = false;
+        this.selectionnes = [];
+      }
+    },
+
+    // ── Modal de décision individuelle ────────────────────────────────
+    modalOuvert:    false,
+    decision:       '',      // 'ACCEPTER' | 'REFUSER'
+    candidatureId:  null,
+    candidatNom:    '',
+    modeleId:       '',
+    modeleSelectionne: null,
+    apercuSujet:    '',
+    apercuCorps:    '',
+
+    modelesAcceptation: [
+      {% for m in modeles_acceptation %}
+      { id: {{ m.id }}, sujet: "{{ m.sujet_modele|escapejs }}", corps: `{{ m.corps_message|escapejs }}`, type_libelle: "{{ m.get_type_modele_display|escapejs }}" }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ],
+    modelesRefus: [
+      {% for m in modeles_refus %}
+      { id: {{ m.id }}, sujet: "{{ m.sujet_modele|escapejs }}", corps: `{{ m.corps_message|escapejs }}`, type_libelle: "{{ m.get_type_modele_display|escapejs }}" }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ],
+
+    get modelesDisponibles() {
+      return this.decision === 'ACCEPTER' ? this.modelesAcceptation : this.modelesRefus;
+    },
+
+    get actionUrl() {
+      return this.candidatureId
+        ? `/entreprise/candidatures/${this.candidatureId}/decision/`
+        : '';
+    },
+
+    ouvrirDecision(decision, candidatureId, candidatNom) {
+      this.decision      = decision;
+      this.candidatureId = candidatureId;
+      this.candidatNom   = candidatNom;
+      this.modeleId      = '';
+      this.modeleSelectionne = null;
+      this.apercuSujet   = '';
+      this.apercuCorps   = '';
+      this.modalOuvert   = true;
+    },
+
+    onModeleChange() {
+      const m = this.modelesDisponibles.find(x => String(x.id) === String(this.modeleId));
+      if (!m) {
+        this.modeleSelectionne = null;
+        return;
+      }
+      this.modeleSelectionne = m;
+      // Aperçu naïf : on remplace les variables {{ candidat.prenom }} etc. par
+      // un placeholder visible. Le rendu réel est fait côté serveur.
+      const placeholder = (s) => (s || '').replace(/\{\{\s*([a-zA-Z_.]+)\s*\}\}/g, (_, v) => {
+        if (v === 'candidat.prenom' || v === 'candidat.nom') {
+          const parts = this.candidatNom.split(' ');
+          return v === 'candidat.prenom' ? parts[0] : (parts.slice(1).join(' ') || '');
+        }
+        return '⟨' + v + '⟩';
+      });
+      this.apercuSujet = placeholder(m.sujet);
+      this.apercuCorps = placeholder(m.corps);
+    },
+
+    // ── Score IA (sentence-transformer ATS) ───────────────────────────
+    scoresIA:  {},   // { [candidatureId]: { score, niveau, ... } }
+    loadingIA: {},   // { [candidatureId]: bool }
+    erreursIA: {},   // { [candidatureId]: string }
+
+    // ── Scoring global (tri par IA + top N) ───────────────────────────
+    triActif:            false,
+    scoringEnCours:      false,
+    resultatsGlobaux:    [],
+    topN:                3,
+    erreurScoringGlobal: '',
+
+    // ── Acceptation en lot du Top N ───────────────────────────────────
+    acceptEnCours: false,
+    acceptToast:   { type: '', message: '' },
+
+    async accepterTopN() {
+      if (this.acceptEnCours) return;
+      const ids = this.resultatsGlobaux.slice(0, this.topN).map(r => r.candidature_id);
+      if (!ids.length) return;
+      this.acceptEnCours = true;
+      try {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const fd = new FormData();
+        fd.append('candidature_ids', JSON.stringify(ids));
+        fd.append('refuser_autres', 'true');
+        const r = await fetch(`/entreprise/candidatures/offre/{{ offre.pk }}/accepter-bulk/`, {
+          method:  'POST',
+          headers: { 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest' },
+          body:    fd,
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.erreur || 'Erreur HTTP ' + r.status);
+        const nbOk     = (data.acceptees    || []).length;
+        const nbDeja   = (data.deja_accept  || []).length;
+        const nbRefus  = (data.refusees     || []).length;
+        const nbKO     = (data.non_eligibles || []).length;
+        const nbErr    = (data.erreurs      || []).length;
+        const nbNotif  = data.notifications_envoyees || 0;
+        let msg = `✅ ${nbOk} acceptée(s)`;
+        if (nbDeja)  msg += ` · ${nbDeja} déjà acceptée(s)`;
+        if (nbRefus) msg += ` · ❌ ${nbRefus} refusée(s)`;
+        if (nbNotif) msg += ` · ✉️ ${nbNotif} notif(s)`;
+        if (nbKO)    msg += ` · ${nbKO} non éligible(s)`;
+        if (nbErr)   msg += ` · ${nbErr} en erreur`;
+        this.acceptToast = { type: nbErr ? 'error' : 'success', message: msg };
+        // Recharge la page après 1.5s pour refléter les nouveaux statuts
+        setTimeout(() => window.location.reload(), 1500);
+      } catch (e) {
+        this.acceptToast = { type: 'error', message: e.message || String(e) };
+      } finally {
+        this.acceptEnCours = false;
+      }
+    },
+
+    async lancerScoringGlobal() {
+      this.scoringEnCours      = true;
+      this.erreurScoringGlobal = '';
+      try {
+        const r = await fetch(`/entreprise/candidatures/offre/{{ offre.pk }}/scoring-ia/`, {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.erreur || 'Erreur HTTP ' + r.status);
+        this.resultatsGlobaux = data.resultats || [];
+        // Hydrate aussi les badges individuels
+        const carte = {};
+        for (const res of this.resultatsGlobaux) {
+          carte[res.candidature_id] = {
+            score: res.score, niveau: res.niveau, cosinus: res.cosinus,
+            modele: 'paraphrase-multilingual-MiniLM-L12-v2',
+          };
+        }
+        this.scoresIA = { ...this.scoresIA, ...carte };
+        if (this.topN > this.resultatsGlobaux.length) {
+          this.topN = Math.max(1, this.resultatsGlobaux.length);
+        }
+        this.triActif = true;
+      } catch (e) {
+        this.erreurScoringGlobal = e.message || String(e);
+      } finally {
+        this.scoringEnCours = false;
+      }
+    },
+    ajusterTopN(delta) {
+      const next = this.topN + delta;
+      if (next < 1) return;
+      if (next > this.resultatsGlobaux.length) return;
+      this.topN = next;
+    },
+    reinitialiserScoring() {
+      this.triActif         = false;
+      this.resultatsGlobaux = [];
+      this.topN             = 3;
+    },
+    estDansTopN(candidatureId) {
+      const top = this.resultatsGlobaux.slice(0, this.topN);
+      return top.some(r => r.candidature_id === candidatureId);
+    },
+    // Palette aux couleurs ivoiriennes uniquement
+    // (orange #c96010 et vert #009A44, leurs nuances claires/foncées)
+    niveauCouleur(niveau) {
+      switch (niveau) {
+        case 'EXCELLENT': return '#009A44';  // vert ivoirien
+        case 'BON':       return '#4CB266';  // vert clair (dérivé)
+        case 'MOYEN':     return '#c96010';  // orange ivoirien
+        default:          return '#B85400';  // orange foncé (FAIBLE)
+      }
+    },
+    async analyserIA(candidatureId) {
+      this.erreursIA = { ...this.erreursIA, [candidatureId]: '' };
+      this.loadingIA = { ...this.loadingIA, [candidatureId]: true };
+      try {
+        const r = await fetch(`/entreprise/candidatures/${candidatureId}/analyser-ia/`, {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.erreur || 'Erreur HTTP ' + r.status);
+        this.scoresIA = { ...this.scoresIA, [candidatureId]: data };
+      } catch (e) {
+        this.erreursIA = { ...this.erreursIA, [candidatureId]: e.message || String(e) };
+      } finally {
+        this.loadingIA = { ...this.loadingIA, [candidatureId]: false };
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,277 @@
+{% extends "candidat/base.html" %}
+{% load i18n %}
+{% block titre %}Créer mon CV — {{ modele.nom }} · {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+{% include "candidat/cv/_form_styles.html" %}
+<style>
+/* ── Ruby Élégant ── Bordeaux #7B1E2A · Gold #C9993A · Sidebar droite ── */
+#cv-sheet { width:794px; min-height:1123px; background:#fff; font-family:'Georgia','Segoe UI',serif; font-size:11pt; color:#1a0a0c; line-height:1.5; box-shadow:0 8px 48px rgba(0,0,0,.2); display:flex; flex-direction:column; position:relative; }
+
+/* Header pleine largeur bordeaux */
+.ry-header { background:#7B1E2A; padding:30px 40px; display:flex; align-items:center; gap:24px; position:relative; overflow:hidden; }
+.ry-header::after { content:''; position:absolute; right:-60px; top:-60px; width:240px; height:240px; border-radius:50%; background:rgba(201,153,58,.08); pointer-events:none; }
+.ry-photo-wrap { width:130px; height:130px; border-radius:50%; overflow:hidden; border:3px solid #C9993A; flex-shrink:0; position:relative; z-index:1; }
+.ry-photo { width:100%; height:100%; object-fit:cover; display:block; }
+.ry-ph    { width:130px; height:130px; border-radius:50%; background:rgba(255,255,255,.08); border:3px solid #C9993A; display:flex; align-items:center; justify-content:center; font-size:30px; flex-shrink:0; position:relative; z-index:1; }
+.ry-header-info { flex:1; position:relative; z-index:1; }
+.ry-name  { font-size:23pt; font-weight:700; color:#fff; letter-spacing:.3px; line-height:1.1; }
+.ry-title { font-size:13.5pt; color:#C9993A; font-style:italic; margin-top:5px; margin-bottom:14px; }
+.ry-contacts { display:flex; flex-wrap:wrap; gap:5px 22px; border-top:1px solid rgba(201,153,58,.3); padding-top:12px; }
+.ry-ci { font-size:8.5pt; color:rgba(255,255,255,.85); display:flex; align-items:center; gap:6px; }
+.ry-ci-line { width:1px; height:12px; background:#C9993A; opacity:.5; flex-shrink:0; }
+
+/* Corps — flexbox bicolore : les deux colonnes s'étirent sur toute la hauteur */
+.ry-body { flex:1; display:flex; align-items:stretch; }
+
+/* Main gauche */
+.ry-main { width:66%; padding:26px 28px 30px 40px; background:#fff; box-sizing:border-box; word-wrap:break-word; overflow-wrap:break-word; }
+
+/* Sidebar droite */
+.ry-side { width:34%; background:#3D0B14; padding:26px 22px 30px; box-sizing:border-box; }
+
+/* Titres section main */
+.ry-sec { display:flex; align-items:center; gap:8px; margin-bottom:13px; margin-top:22px; break-after:avoid; page-break-after:avoid; break-inside:avoid; page-break-inside:avoid; }
+.ry-sec:first-child { margin-top:0; }
+.ry-sec-bar { width:4px; height:18px; background:#7B1E2A; border-radius:2px; flex-shrink:0; }
+.ry-sec-label { font-size:8pt; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#7B1E2A; }
+.ry-sec-line { flex:1; height:1px; background:#F5E6E8; }
+
+/* Titres section sidebar */
+.ry-aside-sec { font-size:7pt; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:#C9993A; padding-bottom:5px; border-bottom:1px solid rgba(201,153,58,.3); margin-bottom:12px; margin-top:22px; break-after:avoid; page-break-after:avoid; }
+.ry-aside-sec:first-child { margin-top:0; }
+
+/* Profil sidebar */
+.ry-profil { font-size:8.5pt; color:rgba(255,255,255,.78); line-height:1.75; font-style:italic; }
+
+/* Entrées main — ne jamais couper une entrée entre 2 pages */
+.ry-entry { margin-bottom:16px; padding-left:14px; border-left:2px solid #F5E6E8; position:relative; break-inside:avoid; page-break-inside:avoid; }
+.ry-entry::before { content:'◆'; position:absolute; left:-7px; top:3px; color:#C9993A; font-size:7pt; }
+.ry-entry-hdr { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.ry-entry-title { font-size:10.5pt; font-weight:700; color:#1a0a0c; }
+.ry-entry-badge { font-size:7.5pt; color:#7B1E2A; background:#FDF2F3; border:1px solid #F5CAD0; padding:2px 9px; border-radius:12px; white-space:nowrap; flex-shrink:0; }
+.ry-entry-sub   { font-size:9pt; color:#7B1E2A; font-weight:600; margin-top:2px; }
+.ry-entry-place { font-size:8.5pt; color:#9ca3af; }
+.ry-entry-desc  { font-size:8.5pt; color:#4b5563; margin-top:4px; line-height:1.6; }
+
+/* Compétences sidebar — étoiles gold */
+.ry-skill { margin-bottom:11px; break-inside:avoid; page-break-inside:avoid; }
+.ry-skill-name { font-size:8.5pt; color:rgba(255,255,255,.85); margin-bottom:4px; }
+.ry-stars { display:flex; gap:3px; }
+.ry-star { width:11px; height:11px; clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); background:rgba(255,255,255,.1); }
+.ry-star.on { background:#C9993A; }
+
+/* Langues sidebar */
+.ry-two-col { display:grid; grid-template-columns:1fr 1fr; gap:5px 8px; }
+.ry-lang { display:flex; flex-direction:column; gap:2px; }
+.ry-lang-name  { font-size:8.5pt; color:rgba(255,255,255,.85); }
+.ry-lang-badge { font-size:7.5pt; color:#C9993A; background:rgba(201,153,58,.15); padding:2px 8px; border-radius:10px; }
+
+/* Intérêts sidebar */
+.ry-interest { display:flex; align-items:center; gap:7px; margin-bottom:8px; }
+.ry-interest-dot { width:6px; height:6px; background:#C9993A; transform:rotate(45deg); flex-shrink:0; }
+.ry-interest-name { font-size:8.5pt; color:rgba(255,255,255,.75); }
+
+/* Items génériques main (certifs, projets, bénévolat) */
+.ry-item { padding:7px 0; border-bottom:1px solid #FAF0F1; break-inside:avoid; page-break-inside:avoid; }
+.ry-item:last-child { border-bottom:none; }
+.ry-item-title { font-size:9.5pt; font-weight:700; color:#1a0a0c; }
+.ry-item-sub { font-size:8pt; color:#6b7280; margin-top:1px; display:flex; justify-content:space-between; gap:8px; }
+.ry-item-year { font-size:8pt; color:#7B1E2A; font-weight:700; white-space:nowrap; flex-shrink:0; }
+
+/* Missions clients */
+.cv-mc-section{margin-top:9px;padding:7px 10px 7px 12px;background:rgba(123,30,42,.06);border-left:3px solid #7B1E2A;border-radius:0 6px 6px 0}
+.cv-mc-label{font-size:6.5pt;font-weight:700;color:#7B1E2A;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+.cv-mc-item{margin-bottom:6px;padding-bottom:6px;border-bottom:1px dashed rgba(123,30,42,.2)}
+.cv-mc-item:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+.cv-mc-hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:6px}
+.cv-mc-title{font-size:9pt;font-weight:600}
+.cv-mc-badge{font-size:6.5pt;color:#fff;background:#7B1E2A;padding:1px 7px;border-radius:8px;white-space:nowrap;flex-shrink:0}
+.cv-mc-client{font-size:8pt;color:#6b7280;margin-top:1px}
+.cv-mc-desc{font-size:7.5pt;color:#4b5563;margin-top:2px;line-height:1.5}
+
+/* Footer */
+.ry-footer { height:5px; background:linear-gradient(to right,#7B1E2A,#C9993A,#7B1E2A); }
+</style>
+{% endblock %}
+
+{% block contenu %}<div class="-mx-6 -my-8" x-data="cvBuilder()"><div class="cv-builder">
+  {% include "candidat/cv/_form_panel.html" %}
+  <div class="preview-panel">
+  <div id="cv-sheet">
+
+    <!-- HEADER bordeaux pleine largeur -->
+    <div class="ry-header">
+      <template x-if="cv.photo"><div class="ry-photo-wrap"><img :src="cv.photo" class="ry-photo"></div></template>
+      <template x-if="!cv.photo"><div class="ry-ph">👤</div></template>
+      <div class="ry-header-info">
+        <div class="ry-name"><span x-text="cv.prenom||'Prénom'"></span> <span x-text="cv.nom?cv.nom.toUpperCase():'NOM'"></span></div>
+        <div class="ry-title" x-text="cv.titre||'Titre professionnel'"></div>
+        <div class="ry-contacts">
+          <template x-if="cv.email"><span class="ry-ci"><span class="ry-ci-line"></span><span x-text="cv.email"></span></span></template>
+          <template x-if="cv.telephone"><span class="ry-ci"><span class="ry-ci-line"></span><span x-text="cv.telephone"></span></span></template>
+          <template x-if="cvLoc()"><span class="ry-ci"><span class="ry-ci-line"></span><span x-text="cvLoc()"></span></span></template>
+          <template x-if="cv.age"><span class="ry-ci"><span class="ry-ci-line"></span><span x-text="cv.age+' ans'"></span></span></template>
+          <template x-if="cv.linkedin"><span class="ry-ci"><span class="ry-ci-line"></span><span x-text="cv.linkedin"></span></span></template>
+          <template x-if="cv.permis"><span class="ry-ci"><span class="ry-ci-line"></span><span x-text="'Permis '+cv.permis"></span></span></template>
+        </div>
+      </div>
+    </div>
+
+    <!-- CORPS -->
+    <div class="ry-body">
+
+      <!-- MAIN gauche blanc -->
+      <div class="ry-main">
+
+        <!-- Expériences -->
+        <template x-if="cv.experiences.some(e=>expVisible(e))">
+          <div>
+            <div class="ry-sec"><div class="ry-sec-bar"></div><div class="ry-sec-label">{% trans "Expériences professionnelles" %}</div><div class="ry-sec-line"></div></div>
+            <template x-for="e in cv.experiences" :key="e.id">
+              <div x-show="expVisible(e)" class="ry-entry">
+                <div class="ry-entry-hdr">
+                  <div class="ry-entry-title" x-text="expTitre(e)"></div>
+                  <div x-show="expTitrePeriodeShow(e)" class="ry-entry-badge" x-text="expTitrePeriodeStr(e)"></div>
+                </div>
+                <template x-if="!e.postes||e.postes.length<=1">
+                  <div x-show="e.entreprise||e.lieu"><span class="ry-entry-sub" x-text="e.entreprise"></span><span x-show="e.lieu" class="ry-entry-place" x-text="e.lieu?' · '+e.lieu:''"></span><span x-show="expPeriodeShow(e)" style="font-size:7.5pt;color:#b0bec5;margin-left:4px;white-space:nowrap" x-text="expPeriodeStr(e)"></span></div>
+                </template>
+                <template x-if="e.postes&&e.postes.length>1">
+                  <div><div x-show="e.lieu" class="ry-entry-place" x-text="'· '+e.lieu" style="margin-bottom:3px"></div><div class="cv-postes-list"><template x-for="p in e.postes" :key="p.id"><div x-show="p.titre" class="cv-postes-row"><span class="cv-postes-titre" x-text="p.titre"></span><span x-show="p.debut||p.enCours" class="cv-postes-date" x-text="formatPeriode(p.debut,p.fin,p.enCours)"></span></div></template></div></div>
+                </template>
+                <div x-show="e.desc" class="ry-entry-desc" x-text="e.desc"></div>
+                <template x-if="e.hasMissionsClient && e.missionsClient && e.missionsClient.filter(mc=>mc.client).length>0"><div class="cv-mc-section"><div class="cv-mc-label">🏢 Missions clients</div><template x-for="mc in e.missionsClient.filter(mc=>mc.client)" :key="mc.id"><div class="cv-mc-item"><div class="cv-mc-hdr"><div class="cv-mc-title" x-text="mc.client||'—'"></div><div x-show="mc.debut||mc.enCours" class="cv-mc-badge" x-text="formatPeriode(mc.debut,mc.fin,mc.enCours)"></div></div><div x-show="mc.pays||mc.ville" class="cv-mc-client"><span x-show="mc.pays" x-text="mc.pays"></span><span x-show="mc.ville" x-text="mc.pays&&mc.ville?' · '+mc.ville:mc.ville||''"></span></div><div x-show="mc.desc" class="cv-mc-desc" x-text="mc.desc"></div></div></template></div></template>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Formations -->
+        <template x-if="vis(cv.formations).filter(f=>f.diplome||f.ecole).length > 0">
+          <div>
+            <div class="ry-sec"><div class="ry-sec-bar"></div><div class="ry-sec-label">{% trans "Formation" %}</div><div class="ry-sec-line"></div></div>
+            <template x-for="f in vis(cv.formations)" :key="f.id">
+              <div x-show="f.diplome||f.ecole" class="ry-entry">
+                <div class="ry-entry-hdr">
+                  <div class="ry-entry-title" x-text="(f.typeSortie==='certification'?'🏅 ':f.typeSortie==='attestation'?'📄 ':'')+(f.diplome||'—')"></div>
+                  <div x-show="f.typeSortie==='certification'?(f.fin||f.expiration):(f.debut||f.enCours)" class="ry-entry-badge" x-text="f.typeSortie==='certification'?(f.expiration?'Exp. '+formatMonth(f.expiration):(f.fin?formatMonth(f.fin):'')):(formatPeriode(f.debut,f.fin,f.enCours))"></div>
+                </div>
+                <div x-show="f.ecole||f.lieu"><span class="ry-entry-sub" x-text="f.ecole"></span><span x-show="f.lieu&&f.typeSortie!=='certification'" class="ry-entry-place" x-text="f.lieu?' · '+f.lieu:''"></span></div>
+                <div x-show="f.domaine" class="ry-entry-desc" x-text="f.domaine" style="font-style:italic;opacity:.8"></div>
+                <div x-show="f.typeSortie==='certification'&&f.numero" class="ry-entry-desc" x-text="'N° '+f.numero"></div>
+                <div x-show="f.desc" class="ry-entry-desc" x-text="f.desc"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Certifications -->
+        <template x-if="cv.showCertif && cv.certifs.filter(c=>c.nom).length > 0">
+          <div>
+            <div class="ry-sec"><div class="ry-sec-bar"></div><div class="ry-sec-label">{% trans "Certifications" %}</div><div class="ry-sec-line"></div></div>
+            <template x-for="c in cv.certifs" :key="c.id">
+              <div x-show="c.nom" class="ry-item ry-certif">
+                <div class="ry-item-title" x-text="c.nom"></div>
+                <div class="ry-item-sub"><span x-text="c.organisme"></span><span class="ry-item-year" x-text="c.annee"></span></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Projets -->
+        <template x-if="cv.showProjets && vis(cv.projets).filter(p=>p.nom).length > 0">
+          <div>
+            <div class="ry-sec"><div class="ry-sec-bar"></div><div class="ry-sec-label">{% trans "Projets" %}</div><div class="ry-sec-line"></div></div>
+            <template x-for="p in vis(cv.projets)" :key="p.id">
+              <div x-show="p.nom" class="ry-item ry-certif">
+                <div class="ry-item-title" x-text="p.nom"></div>
+                <div class="ry-item-sub"><span x-text="p.desc"></span><span class="ry-item-year" x-text="p.annee"></span></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Bénévolat -->
+        <template x-if="cv.showBenev && cv.benevs && vis(cv.benevs).filter(b=>b.role||b.orga).length > 0">
+          <div>
+            <div class="ry-sec"><div class="ry-sec-bar"></div><div class="ry-sec-label">{% trans "Engagement &amp; Bénévolat" %}</div><div class="ry-sec-line"></div></div>
+            <template x-for="b in vis(cv.benevs)" :key="b.id">
+              <div x-show="b.role||b.orga" class="ry-item ry-certif">
+                <div class="ry-item-title" x-text="b.role"></div>
+                <div class="ry-item-sub"><span x-text="b.orga"></span><span class="ry-item-year" x-text="formatPeriode(b.debut,b.fin,b.enCours)"></span></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+      </div>
+
+      <!-- SIDEBAR droite bordeaux sombre -->
+      <div class="ry-side">
+
+        <template x-if="cv.profil">
+          <div>
+            <div class="ry-aside-sec">{% trans "Profil" %}</div>
+            <p class="ry-profil" x-text="cv.profil"></p>
+          </div>
+        </template>
+
+        <template x-if="vis(cv.competences).filter(c=>c.nom).length > 0">
+          <div>
+            <div class="ry-aside-sec">{% trans "Compétences" %}</div>
+            <template x-for="c in vis(cv.competences)" :key="c.id">
+              <div x-show="c.nom" class="ry-skill">
+                <div class="ry-skill-name" x-text="c.nom"></div>
+                <div class="ry-stars">
+                  <template x-for="s in [1,2,3,4,5]" :key="s">
+                    <div class="ry-star" :class="s<=niveauDots(c.niveau)?'on':''"></div>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="vis(cv.langues).filter(l=>l.nom).length > 0">
+          <div>
+            <div class="ry-aside-sec">{% trans "Langues" %}</div>
+            <div class="ry-two-col">
+              <template x-for="l in vis(cv.langues)" :key="l.id">
+                <div x-show="l.nom" class="ry-lang">
+                  <span class="ry-lang-name" x-text="l.nom"></span>
+                  <span class="ry-lang-badge" x-text="niveauCode(l.niveau,'langue')"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <template x-if="cv.interets.filter((i,ii)=>i && !isInteretMasque(ii)).length > 0">
+          <div>
+            <div class="ry-aside-sec">{% trans "Centres d'intérêt" %}</div>
+            <template x-for="(ci,idx) in cv.interets" :key="idx">
+              <div x-show="ci && !isInteretMasque(idx)" class="ry-interest">
+                <div class="ry-interest-dot"></div>
+                <span class="ry-interest-name" x-text="ci"></span>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="cv.showRef">
+          <p style="font-size:7.5pt;color:rgba(201,153,58,.7);text-align:center;margin-top:20px;font-style:italic">{% trans "Références sur demande" %}</p>
+        </template>
+
+      </div>
+
+    </div>
+
+    <div class="ry-footer"></div>
+
+  </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+{% block js_extra %}{% include "candidat/cv/_cvbuilder_js.html" %}{% endblock %}

@@ -1,0 +1,303 @@
+{% extends "candidat/base.html" %}
+{% load i18n %}
+{% block titre %}Créer mon CV — {{ modele.nom }} · {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+{% include "candidat/cv/_form_styles.html" %}
+<style>
+/* ── Onyx & Or ── sidebar noir #1A1A1A + accents #D4AF37 + blanc ─────────── */
+#cv-sheet {
+  width: 794px; min-height: 1123px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 10pt; color: #333; line-height: 1.5;
+  box-shadow: 0 8px 48px rgba(0,0,0,.2);
+  display: flex;
+}
+
+/* ── Sidebar gauche noire ────────────────────────────────────────────────── */
+.ox-sidebar {
+  width: 236px; flex-shrink: 0;
+  background:
+    radial-gradient(circle, rgba(212,175,55,.07) 1px, transparent 1px) 0 0 / 18px 18px,
+    radial-gradient(ellipse at 50%   0%, rgba(212,175,55,.22) 0%, transparent 42%),
+    radial-gradient(ellipse at 50% 100%, rgba(212,175,55,.08) 0%, transparent 35%),
+    linear-gradient(180deg, #0D0D0D 0%, #1C1C1C 45%, #131313 100%);
+  display: flex; flex-direction: column;
+}
+
+/* Zone supérieure : nom + photo */
+.ox-header {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(212,175,55,.3) 0%, transparent 65%),
+    linear-gradient(180deg, #080808 0%, #181818 100%);
+  padding: 30px 20px 24px;
+  text-align: center;
+  border-bottom: 3px solid #D4AF37;
+  flex-shrink: 0;
+}
+.ox-photo-wrap {
+  width: 110px; height: 110px; border-radius: 50%;
+  overflow: hidden; margin: 0 auto 16px;
+  border: 3px solid #D4AF37;
+  box-shadow: 0 4px 20px rgba(0,0,0,.4);
+}
+.ox-photo { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ox-ph {
+  width: 110px; height: 110px; border-radius: 50%;
+  background: #2A2A2A; display: flex; align-items: center;
+  justify-content: center; font-size: 34px; color: #666;
+  margin: 0 auto 16px;
+  border: 3px solid #D4AF37;
+}
+.ox-name {
+  font-size: 14pt; font-weight: 900; color: #FFFFFF;
+  text-transform: uppercase; line-height: 1.05; letter-spacing: .5px;
+}
+.ox-job {
+  font-size: 8.5pt; color: #D4AF37; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 1px; margin-top: 6px;
+}
+
+/* Sections sidebar */
+.ox-sec {
+  font-size: 7pt; font-weight: 800; letter-spacing: 2px;
+  text-transform: uppercase; color: #D4AF37;
+  padding: 14px 20px 5px;
+  border-bottom: 1px solid #2A2A2A;
+  margin-bottom: 6px;
+}
+
+.ox-contact-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 3px 20px; font-size: 7.5pt; color: #BBBBBB;
+  word-break: break-word;
+}
+.ox-ci { color: #D4AF37; flex-shrink: 0; width: 14px; text-align: center; margin-top: 1px; }
+
+/* Barres de compétences */
+.ox-skill-item { padding: 3px 20px 6px; }
+.ox-skill-label { font-size: 7.5pt; color: #CCCCCC; margin-bottom: 3px; display: flex; justify-content: space-between; }
+.ox-skill-bg { height: 5px; background: #2E2E2E; border-radius: 3px; overflow: hidden; }
+.ox-skill-fill { height: 100%; background: #D4AF37; border-radius: 3px; }
+
+/* Langues flags-style */
+.ox-lang-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 3px 20px; font-size: 7.5pt; color: #BBBBBB;
+}
+.ox-lang-dot { width: 6px; height: 6px; border-radius: 50%; background: #D4AF37; flex-shrink: 0; }
+
+/* ── Contenu principal blanc ─────────────────────────────────────────────── */
+.ox-main {
+  flex: 1; padding: 28px 26px 28px 24px;
+  background:
+    radial-gradient(ellipse at 100% 0%,   rgba(212,175,55,.07) 0%, transparent 45%),
+    radial-gradient(ellipse at 100% 100%, rgba(212,175,55,.04) 0%, transparent 35%),
+    #FFFFFF;
+}
+
+.ox-sec-r {
+  font-size: 9pt; font-weight: 800; letter-spacing: 2px;
+  text-transform: uppercase; color: #1A1A1A;
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px; margin-top: 24px;
+}
+.ox-sec-r:first-child { margin-top: 0; }
+.ox-sec-r::after { content: ''; flex: 1; height: 2px; background: #D4AF37; }
+
+.ox-about { font-size: 8.5pt; color: #555; line-height: 1.7; }
+
+/* Expériences : badge date à gauche + contenu */
+.ox-entry { display: flex; gap: 14px; margin-bottom: 15px; }
+.ox-entry-badge {
+  background: #1A1A1A; color: #D4AF37;
+  font-size: 7pt; font-weight: 700; padding: 3px 8px;
+  text-align: center; flex-shrink: 0;
+  align-self: flex-start; min-width: 52px;
+  line-height: 1.4; border-radius: 2px;
+}
+.ox-entry-content { flex: 1; }
+.ox-entry-title { font-size: 9.5pt; font-weight: 700; color: #1A1A1A; line-height: 1.2; }
+.ox-entry-co    { font-size: 8pt; color: #D4AF37; font-weight: 600; margin: 2px 0 3px; }
+.ox-entry-sub   { font-size: 8pt; color: #888; font-style: italic; margin-bottom: 3px; }
+.ox-entry-desc  { font-size: 8pt; color: #555; line-height: 1.6; }
+</style>
+{% endblock %}
+
+{% block contenu %}<div class="-mx-6 -my-8" x-data="cvBuilder()"><div class="cv-builder">
+  {% include "candidat/cv/_form_panel.html" %}
+  <div class="preview-panel">
+  <div id="cv-sheet">
+
+    <!-- SIDEBAR NOIRE -->
+    <div class="ox-sidebar">
+
+      <!-- Header : photo + nom -->
+      <div class="ox-header">
+        <template x-if="cv.photo"><div class="ox-photo-wrap"><img :src="cv.photo" class="ox-photo" alt="{% trans "Photo" %}"></div></template>
+        <template x-if="!cv.photo"><div class="ox-ph">👤</div></template>
+        <div class="ox-name">
+          <span x-text="cv.prenom || 'Prénom'"></span><br>
+          <span x-text="cv.nom || 'NOM'"></span>
+        </div>
+        <div class="ox-job" x-text="cv.titre || 'Titre professionnel'"></div>
+      </div>
+
+      <!-- Contact -->
+      <div class="ox-sec">{% trans "Contact" %}</div>
+      <template x-if="cv.telephone">
+        <div class="ox-contact-item"><span class="ox-ci">☎</span><span x-text="cv.telephone"></span></div>
+      </template>
+      <template x-if="cv.email">
+        <div class="ox-contact-item"><span class="ox-ci">✉</span><span x-text="cv.email"></span></div>
+      </template>
+      <template x-if="cvLoc()">
+        <div class="ox-contact-item"><span class="ox-ci">📍</span><span x-text="cvLoc()"></span></div>
+      </template>
+      <template x-if="cv.age">
+        <div class="ox-contact-item"><span class="ox-ci">📅</span><span x-text="cv.age"></span></div>
+      </template>
+      <template x-if="cv.permis">
+        <div class="ox-contact-item"><span class="ox-ci">🪪</span><span x-text="cv.permis"></span></div>
+      </template>
+
+      <!-- Compétences barres -->
+      <template x-if="vis(cv.competences).filter(c=>c.nom).length > 0">
+        <div>
+          <div class="ox-sec">{% trans "Compétences" %}</div>
+          <template x-for="c in vis(cv.competences)" :key="c.id">
+            <div x-show="c.nom" class="ox-skill-item">
+              <div class="ox-skill-label"><span x-text="c.nom"></span></div>
+              <div class="ox-skill-bg">
+                <div class="ox-skill-fill" :style="`width:${niveauDots(c.niveau)*20}%`"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Langues -->
+      <template x-if="vis(cv.langues).filter(l=>l.nom).length > 0">
+        <div>
+          <div class="ox-sec">{% trans "Langues" %}</div>
+          <template x-for="l in vis(cv.langues)" :key="l.id">
+            <div x-show="l.nom" class="ox-lang-item">
+              <span class="ox-lang-dot"></span>
+              <span x-text="l.nom + (l.niveau ? ' · '+l.niveau : '')"></span>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Intérêts -->
+      <template x-if="cv.interets.filter((i,ii) => i && !isInteretMasque(ii)).length > 0">
+        <div>
+          <div class="ox-sec">{% trans "Intérêts" %}</div>
+          <template x-for="(ci, idx) in cv.interets" :key="idx">
+            <div x-show="ci && !isInteretMasque(idx)" class="ox-lang-item">
+              <span class="ox-lang-dot"></span><span x-text="ci"></span>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <template x-if="cv.showRef">
+        <div>
+          <div class="ox-sec">{% trans "Références" %}</div>
+          <div class="ox-contact-item" style="font-style:italic;color:#888">{% trans "Sur demande" %}</div>
+        </div>
+      </template>
+
+    </div><!-- /sidebar -->
+
+    <!-- CONTENU BLANC -->
+    <div class="ox-main">
+
+      <template x-if="cv.profil">
+        <div>
+          <div class="ox-sec-r">{% trans "Profil" %}</div>
+          <div class="ox-about" x-text="cv.profil"></div>
+        </div>
+      </template>
+
+      <template x-if="cv.experiences.some(e => expVisible(e))">
+        <div>
+          <div class="ox-sec-r">{% trans "Expérience" %}</div>
+          <template x-for="e in cv.experiences" :key="e.id">
+            <div x-show="expVisible(e)" class="ox-entry">
+              <div class="ox-entry-badge" x-text="expTitrePeriodeStr(e)"></div>
+              <div class="ox-entry-content">
+                <div class="ox-entry-title" x-text="expTitre(e)"></div>
+                <div x-show="e.entreprise" class="ox-entry-co" x-text="e.entreprise"></div>
+                <div x-show="e.lieu" class="ox-entry-sub" x-text="e.lieu"></div>
+                <div x-show="e.desc" class="ox-entry-desc" x-text="e.desc"></div>
+                <template x-if="e.postes && e.postes.length > 1">
+                  <div class="cv-postes-list">
+                    <template x-for="p in e.postes" :key="p.id">
+                      <div x-show="p.titre" class="cv-postes-row">
+                        <span class="cv-postes-titre" x-text="p.titre"></span>
+                        <span x-show="p.debut||p.enCours" class="cv-postes-date" x-text="formatPeriode(p.debut,p.fin,p.enCours)"></span>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+                <template x-if="e.hasMissionsClient && e.missionsClient && e.missionsClient.filter(mc=>mc.client).length>0">
+                  <div class="cv-mc-section">
+                    <div class="cv-mc-label">🏢 Missions clients</div>
+                    <template x-for="mc in e.missionsClient.filter(mc=>mc.client)" :key="mc.id">
+                      <div class="cv-mc-item">
+                        <div class="cv-mc-hdr">
+                          <div class="cv-mc-title" x-text="mc.client||'—'"></div>
+                          <div x-show="mc.debut||mc.enCours" class="cv-mc-badge" x-text="formatPeriode(mc.debut,mc.fin,mc.enCours)"></div>
+                        </div>
+                        <div x-show="mc.desc" class="cv-mc-desc" x-text="mc.desc"></div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <template x-if="vis(cv.formations).filter(f => f.diplome || f.ecole).length > 0">
+        <div>
+          <div class="ox-sec-r">{% trans "Formation" %}</div>
+          <template x-for="f in vis(cv.formations)" :key="f.id">
+            <div x-show="f.diplome || f.ecole" class="ox-entry">
+              <div class="ox-entry-badge" x-text="(f.fin||'').substring(0,4)"></div>
+              <div class="ox-entry-content">
+                <div class="ox-entry-title" x-text="f.diplome || '—'"></div>
+                <div x-show="f.ecole" class="ox-entry-co" x-text="f.ecole"></div>
+                <div x-show="f.domaine" class="ox-entry-sub" x-text="f.domaine"></div>
+                <div x-show="f.desc" class="ox-entry-desc" x-text="f.desc"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <template x-if="cv.showProjets && vis(cv.projets).filter(p=>p.nom).length > 0">
+        <div>
+          <div class="ox-sec-r">{% trans "Projets" %}</div>
+          <template x-for="p in vis(cv.projets)" :key="p.id">
+            <div x-show="p.nom" class="ox-entry">
+              <div class="ox-entry-badge" x-text="p.annee||''"></div>
+              <div class="ox-entry-content">
+                <div class="ox-entry-title" x-text="p.nom"></div>
+                <div x-show="p.desc" class="ox-entry-desc" x-text="p.desc"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+    </div><!-- /main -->
+
+  </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+{% block js_extra %}{% include "candidat/cv/_cvbuilder_js.html" %}{% endblock %}

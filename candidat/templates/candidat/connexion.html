@@ -1,0 +1,170 @@
+﻿{% extends "candidat/base_auth.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Connexion" %} — {{ logo_site.nom_site }}{% endblock %}
+
+{% block contenu %}
+<div class="w-full max-w-4xl mx-auto py-10">
+
+  <!-- Carte 2 colonnes -->
+  <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden flex flex-col lg:flex-row min-h-[560px]">
+
+    <!-- ── Colonne gauche : visuel ─────────────────────────────────── -->
+    <div class="lg:w-5/12 flex flex-col justify-between p-6 lg:p-10 text-white relative overflow-hidden"
+         style="background: linear-gradient(145deg, #c96010 0%, #e86f00 50%, #c45a00 100%);">
+
+      <!-- Formes décoratives -->
+      <div class="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10" style="background:#fff; transform:translate(30%,-30%);"></div>
+      <div class="absolute bottom-0 left-0 w-64 h-64 rounded-full opacity-10" style="background:#fff; transform:translate(-30%,30%);"></div>
+      <div class="absolute top-1/2 right-4 w-24 h-24 rounded-full opacity-5" style="background:#fff;"></div>
+
+      <!-- Haut : logo + accroche -->
+      <div class="relative">
+        <div class="flex items-center gap-2 mb-8">
+          {% if logo_site.afficher_image %}
+            <img src="{{ logo_site.logo_image.url }}" alt="{{ logo_site.nom_site }}" class="h-8 object-contain brightness-0 invert">
+          {% endif %}
+          {% if logo_site.afficher_texte %}
+            <span class="text-xl font-extrabold tracking-tight">{{ logo_site.nom_site }}</span>
+          {% endif %}
+        </div>
+        <h2 class="text-3xl font-extrabold leading-tight mb-3">
+          {% trans "Bienvenue" %}<br>{% trans "sur votre espace" %}
+        </h2>
+        <p class="text-white/80 text-sm leading-relaxed">
+          {% trans "Créez votre CV, rédigez votre lettre de motivation et décrochez le poste de vos rêves." %}
+        </p>
+      </div>
+
+      <!-- Illustration centrale SVG -->
+      <div class="relative flex justify-center py-6">
+        <svg viewBox="0 0 200 180" class="w-52 opacity-90" xmlns="http://www.w3.org/2000/svg">
+          <!-- Bureau -->
+          <rect x="20" y="140" width="160" height="8" rx="4" fill="rgba(255,255,255,.3)"/>
+          <!-- Écran -->
+          <rect x="55" y="60" width="90" height="70" rx="8" fill="rgba(255,255,255,.2)" stroke="rgba(255,255,255,.5)" stroke-width="2"/>
+          <rect x="62" y="68" width="76" height="54" rx="5" fill="rgba(255,255,255,.15)"/>
+          <!-- Lignes dans l'écran (CV) -->
+          <rect x="68" y="76" width="30" height="4" rx="2" fill="rgba(255,255,255,.7)"/>
+          <rect x="68" y="84" width="50" height="3" rx="1.5" fill="rgba(255,255,255,.4)"/>
+          <rect x="68" y="91" width="44" height="3" rx="1.5" fill="rgba(255,255,255,.4)"/>
+          <rect x="68" y="98" width="48" height="3" rx="1.5" fill="rgba(255,255,255,.4)"/>
+          <rect x="68" y="105" width="36" height="3" rx="1.5" fill="rgba(255,255,255,.4)"/>
+          <!-- Pied écran -->
+          <rect x="90" y="130" width="20" height="8" rx="2" fill="rgba(255,255,255,.3)"/>
+          <rect x="78" y="138" width="44" height="4" rx="2" fill="rgba(255,255,255,.3)"/>
+          <!-- Clavier -->
+          <rect x="60" y="148" width="80" height="14" rx="4" fill="rgba(255,255,255,.2)" stroke="rgba(255,255,255,.4)" stroke-width="1.5"/>
+          <rect x="66" y="152" width="10" height="6" rx="1" fill="rgba(255,255,255,.3)"/>
+          <rect x="80" y="152" width="10" height="6" rx="1" fill="rgba(255,255,255,.3)"/>
+          <rect x="94" y="152" width="10" height="6" rx="1" fill="rgba(255,255,255,.3)"/>
+          <rect x="108" y="152" width="10" height="6" rx="1" fill="rgba(255,255,255,.3)"/>
+          <!-- Étoiles déco -->
+          <circle cx="40" cy="80" r="3" fill="rgba(255,255,255,.5)"/>
+          <circle cx="35" cy="100" r="2" fill="rgba(255,255,255,.3)"/>
+          <circle cx="165" cy="75" r="2.5" fill="rgba(255,255,255,.4)"/>
+          <circle cx="160" cy="100" r="1.5" fill="rgba(255,255,255,.3)"/>
+          <!-- Badge check -->
+          <circle cx="148" cy="68" r="10" fill="#2e7d52"/>
+          <path d="M143 68l3.5 3.5L153 63" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </div>
+
+      <!-- Bas : statistiques -->
+      <div class="relative grid grid-cols-2 gap-4">
+        <div class="bg-white/15 rounded-2xl p-4 backdrop-blur-sm">
+          <p class="text-2xl font-extrabold">+500</p>
+          <p class="text-white/70 text-xs mt-0.5">{% trans "Candidats inscrits" %}</p>
+        </div>
+        <div class="bg-white/15 rounded-2xl p-4 backdrop-blur-sm">
+          <p class="text-2xl font-extrabold">16</p>
+          <p class="text-white/70 text-xs mt-0.5">{% trans "Modèles de CV" %}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Colonne droite : formulaire ────────────────────────────── -->
+    <div class="lg:w-7/12 flex flex-col justify-center p-6 lg:p-10">
+
+      <h1 class="text-2xl font-extrabold text-gray-800 mb-1">{% trans "Connexion" %}</h1>
+      <p class="text-gray-500 text-sm mb-8">{% trans "Accédez à votre espace candidat" %}</p>
+
+      <!-- Boutons sociaux -->
+      <div class="flex flex-col gap-3 mb-6">
+        {% load socialaccount %}
+        <a href="{% provider_login_url 'google' %}"
+          class="flex items-center justify-center gap-3 w-full py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
+          <svg class="w-5 h-5" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+          {% trans "Continuer avec Google" %}
+        </a>
+        <a href="{% provider_login_url 'github' %}"
+          class="flex items-center justify-center gap-3 w-full py-2.5 rounded-xl text-sm font-medium text-white transition hover:opacity-90"
+          style="background-color:#24292e;">
+          <svg class="w-5 h-5 fill-white" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.335-1.755-1.335-1.755-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z"/></svg>
+          {% trans "Continuer avec GitHub" %}
+        </a>
+      </div>
+
+      <!-- Séparateur -->
+      <div class="relative my-5">
+        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div>
+        <div class="relative flex justify-center text-xs text-gray-400"><span class="bg-white px-3">{% trans "ou avec votre email" %}</span></div>
+      </div>
+
+      <!-- Formulaire -->
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="mb-4">
+          <label for="id_email" class="block text-sm font-medium text-gray-700 mb-1">{% trans "Adresse email" %}</label>
+          {{ form.email }}
+          {% if form.email.errors %}<p class="mt-1 text-xs text-red-600">{{ form.email.errors.0 }}</p>{% endif %}
+        </div>
+        <div class="mb-2" x-data="{ visible: false }">
+          <label for="id_motdepasse" class="block text-sm font-medium text-gray-700 mb-1">{% trans "Mot de passe" %}</label>
+          <div class="relative">
+            {{ form.motdepasse }}
+            <button type="button" @click="visible = !visible"
+                    :title="{% trans "visible ? 'Masquer' : 'Afficher'" %}"
+                    @mousedown.prevent
+                    x-effect="document.getElementById('id_motdepasse').type = visible ? 'text' : 'password'"
+                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition">
+              <svg x-show="!visible" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+              <svg x-show="visible" x-cloak xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.477 0-8.268-2.943-9.542-7a9.97 9.97 0 012.652-4.18M9.88 9.88a3 3 0 104.243 4.243M3 3l18 18"/>
+              </svg>
+            </button>
+          </div>
+          {% if form.motdepasse.errors %}<p class="mt-1 text-xs text-red-600">{{ form.motdepasse.errors.0 }}</p>{% endif %}
+        </div>
+        <div class="text-right mb-5">
+          <a href="{% url 'candidat:mot_de_passe_oublie' %}" class="text-xs hover:underline" style="color:#c96010;">{% trans "Mot de passe oublié ?" %}</a>
+        </div>
+        <button type="submit"
+          class="w-full py-3 rounded-xl text-white font-bold text-sm transition hover:opacity-90 active:scale-95"
+          style="background-color:#c96010;">
+          {% trans "Se connecter" %}
+        </button>
+      </form>
+
+      <!-- Lien inscription -->
+      <div class="relative my-6">
+        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div>
+        <div class="relative flex justify-center text-xs text-gray-400"><span class="bg-white px-3">{% trans "Pas encore de compte ?" %}</span></div>
+      </div>
+      <a href="{% url 'candidat:inscription' %}"
+        class="block w-full text-center py-3 rounded-xl border text-sm font-semibold transition hover:bg-orange-50"
+        style="border-color:#c96010; color:#c96010;">
+        {% trans "Créer un compte gratuitement" %}
+      </a>
+
+      <p class="text-center text-xs text-gray-400 mt-6">
+        {% trans "Vous êtes une entreprise ?" %}
+        <a href="{% url 'entreprise:accueil' %}" class="underline hover:text-gray-600">{% trans "Espace entreprise" %}</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

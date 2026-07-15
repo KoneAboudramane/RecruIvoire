@@ -1,0 +1,1292 @@
+{% extends base_template|default:"candidat/base.html" %}
+{% load i18n static %}
+
+{% block titre %}{{ candidat.prenom }} {{ candidat.nom }} — Portfolio{% endblock %}
+
+{% block css_extra %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════════════════════════════════════
+   Cyber Neon — Portfolio
+   Prefix : .cy-
+   Thème : noir profond + accents néon verts/cyan
+═══════════════════════════════════════════════════════════ */
+.cy {
+  --cy-accent:   {{ couleur_accent|default:'#00ff88' }};
+  --cy-cyan:     #00e5ff;
+  --cy-glow:     color-mix(in srgb, var(--cy-accent), transparent 55%);
+  --cy-glow-s:   color-mix(in srgb, var(--cy-accent), transparent 82%);
+  --cy-glow-xs:  color-mix(in srgb, var(--cy-accent), transparent 92%);
+  --cy-bg:       #080808;
+  --cy-surface:  #0f0f0f;
+  --cy-surface2: #141414;
+  --cy-border:   color-mix(in srgb, var(--cy-accent), transparent 72%);
+  --cy-rule:     rgba(255,255,255,.05);
+  --cy-text:     #b8c8c8;
+  --cy-mute:     rgba(184,200,200,.5);
+  --cy-heading:  #e8f0f0;
+  --cy-head:     'JetBrains Mono', 'Fira Code', monospace;
+  --cy-body:     'Inter', system-ui, sans-serif;
+  --cy-radius:   6px;
+
+  background: var(--cy-bg);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--cy-accent), transparent 96%) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--cy-accent), transparent 96%) 1px, transparent 1px);
+  background-size: 44px 44px;
+  color: var(--cy-text);
+  font-family: var(--cy-body);
+  font-size: 15px;
+  line-height: 1.65;
+  min-height: 100vh;
+}
+.cy *, .cy *::before, .cy *::after { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+.cy a { text-decoration: none; transition: .3s; color: inherit; }
+.cy h1,.cy h2,.cy h3,.cy h4,.cy h5 { font-family: var(--cy-head); color: var(--cy-heading); margin: 0; line-height: 1.2; }
+.cy ul { margin: 0; padding: 0; list-style: none; }
+.cy img { max-width: 100%; display: block; }
+.cy p { margin: 0; }
+
+/* ── Owner banner ── */
+.cy-owner {
+  background: #000; color: var(--cy-accent);
+  border-bottom: 1px solid var(--cy-border);
+  padding: 8px 24px; font-size: 13px; font-weight: 600;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  position: relative; z-index: 45; font-family: var(--cy-head);
+}
+.cy-owner::before { content: '> '; }
+.cy-owner a {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 14px; border-radius: 3px;
+  border: 1px solid var(--cy-accent); color: var(--cy-accent);
+  font-size: 12px; font-weight: 700;
+}
+.cy-owner a:hover { background: var(--cy-accent); color: #000; }
+
+/* ══ SIDEBAR ══ */
+.cy-sidebar {
+  position: fixed;
+  top: 60px; right: 0; bottom: 0;
+  width: 290px;
+  z-index: 40;
+  display: flex; flex-direction: column; justify-content: center;
+  overflow-y: auto;
+  transition: top .3s, right .3s, bottom .1s;
+  padding: 0 14px;
+}
+@media (min-width: 768px) { .cy-sidebar { top: 76px; } }
+
+.cy-sidebar-inner {
+  background: var(--cy-surface);
+  border: 1px solid var(--cy-border);
+  border-radius: var(--cy-radius);
+  padding: 24px 18px;
+  position: relative;
+  overflow: hidden;
+}
+/* Corner bracket decorations */
+.cy-sidebar-inner::before {
+  content: ''; position: absolute; top: 0; left: 0;
+  width: 18px; height: 18px;
+  border-top: 2px solid var(--cy-accent);
+  border-left: 2px solid var(--cy-accent);
+}
+.cy-sidebar-inner::after {
+  content: ''; position: absolute; bottom: 0; right: 0;
+  width: 18px; height: 18px;
+  border-bottom: 2px solid var(--cy-accent);
+  border-right: 2px solid var(--cy-accent);
+}
+
+/* Sidebar profile */
+.cy-sidebar-profile { text-align: center; margin-bottom: 20px; }
+.cy-sidebar-photo {
+  width: 90px; height: 90px; border-radius: 50%;
+  overflow: hidden; margin: 0 auto 12px;
+  border: 2px solid var(--cy-accent);
+  box-shadow: 0 0 16px var(--cy-glow), 0 0 40px var(--cy-glow-s);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--cy-surface2);
+  font-family: var(--cy-head); font-size: 28px; font-weight: 700; color: var(--cy-accent);
+}
+.cy-sidebar-photo img { width: 100%; height: 100%; object-fit: cover; }
+.cy-sidebar-name {
+  font-family: var(--cy-head); font-size: 14px; font-weight: 700; color: var(--cy-heading);
+  margin-bottom: 3px;
+}
+.cy-sidebar-title { font-size: 11px; color: var(--cy-accent); font-family: var(--cy-head); }
+
+/* Sidebar divider */
+.cy-divider { border: none; border-top: 1px solid var(--cy-rule); margin: 14px 0; }
+
+/* Sidebar nav */
+.cy-nav-list { display: flex; flex-direction: column; gap: 2px; }
+.cy-nav-list a {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: var(--cy-radius);
+  font-family: var(--cy-head); font-size: 13px; font-weight: 500;
+  color: var(--cy-mute); transition: .25s;
+}
+.cy-nav-list a::before { content: '> '; color: var(--cy-accent); opacity: 0; transition: .2s; }
+.cy-nav-list a i { font-size: 16px; flex-shrink: 0; }
+.cy-nav-list a:hover, .cy-nav-list a.active {
+  color: var(--cy-accent);
+  background: var(--cy-glow-xs);
+  border-right: 2px solid var(--cy-accent);
+  padding-right: 10px;
+}
+.cy-nav-list a:hover::before, .cy-nav-list a.active::before { opacity: 1; }
+
+/* Sidebar socials */
+.cy-sidebar-socials { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; justify-content: center; }
+.cy-sidebar-socials a {
+  width: 34px; height: 34px; border-radius: 3px;
+  background: var(--cy-surface2); border: 1px solid var(--cy-rule);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 15px; color: var(--cy-mute); transition: .25s;
+}
+.cy-sidebar-socials a:hover { border-color: var(--cy-accent); color: var(--cy-accent); box-shadow: 0 0 8px var(--cy-glow-s); }
+
+/* Sidebar toggle (mobile) */
+.cy-toggle {
+  display: none;
+  position: fixed; top: 80px; right: 14px; z-index: 998;
+  width: 38px; height: 38px; border-radius: 4px;
+  background: var(--cy-accent); color: #000;
+  align-items: center; justify-content: center;
+  font-size: 20px; cursor: pointer; border: none;
+  box-shadow: 0 0 12px var(--cy-glow);
+}
+@media (max-width: 1199.98px) {
+  .cy-sidebar { right: -100%; }
+  .cy-sidebar.open { right: 0; }
+  .cy-toggle { display: flex; }
+}
+@media (min-width: 1200px) { .cy-main { margin-right: 316px; } }
+
+/* ══ SECTIONS ══ */
+.cy-section {
+  padding: 70px 0;
+  scroll-margin-top: 90px;
+  overflow: clip;
+}
+.cy-section-alt { background: var(--cy-surface); }
+.cy-container { max-width: 1280px; margin: 0 auto; padding: 0 28px; }
+.cy-section-head { text-align: center; margin-bottom: 52px; }
+.cy-section-head h2 {
+  font-family: var(--cy-head);
+  font-size: clamp(22px, 3vw, 32px); font-weight: 700;
+  color: var(--cy-heading);
+  text-transform: uppercase; letter-spacing: .12em;
+  margin-bottom: 10px;
+}
+/* Neon underline decoration */
+.cy-section-head h2::before { content: '/* '; color: var(--cy-mute); font-weight: 400; }
+.cy-section-head h2::after  { content: ' */'; color: var(--cy-mute); font-weight: 400; }
+.cy-section-head p { font-size: 14px; color: var(--cy-mute); }
+
+/* ── Two-col grid ── */
+.cy-grid-2 { display: grid; grid-template-columns: 1fr; gap: 40px; }
+@media (min-width: 900px) { .cy-grid-2 { grid-template-columns: 1fr 1fr; } }
+.cy-grid-3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 20px; }
+.cy-grid-4 { display: grid; grid-template-columns: repeat(2,1fr); gap: 20px; }
+@media (min-width: 640px) { .cy-grid-4 { grid-template-columns: repeat(4,1fr); } }
+
+/* ── Buttons ── */
+.cy-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 24px; border-radius: var(--cy-radius);
+  font-family: var(--cy-head); font-size: 13px; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase;
+  cursor: pointer; transition: .25s; border: 2px solid transparent;
+}
+.cy-btn-primary {
+  background: var(--cy-accent); color: #000;
+  box-shadow: 0 0 14px var(--cy-glow);
+}
+.cy-btn-primary:hover { box-shadow: 0 0 28px var(--cy-glow); transform: translateY(-2px); }
+.cy-btn-outline { border-color: var(--cy-accent); color: var(--cy-accent); background: transparent; }
+.cy-btn-outline:hover { background: var(--cy-glow-xs); box-shadow: 0 0 14px var(--cy-glow-s); }
+
+/* ── Card base ── */
+.cy-card {
+  background: var(--cy-surface);
+  border: 1px solid var(--cy-rule);
+  border-radius: var(--cy-radius);
+  transition: border-color .3s, box-shadow .3s, transform .3s;
+}
+.cy-card:hover { border-color: var(--cy-border); box-shadow: 0 0 20px var(--cy-glow-s); }
+
+/* ══ HERO ══ */
+.cy-hero {
+  padding: 80px 0; min-height: 88vh;
+  display: flex; align-items: center; position: relative; overflow: hidden;
+}
+/* Scanline overlay on hero */
+.cy-hero::before {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0,255,136,.015) 2px, rgba(0,255,136,.015) 4px
+  );
+}
+.cy-hero .cy-container { position: relative; z-index: 1; }
+
+.cy-hero-grid {
+  display: grid; grid-template-columns: 1fr; gap: 48px; align-items: center;
+}
+@media (min-width: 900px) { .cy-hero-grid { grid-template-columns: 1.1fr 1fr; } }
+
+.cy-hero-prompt {
+  font-family: var(--cy-head); font-size: 13px; font-weight: 500;
+  color: var(--cy-mute); margin-bottom: 10px; letter-spacing: .08em;
+}
+.cy-hero-prompt::before { content: '$ '; color: var(--cy-accent); }
+.cy-hero-h1 {
+  font-family: var(--cy-head);
+  font-size: clamp(36px, 6vw, 70px); font-weight: 800;
+  color: var(--cy-heading); line-height: 1.05; margin-bottom: 14px;
+  text-shadow: 0 0 40px var(--cy-glow-s);
+}
+.cy-hero-h1 .cy-neon { color: var(--cy-accent); text-shadow: 0 0 20px var(--cy-glow); }
+.cy-hero-typed-line {
+  font-family: var(--cy-head); font-size: clamp(15px, 2vw, 19px);
+  color: var(--cy-mute); margin-bottom: 22px; min-height: 28px;
+}
+.cy-hero-typed-line .cy-typed-word { color: var(--cy-cyan); font-weight: 600; }
+.cy-cursor { color: var(--cy-accent); animation: cyBlink .65s step-end infinite; }
+@keyframes cyBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+.cy-hero-desc { font-size: 14px; color: var(--cy-mute); line-height: 1.75; margin-bottom: 30px; max-width: 460px; }
+.cy-hero-btns { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 28px; }
+.cy-hero-socials { display: flex; gap: 8px; flex-wrap: wrap; }
+.cy-hero-socials a {
+  width: 36px; height: 36px; border-radius: 3px;
+  border: 1px solid var(--cy-rule);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 15px; color: var(--cy-mute); transition: .25s;
+}
+.cy-hero-socials a:hover { border-color: var(--cy-accent); color: var(--cy-accent); box-shadow: 0 0 10px var(--cy-glow-s); }
+
+/* Hero photo (right side) */
+.cy-hero-photo-wrap {
+  position: relative; max-width: 380px; margin: 0 auto;
+}
+.cy-hero-photo {
+  border-radius: 8px; overflow: hidden;
+  border: 1px solid var(--cy-border);
+  box-shadow: 0 0 40px var(--cy-glow-s), 0 0 80px var(--cy-glow-xs);
+  aspect-ratio: 4/5;
+  background: var(--cy-surface2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--cy-head); font-size: 90px; font-weight: 800; color: var(--cy-accent);
+  opacity: .4;
+  position: relative; overflow: hidden;
+}
+.cy-hero-photo img { width: 100%; height: 100%; object-fit: cover; opacity: 1; }
+/* Scanline on photo */
+.cy-hero-photo::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 3px,
+    rgba(0,0,0,.18) 3px, rgba(0,0,0,.18) 6px
+  );
+}
+/* Corner decorations on photo */
+.cy-photo-corner {
+  position: absolute; width: 22px; height: 22px; z-index: 1;
+}
+.cy-photo-corner.tl { top: -1px; left: -1px; border-top: 2px solid var(--cy-accent); border-left: 2px solid var(--cy-accent); }
+.cy-photo-corner.tr { top: -1px; right: -1px; border-top: 2px solid var(--cy-accent); border-right: 2px solid var(--cy-accent); }
+.cy-photo-corner.bl { bottom: -1px; left: -1px; border-bottom: 2px solid var(--cy-accent); border-left: 2px solid var(--cy-accent); }
+.cy-photo-corner.br { bottom: -1px; right: -1px; border-bottom: 2px solid var(--cy-accent); border-right: 2px solid var(--cy-accent); }
+
+/* ══ ABOUT ══ */
+.cy-about-grid { display: grid; grid-template-columns: 1fr; gap: 36px; align-items: start; }
+@media (min-width: 900px) { .cy-about-grid { grid-template-columns: 5fr 7fr; } }
+
+.cy-profile-card {
+  background: var(--cy-surface); border: 1px solid var(--cy-rule);
+  border-radius: var(--cy-radius); padding: 28px; text-align: center;
+}
+.cy-profile-card-photo {
+  width: 140px; height: 140px; border-radius: 50%;
+  overflow: hidden; margin: 0 auto 16px;
+  border: 2px solid var(--cy-accent);
+  box-shadow: 0 0 20px var(--cy-glow);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--cy-surface2);
+  font-family: var(--cy-head); font-size: 44px; font-weight: 700; color: var(--cy-accent);
+}
+.cy-profile-card-photo img { width: 100%; height: 100%; object-fit: cover; }
+.cy-profile-card h3 {
+  font-family: var(--cy-head); font-size: 16px; font-weight: 700;
+  color: var(--cy-heading); margin-bottom: 4px;
+}
+.cy-profile-card .cy-job { color: var(--cy-accent); font-size: 12px; font-family: var(--cy-head); margin-bottom: 18px; }
+.cy-contact-links { display: flex; flex-direction: column; gap: 8px; }
+.cy-contact-link {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px; border-radius: 4px;
+  background: var(--cy-surface2); border: 1px solid var(--cy-rule);
+  font-size: 13px; color: var(--cy-text); transition: .25s;
+}
+.cy-contact-link:hover { border-color: var(--cy-accent); color: var(--cy-accent); }
+.cy-contact-link i { color: var(--cy-accent); font-size: 15px; flex-shrink: 0; }
+
+/* About right */
+.cy-badge {
+  display: inline-block; padding: 4px 14px; border-radius: 3px;
+  border: 1px solid var(--cy-accent); color: var(--cy-accent);
+  font-family: var(--cy-head); font-size: 11px; font-weight: 600; letter-spacing: .12em;
+  text-transform: uppercase; margin-bottom: 14px;
+}
+.cy-about-text h2 { font-size: clamp(20px, 3vw, 28px); font-weight: 700; margin-bottom: 14px; }
+.cy-about-bio { color: var(--cy-text); margin-bottom: 20px; }
+.cy-about-bio p { margin-bottom: 10px; }
+.cy-stats-mini { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 24px; }
+.cy-stat-mini {
+  background: var(--cy-surface2); border: 1px solid var(--cy-rule);
+  border-radius: 4px; padding: 16px 10px; text-align: center; transition: .3s;
+}
+.cy-stat-mini:hover { border-color: var(--cy-border); box-shadow: 0 0 16px var(--cy-glow-s); }
+.cy-stat-mini .num {
+  font-family: var(--cy-head); font-size: 26px; font-weight: 700;
+  color: var(--cy-accent); text-shadow: 0 0 12px var(--cy-glow); line-height: 1;
+}
+.cy-stat-mini .lbl { font-size: 11px; color: var(--cy-mute); margin-top: 4px; }
+.cy-details-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 22px; }
+.cy-detail-item {
+  padding: 12px 14px; background: var(--cy-surface2); border: 1px solid var(--cy-rule);
+  border-radius: 4px;
+}
+.cy-detail-item .lbl { display: block; font-size: 10px; font-weight: 600; letter-spacing: .12em; color: var(--cy-mute); text-transform: uppercase; margin-bottom: 3px; }
+.cy-detail-item .val { font-size: 13px; font-weight: 500; color: var(--cy-heading); }
+.cy-cta-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* ══ STATS ══ */
+.cy-stats-grid {
+  display: grid; grid-template-columns: repeat(2,1fr); gap: 20px;
+  background: var(--cy-surface); border: 1px solid var(--cy-rule);
+  border-radius: var(--cy-radius); padding: 36px 24px;
+}
+@media (min-width: 640px) { .cy-stats-grid { grid-template-columns: repeat(4,1fr); } }
+.cy-stats-item { text-align: center; padding: 16px; }
+.cy-stats-item .icon-wrap {
+  width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 4px;
+  background: var(--cy-glow-xs); border: 1px solid var(--cy-border);
+  color: var(--cy-accent); display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+}
+.cy-stats-item .cy-counter {
+  display: block; font-family: var(--cy-head); font-size: 40px; font-weight: 800;
+  color: var(--cy-accent); text-shadow: 0 0 20px var(--cy-glow); line-height: 1;
+}
+.cy-stats-item p { color: var(--cy-mute); font-size: 13px; margin-top: 6px; }
+
+/* ══ SKILLS ══ */
+.cy-skill-item { margin-bottom: 22px; }
+.cy-skill-hdr { display: flex; justify-content: space-between; margin-bottom: 8px; }
+.cy-skill-name { font-family: var(--cy-head); font-size: 13px; font-weight: 600; color: var(--cy-heading); }
+.cy-skill-pct  { font-family: var(--cy-head); font-size: 12px; font-weight: 700; color: var(--cy-accent); }
+.cy-skill-track { height: 6px; background: var(--cy-surface2); border-radius: 2px; border: 1px solid var(--cy-rule); overflow: hidden; }
+.cy-skill-bar {
+  height: 100%; width: 0;
+  background: linear-gradient(90deg, var(--cy-accent), var(--cy-cyan));
+  transition: width 1.2s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 0 8px var(--cy-glow);
+}
+.cy-skills-col h3 {
+  font-family: var(--cy-head); font-size: 14px; font-weight: 700;
+  color: var(--cy-accent); margin-bottom: 22px;
+  padding-bottom: 10px; border-bottom: 1px solid var(--cy-border);
+  letter-spacing: .06em; text-transform: uppercase;
+}
+
+/* ══ RESUME / TIMELINE ══ */
+.cy-resume-grid { display: grid; grid-template-columns: 1fr; gap: 36px; }
+@media (min-width: 900px) { .cy-resume-grid { grid-template-columns: 4fr 8fr; } }
+
+.cy-resume-side {
+  background: var(--cy-surface); border: 1px solid var(--cy-rule);
+  border-radius: var(--cy-radius); padding: 24px;
+}
+.cy-resume-side-photo {
+  width: 100%; border-radius: 4px; overflow: hidden;
+  background: var(--cy-surface2); margin-bottom: 18px;
+  aspect-ratio: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--cy-head); font-size: 60px; font-weight: 700; color: var(--cy-accent);
+}
+.cy-resume-side-photo img { width: 100%; height: 100%; object-fit: cover; }
+.cy-resume-side h3 {
+  font-family: var(--cy-head); font-size: 13px; font-weight: 700;
+  color: var(--cy-accent); text-transform: uppercase; letter-spacing: .1em;
+  margin: 16px 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--cy-border);
+}
+.cy-resume-side p { color: var(--cy-mute); font-size: 13px; line-height: 1.7; }
+.cy-info-list li {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 5px 0; font-size: 13px; color: var(--cy-text);
+  border-bottom: 1px solid var(--cy-rule);
+}
+.cy-info-list li:last-child { border-bottom: none; }
+.cy-info-list li i { color: var(--cy-accent); font-size: 14px; margin-top: 2px; flex-shrink: 0; }
+
+.cy-resume-section h3 {
+  font-family: var(--cy-head); font-size: 16px; font-weight: 700;
+  color: var(--cy-heading); margin-bottom: 24px;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding-bottom: 10px; border-bottom: 1px solid var(--cy-border);
+  letter-spacing: .04em;
+}
+.cy-resume-section h3 i { color: var(--cy-accent); }
+.cy-resume-section + .cy-resume-section { margin-top: 36px; }
+
+.cy-timeline-item {
+  position: relative; padding-left: 24px; margin-bottom: 28px;
+  border-left: 1px solid var(--cy-rule);
+}
+.cy-timeline-item::before {
+  content: ''; position: absolute; left: -7px; top: 6px;
+  width: 13px; height: 13px; border-radius: 2px;
+  background: var(--cy-accent);
+  box-shadow: 0 0 8px var(--cy-glow);
+}
+.cy-timeline-item h4 { font-family: var(--cy-head); font-size: 15px; font-weight: 600; color: var(--cy-heading); margin-bottom: 6px; }
+.cy-timeline-item .tl-date {
+  display: inline-block; font-family: var(--cy-head); font-size: 11px; font-weight: 600;
+  padding: 3px 10px; border-radius: 3px;
+  background: var(--cy-glow-xs); border: 1px solid var(--cy-border);
+  color: var(--cy-accent); margin-bottom: 8px; letter-spacing: .06em;
+}
+.cy-timeline-item .tl-co { color: var(--cy-mute); font-size: 13px; }
+.cy-timeline-item .tl-co i { color: var(--cy-accent); margin-right: 4px; }
+
+/* ══ PORTFOLIO ══ */
+.cy-portfolio-layout { display: grid; grid-template-columns: 1fr; gap: 28px; }
+@media (min-width: 900px) { .cy-portfolio-layout { grid-template-columns: 220px 1fr; } }
+
+.cy-filters-wrap {
+  background: var(--cy-surface); border: 1px solid var(--cy-rule);
+  border-radius: var(--cy-radius); padding: 18px 16px;
+  position: sticky; top: 110px;
+}
+.cy-filters-wrap h4 {
+  font-family: var(--cy-head); font-size: 11px; font-weight: 700;
+  color: var(--cy-accent); letter-spacing: .14em; text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.cy-filter-list { display: flex; flex-direction: column; gap: 4px; }
+.cy-filter-item {
+  padding: 8px 12px; border-radius: 3px;
+  font-family: var(--cy-head); font-size: 13px; font-weight: 500;
+  color: var(--cy-mute); cursor: pointer; transition: .25s;
+  border-right: 2px solid transparent;
+}
+.cy-filter-item:hover, .cy-filter-item.active {
+  color: var(--cy-accent); background: var(--cy-glow-xs);
+  border-right-color: var(--cy-accent);
+}
+
+.cy-proj-grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
+@media (min-width: 640px) { .cy-proj-grid { grid-template-columns: repeat(2,1fr); } }
+
+.cy-proj-card {
+  background: var(--cy-surface); border: 1px solid var(--cy-rule);
+  border-radius: var(--cy-radius); overflow: hidden; transition: .3s;
+}
+.cy-proj-card:hover { border-color: var(--cy-border); box-shadow: 0 0 20px var(--cy-glow-s); transform: translateY(-4px); }
+.cy-proj-img { height: 200px; overflow: hidden; position: relative; background: var(--cy-surface2); }
+.cy-proj-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s; }
+.cy-proj-card:hover .cy-proj-img img { transform: scale(1.04); }
+.cy-proj-fallback {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  font-size: 48px; color: var(--cy-accent); opacity: .2;
+}
+/* Neon scan overlay on hover */
+.cy-proj-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,.7);
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  opacity: 0; transition: .3s;
+}
+.cy-proj-card:hover .cy-proj-overlay { opacity: 1; }
+.cy-proj-overlay a {
+  width: 38px; height: 38px; border-radius: 3px;
+  background: var(--cy-accent); color: #000;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 16px; transition: .2s;
+}
+.cy-proj-overlay a:hover { box-shadow: 0 0 14px var(--cy-glow); transform: scale(1.1); }
+.cy-proj-info { padding: 16px; }
+.cy-proj-cat { font-family: var(--cy-head); font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--cy-accent); margin-bottom: 5px; }
+.cy-proj-info h4 { font-family: var(--cy-head); font-size: 14px; font-weight: 700; color: var(--cy-heading); margin-bottom: 5px; }
+.cy-proj-info p { font-size: 12px; color: var(--cy-mute); }
+.cy-proj-footer { padding: 10px 16px; border-top: 1px solid var(--cy-rule); display: flex; gap: 8px; }
+.cy-proj-footer a {
+  flex: 1; padding: 7px 0; border-radius: 3px;
+  font-family: var(--cy-head); font-size: 12px; font-weight: 600; text-align: center;
+  letter-spacing: .05em; transition: .2s;
+}
+.cy-proj-btn-main { background: var(--cy-accent); color: #000; }
+.cy-proj-btn-main:hover { box-shadow: 0 0 12px var(--cy-glow); }
+.cy-proj-btn-alt { border: 1px solid var(--cy-rule); color: var(--cy-mute); }
+.cy-proj-btn-alt:hover { border-color: var(--cy-accent); color: var(--cy-accent); }
+
+/* ══ SERVICES ══ */
+.cy-svc-card {
+  background: var(--cy-surface); border: 1px solid var(--cy-rule);
+  border-radius: var(--cy-radius); padding: 30px 22px;
+  position: relative; overflow: hidden; transition: .35s;
+}
+.cy-svc-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--cy-accent), var(--cy-cyan));
+  transform: scaleX(0); transform-origin: left; transition: .35s;
+}
+.cy-svc-card:hover { border-color: var(--cy-border); transform: translateY(-5px); box-shadow: 0 0 24px var(--cy-glow-s); }
+.cy-svc-card:hover::before { transform: scaleX(1); }
+.cy-svc-icon {
+  width: 52px; height: 52px; border-radius: 4px;
+  background: var(--cy-glow-xs); border: 1px solid var(--cy-border);
+  color: var(--cy-accent); display: flex; align-items: center; justify-content: center;
+  font-size: 22px; margin-bottom: 18px; transition: .3s;
+}
+.cy-svc-card:hover .cy-svc-icon { background: var(--cy-accent); color: #000; box-shadow: 0 0 14px var(--cy-glow); }
+.cy-svc-card h3 { font-family: var(--cy-head); font-size: 15px; font-weight: 700; color: var(--cy-heading); margin-bottom: 10px; }
+.cy-svc-card p  { font-size: 13px; color: var(--cy-mute); line-height: 1.7; margin-bottom: 16px; }
+.cy-svc-level { display: flex; gap: 4px; }
+.cy-svc-pip { width: 20px; height: 4px; border-radius: 2px; background: var(--cy-rule); transition: .3s; }
+.cy-svc-pip.on { background: var(--cy-accent); box-shadow: 0 0 6px var(--cy-glow); }
+
+/* ══ CONTACT ══ */
+.cy-contact-wrap { max-width: 680px; margin: 0 auto; }
+.cy-contact-card {
+  background: var(--cy-surface); border: 1px solid var(--cy-rule);
+  border-radius: var(--cy-radius); padding: 32px;
+}
+.cy-contact-card h3 { font-family: var(--cy-head); font-size: 18px; font-weight: 700; color: var(--cy-heading); margin-bottom: 6px; }
+.cy-contact-card > p { color: var(--cy-mute); font-size: 13px; margin-bottom: 24px; }
+.cy-info-item { display: flex; gap: 14px; margin-bottom: 16px; align-items: flex-start; }
+.cy-icon-box {
+  width: 44px; height: 44px; border-radius: 4px; flex-shrink: 0;
+  background: var(--cy-glow-xs); border: 1px solid var(--cy-border);
+  color: var(--cy-accent); display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.cy-info-item h4 { font-family: var(--cy-head); font-size: 11px; font-weight: 600; letter-spacing: .1em; color: var(--cy-mute); text-transform: uppercase; margin-bottom: 3px; }
+.cy-info-item p, .cy-info-item a { font-size: 14px; color: var(--cy-text); }
+.cy-info-item a:hover { color: var(--cy-accent); }
+.cy-cnt-socials { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+.cy-cnt-social {
+  width: 38px; height: 38px; border-radius: 3px;
+  border: 1px solid var(--cy-rule);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 16px; color: var(--cy-mute); transition: .25s;
+}
+.cy-cnt-social:hover { border-color: var(--cy-accent); color: var(--cy-accent); }
+
+/* ══ FOOTER ══ */
+.cy-footer {
+  padding: 16px 28px; text-align: center;
+  font-family: var(--cy-head); font-size: 12px; color: var(--cy-mute);
+  border-top: 1px solid var(--cy-rule);
+  background: var(--cy-surface);
+}
+.cy-footer::before { content: '// '; color: var(--cy-accent); }
+
+/* ══ SCROLL TOP ══ */
+.cy-scroll-top {
+  position: fixed; right: 20px; bottom: 20px; z-index: 996;
+  width: 42px; height: 42px; border-radius: 4px;
+  background: var(--cy-accent); color: #000; border: none;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; cursor: pointer;
+  box-shadow: 0 0 16px var(--cy-glow);
+  transform: translateY(80px); opacity: 0; transition: .3s;
+}
+.cy-scroll-top.show  { transform: translateY(0); opacity: 1; }
+.cy-scroll-top:hover { box-shadow: 0 0 28px var(--cy-glow); }
+
+@media (max-width: 899px) {
+  .cy-hero { min-height: auto; padding: 56px 0; }
+  .cy-section { padding: 50px 0; }
+  .cy-section-head { margin-bottom: 36px; }
+}
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="cy" x-data="cyberNeo()" x-init="init()">
+
+  {% if est_proprio %}
+  <div class="cy-owner">
+    <span>{% trans "Aperçu privé — Cyber Neon" %}</span>
+    <a href="{% url 'candidat:profil' %}?onglet=portfolio"><i class="bi bi-pencil-square"></i>{% trans "Modifier" %}</a>
+  </div>
+  {% endif %}
+
+  <!-- Sidebar toggle (mobile) -->
+  <button class="cy-toggle" @click="sidebarOpen=!sidebarOpen" aria-label="{% trans "Menu" %}">
+    <i class="bi" :class="sidebarOpen ? 'bi-x' : 'bi-terminal'"></i>
+  </button>
+
+  <!-- ══ SIDEBAR ══ -->
+  <aside class="cy-sidebar" :class="{ open: sidebarOpen }">
+    <div class="cy-sidebar-inner">
+
+      <div class="cy-sidebar-profile">
+        <div class="cy-sidebar-photo">
+          {% if candidat.photoProfil %}
+          <img src="{{ candidat.photoProfil.url }}" alt="{{ candidat.prenom }}">
+          {% else %}
+          {{ candidat.prenom|slice:":1"|upper }}{{ candidat.nom|slice:":1"|upper }}
+          {% endif %}
+        </div>
+        <div class="cy-sidebar-name">{{ candidat.prenom }} {{ candidat.nom }}</div>
+        {% if candidat.titreProfessionnel %}
+        <div class="cy-sidebar-title">{{ candidat.titreProfessionnel }}</div>
+        {% endif %}
+      </div>
+
+      <hr class="cy-divider">
+
+      <nav class="cy-nav-list">
+        <a href="#cy-hero"    data-section="hero"      :class="{ active: active==='hero' }"      @click="sidebarOpen=false"><i class="bi bi-house"></i>{% trans "Accueil" %}</a>
+        {% if params.showAbout %}
+        <a href="#cy-about"   data-section="about"     :class="{ active: active==='about' }"     @click="sidebarOpen=false"><i class="bi bi-person"></i>{% trans "À propos" %}</a>
+        {% endif %}
+        {% if params.showCompetences and rubriques.competences %}
+        <a href="#cy-skills"  data-section="skills"    :class="{ active: active==='skills' }"    @click="sidebarOpen=false"><i class="bi bi-terminal"></i>{% trans "Compétences" %}</a>
+        {% endif %}
+        {% if params.showExperiences or params.showFormations %}
+        <a href="#cy-resume"  data-section="resume"    :class="{ active: active==='resume' }"    @click="sidebarOpen=false"><i class="bi bi-file-code"></i>{% trans "Parcours" %}</a>
+        {% endif %}
+        {% if params.showProjets and rubriques.projets %}
+        <a href="#cy-portfolio" data-section="portfolio" :class="{ active: active==='portfolio' }" @click="sidebarOpen=false"><i class="bi bi-grid-3x3"></i>{% trans "Portfolio" %}</a>
+        {% endif %}
+        {% if params.showCompetences and rubriques.competences %}
+        <a href="#cy-services" data-section="services"  :class="{ active: active==='services' }"  @click="sidebarOpen=false"><i class="bi bi-cpu"></i>{% trans "Services" %}</a>
+        {% endif %}
+        {% if params.showContact and candidat.email %}
+        <a href="#cy-contact" data-section="contact"   :class="{ active: active==='contact' }"   @click="sidebarOpen=false"><i class="bi bi-send"></i>{% trans "Contact" %}</a>
+        {% endif %}
+      </nav>
+
+      {% if liens_sociaux %}
+      <div class="cy-sidebar-socials">
+        {% for lien in liens_sociaux %}
+        <a href="{{ lien.url }}" target="_blank" rel="noopener" title="{{ lien.reseau.libelle }}">
+          <i class="bi {{ lien.reseau.bi_class }}"></i>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ══ -->
+  <main class="cy-main">
+
+    <!-- ─── HERO ─── -->
+    <section id="cy-hero" class="cy-section cy-hero">
+      <div class="cy-container">
+        <div class="cy-hero-grid">
+
+          <div data-aos="fade-right" data-aos-delay="100">
+            <p class="cy-hero-prompt">{% trans "init portfolio" %}</p>
+            <h1 class="cy-hero-h1">
+              {{ candidat.prenom|default:"Cyber" }}<br>
+              <span class="cy-neon">{{ candidat.nom|default:"Dev" }}</span>
+            </h1>
+            {% if rubriques.competences %}
+            <div class="cy-hero-typed-line">
+              <span class="cy-typed-word" x-text="typedWord"></span><span class="cy-cursor">█</span>
+            </div>
+            {% elif candidat.titreProfessionnel %}
+            <div class="cy-hero-typed-line">
+              <span style="color:var(--cy-cyan);">{{ candidat.titreProfessionnel }}</span>
+            </div>
+            {% endif %}
+            {% if candidat.biographie %}
+            <p class="cy-hero-desc">{{ candidat.biographie|truncatewords:28 }}</p>
+            {% elif candidat.sloganPortfolio %}
+            <p class="cy-hero-desc">// {{ candidat.sloganPortfolio }}</p>
+            {% endif %}
+            <div class="cy-hero-btns">
+              {% if params.showProjets and rubriques.projets %}
+              <a href="#cy-portfolio" class="cy-btn cy-btn-primary"><i class="bi bi-grid-3x3"></i>{% trans "Mes projets" %}</a>
+              {% endif %}
+              {% if params.showContact and candidat.email %}
+              <a href="#cy-contact" class="cy-btn cy-btn-outline"><i class="bi bi-send"></i>{% trans "Me contacter" %}</a>
+              {% endif %}
+            </div>
+            {% if liens_sociaux %}
+            <div class="cy-hero-socials">
+              {% for lien in liens_sociaux|slice:":5" %}
+              <a href="{{ lien.url }}" target="_blank" rel="noopener" title="{{ lien.reseau.libelle }}">
+                <i class="bi {{ lien.reseau.bi_class }}"></i>
+              </a>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+
+          <div data-aos="fade-left" data-aos-delay="200">
+            <div class="cy-hero-photo-wrap">
+              <div class="cy-photo-corner tl"></div>
+              <div class="cy-photo-corner tr"></div>
+              <div class="cy-photo-corner bl"></div>
+              <div class="cy-photo-corner br"></div>
+              <div class="cy-hero-photo">
+                {% if candidat.photoProfil %}
+                <img src="{{ candidat.photoProfil.url }}" alt="{{ candidat.prenom }} {{ candidat.nom }}">
+                {% else %}
+                {{ candidat.prenom|slice:":1"|upper }}{{ candidat.nom|slice:":1"|upper }}
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── ABOUT ─── -->
+    {% if params.showAbout %}
+    <section id="cy-about" class="cy-section cy-section-alt">
+      <div class="cy-container">
+        <div class="cy-section-head" data-aos="fade-up">
+          <h2>{% trans "about" %}</h2>
+          <p>// Qui suis-je ? Mon parcours en quelques lignes.</p>
+        </div>
+        <div class="cy-about-grid">
+
+          <div data-aos="zoom-in" data-aos-delay="150">
+            <div class="cy-profile-card">
+              <div class="cy-profile-card-photo">
+                {% if candidat.photoProfil %}
+                <img src="{{ candidat.photoProfil.url }}" alt="{{ candidat.prenom }}">
+                {% else %}
+                {{ candidat.prenom|slice:":1"|upper }}{{ candidat.nom|slice:":1"|upper }}
+                {% endif %}
+              </div>
+              <h3>{{ candidat.prenom }} {{ candidat.nom }}</h3>
+              {% if candidat.titreProfessionnel %}
+              <p class="cy-job">{{ candidat.titreProfessionnel }}</p>
+              {% endif %}
+              <div class="cy-contact-links">
+                {% if not masquer_contact and candidat.email %}
+                <a href="mailto:{{ candidat.email }}" class="cy-contact-link"><i class="bi bi-envelope"></i>{{ candidat.email }}</a>
+                {% endif %}
+                {% if not masquer_contact and candidat.telephone %}
+                <a href="tel:{{ candidat.telephone }}" class="cy-contact-link"><i class="bi bi-telephone"></i>{{ candidat.telephone }}</a>
+                {% endif %}
+                {% if candidat.ville or candidat.adresse %}
+                <span class="cy-contact-link"><i class="bi bi-geo-alt"></i>{{ candidat.ville|default:candidat.adresse }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="cy-about-text" data-aos="fade-left" data-aos-delay="200">
+            <span class="cy-badge">// make_contact</span>
+            <h2>{% if candidat.titreProfessionnel %}{{ candidat.titreProfessionnel }}{% else %}Passionné par mon métier{% endif %}</h2>
+            <div class="cy-about-bio" style="margin-top:14px;">
+              {% if candidat.biographie %}
+              {{ candidat.biographie|linebreaks }}
+              {% else %}
+              <p>{% trans "Bienvenue sur mon portfolio. Découvrez mon parcours, mes compétences et mes réalisations." %}</p>
+              {% if candidat.sloganPortfolio %}<p>// {{ candidat.sloganPortfolio }}</p>{% endif %}
+              {% endif %}
+            </div>
+            <div class="cy-stats-mini">
+              <div class="cy-stat-mini">
+                <div class="num">{{ rubriques.projets|length }}{% if rubriques.projets|length %}<span style="font-size:18px;">+</span>{% endif %}</div>
+                <div class="lbl">{% trans "Projets" %}</div>
+              </div>
+              <div class="cy-stat-mini">
+                <div class="num">{% if annees_xp is not None %}{{ annees_xp }}<span style="font-size:18px;">+</span>{% else %}—{% endif %}</div>
+                <div class="lbl">{% trans "Ans XP" %}</div>
+              </div>
+              <div class="cy-stat-mini">
+                <div class="num">{{ rubriques.competences|length }}</div>
+                <div class="lbl">{% trans "Skills" %}</div>
+              </div>
+            </div>
+            <div class="cy-details-row">
+              {% if candidat.secteurActivite %}
+              <div class="cy-detail-item">
+                <span class="lbl">{% trans "Secteur" %}</span>
+                <span class="val">{{ candidat.secteurActivite }}</span>
+              </div>
+              {% endif %}
+              {% if annees_xp is not None %}
+              <div class="cy-detail-item">
+                <span class="lbl">{% trans "Niveau" %}</span>
+                <span class="val">{% if annees_xp >= 8 %}Senior{% elif annees_xp >= 3 %}Confirmé{% else %}Junior{% endif %}</span>
+              </div>
+              {% endif %}
+              {% if formations_groupees.diplome %}
+              {% with f0=formations_groupees.diplome|first %}
+              <div class="cy-detail-item">
+                <span class="lbl">{% trans "Formation" %}</span>
+                <span class="val">{{ f0.diplome|default:f0.domaine|default:"Diplôme" }}</span>
+              </div>
+              {% endwith %}
+              {% endif %}
+              {% if rubriques.langues %}
+              <div class="cy-detail-item">
+                <span class="lbl">{% trans "Langues" %}</span>
+                <span class="val">{% for l in rubriques.langues %}{{ l.nom }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>
+              </div>
+              {% endif %}
+            </div>
+            <div class="cy-cta-row">
+              {% if not masquer_contact and candidat.email %}
+              <a href="mailto:{{ candidat.email }}" class="cy-btn cy-btn-primary"><i class="bi bi-chat-dots"></i>{% trans "Discutons" %}</a>
+              {% endif %}
+              {% if params.showProjets and rubriques.projets %}
+              <a href="#cy-portfolio" class="cy-btn cy-btn-outline"><i class="bi bi-grid-3x3"></i>{% trans "Mes projets" %}</a>
+              {% endif %}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- ─── STATS ─── -->
+    {% if rubriques.projets or annees_xp is not None or rubriques.competences %}
+    <section id="cy-stats" class="cy-section">
+      <div class="cy-container" data-aos="fade-up">
+        <div class="cy-stats-grid">
+          <div class="cy-stats-item" data-aos="zoom-in" data-aos-delay="100">
+            <div class="icon-wrap"><i class="bi bi-folder2-open"></i></div>
+            <span class="cy-counter" data-count="{{ rubriques.projets|length }}">0</span>
+            <p>{% trans "Projets réalisés" %}</p>
+          </div>
+          <div class="cy-stats-item" data-aos="zoom-in" data-aos-delay="150">
+            <div class="icon-wrap"><i class="bi bi-briefcase"></i></div>
+            <span class="cy-counter" data-count="{{ rubriques.experiences|length }}">0</span>
+            <p>{% trans "Expériences" %}</p>
+          </div>
+          <div class="cy-stats-item" data-aos="zoom-in" data-aos-delay="200">
+            <div class="icon-wrap"><i class="bi bi-mortarboard"></i></div>
+            <span class="cy-counter" data-count="{{ rubriques.formations|length|default:0 }}">0</span>
+            <p>{% trans "Formations" %}</p>
+          </div>
+          <div class="cy-stats-item" data-aos="zoom-in" data-aos-delay="250">
+            <div class="icon-wrap"><i class="bi bi-code-slash"></i></div>
+            <span class="cy-counter" data-count="{{ rubriques.competences|length }}">0</span>
+            <p>{% trans "Compétences" %}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- ─── SKILLS ─── -->
+    {% if params.showCompetences and rubriques.competences %}
+    <section id="cy-skills" class="cy-section cy-section-alt">
+      <div class="cy-container">
+        <div class="cy-section-head" data-aos="fade-up">
+          <h2>{% trans "skills" %}</h2>
+          <p>// Niveaux de maîtrise — évalués sur 5.</p>
+        </div>
+        <div class="cy-grid-2" data-aos="fade-up" data-aos-delay="100">
+          <div>
+            <div class="cy-skills-col">
+              <h3>// primary_skills</h3>
+              {% for c in rubriques.competences %}{% if forloop.counter0|divisibleby:2 %}
+              <div class="cy-skill-item">
+                <div class="cy-skill-hdr">
+                  <span class="cy-skill-name">{{ c.nom }}</span>
+                  <span class="cy-skill-pct">{% widthratio c.niveau 5 100 %}%</span>
+                </div>
+                <div class="cy-skill-track">
+                  <div class="cy-skill-bar" data-width="{% widthratio c.niveau 5 100 %}"></div>
+                </div>
+              </div>
+              {% endif %}{% endfor %}
+            </div>
+          </div>
+          <div>
+            <div class="cy-skills-col">
+              <h3>// secondary_skills</h3>
+              {% for c in rubriques.competences %}{% if not forloop.counter0|divisibleby:2 %}
+              <div class="cy-skill-item">
+                <div class="cy-skill-hdr">
+                  <span class="cy-skill-name">{{ c.nom }}</span>
+                  <span class="cy-skill-pct">{% widthratio c.niveau 5 100 %}%</span>
+                </div>
+                <div class="cy-skill-track">
+                  <div class="cy-skill-bar" data-width="{% widthratio c.niveau 5 100 %}"></div>
+                </div>
+              </div>
+              {% endif %}{% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- ─── RESUME ─── -->
+    {% if params.showExperiences or params.showFormations %}
+    <section id="cy-resume" class="cy-section">
+      <div class="cy-container">
+        <div class="cy-section-head" data-aos="fade-up">
+          <h2>{% trans "resume" %}</h2>
+          <p>// Expérience professionnelle, formation et certifications.</p>
+        </div>
+        <div class="cy-resume-grid" data-aos="fade-up" data-aos-delay="100">
+
+          <!-- Side panel -->
+          <div data-aos="fade-right" data-aos-delay="150">
+            <div class="cy-resume-side">
+              <div class="cy-resume-side-photo">
+                {% if candidat.photoProfil %}
+                <img src="{{ candidat.photoProfil.url }}" alt="{{ candidat.prenom }}">
+                {% else %}
+                {{ candidat.prenom|slice:":1"|upper }}{{ candidat.nom|slice:":1"|upper }}
+                {% endif %}
+              </div>
+              {% if candidat.biographie %}
+              <h3>// bio</h3>
+              <p>{{ candidat.biographie|truncatewords:40 }}</p>
+              {% endif %}
+              {% if not masquer_contact %}<h3>// contact</h3>{% endif %}
+              <ul class="cy-info-list">
+                {% if candidat.adresse or candidat.ville %}<li><i class="bi bi-geo-alt"></i>{{ candidat.ville|default:candidat.adresse }}</li>{% endif %}
+                {% if not masquer_contact and candidat.email %}<li><i class="bi bi-envelope"></i>{{ candidat.email }}</li>{% endif %}
+                {% if not masquer_contact and candidat.telephone %}<li><i class="bi bi-phone"></i>{{ candidat.telephone }}</li>{% endif %}
+                {% for lien in liens_sociaux|slice:":3" %}
+                <li><i class="bi bi-link-45deg"></i><a href="{{ lien.url }}" target="_blank" style="color:var(--cy-accent);">{{ lien.reseau.libelle }}</a></li>
+                {% endfor %}
+              </ul>
+              {% if rubriques.langues %}
+              <h3>// langues</h3>
+              <ul class="cy-info-list">
+                {% for l in rubriques.langues %}
+                <li><i class="bi bi-translate"></i>{{ l.nom }}{% if l.niveau %} — {{ l.niveau }}{% endif %}</li>
+                {% endfor %}
+              </ul>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Timeline -->
+          <div>
+            {% if params.showExperiences and rubriques.experiences %}
+            <div class="cy-resume-section" data-aos="fade-up">
+              <h3><i class="bi bi-briefcase"></i>{% trans "Expériences" %}</h3>
+              {% for exp in rubriques.experiences %}
+              <div class="cy-timeline-item">
+                <h4>{% for p in exp.postes %}{{ p.titre }}{% if not forloop.last %} / {% endif %}{% endfor %}{% if not exp.postes %}{{ exp.entreprise }}{% endif %}</h4>
+                {% if exp.periodeFR %}<span class="tl-date">{{ exp.periodeFR }}</span>{% endif %}
+                {% if exp.entreprise %}<p class="tl-co"><i class="bi bi-building"></i>{{ exp.entreprise }}{% if exp.lieu %} — {{ exp.lieu }}{% endif %}</p>{% endif %}
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if params.showFormations and formations_groupees.diplome %}
+            <div class="cy-resume-section" data-aos="fade-up" data-aos-delay="100">
+              <h3><i class="bi bi-mortarboard"></i>{% trans "Formation" %}</h3>
+              {% for f in formations_groupees.diplome %}
+              <div class="cy-timeline-item">
+                <h4>{{ f.diplome|default:f.domaine|default:"Diplôme" }}</h4>
+                {% if f.debut or f.fin %}<span class="tl-date">{{ f.debut|slice:":4" }}{% if f.fin %} → {{ f.fin|slice:":4" }}{% else %} → En cours{% endif %}</span>{% endif %}
+                {% if f.ecole %}<p class="tl-co"><i class="bi bi-building"></i>{{ f.ecole }}{% if f.lieu %} — {{ f.lieu }}{% endif %}</p>{% endif %}
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if params.showFormations and formations_groupees.certification %}
+            <div class="cy-resume-section" data-aos="fade-up" data-aos-delay="200">
+              <h3><i class="bi bi-award"></i>{% trans "Certifications" %}</h3>
+              {% for f in formations_groupees.certification %}
+              <div class="cy-timeline-item">
+                <h4>{{ f.diplome|default:f.domaine|default:"Certification" }}</h4>
+                {% if f.fin %}<span class="tl-date">{{ f.fin|slice:":4" }}</span>{% endif %}
+                {% if f.ecole %}<p class="tl-co"><i class="bi bi-building"></i>{{ f.ecole }}</p>{% endif %}
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- ─── PORTFOLIO ─── -->
+    {% if params.showProjets and rubriques.projets %}
+    <section id="cy-portfolio" class="cy-section cy-section-alt">
+      <div class="cy-container">
+        <div class="cy-section-head" data-aos="fade-up">
+          <h2>{% trans "portfolio" %}</h2>
+          <p>// Projets sélectionnés — études de cas et réalisations.</p>
+        </div>
+        <div class="cy-portfolio-layout" data-aos="fade-up" data-aos-delay="100">
+
+          <div>
+            <div class="cy-filters-wrap">
+              <h4>// filter_by</h4>
+              <div class="cy-filter-list">
+                <div class="cy-filter-item" :class="{ active: filter==='*' }" @click="filter='*'">{% trans "all_projects" %}</div>
+                <template x-for="cat in projCategories" :key="cat">
+                  <div class="cy-filter-item" :class="{ active: filter===cat }" @click="filter=cat" x-text="cat"></div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <div class="cy-proj-grid" data-aos="fade-up" data-aos-delay="150">
+            {% for projet in rubriques.projets %}{% if projet.nom %}
+            {% with cover=projet.images.0 %}
+            <div class="cy-proj-card"
+                 x-show="filter==='*' || filter==='{{ projet.dateDebut|slice:":4"|default:"" }}'"
+                 x-transition>
+              <div class="cy-proj-img">
+                {% if cover.url %}
+                <img src="{{ cover.url }}" alt="{{ projet.nom }}" loading="lazy">
+                {% else %}
+                <div class="cy-proj-fallback"><i class="bi bi-code-square"></i></div>
+                {% endif %}
+                <div class="cy-proj-overlay">
+                  {% if cover.url %}<a href="{{ cover.url }}" target="_blank" title="Aperçu"><i class="bi bi-zoom-in"></i></a>{% endif %}
+                  {% if projet.db_id %}<a href="{% url 'candidat:portfolio_projet_detail' candidat.id projet.db_id %}" title="Détails"><i class="bi bi-arrow-right"></i></a>{% endif %}
+                  {% if projet.has_demo %}<a href="{{ projet.lien }}" target="_blank" rel="noopener" title="Démo"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+                </div>
+              </div>
+              <div class="cy-proj-info">
+                <div class="cy-proj-cat">{{ projet.dateDebut|slice:":4"|default:"project" }}</div>
+                <h4>{{ projet.nom }}</h4>
+                {% if projet.description %}<p>{{ projet.description|truncatewords:10 }}</p>{% endif %}
+              </div>
+              <div class="cy-proj-footer">
+                {% if projet.db_id %}
+                <a href="{% url 'candidat:portfolio_projet_detail' candidat.id projet.db_id %}" class="cy-proj-btn-main">{% trans "view_project()" %}</a>
+                {% endif %}
+                {% if projet.has_demo %}
+                <a href="{{ projet.lien }}" target="_blank" rel="noopener" class="cy-proj-btn-alt">{% trans "live_demo" %}</a>
+                {% endif %}
+              </div>
+            </div>
+            {% endwith %}
+            {% endif %}{% endfor %}
+          </div>
+
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- ─── SERVICES ─── -->
+    {% if params.showCompetences and rubriques.competences %}
+    <section id="cy-services" class="cy-section">
+      <div class="cy-container">
+        <div class="cy-section-head" data-aos="fade-up">
+          <h2>{% trans "services" %}</h2>
+          <p>// Domaines d'intervention — solutions adaptées à vos besoins.</p>
+        </div>
+        <div class="cy-grid-3">
+          {% for c in rubriques.competences|slice:":6" %}
+          <div data-aos="fade-up" data-aos-delay="{{ forloop.counter0 }}00">
+            <div class="cy-svc-card">
+              <div class="cy-svc-icon">
+                <i class="bi bi-{% cycle 'code-slash' 'palette2' 'graph-up-arrow' 'gear-wide-connected' 'shield-lock' 'cpu' %}"></i>
+              </div>
+              <h3>{{ c.nom }}</h3>
+              <p>{% if c.niveau >= 4 %}Expertise avancée — niveau {{ c.niveau }}/5. Disponible pour vos projets les plus complexes.{% else %}Maîtrise solide — niveau {{ c.niveau }}/5. Prêt à intervenir efficacement.{% endif %}</p>
+              <div class="cy-svc-level">
+                {% for i in "12345" %}
+                <div class="cy-svc-pip {% if forloop.counter <= c.niveau %}on{% endif %}"></div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- ─── CONTACT ─── -->
+    {% if params.showContact and candidat.email %}
+    <section id="cy-contact" class="cy-section cy-section-alt">
+      <div class="cy-container">
+        <div class="cy-section-head" data-aos="fade-up">
+          <h2>{% trans "contact" %}</h2>
+          <p>// Une mission, une opportunité, une question ? Envoyez un signal.</p>
+        </div>
+        <div class="cy-contact-wrap" data-aos="fade-up" data-aos-delay="100">
+          <div class="cy-contact-card">
+            <h3>// get_in_touch()</h3>
+            <p>{% trans "Je réponds en général sous 48h ouvrées." %}</p>
+            {% if candidat.email %}
+            <div class="cy-info-item">
+              <div class="cy-icon-box"><i class="bi bi-envelope"></i></div>
+              <div><h4>{% trans "Email" %}</h4><p><a href="mailto:{{ candidat.email }}">{{ candidat.email }}</a></p></div>
+            </div>
+            {% endif %}
+            {% if candidat.telephone %}
+            <div class="cy-info-item">
+              <div class="cy-icon-box"><i class="bi bi-telephone"></i></div>
+              <div><h4>{% trans "Téléphone" %}</h4><p><a href="tel:{{ candidat.telephone }}">{{ candidat.telephone }}</a></p></div>
+            </div>
+            {% endif %}
+            {% if candidat.ville or candidat.adresse %}
+            <div class="cy-info-item">
+              <div class="cy-icon-box"><i class="bi bi-geo-alt"></i></div>
+              <div><h4>{% trans "Localisation" %}</h4><p>{{ candidat.ville|default:candidat.adresse }}</p></div>
+            </div>
+            {% endif %}
+            {% if liens_sociaux %}
+            <div class="cy-cnt-socials">
+              {% for lien in liens_sociaux %}
+              <a href="{{ lien.url }}" target="_blank" rel="noopener" class="cy-cnt-social" title="{{ lien.reseau.libelle }}">
+                <i class="bi {{ lien.reseau.bi_class }}"></i>
+              </a>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- Footer -->
+    <footer class="cy-footer">
+      <p>{% now "Y" %} {{ candidat.prenom }} {{ candidat.nom }} — Cyber Neon Portfolio</p>
+    </footer>
+
+  </main>
+
+  <!-- Scroll top -->
+  <button class="cy-scroll-top" :class="{ show: scrollTop }"
+          @click="window.scrollTo({top:0,behavior:'smooth'})" aria-label="{% trans "Haut" %}">
+    <i class="bi bi-arrow-up-short"></i>
+  </button>
+
+</div><!-- .cy -->
+{% endblock %}
+
+{% block js_extra %}
+<script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+<script>
+window.addEventListener('load', function() {
+  if (window.AOS) AOS.init({ duration: 650, once: true, offset: 60, easing: 'ease-in-out' });
+});
+</script>
+<script>
+function cyberNeo() {
+  return {
+    sidebarOpen: false,
+    active: 'hero',
+    scrollTop: false,
+    filter: '*',
+    typedWord: '',
+    typedItems: [
+      {% for c in rubriques.competences|slice:":6" %}'{{ c.nom|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}
+      {% if not rubriques.competences %}'{{ candidat.titreProfessionnel|default:"Professionnel"|escapejs }}'{% endif %}
+    ],
+    projCategories: (() => {
+      const s = new Set();
+      {% for p in rubriques.projets %}{% if p.dateDebut %}s.add('{{ p.dateDebut|slice:":4" }}');{% endif %}{% endfor %}
+      return Array.from(s);
+    })(),
+
+    init() {
+      // Skill bars
+      document.querySelectorAll('.cy-skill-bar').forEach(bar => {
+        const io = new IntersectionObserver(([e]) => {
+          if (e.isIntersecting) { bar.style.width = (bar.dataset.width || '0') + '%'; io.disconnect(); }
+        }, { threshold: 0.3 });
+        io.observe(bar);
+      });
+
+      // Counter animation
+      document.querySelectorAll('.cy-counter').forEach(el => {
+        const io = new IntersectionObserver(([e]) => {
+          if (!e.isIntersecting) return;
+          const target = +el.dataset.count;
+          const t0 = performance.now(); const dur = 1400;
+          const tick = t => {
+            const p = Math.min(1, (t - t0) / dur);
+            const eased = 1 - Math.pow(1 - p, 3);
+            el.textContent = Math.round(target * eased);
+            if (p < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+          io.disconnect();
+        }, { threshold: 0.4 });
+        io.observe(el);
+      });
+
+      // Scrollspy + scroll state + sidebar position
+      const sections = document.querySelectorAll('section[id]');
+      const sidebar  = document.querySelector('.cy-sidebar');
+      const owner    = document.querySelector('.cy-owner');
+      const footer   = document.querySelector('footer');
+      const onScroll = () => {
+        this.scrollTop = window.scrollY > 300;
+        let cur = 'hero';
+        sections.forEach(s => { if (s.getBoundingClientRect().top < 130) cur = s.id.replace('cy-',''); });
+        this.active = cur;
+        if (sidebar) {
+          if (owner) { const ob = owner.getBoundingClientRect().bottom; sidebar.style.top = Math.max(0, ob) + 'px'; }
+          if (footer) {
+            const ft = footer.getBoundingClientRect().top;
+            sidebar.style.bottom = ft < window.innerHeight ? (window.innerHeight - ft) + 'px' : '0';
+          }
+        }
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+
+      // Smooth scroll
+      document.querySelectorAll('a[href^="#cy-"]').forEach(a => {
+        a.addEventListener('click', e => {
+          const tgt = document.getElementById(a.getAttribute('href').slice(1));
+          if (tgt) { e.preventDefault(); tgt.scrollIntoView({ behavior: 'smooth' }); }
+        });
+      });
+
+      if (this.typedItems.length) this.startTyped();
+    },
+
+    startTyped() {
+      let i = 0, j = 0, del = false;
+      const sp = 75, pause = 1800, dsp = 35;
+      const tick = () => {
+        const w = this.typedItems[i];
+        if (!del) {
+          this.typedWord = w.slice(0, j++);
+          if (j > w.length) { del = true; setTimeout(tick, pause); return; }
+        } else {
+          this.typedWord = w.slice(0, j--);
+          if (j < 0) { del = false; j = 0; i = (i + 1) % this.typedItems.length; }
+        }
+        setTimeout(tick, del ? dsp : sp);
+      };
+      tick();
+    },
+  };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,534 @@
+{% extends "candidat/base.html" %}
+{% load i18n %}
+{% block titre %}Créer mon CV — {{ modele.nom }} · {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+{% include "candidat/cv/_form_styles.html" %}
+<style>
+/* ── Vert Moderne — sidebar droite · cartes · indicateurs dots ── */
+#cv-sheet {
+  width: 794px;
+  min-height: 1123px;
+  background: #fff;
+  font-family: 'Segoe UI', 'Georgia', sans-serif;
+  font-size: 12px;
+  color: #1a2e1a;
+  line-height: 1.5;
+  box-shadow: 0 8px 48px rgba(0,0,0,.18);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Bande de notch supérieure */
+.gt-notch {
+  height: 5px;
+  background: linear-gradient(to right, #006030, #2e7d52, #00C85A, #2e7d52, #006030);
+}
+
+/* ── Header ── */
+.gt-header {
+  background: #2e7d52;
+  padding: 32px 44px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  position: relative;
+  overflow: hidden;
+}
+.gt-header::before {
+  content: '';
+  position: absolute;
+  top: -70px; right: -50px;
+  width: 230px; height: 230px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.06);
+  pointer-events: none;
+}
+.gt-header::after {
+  content: '';
+  position: absolute;
+  bottom: -55px; left: 160px;
+  width: 190px; height: 190px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.04);
+  pointer-events: none;
+}
+
+/* Photo */
+.gt-photo-wrap {
+  flex-shrink: 0;
+  width: 106px; height: 106px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.22);
+  padding: 3px;
+  position: relative; z-index: 1;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.15);
+}
+.gt-photo-inner {
+  width: 130px; height: 130px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255,255,255,.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+}
+.gt-photo-inner img { width: 150%; height: 150%; object-fit: cover; }
+
+.gt-header-info { flex: 1; position: relative; z-index: 1; }
+.gt-name {
+  font-size: 26pt;
+  font-weight: 800;
+  color: white;
+  letter-spacing: .5px;
+  line-height: 1.1;
+}
+.gt-title {
+  font-size: 15.5pt;
+  color: rgba(255,255,255,.85);
+  font-style: italic;
+  margin-top: 5px;
+  margin-bottom: 14px;
+}
+.gt-contacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 18px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.25);
+}
+.gt-ci {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 8.5pt;
+  color: rgba(255,255,255,.9);
+}
+/* Accent diamant devant chaque contact */
+.gt-ci-diam {
+  width: 6px; height: 6px;
+  background: rgba(255,255,255,.75);
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+
+/* Séparateur diagonal SVG */
+.gt-sep { line-height: 0; display: block; }
+.gt-sep svg { display: block; }
+
+/* ── Body ── */
+.gt-body { display: flex; }
+
+/* Contenu principal — gauche */
+.gt-main {
+  flex: 1;
+  padding: 26px 28px 26px 40px;
+  background: white;
+}
+
+/* Sidebar — droite */
+.gt-aside {
+  width: 36%;
+  padding: 26px 26px 26px 22px;
+  background: #EFF9F3;
+  border-left: 3px solid #2e7d52;
+  align-self: flex-start;
+}
+
+/* ── Titres section (main) ── */
+.gt-sec {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 13px; margin-top: 22px;
+}
+.gt-sec:first-child { margin-top: 0; }
+.gt-sec-diam {
+  width: 9px; height: 9px;
+  background: #2e7d52;
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+.gt-sec-label {
+  font-size: 7.5pt;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #1a2e1a;
+  white-space: nowrap;
+}
+.gt-sec-line { flex: 1; height: 1px; background: #C6EDD5; }
+
+/* ── Titres section (aside) ── */
+.gt-aside-sec {
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #006030;
+  padding-bottom: 5px;
+  border-bottom: 2px solid #2e7d52;
+  margin-bottom: 11px; margin-top: 22px;
+}
+.gt-aside-sec:first-child { margin-top: 0; }
+
+/* ── Profil ── */
+.gt-profil {
+  font-size: 9pt; color: #374151;
+  line-height: 1.75; text-align: justify;
+}
+
+/* ── Compétences (dots) — UNIQUE ── */
+.gt-skill {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px; gap: 8px;
+}
+.gt-skill-name { font-size: 8.5pt; color: #1a2e1a; flex: 1; min-width: 0; }
+.gt-skill-dots { display: flex; gap: 4px; flex-shrink: 0; }
+.gt-dot-on  { width: 10px; height: 10px; border-radius: 50%; background: #2e7d52; }
+.gt-dot-half {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: linear-gradient(90deg, #2e7d52 50%, #C3E8D3 50%);
+}
+.gt-dot-off { width: 10px; height: 10px; border-radius: 50%; background: #C3E8D3; }
+
+/* ── Langues ── */
+.gt-lang {
+  background: white;
+  border-radius: 8px;
+  padding: 6px 10px;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 7px;
+  border: 1px solid #B8E2CB;
+}
+.gt-lang-name { font-size: 9pt; font-weight: 600; color: #1a2e1a; }
+.gt-lang-badge {
+  font-size: 7.5pt; color: white;
+  background: #2e7d52; padding: 2px 9px; border-radius: 10px;
+}
+
+/* ── Intérêts ── */
+.gt-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
+.gt-interest { display:flex; align-items:center; gap:5px; font-size:8.5pt; color:#1a2e1a; }
+.gt-interest-dot { width:7px; height:7px; border-radius:50%; background:#2e7d52; flex-shrink:0; }
+
+/* ── Références ── */
+.gt-ref-box {
+  font-size: 8pt; color: #6b7280; font-style: italic;
+  text-align: center; padding: 9px 10px;
+  border: 1px dashed #B8E2CB; border-radius: 6px;
+  margin-top: 16px; background: white;
+}
+
+/* ── Entrées en cartes — UNIQUE ── */
+.gt-entry {
+  background: #F7FCF8;
+  border: 1px solid #D4EDE0;
+  border-left: 4px solid #2e7d52;
+  border-radius: 0 8px 8px 0;
+  padding: 10px 14px;
+  margin-bottom: 9px;
+}
+.gt-entry-hdr { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.gt-entry-title { font-size: 10pt; font-weight: 700; color: #1a2e1a; }
+.gt-entry-badge {
+  font-size: 7.5pt; color: white; background: #2e7d52;
+  padding: 2px 9px; border-radius: 10px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.gt-entry-sub { font-size: 9pt; color: #2e7d52; font-weight: 600; margin-top: 2px; }
+.gt-entry-place { font-size: 8pt; color: #6b7280; }
+.gt-entry-desc { font-size: 8.5pt; color: #4b5563; margin-top: 5px; line-height: 1.65; }
+.gt-mission {
+  font-size: 8.5pt; color: #4b5563;
+  padding-left: 14px; position: relative;
+  line-height: 1.5; margin-top: 3px;
+}
+.gt-mission::before {
+  content: '◆'; position: absolute; left: 0;
+  color: #2e7d52; font-size: 6pt; top: 3px;
+}
+
+/* ── Listes (certifs, projets, bénévolat) ── */
+.gt-list-item {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 7px 0; border-bottom: 1px solid #D4EDE0; gap: 12px;
+}
+.gt-list-item:last-child { border-bottom: none; }
+.gt-list-title { font-weight: 600; font-size: 9.5pt; color: #1a2e1a; }
+.gt-list-sub { font-size: 8pt; color: #6b7280; margin-top: 1px; }
+.gt-list-year { font-size: 8pt; color: #2e7d52; font-weight: 700; white-space: nowrap; }
+
+/* ── Missions clients ── */
+.cv-mc-section { margin-top: 8px; padding: 7px 10px 7px 12px; background: rgba(46,125,82,.07); border-left: 3px solid #2e7d52; border-radius: 0 6px 6px 0; }
+.cv-mc-label { font-size: 6.5pt; font-weight: 700; color: #2e7d52; text-transform: uppercase; letter-spacing: .7px; margin-bottom: 6px; }
+.cv-mc-item { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed rgba(46,125,82,.25); }
+.cv-mc-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.cv-mc-hdr { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+.cv-mc-title { font-size: 9pt; font-weight: 600; }
+.cv-mc-badge { font-size: 6.5pt; color: #2e7d52; background: rgba(46,125,82,.1); padding: 1px 7px; border-radius: 8px; white-space: nowrap; flex-shrink: 0; }
+.cv-mc-client { font-size: 8pt; color: #6b7280; margin-top: 1px; }
+.cv-mc-desc { font-size: 7.5pt; color: #4b5563; margin-top: 2px; line-height: 1.5; }
+
+/* ── Footer ── */
+.gt-footer {
+  height: 5px;
+  background: linear-gradient(to right, #006030, #2e7d52, #00C85A, #2e7d52, #006030);
+  margin-top: auto;
+}
+</style>
+{% endblock %}
+
+{% block contenu %}<div class="-mx-6 -my-8" x-data="cvBuilder()"><div class="cv-builder">
+  {% include "candidat/cv/_form_panel.html" %}
+  <div class="preview-panel">
+  <div id="cv-sheet">
+
+    <div class="gt-notch"></div>
+
+    <!-- HEADER -->
+    <div class="gt-header">
+      <div class="gt-photo-wrap">
+        <template x-if="cv.photo">
+          <div class="gt-photo-inner"><img :src="cv.photo" alt="{% trans "Photo" %}"></div>
+        </template>
+        <template x-if="!cv.photo">
+          <div class="gt-photo-inner">👤</div>
+        </template>
+      </div>
+      <div class="gt-header-info">
+        <div class="gt-name">
+          <span x-text="cv.prenom||'Prénom'"></span>
+          <span x-text="cv.nom?cv.nom.toUpperCase():'NOM'"></span>
+        </div>
+        <div class="gt-title" x-text="cv.titre||'Titre professionnel'"></div>
+        <div class="gt-contacts">
+          <template x-if="cv.email">
+            <span class="gt-ci"><span class="gt-ci-diam"></span><span x-text="cv.email"></span></span>
+          </template>
+          <template x-if="cv.telephone">
+            <span class="gt-ci"><span class="gt-ci-diam"></span><span x-text="cv.telephone"></span></span>
+          </template>
+          <template x-if="cvLoc()">
+            <span class="gt-ci"><span class="gt-ci-diam"></span><span x-text="cvLoc()"></span></span>
+          </template>
+          <template x-if="cv.age">
+            <span class="gt-ci"><span class="gt-ci-diam"></span><span x-text="cv.age+' ans'"></span></span>
+          </template>
+          <template x-if="cv.linkedin">
+            <span class="gt-ci"><span class="gt-ci-diam"></span><span x-text="cv.linkedin"></span></span>
+          </template>
+          <template x-if="cv.permis">
+            <span class="gt-ci"><span class="gt-ci-diam"></span><span x-text="'Permis ' + cv.permis"></span></span>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- Séparateur diagonal : le vert "glisse" vers la droite -->
+    <div class="gt-sep">
+      <svg width="794" height="28" viewBox="0 0 794 28" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="0,0 794,0 0,28" fill="#2e7d52"/>
+        <polygon points="794,0 794,28 0,28" fill="#EFF9F3"/>
+      </svg>
+    </div>
+
+    <!-- BODY -->
+    <div class="gt-body">
+
+      <!-- ── Contenu principal (gauche) ── -->
+      <div class="gt-main">
+
+        <template x-if="cv.experiences.some(e=>expVisible(e))">
+          <div>
+            <div class="gt-sec">
+              <div class="gt-sec-diam"></div>
+              <div class="gt-sec-label">{% trans "Expériences professionnelles" %}</div>
+              <div class="gt-sec-line"></div>
+            </div>
+            <template x-for="e in cv.experiences" :key="e.id">
+              <div x-show="expVisible(e)" class="gt-entry">
+                <div class="gt-entry-hdr">
+                  <div class="gt-entry-title" x-text="expTitre(e)"></div>
+                  <div x-show="expTitrePeriodeShow(e)" class="gt-entry-badge" x-text="expTitrePeriodeStr(e)"></div>
+                </div>
+                <template x-if="!e.postes||e.postes.length<=1">
+                  <div x-show="e.entreprise||e.lieu">
+                    <span class="gt-entry-sub" x-text="e.entreprise"></span>
+                    <span x-show="e.lieu" class="gt-entry-place" x-text="e.lieu?' · '+e.lieu:''"></span>
+                    <span x-show="expPeriodeShow(e)" style="font-size:7.5pt;color:#94a3b8;margin-left:4px;white-space:nowrap" x-text="expPeriodeStr(e)"></span>
+                  </div>
+                </template>
+                <template x-if="e.postes&&e.postes.length>1">
+                  <div><div x-show="e.lieu" class="gt-entry-place" x-text="'· '+e.lieu" style="margin-bottom:3px"></div><div class="cv-postes-list"><template x-for="p in e.postes" :key="p.id"><div x-show="p.titre" class="cv-postes-row"><span class="cv-postes-titre" x-text="p.titre"></span><span x-show="p.debut||p.enCours" class="cv-postes-date" x-text="formatPeriode(p.debut,p.fin,p.enCours)"></span></div></template></div></div>
+                </template>
+                <div x-show="e.desc" class="gt-entry-desc" x-text="e.desc"></div>
+                <template x-if="e.hasMissionsClient && e.missionsClient && e.missionsClient.filter(mc=>mc.client).length>0">
+                  <div class="cv-mc-section">
+                    <div class="cv-mc-label">🏢 Missions clients</div>
+                    <template x-for="mc in e.missionsClient.filter(mc=>mc.client)" :key="mc.id">
+                      <div class="cv-mc-item">
+                        <div class="cv-mc-hdr">
+                          <div class="cv-mc-title" x-text="mc.client||'—'"></div>
+                          <div x-show="mc.debut||mc.enCours" class="cv-mc-badge" x-text="formatPeriode(mc.debut,mc.fin,mc.enCours)"></div>
+                        </div>
+                        <div x-show="mc.pays||mc.ville" class="cv-mc-client">
+                          <span x-show="mc.pays" x-text="mc.pays"></span>
+                          <span x-show="mc.ville" x-text="mc.pays&&mc.ville?' · '+mc.ville:mc.ville||''"></span>
+                        </div>
+                        <div x-show="mc.desc" class="cv-mc-desc" x-text="mc.desc"></div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="vis(cv.formations).filter(f=>f.diplome||f.ecole).length > 0">
+          <div>
+            <div class="gt-sec">
+              <div class="gt-sec-diam"></div>
+              <div class="gt-sec-label">{% trans "Formations" %}</div>
+              <div class="gt-sec-line"></div>
+            </div>
+            <template x-for="f in vis(cv.formations)" :key="f.id">
+              <div x-show="f.diplome||f.ecole" class="gt-entry">
+                <div class="gt-entry-hdr">
+                  <div class="gt-entry-title" x-text="(f.typeSortie==='certification'?'🏅 ':f.typeSortie==='attestation'?'📄 ':'')+(f.diplome||'—')"></div>
+                  <div x-show="f.typeSortie==='certification'?(f.fin||f.expiration):(f.debut||f.enCours)" class="gt-entry-badge" x-text="f.typeSortie==='certification'?(f.expiration?'Exp. '+formatMonth(f.expiration):(f.fin?formatMonth(f.fin):'')):(formatPeriode(f.debut,f.fin,f.enCours))"></div>
+                </div>
+                <div x-show="f.ecole||f.lieu">
+                  <span class="gt-entry-sub" x-text="f.ecole"></span>
+                  <span x-show="f.lieu&&f.typeSortie!=='certification'" class="gt-entry-place" x-text="f.lieu?' · '+f.lieu:''"></span>
+                </div>
+                <div x-show="f.domaine" class="gt-entry-desc" x-text="f.domaine" style="font-style:italic;opacity:0.8"></div>
+                <div x-show="f.typeSortie==='certification'&&f.numero" class="gt-entry-desc" x-text="'N° '+f.numero"></div>
+                <div x-show="f.desc" class="gt-entry-desc" x-text="f.desc"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="cv.showCertif && cv.certifs.filter(c=>c.nom).length > 0">
+          <div>
+            <div class="gt-sec">
+              <div class="gt-sec-diam"></div>
+              <div class="gt-sec-label">{% trans "Certifications" %}</div>
+              <div class="gt-sec-line"></div>
+            </div>
+            <template x-for="c in cv.certifs" :key="c.id">
+              <div x-show="c.nom" class="gt-list-item gt-certif">
+                <div>
+                  <div class="gt-list-title" x-text="c.nom"></div>
+                  <div class="gt-list-sub" x-text="c.organisme"></div>
+                </div>
+                <div class="gt-list-year" x-text="c.annee"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="cv.showProjets && vis(cv.projets).filter(p=>p.nom).length > 0">
+          <div>
+            <div class="gt-sec">
+              <div class="gt-sec-diam"></div>
+              <div class="gt-sec-label">{% trans "Projets personnels" %}</div>
+              <div class="gt-sec-line"></div>
+            </div>
+            <template x-for="p in vis(cv.projets)" :key="p.id">
+              <div x-show="p.nom" class="gt-list-item gt-certif">
+                <div>
+                  <div class="gt-list-title" x-text="p.nom"></div>
+                  <div class="gt-list-sub" x-text="p.desc"></div>
+                </div>
+                <div class="gt-list-year" x-text="p.annee"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="cv.showBenev && cv.benevs && vis(cv.benevs).filter(b=>b.role||b.orga).length > 0">
+          <div>
+            <div class="gt-sec">
+              <div class="gt-sec-diam"></div>
+              <div class="gt-sec-label">{% trans "Bénévolat" %}</div>
+              <div class="gt-sec-line"></div>
+            </div>
+            <template x-for="b in vis(cv.benevs)" :key="b.id">
+              <div x-show="b.role||b.orga" class="gt-list-item gt-certif">
+                <div>
+                  <div class="gt-list-title" x-text="b.role"></div>
+                  <div class="gt-list-sub" x-text="b.orga"></div>
+                </div>
+                <div class="gt-list-year" x-text="formatPeriode(b.debut,b.fin,b.enCours)"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+      </div>
+
+      <!-- ── Sidebar droite ── -->
+      <div class="gt-aside">
+
+        <template x-if="cv.profil">
+          <div>
+            <div class="gt-aside-sec">{% trans "Profil" %}</div>
+            <p class="gt-profil" x-text="cv.profil"></p>
+          </div>
+        </template>
+
+        <template x-if="vis(cv.competences).filter(c=>c.nom).length > 0">
+          <div>
+            <div class="gt-aside-sec">{% trans "Compétences" %}</div>
+            <template x-for="c in vis(cv.competences)" :key="c.id">
+              <div x-show="c.nom" class="gt-skill">
+                <div class="gt-skill-name" x-text="c.nom"></div>
+                <div class="gt-skill-dots">
+                  <template x-for="d in [1,2,3,4,5]" :key="d">
+                    <div :class="d <= niveauDots(c.niveau) ? 'gt-dot-on' : 'gt-dot-off'"></div>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="vis(cv.langues).filter(l=>l.nom).length > 0">
+          <div>
+            <div class="gt-aside-sec">{% trans "Langues" %}</div>
+            <template x-for="l in vis(cv.langues)" :key="l.id">
+              <div x-show="l.nom" class="gt-lang">
+                <span class="gt-lang-name" x-text="l.nom"></span>
+                <span class="gt-lang-badge" x-text="niveauCode(l.niveau, 'langue')"></span>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="cv.interets.filter((i,ii)=>i && !isInteretMasque(ii)).length > 0">
+          <div>
+            <div class="gt-aside-sec">{% trans "Centres d'intérêt" %}</div>
+            <div class="gt-two-col">
+              <template x-for="(ci,idx) in cv.interets" :key="idx">
+                <div x-show="ci && !isInteretMasque(idx)" class="gt-interest">
+                  <div class="gt-interest-dot"></div>
+                  <span x-text="ci"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <template x-if="cv.showRef">
+          <div class="gt-ref-box">{% trans "Références professionnelles disponibles sur demande." %}</div>
+        </template>
+
+      </div>
+    </div>
+
+    <div class="gt-footer"></div>
+  </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+{% block js_extra %}{% include "candidat/cv/_cvbuilder_js.html" %}{% endblock %}

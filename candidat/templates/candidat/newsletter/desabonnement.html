@@ -1,0 +1,35 @@
+﻿{% extends "candidat/base.html" %}
+{% load i18n %}
+
+{% block titre %}Désabonnement — {{ logo_site.nom_site }}{% endblock %}
+
+{% block contenu %}
+<div class="max-w-lg mx-auto py-20 text-center">
+
+  {% if desabonne %}
+    <div class="text-6xl mb-6">✅</div>
+    <h1 class="text-3xl font-extrabold text-gray-800 mb-3">{% trans "Vous êtes désabonné(e)" %}</h1>
+    <p class="text-gray-500 mb-2">
+      L'adresse <strong class="text-gray-700">{{ abonne.email }}</strong> a bien été retirée
+      de la newsletter <strong>{{ logo_site.nom_site }}</strong>.
+    </p>
+    <p class="text-gray-400 text-sm mb-8">{% trans "Vous ne recevrez plus nos e-mails hebdomadaires." %}</p>
+    <a href="{% url 'candidat:accueil' %}"
+       class="inline-block text-white font-bold px-8 py-3 rounded-xl transition hover:opacity-90"
+       style="background:#c96010;">
+      Retour à l'accueil
+    </a>
+
+  {% else %}
+    <div class="text-6xl mb-6">❌</div>
+    <h1 class="text-3xl font-extrabold text-gray-800 mb-3">{% trans "Lien invalide" %}</h1>
+    <p class="text-gray-500 mb-8">{% trans "Ce lien de désabonnement est introuvable ou a déjà été utilisé." %}</p>
+    <a href="{% url 'candidat:accueil' %}"
+       class="inline-block text-white font-bold px-8 py-3 rounded-xl transition hover:opacity-90"
+       style="background:#c96010;">
+      Retour à l'accueil
+    </a>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{{ logo_site.nom_site }} — {{ conseil.get_categorie_display }}
+==============================================
+
+{{ conseil.titre }}
+{{ conseil.titre|length|add:"0"|stringformat:"s" }}
+
+{{ conseil.contenu }}
+
+---
+Accédez à votre espace : http://127.0.0.1:8000/candidat/
+
+---
+Vous recevez cet e-mail car vous êtes abonné(e) aux conseils de {{ logo_site.nom_site }}.
+Pour vous désabonner : {{ desabo_url }}

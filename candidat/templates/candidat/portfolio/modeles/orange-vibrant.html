@@ -1,0 +1,2171 @@
+﻿{% extends base_template|default:"candidat/base.html" %}
+{% load i18n static %}
+
+{% block titre %}{{ candidat.prenom }} {{ candidat.nom }} — Portfolio{% endblock %}
+
+{% block css_extra %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --pf-accent: {{ couleur_accent|default:'#F77F00' }};
+        --pf-green:  #009A44;
+        --pf-paper:  #FFFEFB;
+        --pf-cream:  #FAF7F2;
+        --pf-ink:    #181615;
+        --pf-rule:   #1816151a;
+        --pf-mute:   #6B6964;
+    }
+
+    .pf, .pf * {
+        font-feature-settings: "ss01", "kern", "liga";
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        box-sizing: border-box;
+    }
+    .pf {
+        font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+        background: var(--pf-paper);
+        color: var(--pf-ink);
+        font-size: 16px;
+        line-height: 1.55;
+    }
+    /* Reset des liens : `inherit` uniquement pour les liens « bruts » sans
+       classe spécifique. Les boutons et autres liens stylés conservent leur
+       couleur déclarée — sinon `.pf a` (spé 0,1,1) bat `.pf-btn-primary`
+       (spé 0,1,0) et le texte du bouton finit invisible. */
+    .pf a:not([class]) { color: inherit; text-decoration: none; }
+    .pf-display { font-family: 'Fraunces', 'Playfair Display', Georgia, serif; letter-spacing: -0.02em; }
+    .pf-mono    { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; }
+
+    /* ── Animations ──────────────────────────────────────────────────── */
+    @keyframes pf-up {
+        from { opacity: 0; transform: translateY(28px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pf-pulse {
+        0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--pf-green) 60%, transparent); }
+        50%      { box-shadow: 0 0 0 8px color-mix(in srgb, var(--pf-green) 0%, transparent); }
+    }
+    .pf-reveal     { opacity: 0; }
+    .pf-reveal.in  { animation: pf-up .9s cubic-bezier(.16,.84,.44,1) both; }
+    .pf-reveal.d1  { animation-delay: .08s; }
+    .pf-reveal.d2  { animation-delay: .16s; }
+    .pf-reveal.d3  { animation-delay: .24s; }
+    .pf-reveal.d4  { animation-delay: .32s; }
+    .pf-reveal.d5  { animation-delay: .40s; }
+
+    /* ── Bandeau preview privée ──────────────────────────────────────── */
+    .pf-owner {
+        background: var(--pf-accent);
+        color: #fff;
+        padding: 10px 24px;
+        font-size: 13px; font-weight: 500;
+        display: flex; align-items: center; justify-content: space-between; gap: 14px;
+        flex-wrap: wrap;
+    }
+    .pf-owner .pf-owner-btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 6px 14px; border-radius: 50px;
+        background: #fff; color: var(--pf-ink);
+        font-size: 12px; font-weight: 700; text-decoration: none;
+        transition: opacity .2s;
+    }
+    .pf-owner .pf-owner-btn:hover { opacity: .85; }
+
+    /* ── HERO ────────────────────────────────────────────────────────── */
+    .pf-hero {
+        position: relative;
+        padding: clamp(40px, 6vw, 80px) clamp(24px, 5vw, 96px) clamp(56px, 7vw, 112px);
+    }
+    /* Bande tricolore CI décorative en haut */
+    .pf-hero::before {
+        content: '';
+        position: absolute; left: 0; right: 0; top: 0; height: 5px;
+        background: linear-gradient(90deg,
+            var(--pf-accent) 0%, var(--pf-accent) 33.33%,
+            #fff 33.33%, #fff 66.66%,
+            var(--pf-green) 66.66%, var(--pf-green) 100%);
+    }
+
+    .pf-hero-inner {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+        gap: clamp(40px, 6vw, 88px);
+        align-items: center;
+        padding-top: clamp(28px, 4vw, 56px);
+    }
+    @media (max-width: 880px) {
+        .pf-hero-inner { grid-template-columns: 1fr; gap: 40px; }
+    }
+
+    .pf-eyebrow {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px; letter-spacing: .22em; text-transform: uppercase;
+        color: var(--pf-mute);
+        display: inline-flex; align-items: center; gap: 12px;
+        margin-bottom: 22px;
+    }
+    .pf-eyebrow::before {
+        content: ''; width: 32px; height: 1px;
+        background: var(--pf-accent);
+    }
+
+    .pf-name {
+        font-family: 'Fraunces', serif;
+        font-weight: 600;
+        font-size: clamp(52px, 9vw, 132px);
+        line-height: .92; letter-spacing: -0.04em;
+        margin: 0 0 18px;
+        font-variation-settings: "opsz" 144;
+    }
+    .pf-name .accent {
+        color: var(--pf-accent);
+        font-style: italic;
+        font-weight: 500;
+    }
+
+    /* Titre professionnel : information clé du candidat, mise en avant juste
+       sous le nom. Plus visible que la tagline (slogan). */
+    .pf-job-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        font-family: 'Manrope', sans-serif;
+        font-size: clamp(20px, 2vw, 28px);
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: -0.015em;
+        color: var(--pf-ink);
+        background: color-mix(in srgb, var(--pf-accent) 14%, transparent);
+        padding: 8px 18px;
+        border-radius: 999px;
+        border: 1.5px solid color-mix(in srgb, var(--pf-accent) 35%, transparent);
+        margin: 0 0 24px;
+    }
+    .pf-job-title::before {
+        content: '';
+        width: 8px; height: 8px; border-radius: 50%;
+        background: var(--pf-accent);
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--pf-accent) 22%, transparent);
+        flex-shrink: 0;
+    }
+
+    .pf-tagline {
+        font-family: 'Fraunces', serif;
+        font-style: italic;
+        font-weight: 400;
+        font-size: clamp(18px, 1.6vw, 22px);
+        line-height: 1.5;
+        color: color-mix(in srgb, var(--pf-ink) 75%, transparent);
+        max-width: 56ch;
+        margin: 0 0 32px;
+        font-variation-settings: "opsz" 24;
+    }
+
+    .pf-meta {
+        display: flex; flex-wrap: nowrap; gap: 22px;
+        align-items: center;
+        font-size: clamp(13px, 1.25vw, 16px);
+        font-weight: 500;
+        color: color-mix(in srgb, var(--pf-ink) 82%, transparent);
+        margin-bottom: 40px;
+        overflow-x: auto;
+        scrollbar-width: none;            /* Firefox */
+    }
+    .pf-meta::-webkit-scrollbar { display: none; }   /* Chromium / Safari */
+    .pf-meta-item {
+        display: inline-flex; align-items: center; gap: 10px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .pf-meta-item svg {
+        width: 18px; height: 18px;
+        color: var(--pf-accent);
+        flex-shrink: 0;
+    }
+    .pf-meta-dot {
+        width: 5px; height: 5px; border-radius: 50%;
+        background: color-mix(in srgb, var(--pf-ink) 35%, transparent);
+        flex-shrink: 0;
+    }
+
+    .pf-cta-row { display: flex; flex-wrap: wrap; gap: 12px; }
+    .pf-btn {
+        display: inline-flex; align-items: center; gap: 10px;
+        padding: 14px 24px; border-radius: 999px;
+        font-weight: 600; font-size: 14px; letter-spacing: -0.005em;
+        text-decoration: none;
+        transition: transform .25s, box-shadow .25s, background .25s, color .25s, border-color .25s;
+    }
+    .pf-btn-primary {
+        background: var(--pf-ink); color: var(--pf-paper);
+        box-shadow: 0 12px 30px -10px color-mix(in srgb, var(--pf-ink) 50%, transparent);
+    }
+    .pf-btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 40px -10px color-mix(in srgb, var(--pf-ink) 60%, transparent);
+    }
+    .pf-btn-ghost {
+        background: transparent; color: var(--pf-ink);
+        border: 1.5px solid var(--pf-ink);
+    }
+    .pf-btn-ghost:hover {
+        background: var(--pf-ink); color: var(--pf-paper);
+    }
+
+    /* ── Photo héro ──────────────────────────────────────────────────── */
+    .pf-portrait {
+        position: relative;
+        aspect-ratio: 4 / 5;
+        border-radius: 6px;
+        overflow: hidden;
+        box-shadow:
+            0 1px 2px color-mix(in srgb, var(--pf-ink) 8%, transparent),
+            0 30px 70px -25px color-mix(in srgb, var(--pf-ink) 35%, transparent);
+    }
+    .pf-portrait img {
+        width: 100%; height: 100%;
+        object-fit: cover;
+        transform: scale(1.02);
+        transition: transform 1.4s cubic-bezier(.16,.84,.44,1);
+    }
+    .pf-portrait:hover img { transform: scale(1.06); }
+    .pf-portrait-fallback {
+        width: 100%; height: 100%;
+        background: linear-gradient(135deg,
+            var(--pf-accent),
+            color-mix(in srgb, var(--pf-accent) 55%, var(--pf-green)));
+        display: flex; align-items: center; justify-content: center;
+        color: var(--pf-paper);
+        font-family: 'Fraunces', serif;
+        font-size: clamp(80px, 14vw, 180px);
+        font-weight: 600; letter-spacing: -0.05em;
+        font-variation-settings: "opsz" 144;
+    }
+    /* Tag "disponible" en bas de photo */
+    .pf-portrait-tag {
+        position: absolute; bottom: 16px; left: 16px;
+        background: var(--pf-paper);
+        padding: 10px 14px;
+        border-radius: 999px;
+        display: inline-flex; align-items: center; gap: 10px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px; font-weight: 500; letter-spacing: .08em;
+        color: var(--pf-ink);
+        box-shadow: 0 6px 18px -6px color-mix(in srgb, var(--pf-ink) 30%, transparent);
+    }
+    .pf-portrait-tag .live {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: var(--pf-green);
+        animation: pf-pulse 2s infinite;
+    }
+
+    /* ── SECTIONS — base (pleine largeur) ────────────────────────────── */
+    .pf-section {
+        padding: clamp(64px, 8vw, 128px) clamp(24px, 5vw, 96px);
+    }
+    .pf-section.cream { background: var(--pf-cream); }
+    .pf-section-inner { width: 100%; }
+
+    .pf-section-head {
+        display: grid;
+        grid-template-columns: minmax(0, 280px) 1fr;
+        gap: clamp(32px, 5vw, 80px);
+        align-items: end;
+        margin-bottom: clamp(48px, 6vw, 80px);
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--pf-rule);
+    }
+    @media (max-width: 880px) { .pf-section-head { grid-template-columns: 1fr; gap: 16px; } }
+    .pf-section-num {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px; letter-spacing: .22em; text-transform: uppercase;
+        color: var(--pf-mute);
+    }
+    .pf-section-title {
+        font-family: 'Fraunces', serif;
+        font-weight: 500;
+        font-size: clamp(36px, 5vw, 72px);
+        line-height: 1.02; letter-spacing: -0.03em;
+        margin: 0;
+        font-variation-settings: "opsz" 144;
+    }
+    .pf-section-title em {
+        font-style: italic; color: var(--pf-accent);
+        font-weight: 400;
+    }
+
+    /* ── PROJETS — vitrine de cards compactes ──────────────────────── */
+    .pf-projects-list {
+        display: grid;
+        gap: clamp(20px, 2.5vw, 32px);
+        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    }
+    .pf-project {
+        display: flex; flex-direction: column;
+        background: var(--pf-paper);
+        border: 1px solid var(--pf-rule);
+        border-radius: 14px;
+        overflow: hidden;
+        transition: transform .3s, box-shadow .3s, border-color .3s;
+    }
+    .pf-project:hover {
+        transform: translateY(-4px);
+        border-color: color-mix(in srgb, var(--pf-accent) 28%, var(--pf-rule));
+        box-shadow: 0 24px 50px -22px color-mix(in srgb, var(--pf-ink) 28%, transparent);
+    }
+
+    /* Image cover de la card */
+    .pf-project-cover {
+        position: relative;
+        aspect-ratio: 16 / 10;
+        overflow: hidden;
+        background: var(--pf-cream);
+    }
+    .pf-project-cover img {
+        width: 100%; height: 100%; object-fit: cover;
+        transition: transform .8s cubic-bezier(.16,.84,.44,1);
+    }
+    .pf-project:hover .pf-project-cover img { transform: scale(1.05); }
+    .pf-project-cover-fallback {
+        width: 100%; height: 100%;
+        background: linear-gradient(135deg,
+            color-mix(in srgb, var(--pf-accent) 20%, var(--pf-paper)),
+            color-mix(in srgb, var(--pf-accent) 38%, var(--pf-cream)));
+        display: flex; align-items: center; justify-content: center;
+        color: var(--pf-accent);
+    }
+    .pf-project-cover-fallback svg { width: 64px; height: 64px; opacity: .55; }
+    .pf-project-year {
+        position: absolute; top: 14px; right: 14px;
+        background: var(--pf-paper);
+        padding: 5px 12px; border-radius: 999px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px; letter-spacing: .04em; font-weight: 700;
+        color: var(--pf-ink);
+        box-shadow: 0 6px 16px -4px color-mix(in srgb, var(--pf-ink) 28%, transparent);
+    }
+    .pf-project-mediac {
+        position: absolute; bottom: 14px; left: 14px;
+        background: color-mix(in srgb, var(--pf-ink) 70%, transparent);
+        backdrop-filter: blur(8px);
+        padding: 5px 12px; border-radius: 999px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px; font-weight: 600;
+        color: var(--pf-paper);
+        display: inline-flex; align-items: center; gap: 6px;
+    }
+
+    /* Body de la card */
+    .pf-project-body {
+        padding: 22px 24px 24px;
+        display: flex; flex-direction: column;
+        flex: 1;
+    }
+    .pf-project-num {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
+        color: var(--pf-accent); font-weight: 700;
+        margin-bottom: 10px;
+    }
+    .pf-project-title {
+        font-family: 'Fraunces', serif;
+        font-weight: 600;
+        font-size: clamp(22px, 2vw, 26px);
+        line-height: 1.18; letter-spacing: -0.018em;
+        margin: 0 0 10px;
+        color: var(--pf-ink);
+        font-variation-settings: "opsz" 28;
+    }
+    .pf-project-excerpt {
+        font-size: 14px; line-height: 1.55;
+        color: color-mix(in srgb, var(--pf-ink) 72%, transparent);
+        margin: 0 0 18px;
+        flex: 1;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .pf-project-tags {
+        display: flex; flex-wrap: wrap; gap: 6px;
+        margin-bottom: 16px;
+    }
+    .pf-project-tag {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+        font-weight: 600;
+        padding: 4px 10px; border-radius: 999px;
+        background: color-mix(in srgb, var(--pf-cream) 80%, transparent);
+        color: var(--pf-mute);
+        border: 1px solid var(--pf-rule);
+    }
+    .pf-project-tag svg { width: 11px; height: 11px; vertical-align: -1px; margin-right: 3px; }
+
+    .pf-project-actions {
+        display: flex; gap: 10px;
+        padding-top: 14px;
+        border-top: 1px solid var(--pf-rule);
+    }
+    .pf-project-btn {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 10px 18px; border-radius: 999px;
+        font-weight: 700; font-size: 13px;
+        text-decoration: none; cursor: pointer;
+        transition: transform .25s, background .25s, box-shadow .25s, color .25s, border-color .25s;
+    }
+    .pf-project-btn-primary {
+        background: var(--pf-ink); color: var(--pf-paper);
+        flex: 1; justify-content: center;
+    }
+    .pf-project-btn-primary:hover {
+        transform: translateY(-1px);
+        background: var(--pf-accent); color: var(--pf-ink);
+        box-shadow: 0 12px 28px -10px var(--pf-accent);
+    }
+    .pf-project-btn-primary svg { width: 14px; height: 14px; transition: transform .25s; }
+    .pf-project-btn-primary:hover svg { transform: translateX(3px); }
+    .pf-project-btn-ghost {
+        background: var(--pf-paper);
+        border: 1.5px solid var(--pf-rule);
+        color: var(--pf-ink);
+    }
+    .pf-project-btn-ghost:hover {
+        background: var(--pf-cream);
+        border-color: var(--pf-accent);
+        color: var(--pf-accent);
+    }
+    .pf-project-btn-ghost svg { width: 14px; height: 14px; }
+
+    /* État vide section projets (propriétaire seul) */
+    .pf-empty {
+        text-align: center;
+        padding: clamp(48px, 6vw, 80px) clamp(24px, 4vw, 56px);
+        background: var(--pf-paper);
+        border: 2px dashed color-mix(in srgb, var(--pf-accent) 30%, transparent);
+        border-radius: 14px;
+    }
+    .pf-empty-icon {
+        width: 72px; height: 72px;
+        margin: 0 auto 22px;
+        background: color-mix(in srgb, var(--pf-accent) 12%, transparent);
+        border-radius: 18px;
+        display: flex; align-items: center; justify-content: center;
+        color: var(--pf-accent);
+    }
+    .pf-empty-icon svg { width: 36px; height: 36px; }
+    .pf-empty-title {
+        font-family: 'Fraunces', serif;
+        font-weight: 600;
+        font-size: clamp(24px, 2.4vw, 32px);
+        line-height: 1.15; letter-spacing: -0.02em;
+        margin: 0 0 12px;
+        font-variation-settings: "opsz" 36;
+    }
+    .pf-empty-text {
+        font-size: 15px; line-height: 1.55;
+        color: var(--pf-mute);
+        max-width: 56ch; margin: 0 auto 24px;
+    }
+    .pf-empty-cta {
+        display: inline-flex; align-items: center; gap: 10px;
+        padding: 12px 22px;
+        background: var(--pf-accent); color: var(--pf-paper);
+        border-radius: 999px;
+        font-weight: 700; font-size: 14px;
+        text-decoration: none;
+        transition: transform .25s, box-shadow .25s;
+    }
+    .pf-empty-cta:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 30px -10px var(--pf-accent);
+    }
+
+    /* ── À PROPOS — biographie éditoriale + méta ────────────────────── */
+    .pf-about {
+        display: grid;
+        grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+        gap: clamp(40px, 6vw, 96px);
+        align-items: start;
+    }
+    @media (max-width: 880px) { .pf-about { grid-template-columns: 1fr; gap: 48px; } }
+
+    .pf-about-text {
+        font-family: 'Fraunces', serif;
+        font-weight: 400;
+        font-size: clamp(20px, 1.8vw, 26px);
+        line-height: 1.55; letter-spacing: -0.005em;
+        color: color-mix(in srgb, var(--pf-ink) 88%, transparent);
+        font-variation-settings: "opsz" 18;
+    }
+    .pf-about-text p { margin: 0 0 1em; }
+    .pf-about-text p:last-child { margin-bottom: 0; }
+    .pf-about-text p:first-of-type::first-letter {
+        font-family: 'Fraunces', serif;
+        font-size: 5em; line-height: .9;
+        float: left; margin: 6px 14px 0 0;
+        font-weight: 600; color: var(--pf-accent);
+        font-variation-settings: "opsz" 144;
+    }
+
+    .pf-about-empty {
+        font-family: 'Fraunces', serif;
+        font-style: italic;
+        font-size: clamp(18px, 1.4vw, 22px);
+        color: var(--pf-mute); line-height: 1.5;
+        padding: 32px;
+        border: 1px dashed var(--pf-rule);
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--pf-cream) 50%, transparent);
+    }
+
+    /* Encart méta : carte d'identité prominente avec icônes */
+    .pf-about-side {
+        background: var(--pf-paper);
+        border: 1px solid var(--pf-rule);
+        border-radius: 12px;
+        padding: clamp(32px, 3.5vw, 44px);
+        position: relative; overflow: hidden;
+        box-shadow:
+            0 1px 2px color-mix(in srgb, var(--pf-ink) 6%, transparent),
+            0 24px 60px -25px color-mix(in srgb, var(--pf-ink) 22%, transparent);
+    }
+    .pf-about-side::before {
+        content: '';
+        position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
+        background: linear-gradient(to bottom,
+            var(--pf-accent) 0%, var(--pf-accent) 50%,
+            var(--pf-green) 50%, var(--pf-green) 100%);
+    }
+    .pf-about-side-head {
+        display: flex; align-items: center; gap: 10px;
+        font-family: 'Fraunces', serif;
+        font-size: clamp(20px, 1.8vw, 24px); font-weight: 600;
+        font-style: italic;
+        color: var(--pf-ink);
+        margin-bottom: 24px;
+        padding-bottom: 18px;
+        border-bottom: 2px solid var(--pf-rule);
+        font-variation-settings: "opsz" 24;
+    }
+    .pf-about-side-head::before {
+        content: '✦'; color: var(--pf-accent); font-style: normal;
+        font-size: .9em;
+    }
+    .pf-about-side dl {
+        display: flex; flex-direction: column; margin: 0;
+    }
+    .pf-about-side .row {
+        display: grid;
+        grid-template-columns: 32px 1fr;
+        column-gap: 16px;
+        align-items: center;
+        padding: 14px 0;
+        border-bottom: 1px solid color-mix(in srgb, var(--pf-ink) 6%, transparent);
+    }
+    .pf-about-side .row:last-child { border-bottom: none; }
+    .pf-about-side .icon {
+        grid-row: span 2;
+        width: 32px; height: 32px;
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--pf-accent) 12%, transparent);
+        color: var(--pf-accent);
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .pf-about-side .icon svg { width: 16px; height: 16px; }
+    .pf-about-side dt {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+        color: var(--pf-mute);
+        font-weight: 500;
+        margin-bottom: 2px;
+    }
+    .pf-about-side dd {
+        margin: 0;
+        font-size: clamp(15px, 1.2vw, 17px);
+        line-height: 1.35;
+        color: var(--pf-ink);
+        word-break: break-word;
+        font-weight: 600;
+        letter-spacing: -0.005em;
+    }
+    .pf-about-side dd a {
+        color: var(--pf-ink);
+        text-decoration: none;
+        border-bottom: 1.5px solid color-mix(in srgb, var(--pf-accent) 60%, transparent);
+        transition: color .2s, border-color .2s;
+    }
+    .pf-about-side dd a:hover {
+        color: var(--pf-accent);
+        border-bottom-color: var(--pf-accent);
+    }
+    .pf-about-side dd .pill {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 5px 12px; border-radius: 999px;
+        background: color-mix(in srgb, var(--pf-accent) 14%, transparent);
+        color: var(--pf-accent);
+        font-size: 13px; font-weight: 700;
+        letter-spacing: 0;
+        border: 1px solid color-mix(in srgb, var(--pf-accent) 30%, transparent);
+    }
+    .pf-about-side dd .pill.green {
+        background: color-mix(in srgb, var(--pf-green) 14%, transparent);
+        color: var(--pf-green);
+        border-color: color-mix(in srgb, var(--pf-green) 30%, transparent);
+    }
+
+    /* ── EXPÉRIENCES — cards CV-pro impactantes ──────────────────────── */
+    .pf-exp-list {
+        display: grid; gap: clamp(20px, 2.5vw, 32px);
+    }
+
+    .pf-exp {
+        background: var(--pf-paper);
+        border: 1px solid var(--pf-rule);
+        border-radius: 14px;
+        padding: clamp(28px, 3.5vw, 44px);
+        position: relative;
+        overflow: hidden;
+        transition: transform .25s, box-shadow .25s, border-color .25s;
+    }
+    .pf-exp::before {
+        content: '';
+        position: absolute; left: 0; top: 0; bottom: 0;
+        width: 4px;
+        background: linear-gradient(to bottom,
+            var(--pf-accent) 0%, var(--pf-accent) 60%,
+            color-mix(in srgb, var(--pf-accent) 40%, transparent) 100%);
+    }
+    .pf-exp:hover {
+        transform: translateY(-3px);
+        border-color: color-mix(in srgb, var(--pf-accent) 28%, var(--pf-rule));
+        box-shadow: 0 22px 50px -22px color-mix(in srgb, var(--pf-ink) 26%, transparent);
+    }
+    .pf-exp.live::before {
+        background: linear-gradient(to bottom,
+            var(--pf-green) 0%, var(--pf-green) 100%);
+    }
+
+    .pf-exp-head {
+        display: flex; flex-wrap: wrap; gap: 16px 24px;
+        align-items: flex-start; justify-content: space-between;
+        margin-bottom: 16px;
+    }
+    .pf-exp-head-left { flex: 1 1 auto; min-width: 0; }
+    .pf-exp-head-right { flex-shrink: 0; }
+
+    .pf-exp-title {
+        font-family: 'Fraunces', serif;
+        font-weight: 600;
+        font-size: clamp(26px, 3vw, 40px);
+        line-height: 1.05; letter-spacing: -0.025em;
+        margin: 0 0 10px;
+        color: var(--pf-ink);
+        font-variation-settings: "opsz" 48;
+    }
+
+    .pf-exp-meta-row {
+        display: flex; flex-wrap: wrap; align-items: center;
+        gap: 6px 14px;
+        font-size: 15px; font-weight: 600;
+        color: color-mix(in srgb, var(--pf-ink) 80%, transparent);
+    }
+    .pf-exp-meta-row .company {
+        color: var(--pf-accent);
+        font-weight: 700;
+    }
+    .pf-exp-meta-row .dot {
+        width: 4px; height: 4px; border-radius: 50%;
+        background: color-mix(in srgb, var(--pf-ink) 25%, transparent);
+    }
+    .pf-exp-meta-row .loc {
+        font-weight: 500; color: var(--pf-mute);
+        display: inline-flex; align-items: center; gap: 6px;
+    }
+    .pf-exp-meta-row .loc svg { width: 14px; height: 14px; }
+    .pf-exp-meta-row .live {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 3px 10px; border-radius: 999px;
+        background: color-mix(in srgb, var(--pf-green) 16%, transparent);
+        color: var(--pf-green);
+        font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    }
+    .pf-exp-meta-row .live::before {
+        content: ''; width: 6px; height: 6px; border-radius: 50%;
+        background: var(--pf-green);
+        animation: pf-pulse 2s infinite;
+    }
+
+    /* Pill période en haut à droite, frappante */
+    .pf-exp-period-chip {
+        display: inline-flex; flex-direction: column; align-items: flex-end;
+        gap: 4px;
+        padding: 10px 16px;
+        background: color-mix(in srgb, var(--pf-accent) 10%, transparent);
+        border: 1.5px solid color-mix(in srgb, var(--pf-accent) 28%, transparent);
+        border-radius: 10px;
+        text-align: right;
+    }
+    .pf-exp-period-chip .when {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px; font-weight: 600; letter-spacing: .04em;
+        color: var(--pf-ink);
+    }
+    .pf-exp-period-chip .duration {
+        font-family: 'Fraunces', serif;
+        font-style: italic; font-weight: 500;
+        font-size: 13px;
+        color: var(--pf-accent);
+    }
+
+    /* Section postes successifs (cas multi-postes) */
+    .pf-exp-postes {
+        margin-top: 20px;
+        padding-top: 18px;
+        border-top: 1px dashed color-mix(in srgb, var(--pf-ink) 12%, transparent);
+    }
+    .pf-exp-postes-label {
+        display: inline-flex; align-items: center; gap: 8px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px; font-weight: 700;
+        letter-spacing: .18em; text-transform: uppercase;
+        color: var(--pf-mute);
+        margin-bottom: 12px;
+    }
+    .pf-exp-postes-label::before {
+        content: '↗'; color: var(--pf-accent); font-weight: 800;
+    }
+    .pf-exp-postes-list {
+        display: grid; gap: 8px;
+    }
+    .pf-exp-poste {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px 18px;
+        align-items: center;
+        padding: 10px 14px;
+        background: color-mix(in srgb, var(--pf-cream) 60%, transparent);
+        border-radius: 8px;
+        border-left: 3px solid color-mix(in srgb, var(--pf-accent) 70%, transparent);
+    }
+    @media (max-width: 540px) {
+        .pf-exp-poste { grid-template-columns: 1fr; gap: 4px; }
+    }
+    .pf-exp-poste-title {
+        font-weight: 700; font-size: 15px;
+        color: var(--pf-ink);
+    }
+    .pf-exp-poste-meta {
+        display: inline-flex; align-items: center; gap: 8px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        color: var(--pf-mute);
+        white-space: nowrap;
+    }
+    .pf-exp-poste-meta .duration {
+        color: var(--pf-accent); font-weight: 600;
+    }
+
+    /* Encart missions clients — chips */
+    .pf-mc {
+        margin-top: 20px;
+        padding: 20px 22px;
+        background: color-mix(in srgb, var(--pf-accent) 5%, transparent);
+        border-radius: 10px;
+        border: 1px solid color-mix(in srgb, var(--pf-accent) 18%, transparent);
+    }
+    .pf-mc-label {
+        display: inline-flex; align-items: center; gap: 8px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px; font-weight: 700;
+        letter-spacing: .18em; text-transform: uppercase;
+        color: var(--pf-accent);
+        margin-bottom: 14px;
+    }
+    .pf-mc-label::before { content: '◆'; }
+    .pf-mc-list {
+        display: grid; gap: 14px;
+    }
+    .pf-mc-item {
+        padding: 14px 16px;
+        background: var(--pf-paper);
+        border-radius: 8px;
+        border-left: 3px solid var(--pf-accent);
+    }
+    .pf-mc-head {
+        display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px;
+        margin-bottom: 4px;
+    }
+    .pf-mc-client {
+        font-family: 'Fraunces', serif;
+        font-size: 17px; font-weight: 600;
+        color: var(--pf-ink);
+        font-variation-settings: "opsz" 18;
+    }
+    .pf-mc-meta {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px; color: var(--pf-mute);
+    }
+    .pf-mc-desc {
+        font-size: 14px; line-height: 1.55;
+        color: color-mix(in srgb, var(--pf-ink) 78%, transparent);
+        margin-top: 6px;
+    }
+
+    /* ── FORMATIONS & DIPLÔMES ──────────────────────────────────────── */
+    .pf-edu-group { margin-bottom: clamp(40px, 5vw, 64px); }
+    .pf-edu-group:last-child { margin-bottom: 0; }
+    .pf-edu-group-head {
+        display: flex; align-items: center; gap: 16px;
+        margin-bottom: clamp(20px, 2.5vw, 28px);
+    }
+    .pf-edu-group-title {
+        font-family: 'Fraunces', serif;
+        font-style: italic; font-weight: 500;
+        font-size: clamp(22px, 2vw, 28px);
+        line-height: 1; letter-spacing: -0.015em;
+        color: var(--pf-ink);
+        margin: 0;
+        font-variation-settings: "opsz" 32;
+        white-space: nowrap;
+    }
+    .pf-edu-group-title::before {
+        content: '— '; color: var(--pf-accent); font-style: normal;
+    }
+    .pf-edu-group.cert .pf-edu-group-title::before { color: var(--pf-green); }
+    .pf-edu-group-count {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+        color: var(--pf-mute); font-weight: 600;
+        padding: 4px 10px; border-radius: 999px;
+        background: color-mix(in srgb, var(--pf-ink) 5%, transparent);
+    }
+    .pf-edu-group-rule { flex: 1; height: 1px; background: var(--pf-rule); }
+
+    .pf-edu-list {
+        display: grid; gap: clamp(16px, 2vw, 22px);
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    }
+    .pf-edu {
+        position: relative;
+        background: var(--pf-paper);
+        border: 1px solid var(--pf-rule);
+        border-radius: 12px;
+        padding: clamp(22px, 2.5vw, 32px);
+        transition: transform .25s, box-shadow .25s, border-color .25s;
+        display: flex; flex-direction: column;
+    }
+    .pf-edu:hover {
+        transform: translateY(-3px);
+        border-color: color-mix(in srgb, var(--pf-accent) 28%, var(--pf-rule));
+        box-shadow: 0 18px 40px -20px color-mix(in srgb, var(--pf-ink) 22%, transparent);
+    }
+
+    .pf-edu-head {
+        display: flex; align-items: flex-start; justify-content: space-between;
+        gap: 12px; margin-bottom: 14px;
+    }
+    .pf-edu-icon {
+        width: 44px; height: 44px;
+        border-radius: 10px;
+        background: color-mix(in srgb, var(--pf-accent) 12%, transparent);
+        color: var(--pf-accent);
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .pf-edu-icon svg { width: 22px; height: 22px; }
+    .pf-edu.cert .pf-edu-icon {
+        background: color-mix(in srgb, var(--pf-green) 14%, transparent);
+        color: var(--pf-green);
+    }
+
+    .pf-edu-badge {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+        font-weight: 700;
+        padding: 4px 10px; border-radius: 999px;
+        background: color-mix(in srgb, var(--pf-accent) 14%, transparent);
+        color: var(--pf-accent);
+        border: 1px solid color-mix(in srgb, var(--pf-accent) 26%, transparent);
+        white-space: nowrap;
+    }
+    .pf-edu.cert .pf-edu-badge {
+        background: color-mix(in srgb, var(--pf-green) 14%, transparent);
+        color: var(--pf-green);
+        border-color: color-mix(in srgb, var(--pf-green) 26%, transparent);
+    }
+
+    .pf-edu-title {
+        font-family: 'Fraunces', serif;
+        font-weight: 600;
+        font-size: clamp(20px, 1.8vw, 24px);
+        line-height: 1.2; letter-spacing: -0.018em;
+        margin: 0 0 6px;
+        color: var(--pf-ink);
+        font-variation-settings: "opsz" 28;
+    }
+    .pf-edu-school {
+        font-size: 15px; font-weight: 700;
+        color: var(--pf-accent);
+        margin-bottom: 4px;
+    }
+    .pf-edu.cert .pf-edu-school { color: var(--pf-green); }
+
+    .pf-edu-meta {
+        display: flex; flex-wrap: wrap; align-items: center;
+        gap: 4px 10px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        color: var(--pf-mute);
+        margin-bottom: 12px;
+    }
+    .pf-edu-meta .dot {
+        width: 3px; height: 3px; border-radius: 50%;
+        background: color-mix(in srgb, var(--pf-ink) 25%, transparent);
+    }
+
+    .pf-edu-domain {
+        display: inline-block;
+        font-size: 13px; font-weight: 600;
+        color: color-mix(in srgb, var(--pf-ink) 75%, transparent);
+        margin-bottom: 12px;
+        padding: 6px 12px;
+        background: color-mix(in srgb, var(--pf-cream) 70%, transparent);
+        border-radius: 6px;
+    }
+
+    .pf-edu-desc {
+        font-size: 14px; line-height: 1.55;
+        color: color-mix(in srgb, var(--pf-ink) 75%, transparent);
+        margin: 0 0 14px;
+    }
+
+    .pf-edu-cert-info {
+        margin-top: auto;
+        padding-top: 14px;
+        border-top: 1px dashed var(--pf-rule);
+        display: flex; flex-wrap: wrap; gap: 6px 14px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        color: var(--pf-mute);
+    }
+    .pf-edu-cert-info .key {
+        text-transform: uppercase; letter-spacing: .12em;
+        color: color-mix(in srgb, var(--pf-ink) 50%, transparent);
+        margin-right: 4px;
+    }
+    .pf-edu-cert-info .val {
+        color: var(--pf-ink); font-weight: 600;
+    }
+
+    /* ── MAÎTRISE : compétences + langues côte à côte ──────────────── */
+    .pf-mastery-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: clamp(32px, 4vw, 64px);
+        align-items: start;
+    }
+    @media (max-width: 880px) {
+        .pf-mastery-grid { grid-template-columns: 1fr; gap: 48px; }
+    }
+
+    /* ── COMPÉTENCES — cards avec barre + label ────────────────────── */
+    .pf-skill-list {
+        display: grid; gap: 12px;
+        grid-template-columns: 1fr;
+    }
+    .pf-skill {
+        background: var(--pf-paper);
+        border: 1px solid var(--pf-rule);
+        border-radius: 10px;
+        padding: 18px 22px;
+        transition: transform .25s, border-color .25s, box-shadow .25s;
+    }
+    .pf-skill:hover {
+        transform: translateY(-2px);
+        border-color: color-mix(in srgb, var(--pf-accent) 28%, var(--pf-rule));
+        box-shadow: 0 14px 32px -16px color-mix(in srgb, var(--pf-ink) 22%, transparent);
+    }
+    .pf-skill-head {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+    .pf-skill-name {
+        font-size: 16px; font-weight: 700;
+        color: var(--pf-ink);
+        letter-spacing: -0.005em;
+    }
+    .pf-skill-level-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+        font-weight: 700;
+        padding: 3px 8px; border-radius: 999px;
+        background: color-mix(in srgb, var(--pf-accent) 14%, transparent);
+        color: var(--pf-accent);
+        white-space: nowrap;
+    }
+    .pf-skill-bar {
+        position: relative;
+        height: 6px;
+        background: color-mix(in srgb, var(--pf-ink) 8%, transparent);
+        border-radius: 999px; overflow: hidden;
+    }
+    .pf-skill-bar-fill {
+        position: absolute; left: 0; top: 0; bottom: 0;
+        background: linear-gradient(90deg,
+            var(--pf-accent),
+            color-mix(in srgb, var(--pf-accent) 60%, var(--pf-green)));
+        border-radius: 999px;
+        transform-origin: left;
+        animation: pf-bar 1.2s cubic-bezier(.16,.84,.44,1) both;
+    }
+    @keyframes pf-bar {
+        from { transform: scaleX(0); }
+        to   { transform: scaleX(var(--w, 1)); }
+    }
+    .pf-skill-stars {
+        display: inline-flex; gap: 3px;
+        margin-top: 8px;
+        font-size: 14px; color: var(--pf-accent);
+    }
+
+    /* ── LANGUES — cards prominentes ────────────────────────────────── */
+    .pf-lang-list {
+        display: grid; gap: 12px;
+        grid-template-columns: 1fr;
+    }
+    .pf-lang {
+        background: var(--pf-paper);
+        border: 1px solid var(--pf-rule);
+        border-radius: 12px;
+        padding: 22px 24px;
+        transition: transform .25s, border-color .25s, box-shadow .25s;
+        position: relative; overflow: hidden;
+    }
+    .pf-lang:hover {
+        transform: translateY(-2px);
+        border-color: color-mix(in srgb, var(--pf-accent) 28%, var(--pf-rule));
+        box-shadow: 0 14px 32px -16px color-mix(in srgb, var(--pf-ink) 22%, transparent);
+    }
+    .pf-lang::before {
+        content: '';
+        position: absolute; top: 0; right: 0; width: 60px; height: 60px;
+        border-radius: 50%;
+        background: radial-gradient(circle, color-mix(in srgb, var(--pf-accent) 16%, transparent), transparent 70%);
+        transform: translate(20px, -20px);
+        pointer-events: none;
+    }
+    .pf-lang.native::before {
+        background: radial-gradient(circle, color-mix(in srgb, var(--pf-green) 22%, transparent), transparent 70%);
+    }
+    .pf-lang-name {
+        font-family: 'Fraunces', serif;
+        font-weight: 600;
+        font-size: clamp(20px, 1.8vw, 24px);
+        line-height: 1.1; letter-spacing: -0.015em;
+        color: var(--pf-ink);
+        margin: 0 0 12px;
+        font-variation-settings: "opsz" 28;
+    }
+    .pf-lang-level-row {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 10px;
+    }
+    .pf-lang-cefr {
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 700;
+        font-size: 13px; letter-spacing: .04em;
+        padding: 5px 12px;
+        background: var(--pf-ink); color: var(--pf-paper);
+        border-radius: 6px;
+    }
+    .pf-lang.native .pf-lang-cefr {
+        background: var(--pf-green);
+    }
+    .pf-lang-text {
+        font-size: 13px; font-weight: 600;
+        color: color-mix(in srgb, var(--pf-ink) 70%, transparent);
+    }
+    .pf-lang-dots {
+        display: inline-flex; gap: 4px;
+        margin-top: 12px;
+    }
+    .pf-lang-dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: color-mix(in srgb, var(--pf-ink) 12%, transparent);
+    }
+    .pf-lang-dot.on { background: var(--pf-accent); }
+    .pf-lang.native .pf-lang-dot.on { background: var(--pf-green); }
+
+    /* ── BÉNÉVOLAT — cards engagement (vert civisme) ────────────────── */
+    .pf-vol-list {
+        display: grid; gap: clamp(16px, 2vw, 22px);
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    }
+    .pf-vol {
+        position: relative;
+        background: var(--pf-paper);
+        border: 1px solid var(--pf-rule);
+        border-left: 4px solid var(--pf-green);
+        border-radius: 10px;
+        padding: clamp(20px, 2.5vw, 28px);
+        transition: transform .25s, box-shadow .25s, border-color .25s;
+        display: flex; flex-direction: column;
+    }
+    .pf-vol:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 18px 40px -22px color-mix(in srgb, var(--pf-green) 35%, transparent);
+        border-left-color: var(--pf-green);
+        border-color: color-mix(in srgb, var(--pf-green) 25%, var(--pf-rule));
+    }
+    .pf-vol-icon {
+        width: 40px; height: 40px;
+        border-radius: 10px;
+        background: color-mix(in srgb, var(--pf-green) 14%, transparent);
+        color: var(--pf-green);
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 14px;
+    }
+    .pf-vol-icon svg { width: 22px; height: 22px; }
+    .pf-vol-role {
+        font-family: 'Fraunces', serif;
+        font-weight: 600;
+        font-size: clamp(20px, 1.8vw, 24px);
+        line-height: 1.2; letter-spacing: -0.018em;
+        margin: 0 0 6px;
+        color: var(--pf-ink);
+        font-variation-settings: "opsz" 28;
+    }
+    .pf-vol-orga {
+        font-size: 14px; font-weight: 700;
+        color: var(--pf-green);
+        margin-bottom: 14px;
+    }
+    .pf-vol-foot {
+        margin-top: auto;
+        padding-top: 14px;
+        border-top: 1px dashed var(--pf-rule);
+        display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        color: var(--pf-mute);
+    }
+    .pf-vol-foot .duree {
+        color: var(--pf-green); font-weight: 700;
+    }
+    .pf-vol-foot .live {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 3px 10px; border-radius: 999px;
+        background: color-mix(in srgb, var(--pf-green) 16%, transparent);
+        color: var(--pf-green);
+        font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    }
+    .pf-vol-foot .live::before {
+        content: ''; width: 6px; height: 6px; border-radius: 50%;
+        background: var(--pf-green);
+        animation: pf-pulse 2s infinite;
+    }
+
+    /* ── CENTRES D'INTÉRÊT — pills serif italique ────────────────────── */
+    .pf-interest-list {
+        display: flex; flex-wrap: wrap;
+        gap: 12px;
+    }
+    .pf-interest {
+        display: inline-flex; align-items: center; gap: 10px;
+        padding: 12px 22px;
+        background: var(--pf-paper);
+        border: 1.5px solid var(--pf-rule);
+        border-radius: 999px;
+        font-family: 'Fraunces', serif;
+        font-style: italic;
+        font-size: clamp(15px, 1.3vw, 18px);
+        font-weight: 500;
+        color: var(--pf-ink);
+        font-variation-settings: "opsz" 18;
+        cursor: default;
+        transition: transform .25s, background .25s, border-color .25s, color .25s, box-shadow .25s;
+    }
+    .pf-interest::before {
+        content: '✦';
+        color: var(--pf-accent);
+        font-size: .8em;
+        font-style: normal;
+        transition: transform .35s;
+    }
+    .pf-interest:hover {
+        transform: translateY(-2px);
+        background: var(--pf-ink);
+        color: var(--pf-paper);
+        border-color: var(--pf-ink);
+        box-shadow: 0 14px 30px -14px color-mix(in srgb, var(--pf-ink) 40%, transparent);
+    }
+    .pf-interest:hover::before {
+        transform: rotate(180deg);
+        color: var(--pf-accent);
+    }
+
+    /* ── CONTACT — paper uniforme, contacts en grand + formulaire direct ─ */
+    .pf-contact-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+        gap: clamp(40px, 5vw, 72px);
+        align-items: start;
+    }
+    @media (max-width: 880px) { .pf-contact-grid { grid-template-columns: 1fr; gap: 40px; } }
+
+    /* Colonne gauche : coordonnées en grand */
+    .pf-contact-coords { display: flex; flex-direction: column; gap: 18px; }
+    .pf-coord {
+        display: grid;
+        grid-template-columns: 56px 1fr;
+        gap: 18px;
+        align-items: center;
+        padding: 18px 22px;
+        background: var(--pf-paper);
+        border: 1px solid var(--pf-rule);
+        border-radius: 12px;
+        text-decoration: none;
+        color: var(--pf-ink);
+        transition: transform .25s, border-color .25s, box-shadow .25s, background .25s;
+    }
+    .pf-coord:hover {
+        transform: translateX(4px);
+        border-color: color-mix(in srgb, var(--pf-accent) 35%, var(--pf-rule));
+        background: color-mix(in srgb, var(--pf-accent) 4%, var(--pf-paper));
+        box-shadow: 0 14px 32px -16px color-mix(in srgb, var(--pf-accent) 30%, transparent);
+    }
+    .pf-coord-icon {
+        width: 56px; height: 56px;
+        background: color-mix(in srgb, var(--pf-accent) 12%, transparent);
+        color: var(--pf-accent);
+        border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .pf-coord-icon svg { width: 26px; height: 26px; }
+    .pf-coord-key {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+        color: var(--pf-mute);
+        margin-bottom: 4px;
+    }
+    .pf-coord-val {
+        font-family: 'Fraunces', serif;
+        font-weight: 600;
+        font-size: clamp(18px, 1.6vw, 22px);
+        line-height: 1.2; letter-spacing: -0.015em;
+        color: var(--pf-ink);
+        font-variation-settings: "opsz" 24;
+        word-break: break-word;
+    }
+    .pf-coord:hover .pf-coord-val { color: var(--pf-accent); }
+
+    /* Pill disponibilité */
+    .pf-dispo {
+        display: inline-flex; align-items: center; gap: 10px;
+        margin-top: 12px;
+        padding: 10px 18px;
+        background: color-mix(in srgb, var(--pf-green) 12%, transparent);
+        color: var(--pf-green);
+        border: 1.5px solid color-mix(in srgb, var(--pf-green) 30%, transparent);
+        border-radius: 999px;
+        font-weight: 700; font-size: 14px;
+    }
+    .pf-dispo::before {
+        content: ''; width: 9px; height: 9px; border-radius: 50%;
+        background: var(--pf-green);
+        animation: pf-pulse 2s infinite;
+    }
+
+    /* Liens sociaux : pills sur fond paper */
+    .pf-socials {
+        display: flex; flex-wrap: wrap; gap: 10px;
+        margin-top: 16px;
+    }
+    .pf-social {
+        display: inline-flex; align-items: center; gap: 10px;
+        padding: 10px 18px;
+        background: var(--pf-paper);
+        border: 1px solid var(--pf-rule);
+        border-radius: 999px;
+        font-size: 13px; font-weight: 600;
+        color: var(--pf-ink);
+        text-decoration: none;
+        transition: background .2s, border-color .2s, color .2s, transform .2s;
+    }
+    .pf-social:hover {
+        background: var(--pf-ink);
+        border-color: var(--pf-ink);
+        color: var(--pf-paper);
+        transform: translateY(-2px);
+    }
+    .pf-social i { font-size: 14px; }
+
+    /* Colonne droite : formulaire de contact direct */
+    .pf-form-card {
+        background: var(--pf-paper);
+        border: 1px solid var(--pf-rule);
+        border-radius: 16px;
+        padding: clamp(28px, 3.5vw, 40px);
+        box-shadow: 0 30px 60px -25px color-mix(in srgb, var(--pf-ink) 22%, transparent);
+    }
+    .pf-form-title {
+        font-family: 'Fraunces', serif;
+        font-weight: 600;
+        font-size: clamp(22px, 2vw, 28px);
+        line-height: 1.15; letter-spacing: -0.02em;
+        margin: 0 0 6px;
+        font-variation-settings: "opsz" 32;
+    }
+    .pf-form-sub {
+        font-size: 14px; color: var(--pf-mute); line-height: 1.5;
+        margin: 0 0 24px;
+    }
+    .pf-form-grid {
+        display: grid; gap: 14px;
+        grid-template-columns: 1fr 1fr;
+    }
+    .pf-form-grid .full { grid-column: 1 / -1; }
+    @media (max-width: 540px) {
+        .pf-form-grid { grid-template-columns: 1fr; }
+        .pf-form-grid .full { grid-column: auto; }
+    }
+    .pf-field { display: flex; flex-direction: column; gap: 6px; }
+    .pf-field-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+        color: var(--pf-mute); font-weight: 600;
+    }
+    .pf-field-label .req { color: var(--pf-accent); margin-left: 4px; }
+    .pf-input, .pf-textarea {
+        width: 100%;
+        padding: 12px 14px;
+        background: color-mix(in srgb, var(--pf-cream) 60%, transparent);
+        border: 1.5px solid var(--pf-rule);
+        border-radius: 8px;
+        font-family: 'Manrope', sans-serif;
+        font-size: 15px; line-height: 1.4; color: var(--pf-ink);
+        transition: border-color .2s, background .2s;
+    }
+    .pf-input:focus, .pf-textarea:focus {
+        outline: none;
+        border-color: var(--pf-accent);
+        background: var(--pf-paper);
+    }
+    .pf-textarea { resize: vertical; min-height: 130px; }
+
+    .pf-form-submit {
+        margin-top: 18px;
+        display: inline-flex; align-items: center; gap: 10px;
+        padding: 14px 26px;
+        background: var(--pf-ink); color: var(--pf-paper);
+        border: none; border-radius: 999px;
+        font-family: 'Manrope', sans-serif;
+        font-weight: 700; font-size: 14px; cursor: pointer;
+        transition: transform .25s, box-shadow .25s, background .25s;
+    }
+    .pf-form-submit:hover:not(:disabled) {
+        transform: translateY(-2px);
+        background: var(--pf-accent);
+        box-shadow: 0 18px 40px -10px var(--pf-accent);
+    }
+    .pf-form-submit:disabled { opacity: .5; cursor: not-allowed; }
+    .pf-form-msg {
+        margin-top: 14px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+    .pf-form-msg.ok {
+        background: color-mix(in srgb, var(--pf-green) 12%, transparent);
+        color: var(--pf-green);
+        border: 1px solid color-mix(in srgb, var(--pf-green) 30%, transparent);
+    }
+    .pf-form-msg.err {
+        background: color-mix(in srgb, #dc2626 10%, transparent);
+        color: #b91c1c;
+        border: 1px solid color-mix(in srgb, #dc2626 30%, transparent);
+    }
+
+    /* ── Cleanup conflits avec base.html ────────────────────────────── */
+    body { background: var(--pf-paper); }
+    [x-cloak] { display: none !important; }
+
+    /* Défilement fluide sur clics ancres (Me contacter, Voir mes travaux) */
+    html { scroll-behavior: smooth; }
+    /* Évite que la section ne soit collée tout en haut quand on y arrive */
+    .pf [id] { scroll-margin-top: 24px; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="pf -mx-6 -my-8" x-data x-init="(() => {
+    const io = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+            if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+        }
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.pf-reveal').forEach(el => io.observe(el));
+})()">
+
+    {% if est_proprio %}
+    <div class="pf-owner">
+        <span style="display:inline-flex; align-items:center; gap:10px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+            </svg>
+            Aperçu privé — visible uniquement par vous tant que le portfolio n'est pas public.
+        </span>
+        <a href="{% url 'candidat:profil' %}?onglet=portfolio" class="pf-owner-btn">{% trans "Modifier mon profil →" %}</a>
+    </div>
+    {% endif %}
+
+    <!-- ═══════════════════ HERO ═══════════════════ -->
+    <section class="pf-hero">
+        <div class="pf-hero-inner">
+
+            <!-- Colonne gauche : texte -->
+            <div>
+                <div class="pf-eyebrow pf-reveal">
+                    Portfolio · {% now "Y" %}
+                    {% if candidat.secteurActivite %} · {{ candidat.secteurActivite }}{% endif %}
+                </div>
+
+                <h1 class="pf-name pf-display pf-reveal d1">
+                    {{ candidat.prenom }}<br>
+                    <span class="accent">{{ candidat.nom }}</span>
+                </h1>
+
+                {% if candidat.titreProfessionnel %}
+                <div class="pf-reveal d2">
+                    <p class="pf-job-title">{{ candidat.titreProfessionnel }}</p>
+                </div>
+                {% endif %}
+
+                {% if candidat.sloganPortfolio %}
+                <p class="pf-tagline pf-reveal d3">« {{ candidat.sloganPortfolio }} »</p>
+                {% elif not candidat.titreProfessionnel %}
+                <p class="pf-tagline pf-reveal d3">{% trans "Bienvenue sur mon portfolio." %}</p>
+                {% endif %}
+
+                <div class="pf-meta pf-reveal d4">
+                    {% if candidat.adresse %}
+                    <span class="pf-meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        {{ candidat.adresse }}
+                    </span>
+                    {% endif %}
+                    {% if candidat.adresse and candidat.typeMobilite %}<span class="pf-meta-dot"></span>{% endif %}
+                    {% if candidat.typeMobilite %}
+                    <span class="pf-meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                        Mobilité {{ candidat.typeMobilite|lower }}
+                    </span>
+                    {% endif %}
+                    {% if candidat.typeMobilite and annees_xp is not None %}<span class="pf-meta-dot"></span>{% endif %}
+                    {% if annees_xp is not None %}
+                    <span class="pf-meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        {% if annees_xp == 0 %}Junior · début {{ candidat.datePremierEmploi }}
+                        {% else %}{{ annees_xp }} an{{ annees_xp|pluralize }} d'expérience{% endif %}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="pf-cta-row pf-reveal d5">
+                    {% if params.showContact and candidat.email %}
+                    <a href="#contact" class="pf-btn pf-btn-primary">
+                        Me contacter
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                            <polyline points="12 5 19 12 12 19"/>
+                        </svg>
+                    </a>
+                    {% elif candidat.email %}
+                    <a href="mailto:{{ candidat.email }}" class="pf-btn pf-btn-primary">
+                        Me contacter
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                            <polyline points="12 5 19 12 12 19"/>
+                        </svg>
+                    </a>
+                    {% endif %}
+                    <a href="#travaux" class="pf-btn pf-btn-ghost">
+                        Voir mes travaux
+                    </a>
+                </div>
+            </div>
+
+            <!-- Colonne droite : photo -->
+            <div class="pf-portrait pf-reveal d2">
+                {% if candidat.photoProfil %}
+                    <img src="{{ candidat.photoProfil.url }}" alt="{{ candidat.prenom }} {{ candidat.nom }}">
+                {% else %}
+                    <div class="pf-portrait-fallback">
+                        {{ candidat.prenom|slice:":1"|upper }}{{ candidat.nom|slice:":1"|upper }}
+                    </div>
+                {% endif %}
+                <div class="pf-portrait-tag">
+                    <span class="live"></span>
+                    <span>{% trans "Disponible" %}</span>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    {# ═══════════════════ § 02 — PROJETS PHARES ═══════════════════ #}
+    {% comment %}
+    Affichée si toggle ON ET (au moins un projet OU propriétaire — pour qu'il
+    voie qu'il peut/doit en ajouter). Visiteurs : section cachée si vide.
+    {% endcomment %}
+    {% if params.showProjets and rubriques.projets or params.showProjets and est_proprio %}
+    <section class="pf-section cream" id="travaux">
+        <div class="pf-section-inner">
+            <div class="pf-section-head">
+                <span class="pf-section-num pf-reveal">§ 02 — Réalisations</span>
+                <h2 class="pf-section-title pf-display pf-reveal d1">
+                    Mes <em>{% trans "projets" %}</em> phares.
+                </h2>
+            </div>
+
+            {% if not rubriques.projets %}
+            <div class="pf-empty pf-reveal">
+                <div class="pf-empty-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+                </div>
+                <h3 class="pf-empty-title pf-display">{% trans "Vos réalisations attendent leur scène." %}</h3>
+                <p class="pf-empty-text">
+                    C'est ici que vos projets, études de cas et réalisations marquantes seront mis en valeur :
+                    contexte, contributions, médias, lien démo. Ajoutez-les depuis l'onglet
+                    <strong>{% trans "Profil → Rubriques → Réalisations" %}</strong>.
+                </p>
+                <a href="{% url 'candidat:profil' %}?onglet=rubriques" class="pf-empty-cta">
+                    Ajouter une réalisation
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                    </svg>
+                </a>
+            </div>
+            {% else %}
+            <div class="pf-projects-list">
+                {% for projet in rubriques.projets %}
+                {% if projet.nom %}
+                {% with cover=projet.images.0 nb_med=projet.images|length nb_vid=projet.videos|length %}
+                <article class="pf-project pf-reveal">
+
+                    {# Cover image (ou fallback) #}
+                    <div class="pf-project-cover">
+                        {% if cover.url %}
+                            <img src="{{ cover.url }}" alt="{{ projet.nom }}" loading="lazy">
+                        {% else %}
+                            <div class="pf-project-cover-fallback">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+                            </div>
+                        {% endif %}
+                        {% if projet.dateDebut %}
+                        <span class="pf-project-year">{{ projet.dateDebut|slice:":4" }}</span>
+                        {% endif %}
+                        {% if nb_med or nb_vid %}
+                        <span class="pf-project-mediac">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+                            {{ nb_med|add:nb_vid }} média{{ nb_med|add:nb_vid|pluralize }}
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    {# Body #}
+                    <div class="pf-project-body">
+                        <div class="pf-project-num">№ {{ forloop.counter|stringformat:"02d" }} — Réalisation</div>
+                        <h3 class="pf-project-title pf-display">{{ projet.nom }}</h3>
+                        {% if projet.contexte or projet.realisation %}
+                        <p class="pf-project-excerpt">
+                            {{ projet.contexte|default:projet.realisation|truncatewords:30 }}
+                        </p>
+                        {% endif %}
+
+                        <div class="pf-project-tags">
+                            {% if projet.tailleEquipe %}
+                            <span class="pf-project-tag">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                Équipe {{ projet.tailleEquipe }}
+                            </span>
+                            {% endif %}
+                            {% if projet.dateDebut and projet.dateFin %}
+                            <span class="pf-project-tag">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+                                {{ projet.dateDebut|slice:":7" }} → {{ projet.dateFin|slice:":7" }}
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        <div class="pf-project-actions">
+                            {% if projet.db_id %}
+                            <a href="{% url 'candidat:portfolio_projet_detail' candidat.id projet.db_id %}" class="pf-project-btn pf-project-btn-primary">
+                                Voir le projet
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                                </svg>
+                            </a>
+                            {% endif %}
+                            {% if projet.has_demo %}
+                            <a href="{{ projet.lien }}" target="_blank" rel="noopener" class="pf-project-btn pf-project-btn-ghost" title="{% trans "Voir la démo" %}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                    <path d="M7 17L17 7"/><polyline points="7 7 17 7 17 17"/>
+                                </svg>
+                                Démo
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                </article>
+                {% endwith %}
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+
+    {# ═══════════════════ § 03 — À PROPOS ═══════════════════ #}
+    {% if params.showAbout %}
+    <section class="pf-section" id="a-propos">
+        <div class="pf-section-inner">
+            <div class="pf-section-head">
+                <span class="pf-section-num pf-reveal">§ 03 — Préface</span>
+                <h2 class="pf-section-title pf-display pf-reveal d1">
+                    À <em>{% trans "propos" %}</em>.
+                </h2>
+            </div>
+
+            <div class="pf-about">
+                <div>
+                    {% if candidat.biographie %}
+                    <div class="pf-about-text pf-reveal">
+                        {{ candidat.biographie|linebreaks }}
+                    </div>
+                    {% else %}
+                    <div class="pf-about-empty pf-reveal">
+                        La biographie n'a pas encore été rédigée. Une fois renseignée
+                        dans l'onglet <strong>{% trans "Profil → Portfolio" %}</strong>, elle apparaîtra
+                        ici comme préface du portfolio.
+                    </div>
+                    {% endif %}
+                </div>
+
+                <aside class="pf-about-side pf-reveal d2">
+                    <div class="pf-about-side-head">{% trans "Carte d'identité" %}</div>
+                    <dl>
+                        {% if candidat.email %}
+                        <div class="row">
+                            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+                            <dt>{% trans "Email" %}</dt>
+                            <dd><a href="mailto:{{ candidat.email }}">{{ candidat.email }}</a></dd>
+                        </div>
+                        {% endif %}
+                        {% if candidat.telephone %}
+                        <div class="row">
+                            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
+                            <dt>{% trans "Téléphone" %}</dt>
+                            <dd><a href="tel:{{ candidat.telephone }}">{{ candidat.telephone }}</a></dd>
+                        </div>
+                        {% endif %}
+                        {% if candidat.adresse %}
+                        <div class="row">
+                            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+                            <dt>{% trans "Adresse" %}</dt>
+                            <dd>{{ candidat.adresse }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if candidat.dateNaissance %}
+                        <div class="row">
+                            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 9V7a2 2 0 0 0-2-2h-3"/><path d="M4 9V7a2 2 0 0 1 2-2h3"/><path d="M3 21h18"/><path d="M5 21V11a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10"/><path d="M12 9v6"/><path d="M9 12h6"/></svg></span>
+                            <dt>{% trans "Naissance" %}</dt>
+                            <dd>{{ candidat.dateNaissance|date:"j F Y" }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if candidat.sexe %}
+                        <div class="row">
+                            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="6"/><path d="M12 16v6"/><path d="M9 19h6"/></svg></span>
+                            <dt>{% trans "Sexe" %}</dt>
+                            <dd>{{ candidat.sexe }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if candidat.secteurActivite %}
+                        <div class="row">
+                            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span>
+                            <dt>{% trans "Secteur" %}</dt>
+                            <dd>{{ candidat.secteurActivite }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if candidat.typeMobilite %}
+                        <div class="row">
+                            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+                            <dt>{% trans "Mobilité" %}</dt>
+                            <dd><span class="pill">{{ candidat.typeMobilite }}</span></dd>
+                        </div>
+                        {% endif %}
+                        {% if candidat.typeContratRecherche %}
+                        <div class="row">
+                            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg></span>
+                            <dt>{% trans "Recherche" %}</dt>
+                            <dd><span class="pill green">{{ candidat.typeContratRecherche }}</span></dd>
+                        </div>
+                        {% endif %}
+                        {% if candidat.datePremierEmploi %}
+                        <div class="row">
+                            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+                            <dt>{% trans "Premier emploi" %}</dt>
+                            <dd>{{ candidat.datePremierEmploi }}</dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </aside>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {# ═══════════════════ § 04 — EXPÉRIENCES PROFESSIONNELLES ═══════════════════ #}
+    {% if params.showExperiences and rubriques.experiences %}
+    <section class="pf-section cream" id="parcours">
+        <div class="pf-section-inner">
+            <div class="pf-section-head">
+                <span class="pf-section-num pf-reveal">§ 04 — Parcours</span>
+                <h2 class="pf-section-title pf-display pf-reveal d1">
+                    Mes <em>{% trans "expériences" %}</em> professionnelles.
+                </h2>
+            </div>
+
+            <div class="pf-exp-list">
+                {% for exp in rubriques.experiences %}
+                {% if exp.entreprise or exp.postes.0.titre %}
+                <article class="pf-exp pf-reveal{% if exp.enCours %} live{% endif %}">
+
+                    <header class="pf-exp-head">
+                        <div class="pf-exp-head-left">
+                            <h3 class="pf-exp-title pf-display">
+                                {% if exp.postes|length == 1 and exp.postes.0.titre %}
+                                    {{ exp.postes.0.titre }}
+                                {% elif exp.entreprise %}
+                                    {{ exp.entreprise }}
+                                {% else %}
+                                    {{ exp.postes.0.titre|default:'Expérience' }}
+                                {% endif %}
+                            </h3>
+                            <div class="pf-exp-meta-row">
+                                {% if exp.entreprise and exp.postes|length == 1 and exp.postes.0.titre %}
+                                <span class="company">{{ exp.entreprise }}</span>
+                                {% if exp.lieu or exp.ville %}<span class="dot"></span>{% endif %}
+                                {% endif %}
+                                {% if exp.lieu or exp.ville or exp.pays %}
+                                <span class="loc">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                    {% if exp.lieu %}{{ exp.lieu }}{% else %}{{ exp.ville|default:'' }}{% if exp.ville and exp.pays %}, {% endif %}{{ exp.pays|default:'' }}{% endif %}
+                                </span>
+                                {% endif %}
+                                {% if exp.enCours %}
+                                <span class="dot"></span>
+                                <span class="live">{% trans "En cours" %}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if exp.periodeFR or exp.duree %}
+                        <div class="pf-exp-head-right">
+                            <div class="pf-exp-period-chip">
+                                {% if exp.periodeFR %}<span class="when">{{ exp.periodeFR }}</span>{% endif %}
+                                {% if exp.duree %}<span class="duration">{{ exp.duree }}</span>{% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </header>
+
+                    {% if exp.postes|length > 1 %}
+                    <div class="pf-exp-postes">
+                        <div class="pf-exp-postes-label">{% trans "Évolution interne" %}</div>
+                        <div class="pf-exp-postes-list">
+                            {% for poste in exp.postes %}
+                            <div class="pf-exp-poste">
+                                <span class="pf-exp-poste-title">{{ poste.titre|default:'—' }}</span>
+                                {% if poste.periodeFR or poste.duree %}
+                                <span class="pf-exp-poste-meta">
+                                    {% if poste.periodeFR %}{{ poste.periodeFR }}{% endif %}
+                                    {% if poste.periodeFR and poste.duree %} · {% endif %}
+                                    {% if poste.duree %}<span class="duration">{{ poste.duree }}</span>{% endif %}
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if exp.hasMissionsClient and exp.missionsClient %}
+                    <div class="pf-mc">
+                        <div class="pf-mc-label">{% trans "Missions clients" %}</div>
+                        <div class="pf-mc-list">
+                            {% for mc in exp.missionsClient %}
+                            {% if mc.client %}
+                            <div class="pf-mc-item">
+                                <div class="pf-mc-head">
+                                    <span class="pf-mc-client">{{ mc.client }}</span>
+                                    {% if mc.ville or mc.pays %}
+                                    <span class="pf-mc-meta">{{ mc.ville|default:'' }}{% if mc.ville and mc.pays %}, {% endif %}{{ mc.pays|default:'' }}</span>
+                                    {% endif %}
+                                    {% if mc.debut or mc.enCours %}
+                                    <span class="pf-mc-meta">·
+                                        {{ mc.debut|slice:":7"|default:'' }}
+                                        {% if mc.fin or mc.enCours %} — {% endif %}
+                                        {% if mc.enCours %}Présent{% elif mc.fin %}{{ mc.fin|slice:":7" }}{% endif %}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                {% if mc.desc %}<div class="pf-mc-desc">{{ mc.desc }}</div>{% endif %}
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </article>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {# ═══════════════════ § 05 — FORMATIONS & DIPLÔMES ═══════════════════ #}
+    {% if params.showFormations and rubriques.formations %}
+    <section class="pf-section" id="formations">
+        <div class="pf-section-inner">
+            <div class="pf-section-head">
+                <span class="pf-section-num pf-reveal">§ 05 — Apprentissages</span>
+                <h2 class="pf-section-title pf-display pf-reveal d1">
+                    Formations & <em>{% trans "diplômes" %}</em>.
+                </h2>
+            </div>
+
+            {# 3 sous-groupes empilés : diplômes, certifications, attestations #}
+
+            {# — DIPLÔMES — #}
+            {% with items=formations_groupees.diplome %}
+            {% if items %}
+            <div class="pf-edu-group pf-reveal">
+                <div class="pf-edu-group-head">
+                    <h3 class="pf-edu-group-title pf-display">{% trans "Diplômes" %}</h3>
+                    <span class="pf-edu-group-count">{{ items|length }}</span>
+                    <span class="pf-edu-group-rule"></span>
+                </div>
+                <div class="pf-edu-list">
+                    {% for f in items %}
+                    {% if f.diplome or f.ecole %}
+                    <article class="pf-edu pf-reveal">
+                        <div class="pf-edu-head">
+                            <div class="pf-edu-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                            </div>
+                            <span class="pf-edu-badge">{% trans "Diplôme" %}</span>
+                        </div>
+                        <h4 class="pf-edu-title pf-display">{{ f.diplome|default:f.ecole }}</h4>
+                        {% if f.diplome and f.ecole %}<div class="pf-edu-school">{{ f.ecole }}</div>{% endif %}
+                        <div class="pf-edu-meta">
+                            {% if f.debut or f.fin or f.enCours %}
+                            <span>{{ f.debut|slice:":7"|default:'' }}{% if f.debut and f.fin or f.debut and f.enCours %} → {% endif %}{% if f.enCours %}En cours{% elif f.fin %}{{ f.fin|slice:":7" }}{% endif %}</span>
+                            {% endif %}
+                            {% if f.lieu %}<span class="dot"></span><span>{{ f.lieu }}</span>{% endif %}
+                            {% if f.niveauEtude %}<span class="dot"></span><span>{{ f.niveauEtude }}</span>{% endif %}
+                        </div>
+                        {% if f.domaine %}<span class="pf-edu-domain">{{ f.domaine }}</span>{% endif %}
+                        {% if f.desc %}<p class="pf-edu-desc">{{ f.desc }}</p>{% endif %}
+                    </article>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            {# — CERTIFICATIONS — #}
+            {% with items=formations_groupees.certification %}
+            {% if items %}
+            <div class="pf-edu-group cert pf-reveal">
+                <div class="pf-edu-group-head">
+                    <h3 class="pf-edu-group-title pf-display">{% trans "Certifications" %}</h3>
+                    <span class="pf-edu-group-count">{{ items|length }}</span>
+                    <span class="pf-edu-group-rule"></span>
+                </div>
+                <div class="pf-edu-list">
+                    {% for f in items %}
+                    {% if f.diplome or f.ecole %}
+                    <article class="pf-edu cert pf-reveal">
+                        <div class="pf-edu-head">
+                            <div class="pf-edu-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+                            </div>
+                            <span class="pf-edu-badge">{% trans "Certification" %}</span>
+                        </div>
+                        <h4 class="pf-edu-title pf-display">{{ f.diplome|default:f.ecole }}</h4>
+                        {% if f.diplome and f.ecole %}<div class="pf-edu-school">{{ f.ecole }}</div>{% endif %}
+                        <div class="pf-edu-meta">
+                            {% if f.debut or f.fin or f.enCours %}
+                            <span>{{ f.debut|slice:":7"|default:'' }}{% if f.debut and f.fin or f.debut and f.enCours %} → {% endif %}{% if f.enCours %}En cours{% elif f.fin %}{{ f.fin|slice:":7" }}{% endif %}</span>
+                            {% endif %}
+                            {% if f.lieu %}<span class="dot"></span><span>{{ f.lieu }}</span>{% endif %}
+                            {% if f.niveauEtude %}<span class="dot"></span><span>{{ f.niveauEtude }}</span>{% endif %}
+                        </div>
+                        {% if f.domaine %}<span class="pf-edu-domain">{{ f.domaine }}</span>{% endif %}
+                        {% if f.desc %}<p class="pf-edu-desc">{{ f.desc }}</p>{% endif %}
+                        {% if f.numero or f.expiration %}
+                        <div class="pf-edu-cert-info">
+                            {% if f.numero %}<span><span class="key">N°</span><span class="val">{{ f.numero }}</span></span>{% endif %}
+                            {% if f.expiration %}<span><span class="key">Exp.</span><span class="val">{{ f.expiration|slice:":7" }}</span></span>{% endif %}
+                        </div>
+                        {% endif %}
+                    </article>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            {# — ATTESTATIONS — #}
+            {% with items=formations_groupees.attestation %}
+            {% if items %}
+            <div class="pf-edu-group pf-reveal">
+                <div class="pf-edu-group-head">
+                    <h3 class="pf-edu-group-title pf-display">{% trans "Attestations" %}</h3>
+                    <span class="pf-edu-group-count">{{ items|length }}</span>
+                    <span class="pf-edu-group-rule"></span>
+                </div>
+                <div class="pf-edu-list">
+                    {% for f in items %}
+                    {% if f.diplome or f.ecole %}
+                    <article class="pf-edu pf-reveal">
+                        <div class="pf-edu-head">
+                            <div class="pf-edu-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+                            </div>
+                            <span class="pf-edu-badge">{% trans "Attestation" %}</span>
+                        </div>
+                        <h4 class="pf-edu-title pf-display">{{ f.diplome|default:f.ecole }}</h4>
+                        {% if f.diplome and f.ecole %}<div class="pf-edu-school">{{ f.ecole }}</div>{% endif %}
+                        <div class="pf-edu-meta">
+                            {% if f.debut or f.fin or f.enCours %}
+                            <span>{{ f.debut|slice:":7"|default:'' }}{% if f.debut and f.fin or f.debut and f.enCours %} → {% endif %}{% if f.enCours %}En cours{% elif f.fin %}{{ f.fin|slice:":7" }}{% endif %}</span>
+                            {% endif %}
+                            {% if f.lieu %}<span class="dot"></span><span>{{ f.lieu }}</span>{% endif %}
+                        </div>
+                        {% if f.domaine %}<span class="pf-edu-domain">{{ f.domaine }}</span>{% endif %}
+                        {% if f.desc %}<p class="pf-edu-desc">{{ f.desc }}</p>{% endif %}
+                    </article>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            {% endwith %}
+
+        </div>
+    </section>
+    {% endif %}
+
+    {# ═══════════════════ § 06 — COMPÉTENCES & LANGUES ═══════════════════ #}
+    {% if params.showCompetences and rubriques.competences or params.showLangues and rubriques.langues %}
+    <section class="pf-section cream" id="maitrise">
+        <div class="pf-section-inner">
+            <div class="pf-section-head">
+                <span class="pf-section-num pf-reveal">§ 06 — Maîtrise</span>
+                <h2 class="pf-section-title pf-display pf-reveal d1">
+                    Compétences & <em>{% trans "langues" %}</em>.
+                </h2>
+            </div>
+
+            <div class="pf-mastery-grid">
+
+            {# — COMPÉTENCES — #}
+            {% if params.showCompetences and rubriques.competences %}
+            <div class="pf-edu-group pf-reveal" style="margin-bottom:0;">
+                <div class="pf-edu-group-head">
+                    <h3 class="pf-edu-group-title pf-display">{% trans "Compétences techniques" %}</h3>
+                    <span class="pf-edu-group-count">{{ rubriques.competences|length }}</span>
+                    <span class="pf-edu-group-rule"></span>
+                </div>
+                <div class="pf-skill-list">
+                    {% for c in rubriques.competences %}
+                    {% if c.nom %}
+                    {% with niv=c.niveau|default:3 %}
+                    <div class="pf-skill pf-reveal">
+                        <div class="pf-skill-head">
+                            <span class="pf-skill-name">{{ c.nom }}</span>
+                            <span class="pf-skill-level-label">
+                                {% if niv == 5 %}Expert
+                                {% elif niv == 4 %}Avancé
+                                {% elif niv == 3 %}Intermédiaire
+                                {% elif niv == 2 %}Débutant
+                                {% else %}Notions{% endif %}
+                            </span>
+                        </div>
+                        <div class="pf-skill-bar">
+                            <div class="pf-skill-bar-fill" style="--w: {% widthratio niv 5 1 %}; transform: scaleX({% widthratio niv 5 1 %});"></div>
+                        </div>
+                    </div>
+                    {% endwith %}
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {# — LANGUES — #}
+            {% if params.showLangues and rubriques.langues %}
+            <div class="pf-edu-group pf-reveal" style="margin-bottom:0;">
+                <div class="pf-edu-group-head">
+                    <h3 class="pf-edu-group-title pf-display">{% trans "Langues parlées" %}</h3>
+                    <span class="pf-edu-group-count">{{ rubriques.langues|length }}</span>
+                    <span class="pf-edu-group-rule"></span>
+                </div>
+                <div class="pf-lang-list">
+                    {% for l in rubriques.langues %}
+                    {% if l.nom %}
+                    {% with niv=l.niveau %}
+                    <div class="pf-lang pf-reveal{% if niv == 'N' %} native{% endif %}">
+                        <h4 class="pf-lang-name pf-display">{{ l.nom }}</h4>
+                        <div class="pf-lang-level-row">
+                            <span class="pf-lang-cefr">
+                                {% if niv == 'N' %}Native{% elif niv %}{{ niv }}{% else %}—{% endif %}
+                            </span>
+                            <span class="pf-lang-text">
+                                {% if niv == 'A1' %}Débutant
+                                {% elif niv == 'A2' %}Élémentaire
+                                {% elif niv == 'B1' %}Intermédiaire
+                                {% elif niv == 'B2' %}Interm. avancé
+                                {% elif niv == 'C1' %}Avancé
+                                {% elif niv == 'C2' %}Maîtrise
+                                {% elif niv == 'N' %}Langue maternelle
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="pf-lang-dots">
+                            {% if niv == 'A1' %}<span class="pf-lang-dot on"></span><span class="pf-lang-dot"></span><span class="pf-lang-dot"></span><span class="pf-lang-dot"></span><span class="pf-lang-dot"></span>
+                            {% elif niv == 'A2' %}<span class="pf-lang-dot on"></span><span class="pf-lang-dot on"></span><span class="pf-lang-dot"></span><span class="pf-lang-dot"></span><span class="pf-lang-dot"></span>
+                            {% elif niv == 'B1' %}<span class="pf-lang-dot on"></span><span class="pf-lang-dot on"></span><span class="pf-lang-dot on"></span><span class="pf-lang-dot"></span><span class="pf-lang-dot"></span>
+                            {% elif niv == 'B2' or niv == 'C1' %}<span class="pf-lang-dot on"></span><span class="pf-lang-dot on"></span><span class="pf-lang-dot on"></span><span class="pf-lang-dot on"></span><span class="pf-lang-dot"></span>
+                            {% else %}<span class="pf-lang-dot on"></span><span class="pf-lang-dot on"></span><span class="pf-lang-dot on"></span><span class="pf-lang-dot on"></span><span class="pf-lang-dot on"></span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endwith %}
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            </div>{# /pf-mastery-grid #}
+
+        </div>
+    </section>
+    {% endif %}
+
+    {# ═══════════════════ § 08 — CENTRES D'INTÉRÊT ═══════════════════ #}
+    {% if params.showInterets and rubriques.interets %}
+    <section class="pf-section cream" id="passions">
+        <div class="pf-section-inner">
+            <div class="pf-section-head">
+                <span class="pf-section-num pf-reveal">§ 08 — Au-delà</span>
+                <h2 class="pf-section-title pf-display pf-reveal d1">
+                    Mes <em>{% trans "passions" %}</em>.
+                </h2>
+            </div>
+
+            <div class="pf-interest-list pf-reveal">
+                {% for i in rubriques.interets %}
+                  {% if i.libelle %}<span class="pf-interest">{{ i.libelle }}</span>
+                  {% elif i %}<span class="pf-interest">{{ i }}</span>{% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {# ═══════════════════ § 09 — CONTACT (final) ═══════════════════ #}
+    {% if params.showContact and candidat.email %}
+    <section class="pf-section" id="contact">
+        <div class="pf-section-inner">
+            <div class="pf-section-head">
+                <span class="pf-section-num pf-reveal">§ 09 — Conversation</span>
+                <h2 class="pf-section-title pf-display pf-reveal d1">
+                    Travaillons <em>{% trans "ensemble" %}</em>.
+                </h2>
+            </div>
+
+            <div class="pf-contact-coords pf-reveal" style="max-width:520px;margin:0 auto;">
+                    {% if candidat.email %}
+                    <a href="mailto:{{ candidat.email }}" class="pf-coord">
+                        <span class="pf-coord-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        </span>
+                        <div>
+                            <div class="pf-coord-key">{% trans "Email" %}</div>
+                            <div class="pf-coord-val">{{ candidat.email }}</div>
+                        </div>
+                    </a>
+                    {% endif %}
+                    {% if candidat.telephone %}
+                    <a href="tel:{{ candidat.telephone }}" class="pf-coord">
+                        <span class="pf-coord-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        </span>
+                        <div>
+                            <div class="pf-coord-key">{% trans "Téléphone" %}</div>
+                            <div class="pf-coord-val">{{ candidat.telephone }}</div>
+                        </div>
+                    </a>
+                    {% endif %}
+                    {% if candidat.ville or candidat.adresse %}
+                    <div class="pf-coord" style="cursor:default;">
+                        <span class="pf-coord-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        </span>
+                        <div>
+                            <div class="pf-coord-key">{% trans "Localisation" %}</div>
+                            <div class="pf-coord-val">{{ candidat.ville|default:candidat.adresse }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div>
+                        <span class="pf-dispo">{% trans "Ouvert" %}{% if candidat.sexe and candidat.sexe|stringformat:'s'|lower == 'féminin' %}e{% endif %} aux opportunités</span>
+                    </div>
+
+                    {% if liens_sociaux %}
+                    <div class="pf-socials">
+                        {% for lien in liens_sociaux %}
+                        <a href="{{ lien.url }}" target="_blank" rel="noopener" class="pf-social">
+                            <i class="bi {{ lien.reseau.bi_class }}"></i>
+                            {{ lien.reseau.libelle|default:lien.reseau.slug }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+        </div>
+    </section>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+

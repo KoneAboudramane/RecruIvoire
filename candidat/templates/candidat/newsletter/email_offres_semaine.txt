@@ -1,0 +1,25 @@
+{{ logo_site.nom_site }} — Offres de la semaine
+==============================================
+
+Bonjour,
+
+{% if personnalise %}Voici les {{ nb_offres }} offres qui correspondent le mieux à votre profil cette semaine.
+{% else %}Voici notre sélection des {{ nb_offres }} meilleures offres de la semaine.
+{% endif %}
+
+{% for offre in offres %}
+──────────────────────────────────────
+{{ forloop.counter }}. {{ offre.titre }}
+   Entreprise  : {{ offre.entreprise.raisonSocial }}
+{% if offre.localisation %}   Lieu        : {{ offre.localisation }}
+{% endif %}{% if offre.typeContrat %}   Contrat     : {{ offre.get_typeContrat_display }}
+{% endif %}{% if offre.missions %}   Description : {{ offre.missions|truncatewords:20 }}
+{% endif %}
+{% endfor %}
+──────────────────────────────────────
+
+Voir toutes les offres : http://127.0.0.1:8000/candidat/offres/
+
+---
+Vous recevez cet e-mail car vous êtes abonné(e) à la newsletter {{ logo_site.nom_site }}.
+Pour vous désabonner : {{ desabo_url }}

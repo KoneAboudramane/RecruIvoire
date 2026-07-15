@@ -1,0 +1,221 @@
+{% extends "candidat/base.html" %}
+{% load i18n %}
+{% block titre %}Créer mon CV — {{ modele.nom }} · {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+{% include "candidat/cv/_form_styles.html" %}
+<style>
+/* ── Artistique ── Coral #E85D4A + Teal #2A9D8F + Jaune #E9C46A ─────────────── */
+#cv-sheet { width:794px; min-height:1123px; background:#FFFBF8; font-family:'Segoe UI',system-ui,sans-serif; font-size:11pt; color:#264653; line-height:1.5; box-shadow:0 8px 48px rgba(0,0,0,.15); display:flex; flex-direction:column; }
+/* Header créatif */
+.ar-header { position:relative; padding:34px 36px 28px; background:white; }
+.ar-deco-1 { position:absolute; top:0; right:0; width:220px; height:180px; background:linear-gradient(135deg,#E9C46A22,#E85D4A11); border-radius:0 0 0 100%; }
+.ar-deco-2 { position:absolute; top:0; left:0; width:6px; height:100%; background:linear-gradient(180deg,#E85D4A,#2A9D8F,#E9C46A); }
+.ar-header-inner { display:flex; align-items:center; gap:24px; padding-left:16px; }
+.ar-photo-wrap { width:140px; height:140px; border-radius:20%; overflow:hidden; border:3px solid #E85D4A; flex-shrink:0; }
+.ar-photo { width:100%; height:100%; object-fit:cover; display:block; }
+.ar-ph    { width:120px; height:120px; border-radius:20%; background:linear-gradient(135deg,#FFE8E5,#FFF3CD); display:flex; align-items:center; justify-content:center; font-size:28px; border:3px solid #E85D4A; flex-shrink:0; }
+.ar-name  { font-size:26pt; font-weight:900; color:#E85D4A; letter-spacing:-1px; line-height:1; }
+.ar-title { font-size:11pt; color:#2A9D8F; font-weight:600; margin-top:5px; }
+.ar-contacts { display:flex; flex-wrap:wrap; gap:5px 16px; margin-top:9px; }
+.ar-ci { font-size:8.5pt; color:#6b7280; display:flex; align-items:center; gap:4px; }
+.ar-ci span:first-child { color:#E85D4A; }
+/* Body */
+.ar-body { display:flex; flex-grow:1; }
+.ar-left { width:34%; background:white; padding:22px 18px; border-right:2px solid #FFF3CD; }
+.ar-right { flex:1; padding:22px 26px; }
+/* Section titles */
+.ar-sec-l { font-size:8pt; font-weight:800; letter-spacing:3px; text-transform:uppercase; color:#2A9D8F; margin-bottom:12px; margin-top:20px; display:flex; align-items:center; gap:8px; }
+.ar-sec-l:first-child { margin-top:0; }
+.ar-sec-l::before { content:''; width:24px; height:3px; background:#2A9D8F; border-radius:2px; flex-shrink:0; }
+.ar-sec-r { font-size:8pt; font-weight:800; letter-spacing:3px; text-transform:uppercase; color:#E85D4A; margin-bottom:12px; margin-top:20px; display:flex; align-items:center; gap:8px; }
+.ar-sec-r:first-child { margin-top:0; }
+.ar-sec-r::before { content:''; width:24px; height:3px; background:#E85D4A; border-radius:2px; flex-shrink:0; }
+/* Profil */
+.ar-profil { font-size:9pt; color:#4b5563; line-height:1.7; border-left:3px solid #E9C46A; padding-left:10px; }
+/* Skills */
+.ar-skill { margin-bottom:10px; }
+.ar-skill-lbl { font-size:8.5pt; color:#264653; margin-bottom:4px; }
+.ar-bar-bg { background:#FFF3CD; height:6px; border-radius:3px; }
+.ar-bar-fg { background:linear-gradient(90deg,#2A9D8F,#E9C46A); height:6px; border-radius:3px; }
+/* Langues */
+.ar-lang { background:#F0FFFE; border:1px solid #2A9D8F33; border-radius:10px; padding:6px 10px; margin-bottom:7px; display:flex; justify-content:space-between; align-items:center; }
+.ar-lang-name  { font-size:9pt; font-weight:600; color:#264653; }
+.ar-lang-level { font-size:8pt; color:#2A9D8F; font-weight:600; }
+/* Interests - colored tags */
+.ar-tag { display:inline-block; padding:4px 12px; border-radius:20px; font-size:8pt; font-weight:600; margin:3px 3px 3px 0; }
+.ar-tag:nth-child(3n+1) { background:#FFE8E5; color:#E85D4A; }
+.ar-tag:nth-child(3n+2) { background:#E6F7F5; color:#2A9D8F; }
+.ar-tag:nth-child(3n)   { background:#FFF3CD; color:#D4A017; }
+/* Entries */
+.ar-entry { margin-bottom:16px; padding-left:14px; border-left:3px solid #FFF3CD; position:relative; }
+.ar-entry::before { content:''; width:10px; height:10px; border-radius:50%; background:#E85D4A; position:absolute; left:-7px; top:4px; }
+.ar-entry-title { font-size:10.5pt; font-weight:700; color:#264653; }
+.ar-entry-date  { display:inline-block; font-size:7.5pt; color:white; background:#E85D4A; padding:2px 9px; border-radius:10px; margin-left:8px; vertical-align:middle; }
+.ar-entry-sub   { font-size:9pt; color:#2A9D8F; font-weight:600; margin-top:2px; }
+.ar-entry-place { font-size:8.5pt; color:#94a3b8; }
+.ar-entry-desc  { font-size:8.5pt; color:#4b5563; margin-top:4px; line-height:1.6; }
+.ar-mission { font-size:8.5pt; color:#4b5563; padding-left:12px; position:relative; margin-top:3px; line-height:1.5; }
+.ar-mission::before { content:'✦'; position:absolute; left:0; color:#E9C46A; font-size:7pt; top:2px; }
+/* Certif */
+.ar-certif { background:#F0FFFE; border-radius:8px; padding:8px 12px; margin-bottom:8px; border-left:3px solid #2A9D8F; }
+.ar-certif-name { font-size:9.5pt; font-weight:600; color:#264653; }
+.ar-certif-sub  { font-size:8pt; color:#6b7280; }
+.ar-footer { height:6px; background:linear-gradient(90deg,#E85D4A,#E9C46A,#2A9D8F); }
+.cv-mc-section{margin-top:9px;padding:7px 10px 7px 12px;background:rgba(233,196,106,.1);border-left:3px solid #E9C46A;border-radius:0 6px 6px 0}
+.cv-mc-label{font-size:6.5pt;font-weight:700;color:#E9C46A;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+.cv-mc-item{margin-bottom:6px;padding-bottom:6px;border-bottom:1px dashed rgba(233,196,106,.4)}
+.cv-mc-item:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+.cv-mc-hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:6px}
+.cv-mc-title{font-size:9pt;font-weight:600}
+.cv-mc-badge{font-size:6.5pt;color:#855C0B;background:rgba(233,196,106,.2);padding:1px 7px;border-radius:8px;white-space:nowrap;flex-shrink:0}
+.cv-mc-client{font-size:8pt;color:#6b7280;margin-top:1px}
+.cv-mc-desc{font-size:7.5pt;color:#4b5563;margin-top:2px;line-height:1.5}
+</style>
+{% endblock %}
+
+{% block contenu %}<div class="-mx-6 -my-8" x-data="cvBuilder()"><div class="cv-builder">
+  {% include "candidat/cv/_form_panel.html" %}
+  <div class="preview-panel">
+  <div id="cv-sheet">
+
+    <div class="ar-header">
+      <div class="ar-deco-1"></div>
+      <div class="ar-deco-2"></div>
+      <div class="ar-header-inner">
+        <template x-if="cv.photo"><div class="ar-photo-wrap"><img :src="cv.photo" class="ar-photo"></div></template>
+        <template x-if="!cv.photo"><div class="ar-ph">👤</div></template>
+        <div>
+          <div class="ar-name"><span x-text="cv.prenom||'Prénom'"></span> <span x-text="cv.nom?cv.nom.toUpperCase():'NOM'"></span></div>
+          <div class="ar-title" x-text="cv.titre||'Titre professionnel'"></div>
+          <div class="ar-contacts">
+            <template x-if="cv.email"><span class="ar-ci"><span>✉</span><span x-text="cv.email"></span></span></template>
+            <template x-if="cv.telephone"><span class="ar-ci"><span>☎</span><span x-text="cv.telephone"></span></span></template>
+            <template x-if="cvLoc()"><span class="ar-ci"><span>📍</span><span x-text="cvLoc()"></span></span></template>
+            <template x-if="cv.age"><span class="ar-ci"><span>🎂</span><span x-text="cv.age+' ans'"></span></span></template>
+            <template x-if="cv.linkedin"><span class="ar-ci"><span>in</span><span x-text="cv.linkedin"></span></span></template>
+            <template x-if="cv.permis"><span class="ar-ci"><span>🪪</span><span x-text="'Permis ' + cv.permis"></span></span></template>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ar-body">
+      <div class="ar-left">
+        <template x-if="cv.profil"><div><div class="ar-sec-l">{% trans "Profil" %}</div><p class="ar-profil" x-text="cv.profil"></p></div></template>
+
+        <template x-if="vis(cv.competences).filter(c=>c.nom).length > 0">
+          <div><div class="ar-sec-l">{% trans "Compétences" %}</div>
+            <template x-for="c in vis(cv.competences)" :key="c.id">
+              <div x-show="c.nom" class="ar-skill">
+                <div class="ar-skill-lbl" x-text="c.nom"></div>
+                <div class="ar-bar-bg"><div class="ar-bar-fg" x-bind:style.width="(niveauDots(c.niveau)/5*100)+'%'"></div></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="vis(cv.langues).filter(l=>l.nom).length > 0">
+          <div><div class="ar-sec-l">{% trans "Langues" %}</div>
+            <template x-for="l in vis(cv.langues)" :key="l.id">
+              <div x-show="l.nom" class="ar-lang">
+                <span class="ar-lang-name" x-text="l.nom"></span>
+                <span class="ar-lang-level" x-text="niveauCode(l.niveau, 'langue')"></span>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="cv.interets.filter((i,ii)=>i && !isInteretMasque(ii)).length > 0">
+          <div><div class="ar-sec-l">{% trans "Centres d'intérêt" %}</div>
+            <template x-for="(ci,idx) in cv.interets" :key="idx">
+              <div x-show="ci && !(cv.interetsMasques||[]).includes(idx)" class="ar-interest-item"><span class="ar-tag" x-text="ci"></span></div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="cv.showBenev && vis(cv.benevs).filter(b=>b.orga).length > 0">
+          <div><div class="ar-sec-l">{% trans "Bénévolat" %}</div>
+            <template x-for="b in vis(cv.benevs)" :key="b.id">
+              <div x-show="b.orga" class="ar-certif">
+                <div class="ar-certif-name" x-text="b.role"></div>
+                <div class="ar-certif-sub" x-text="b.orga"></div>
+                <div class="ar-certif-sub" x-show="b.debut" x-text="formatPeriode(b.debut,b.fin,b.enCours)"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="cv.showRef"><p style="font-size:8pt;color:#94a3b8;text-align:center;margin-top:16px;font-style:italic">{% trans "Références sur demande" %}</p></template>
+      </div>
+
+      <div class="ar-right">
+        <template x-if="cv.experiences.some(e=>expVisible(e))">
+          <div><div class="ar-sec-r">{% trans "Expériences professionnelles" %}</div>
+            <template x-for="e in cv.experiences" :key="e.id">
+              <div x-show="expVisible(e)" class="ar-entry">
+                <div>
+                  <span class="ar-entry-title" x-text="expTitre(e)"></span>
+                  <span x-show="expTitrePeriodeShow(e)" class="ar-entry-date" x-text="expTitrePeriodeStr(e)"></span>
+                </div>
+                <template x-if="!e.postes||e.postes.length<=1">
+                  <div x-show="e.entreprise||e.lieu"><span class="ar-entry-sub" x-text="e.entreprise"></span><span x-show="e.lieu" class="ar-entry-place" x-text="e.lieu?' · '+e.lieu:''"></span><span x-show="expPeriodeShow(e)" style="font-size:7.5pt;color:#94a3b8;margin-left:4px;white-space:nowrap" x-text="expPeriodeStr(e)"></span></div>
+                </template>
+                <template x-if="e.postes&&e.postes.length>1">
+                  <div><div x-show="e.lieu" class="ar-entry-place" x-text="'· '+e.lieu" style="margin-bottom:3px"></div><div class="cv-postes-list"><template x-for="p in e.postes" :key="p.id"><div x-show="p.titre" class="cv-postes-row"><span class="cv-postes-titre" x-text="p.titre"></span><span x-show="p.debut||p.enCours" class="cv-postes-date" x-text="formatPeriode(p.debut,p.fin,p.enCours)"></span></div></template></div></div>
+                </template>
+                <div x-show="e.desc" class="ar-entry-desc" x-text="e.desc"></div>
+                <template x-if="e.hasMissionsClient && e.missionsClient && e.missionsClient.filter(mc=>mc.client).length>0"><div class="cv-mc-section"><div class="cv-mc-label">🏢 Missions clients</div><template x-for="mc in e.missionsClient.filter(mc=>mc.client)" :key="mc.id"><div class="cv-mc-item"><div class="cv-mc-hdr"><div class="cv-mc-title" x-text="mc.client||'—'"></div><div x-show="mc.debut||mc.enCours" class="cv-mc-badge" x-text="formatPeriode(mc.debut,mc.fin,mc.enCours)"></div></div><div x-show="mc.pays||mc.ville" class="cv-mc-client"><span x-show="mc.pays" x-text="mc.pays"></span><span x-show="mc.ville" x-text="mc.pays&&mc.ville?' · '+mc.ville:mc.ville||''"></span></div><div x-show="mc.desc" class="cv-mc-desc" x-text="mc.desc"></div></div></template></div></template>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="vis(cv.formations).filter(f=>f.diplome||f.ecole).length > 0">
+          <div><div class="ar-sec-r">{% trans "Formations" %}</div>
+            <template x-for="f in vis(cv.formations)" :key="f.id">
+              <div x-show="f.diplome||f.ecole" class="ar-entry" style="border-left-color:#E9C46A">
+                <div style="content:'';background:#2A9D8F">
+                  <span class="ar-entry-title" x-text="(f.typeSortie==='certification'?'🏅 ':f.typeSortie==='attestation'?'📄 ':'')+(f.diplome||'—')"></span>
+                  <span x-show="f.typeSortie==='certification'?(f.fin||f.expiration):(f.debut||f.enCours)" class="ar-entry-date" style="background:#2A9D8F" x-text="f.typeSortie==='certification'?(f.expiration?'Exp. '+formatMonth(f.expiration):(f.fin?formatMonth(f.fin):'')):(formatPeriode(f.debut,f.fin,f.enCours))"></span>
+                </div>
+                <div x-show="f.ecole||f.lieu"><span class="ar-entry-sub" x-text="f.ecole"></span><span x-show="f.lieu&&f.typeSortie!=='certification'" class="ar-entry-place" x-text="f.lieu?' · '+f.lieu:''"></span></div>
+                <div x-show="f.domaine" class="ar-entry-desc" x-text="f.domaine" style="font-style:italic;opacity:0.8"></div>
+                <div x-show="f.typeSortie==='certification'&&f.numero" class="ar-entry-desc" x-text="'N° '+f.numero"></div>
+                <div x-show="f.desc" class="ar-entry-desc" x-text="f.desc"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="cv.showCertif && cv.certifs.filter(c=>c.nom).length > 0">
+          <div><div class="ar-sec-r">{% trans "Certifications" %}</div>
+            <template x-for="c in cv.certifs" :key="c.id">
+              <div x-show="c.nom" class="ar-certif">
+                <div class="ar-certif-name" x-text="c.nom"></div>
+                <div class="ar-certif-sub"><span x-text="c.organisme"></span><span x-show="c.annee" x-text="c.annee?' · '+c.annee:''"></span></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="cv.showProjets && vis(cv.projets).filter(p=>p.nom).length > 0">
+          <div><div class="ar-sec-r">{% trans "Projets" %}</div>
+            <template x-for="p in vis(cv.projets)" :key="p.id">
+              <div x-show="p.nom" class="ar-entry">
+                <div><span class="ar-entry-title" x-text="p.nom"></span><span x-show="p.annee" class="ar-entry-date" x-text="p.annee"></span></div>
+                <div x-show="p.desc" class="ar-entry-desc" x-text="p.desc"></div>
+                <div x-show="p.lien" class="ar-entry-desc" style="color:#2A9D8F;font-size:8pt">🔗 <span x-text="p.lien"></span></div>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+    </div>
+    <div class="ar-footer"></div>
+  </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+{% block js_extra %}{% include "candidat/cv/_cvbuilder_js.html" %}{% endblock %}

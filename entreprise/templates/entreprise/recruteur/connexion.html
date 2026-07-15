@@ -1,0 +1,611 @@
+﻿{% extends "entreprise/base_auth.html" %}
+{% load static i18n %}
+
+{% block titre %}Connexion — {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+<style>
+    /* ── Fond animé ─────────────────────────────────────────── */
+    .auth-bg {
+        position: absolute; inset: 0; overflow: hidden; z-index: 0;
+        pointer-events: none;
+    }
+    .auth-bg::before, .auth-bg::after {
+        content: ''; position: absolute; border-radius: 50%; filter: blur(80px); opacity: .35;
+        animation: floatBlob 18s ease-in-out infinite;
+    }
+    .auth-bg::before {
+        width: 520px; height: 520px;
+        background: radial-gradient(circle, #009A44 0%, transparent 70%);
+        top: -120px; left: -120px;
+    }
+    .auth-bg::after {
+        width: 460px; height: 460px;
+        background: radial-gradient(circle, #c96010 0%, transparent 70%);
+        bottom: -120px; right: -100px;
+        animation-delay: -9s;
+    }
+    @keyframes floatBlob {
+        0%,100% { transform: translate(0,0) scale(1); }
+        33%     { transform: translate(40px,30px) scale(1.08); }
+        66%     { transform: translate(-30px,40px) scale(.95); }
+    }
+
+    /* ── Carte avec entrée en fade-up ───────────────────────── */
+    .auth-card { animation: cardIn .55s cubic-bezier(.2,.8,.2,1) both; }
+    @keyframes cardIn {
+        from { opacity: 0; transform: translateY(18px) scale(.985); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ── Panneau gauche : motifs ────────────────────────────── */
+    .panel-grid {
+        position: absolute; inset: 0;
+        background-image:
+            linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+        background-size: 28px 28px;
+        mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+    }
+    .orb {
+        animation: pulseOrb 3.5s ease-in-out infinite;
+        box-shadow: 0 0 0 0 rgba(255,255,255,.4);
+    }
+    @keyframes pulseOrb {
+        0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,.35); }
+        50%     { box-shadow: 0 0 0 18px rgba(255,255,255,0); }
+    }
+
+    /* ── Champs : floating label ────────────────────────────── */
+    .ffield { position: relative; }
+    .ffield input {
+        width: 100%; padding: 22px 14px 10px 42px;
+        border-radius: 14px; border: 1.5px solid #e5e7eb;
+        background: #f9fafb; font-size: 14px; color: #111827;
+        transition: border-color .2s, background .2s, box-shadow .2s;
+    }
+    .ffield input:focus {
+        outline: none; border-color: #009A44; background: #fff;
+        box-shadow: 0 0 0 4px rgba(0,154,68,.12);
+    }
+    .ffield input.has-pass-toggle { padding-right: 44px; }
+    .ffield > label.flabel {
+        position: absolute; left: 42px; top: 50%; transform: translateY(-50%);
+        font-size: 13px; color: #9ca3af; pointer-events: none;
+        transition: all .18s ease; background: transparent;
+    }
+    .ffield input:focus + label.flabel,
+    .ffield input:not(:placeholder-shown) + label.flabel {
+        top: 12px; transform: translateY(0);
+        font-size: 10px; font-weight: 700;
+        letter-spacing: .08em; text-transform: uppercase;
+        color: #009A44;
+    }
+    .ffield .ficon {
+        position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+        font-size: 16px; color: #9ca3af; pointer-events: none;
+    }
+    .ffield input:focus ~ .ficon { color: #009A44; }
+    .ffield.is-valid input { border-color: #22c55e; }
+    .ffield.is-invalid input { border-color: #ef4444; }
+
+    /* ── Bouton primaire ─────────────────────────────────────── */
+    .btn-primary {
+        position: relative; overflow: hidden;
+        background: linear-gradient(135deg, #009A44 0%, #007a36 100%);
+        transition: transform .15s, box-shadow .25s, opacity .2s;
+    }
+    .btn-primary:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 30px -10px rgba(0,154,68,.6);
+    }
+    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+    .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-primary .shine {
+        position: absolute; inset: 0;
+        background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,.25) 50%, transparent 70%);
+        transform: translateX(-100%);
+    }
+    .btn-primary:hover:not(:disabled) .shine { animation: shine .9s ease; }
+    @keyframes shine { to { transform: translateX(100%); } }
+
+    /* ── Spinner ────────────────────────────────────────────── */
+    .spinner {
+        width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,.35);
+        border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Caps lock badge ────────────────────────────────────── */
+    .caps-badge {
+        position: absolute; right: 44px; top: 50%; transform: translateY(-50%);
+        font-size: 9px; font-weight: 800; letter-spacing: .08em;
+        background: #fef3c7; color: #92400e; padding: 3px 6px; border-radius: 6px;
+        border: 1px solid #fde68a;
+    }
+
+    /* ── Tagline rotatif ────────────────────────────────────── */
+    .tagline-fade-enter { animation: tagFade .5s ease both; }
+    @keyframes tagFade { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ── Stats animés ───────────────────────────────────────── */
+    .stat-card { backdrop-filter: blur(8px); }
+
+    /* ── Erreur shake ───────────────────────────────────────── */
+    .shake { animation: shake .45s cubic-bezier(.36,.07,.19,.97); }
+    @keyframes shake {
+        10%,90% { transform: translateX(-2px); }
+        20%,80% { transform: translateX(3px); }
+        30%,50%,70% { transform: translateX(-5px); }
+        40%,60% { transform: translateX(5px); }
+    }
+
+    /* ── Dark mode ajustements ─────────────────────────────── */
+    html.dark .ffield input { background: #0f172a !important; border-color: #334155 !important; color: #e2e8f0 !important; }
+    html.dark .ffield input:focus { background: #0b1220 !important; border-color: #009A44 !important; }
+    html.dark .ffield > label.flabel { color: #64748b; }
+
+    /* Badge "Connexion sécurisée" (vert pâle) */
+    html.dark [style*="background:#DCFCE7"][style*="color:#166534"] {
+        background: rgba(34,197,94,.18) !important;
+        color: #86efac !important;
+    }
+
+    /* CTA Connexion entreprise — carte orange */
+    .btn-admin-entreprise {
+        border-color: #FED7AA;
+        background: linear-gradient(135deg, #FFF7ED 0%, #FFFFFF 100%);
+        border-width: 2px;
+    }
+    .btn-admin-entreprise:hover {
+        border-color: #c96010;
+        background: linear-gradient(135deg, #FFEDD5 0%, #FFFFFF 100%);
+    }
+    html.dark .btn-admin-entreprise {
+        border-color: rgba(249,115,22,.30) !important;
+        background: linear-gradient(135deg, rgba(249,115,22,.10) 0%, #1e293b 100%) !important;
+    }
+    html.dark .btn-admin-entreprise:hover {
+        border-color: #c96010 !important;
+        background: linear-gradient(135deg, rgba(249,115,22,.22) 0%, #1e293b 100%) !important;
+    }
+    /* Badge "Admin" (orange pâle) */
+    html.dark [style*="background:#FED7AA"][style*="color:#9A3412"] {
+        background: rgba(249,115,22,.20) !important;
+        color: #fdba74 !important;
+    }
+
+    /* Caps Lock badge */
+    html.dark .caps-badge {
+        background: rgba(234,179,8,.20) !important;
+        color: #fde68a !important;
+        border-color: rgba(234,179,8,.35) !important;
+    }
+
+    /* Floating label couleur active (focus / pré-rempli) */
+    html.dark .ffield input:focus + label.flabel,
+    html.dark .ffield input:not(:placeholder-shown) + label.flabel {
+        color: #4ade80 !important;
+    }
+
+    /* Bordures invalides / valides plus visibles en sombre */
+    html.dark .ffield.is-valid input   { border-color: #4ade80 !important; }
+    html.dark .ffield.is-invalid input { border-color: #f87171 !important; }
+
+    /* CTA "Créer un compte entreprise" — gradient Tailwind (from-green-50 → white) */
+    html.dark a.bg-gradient-to-br.from-green-50.to-white {
+        background: linear-gradient(135deg, rgba(34,197,94,.10) 0%, #1e293b 100%) !important;
+    }
+    html.dark a.hover\:from-green-100\:hover:hover,
+    html.dark a.bg-gradient-to-br.from-green-50.to-white:hover {
+        background: linear-gradient(135deg, rgba(34,197,94,.20) 0%, #1e293b 100%) !important;
+    }
+
+    /* Séparateurs verts décoratifs (panneau gauche reste vert vibrant, OK) */
+    html.dark .border-white\/15 { border-color: rgba(255,255,255,.10) !important; }
+    html.dark .border-white\/20 { border-color: rgba(255,255,255,.12) !important; }
+
+    /* Étiquette de section "Espace entreprise" — bandeau gris */
+    html.dark .bg-gray-100 { background-color: #1e2d42 !important; }
+
+    /* ── MODE NOIR (OLED) ajustements ───────────────────────── */
+    html.noir .ffield input { background: #000 !important; border-color: #222 !important; color: #e2e8f0 !important; }
+    html.noir .ffield input:focus { background: #000 !important; border-color: #009A44 !important; }
+    html.noir .ffield > label.flabel { color: #64748b; }
+
+    html.noir [style*="background:#DCFCE7"][style*="color:#166534"] {
+        background: rgba(34,197,94,.14) !important;
+        color: #86efac !important;
+    }
+
+    html.noir .btn-admin-entreprise {
+        border-color: rgba(249,115,22,.24) !important;
+        background: linear-gradient(135deg, rgba(249,115,22,.08) 0%, #0d0d0d 100%) !important;
+    }
+    html.noir .btn-admin-entreprise:hover {
+        border-color: #c96010 !important;
+        background: linear-gradient(135deg, rgba(249,115,22,.18) 0%, #0d0d0d 100%) !important;
+    }
+    html.noir [style*="background:#FED7AA"][style*="color:#9A3412"] {
+        background: rgba(249,115,22,.16) !important;
+        color: #fdba74 !important;
+    }
+
+    html.noir .caps-badge {
+        background: rgba(234,179,8,.16) !important;
+        color: #fde68a !important;
+        border-color: rgba(234,179,8,.28) !important;
+    }
+
+    html.noir .ffield input:focus + label.flabel,
+    html.noir .ffield input:not(:placeholder-shown) + label.flabel {
+        color: #4ade80 !important;
+    }
+
+    html.noir .ffield.is-valid input   { border-color: #4ade80 !important; }
+    html.noir .ffield.is-invalid input { border-color: #f87171 !important; }
+
+    html.noir a.bg-gradient-to-br.from-green-50.to-white {
+        background: linear-gradient(135deg, rgba(34,197,94,.08) 0%, #0d0d0d 100%) !important;
+    }
+    html.noir a.bg-gradient-to-br.from-green-50.to-white:hover {
+        background: linear-gradient(135deg, rgba(34,197,94,.16) 0%, #0d0d0d 100%) !important;
+    }
+
+    html.noir .border-white\/15 { border-color: rgba(255,255,255,.08) !important; }
+    html.noir .border-white\/20 { border-color: rgba(255,255,255,.10) !important; }
+
+    html.noir .bg-gray-100 { background-color: #1a1a1a !important; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="relative w-full py-8"
+     x-data="recruteurLogin()"
+     x-init="init()">
+
+    <!-- Fond animé -->
+    <div class="auth-bg"></div>
+
+    <div class="relative z-10 w-full max-w-5xl mx-auto auth-card">
+        <div class="flex rounded-3xl shadow-2xl overflow-hidden min-h-[600px] bg-white">
+
+            <!-- ═══════════════ Panneau gauche ═══════════════ -->
+            <div class="hidden lg:flex flex-col justify-between w-5/12 p-10 text-white relative overflow-hidden"
+                 style="background: linear-gradient(145deg, #006b30 0%, #009A44 50%, #00c05a 100%);">
+
+                <!-- Motifs décoratifs -->
+                <div class="panel-grid"></div>
+                <div class="absolute -top-20 -right-16 w-72 h-72 rounded-full opacity-20"
+                     style="background: radial-gradient(circle, #fff 0%, transparent 70%);"></div>
+                <div class="absolute -bottom-24 -left-10 w-64 h-64 rounded-full opacity-15"
+                     style="background: radial-gradient(circle, #c96010 0%, transparent 70%);"></div>
+
+                <!-- Header marque -->
+                <div class="relative z-10">
+                    <div class="flex items-center gap-3 mb-10">
+                        <div class="orb w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center text-2xl backdrop-blur-md">
+                            🎯
+                        </div>
+                        <div>
+                            <p class="text-[10px] text-white/60 uppercase tracking-[.18em] font-semibold">{{ logo_site.nom_site }}</p>
+                            <p class="text-base font-extrabold">{% trans "Espace Recruteur" %}</p>
+                        </div>
+                    </div>
+
+                    <!-- Tagline rotatif -->
+                    <div class="min-h-[110px]">
+                        <template x-for="(tag, i) in taglines" :key="i">
+                            <div x-show="taglineIdx === i" class="tagline-fade-enter">
+                                <h1 class="text-3xl font-extrabold leading-tight mb-3" x-text="tag.title"></h1>
+                                <p class="text-white/75 text-sm leading-relaxed max-w-xs" x-text="tag.sub"></p>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Indicateurs slide -->
+                    <div class="flex gap-1.5 mt-4">
+                        <template x-for="(t, i) in taglines" :key="i">
+                            <button type="button" @click="taglineIdx = i"
+                                    class="h-1 rounded-full transition-all duration-300"
+                                    :class="taglineIdx === i ? 'w-8 bg-white' : 'w-3 bg-white/30 hover:bg-white/50'"
+                                    :aria-label="{% trans "'Slide ' + (i+1)" %}"></button>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Stats glassmorphism -->
+                <div class="relative z-10 grid grid-cols-3 gap-2 my-6">
+                    <div class="stat-card bg-white/10 border border-white/15 rounded-xl p-3 text-center">
+                        <div class="text-xl font-extrabold" x-text="counter1 + '+'"></div>
+                        <div class="text-[10px] text-white/70 uppercase tracking-wider mt-0.5">{% trans "Talents" %}</div>
+                    </div>
+                    <div class="stat-card bg-white/10 border border-white/15 rounded-xl p-3 text-center">
+                        <div class="text-xl font-extrabold" x-text="counter2 + '+'"></div>
+                        <div class="text-[10px] text-white/70 uppercase tracking-wider mt-0.5">{% trans "Entreprises" %}</div>
+                    </div>
+                    <div class="stat-card bg-white/10 border border-white/15 rounded-xl p-3 text-center">
+                        <div class="text-xl font-extrabold" x-text="counter3 + '%'"></div>
+                        <div class="text-[10px] text-white/70 uppercase tracking-wider mt-0.5">{% trans "Satisfaction" %}</div>
+                    </div>
+                </div>
+
+                <!-- Réassurance / fonctionnalités -->
+                <div class="relative z-10 pt-5 border-t border-white/15">
+                    <p class="text-[10px] text-white/60 uppercase tracking-[.18em] font-semibold mb-3">{% trans "Ce qui vous attend" %}</p>
+                    <div class="space-y-2.5">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center text-sm flex-shrink-0">📋</div>
+                            <span class="text-xs text-white/85">{% trans "Gérez vos offres d'emploi en un clic" %}</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center text-sm flex-shrink-0">📨</div>
+                            <span class="text-xs text-white/85">{% trans "Traitez les candidatures en équipe" %}</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center text-sm flex-shrink-0">🔒</div>
+                            <span class="text-xs text-white/85">{% trans "Données chiffrées et sécurisées" %}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════════ Panneau droit (formulaire) ═══════════════ -->
+            <div class="flex-1 bg-white flex flex-col justify-center px-6 sm:px-10 md:px-14 py-10 relative">
+
+                <div class="max-w-sm mx-auto w-full">
+
+                    <!-- Badge sécurité -->
+                    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider mb-5"
+                         style="background:#DCFCE7; color:#166534;">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block animate-pulse"></span>
+                        Connexion sécurisée
+                    </div>
+
+                    <h2 class="text-3xl font-extrabold text-gray-900 mb-1.5">
+                        Bon retour <span class="inline-block animate-bounce">👋</span>
+                    </h2>
+                    <p class="text-sm text-gray-500 mb-7">
+                        Espace réservé aux recruteurs <strong>{% trans "RH, Manager et Lecteur" %}</strong>.
+                        Les administrateurs se connectent via l'espace entreprise.
+                    </p>
+
+                    <!-- Erreur serveur -->
+                    {% if error %}
+                    <div class="mb-5 px-4 py-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-sm text-red-700 shake">
+                        <span class="mt-0.5 flex-shrink-0">⚠️</span>
+                        <div class="flex-1">
+                            <p>{{ error }}</p>
+                            {% if redirect_admin %}
+                            <a href="{% url 'entreprise:connexion' %}"
+                               class="inline-flex items-center gap-1 mt-2 font-bold text-red-800 hover:underline">
+                                🔑 Aller à la connexion entreprise →
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <form method="post" class="space-y-4" @submit="onSubmit($event)" novalidate>
+                        {% csrf_token %}
+
+                        <!-- Email -->
+                        <div class="ffield"
+                             :class="{ 'is-valid': emailValid && email.length > 0, 'is-invalid': emailTouched && !emailValid }">
+                            <input type="email" name="email" id="rec_email"
+                                   x-model="email"
+                                   @blur="emailTouched = true"
+                                   value="{{ email|default:'' }}"
+                                   placeholder=" "
+                                   autocomplete="username"
+                                   class="peer"
+                                   required autofocus>
+                            <label for="rec_email" class="flabel">{% trans "Email professionnel" %}</label>
+                            <span class="ficon">✉️</span>
+                        </div>
+                        <p x-show="emailTouched && !emailValid && email.length > 0"
+                           x-transition.opacity
+                           class="text-xs text-red-600 -mt-2 flex items-center gap-1">
+                            <span>⚠️</span> Format d'email invalide
+                        </p>
+
+                        <!-- Mot de passe -->
+                        <div class="ffield has-pass-toggle relative">
+                            <input :type="showPass ? 'text' : 'password'" name="motPasse" id="rec_pass"
+                                   x-model="password"
+                                   @keyup="detectCaps($event)"
+                                   @keydown="detectCaps($event)"
+                                   placeholder=" "
+                                   autocomplete="current-password"
+                                   class="has-pass-toggle"
+                                   required>
+                            <label for="rec_pass" class="flabel">{% trans "Mot de passe" %}</label>
+                            <span class="ficon">🔒</span>
+                            <span x-show="capsLock" x-transition.opacity class="caps-badge" title="{% trans "Verrouillage majuscules activé" %}">CAPS</span>
+                            <button type="button" @click="showPass = !showPass"
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 text-base p-1 rounded transition"
+                                    :aria-label="{% trans "showPass ? 'Masquer le mot de passe' : 'Afficher le mot de passe'" %}">
+                                <span x-text="showPass ? '🙈' : '👁️'"></span>
+                            </button>
+                        </div>
+
+                        <!-- Options -->
+                        <div class="flex items-center justify-between text-sm pt-1">
+                            <label class="flex items-center gap-2 text-gray-600 cursor-pointer select-none">
+                                <input type="checkbox" name="souvenir"
+                                       class="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-2 focus:ring-green-400">
+                                <span class="text-xs">{% trans "Se souvenir de moi" %}</span>
+                            </label>
+                            <a href="{% url 'entreprise:mot_de_passe_oublie' %}"
+                               class="text-xs font-semibold text-green-700 hover:text-green-800 hover:underline transition">
+                                Mot de passe oublié ?
+                            </a>
+                        </div>
+
+                        <!-- Bouton soumettre -->
+                        <button type="submit"
+                                :disabled="submitting"
+                                class="btn-primary w-full py-3.5 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 mt-2">
+                            <span class="shine"></span>
+                            <template x-if="!submitting">
+                                <span class="flex items-center gap-2">
+                                    <span>{% trans "Se connecter" %}</span>
+                                    <span>→</span>
+                                </span>
+                            </template>
+                            <template x-if="submitting">
+                                <span class="flex items-center gap-2">
+                                    <span class="spinner"></span>
+                                    <span>{% trans "Connexion en cours…" %}</span>
+                                </span>
+                            </template>
+                        </button>
+
+                        <!-- Séparateur -->
+                        <div class="relative flex items-center gap-3 py-3">
+                            <div class="flex-1 h-px bg-gray-200"></div>
+                            <span class="text-[10px] text-gray-400 uppercase tracking-widest">ou</span>
+                            <div class="flex-1 h-px bg-gray-200"></div>
+                        </div>
+
+                        <!-- En-tête section "Espace entreprise" -->
+                        <div class="flex items-center gap-2 pt-1">
+                            <div class="flex-1 h-px bg-gray-100"></div>
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{% trans "Espace entreprise" %}</span>
+                            <div class="flex-1 h-px bg-gray-100"></div>
+                        </div>
+
+                        <!-- CTA Connexion entreprise (admin) — carte orange visible -->
+                        <a href="{% url 'entreprise:connexion' %}"
+                           class="btn-admin-entreprise flex items-center gap-3 w-full px-4 py-3.5 rounded-xl transition-all duration-200 group relative overflow-hidden">
+                            <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0 text-white shadow-md"
+                                 style="background: linear-gradient(135deg, #c96010, #d96a00);">
+                                🔑
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-1.5 mb-0.5">
+                                    <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                                          style="background:#FED7AA; color:#9A3412;">{% trans "Admin" %}</span>
+                                    <span class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">{% trans "Gestionnaire" %}</span>
+                                </div>
+                                <p class="text-sm font-extrabold text-gray-900 group-hover:text-orange-700">{% trans "Connexion entreprise" %}</p>
+                                <p class="text-[11px] text-gray-500 mt-0.5">{% trans "Pour le compte administrateur de l'entreprise" %}</p>
+                            </div>
+                            <span class="text-xl font-bold transition-transform group-hover:translate-x-1" style="color:#c96010;">→</span>
+                        </a>
+
+                        <!-- CTA inscription entreprise — carte verte -->
+                        <a href="{% url 'entreprise:inscription' %}"
+                           class="flex items-center gap-3 w-full px-4 py-3.5 rounded-xl border-2 border-green-100 bg-gradient-to-br from-green-50 to-white hover:from-green-100 hover:border-green-300 transition-all duration-200 group">
+                            <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0 text-white shadow-md"
+                                 style="background: linear-gradient(135deg, #009A44, #007a36);">
+                                🏢
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-1.5 mb-0.5">
+                                    <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-green-100 text-green-800">{% trans "Nouveau" %}</span>
+                                    <span class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">{% trans "Inscription" %}</span>
+                                </div>
+                                <p class="text-sm font-extrabold text-gray-900 group-hover:text-green-800">{% trans "Créer un compte entreprise" %}</p>
+                                <p class="text-[11px] text-gray-500 mt-0.5">{% trans "Publiez vos offres et recrutez vos talents" %}</p>
+                            </div>
+                            <span class="text-xl font-bold text-green-600 group-hover:translate-x-1 transition-transform">→</span>
+                        </a>
+
+                        <!-- Note recruteur -->
+                        <p class="text-center text-xs text-gray-400 pt-2">
+                            Recruteur sans accès ? Demandez à votre administrateur entreprise de vous inviter.
+                        </p>
+
+                        <!-- Lien candidat (mobile) -->
+                        <p class="text-center text-xs text-gray-400 lg:hidden pt-2 border-t border-gray-100">
+                            Vous êtes candidat ?
+                            <a href="{% url 'candidat:connexion' %}" class="text-gray-600 font-semibold hover:underline">
+                                Espace candidat →
+                            </a>
+                        </p>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    function recruteurLogin() {
+        return {
+            email: "{{ email|default:'' }}",
+            password: '',
+            emailTouched: false,
+            showPass: false,
+            capsLock: false,
+            submitting: false,
+            taglineIdx: 0,
+            taglines: [
+                { title: 'Recrutez les meilleurs talents', sub: 'Accédez à des milliers de profils qualifiés à travers la Côte d’Ivoire et l’Afrique de l’Ouest.' },
+                { title: 'Gérez votre équipe RH', sub: 'Collaborez avec vos collègues, suivez les candidatures et planifiez les entretiens depuis un seul tableau de bord.' },
+                { title: 'Décidez en confiance', sub: 'Statistiques en temps réel, filtres avancés et historique complet pour chaque candidature reçue.' },
+            ],
+            counter1: 0, counter2: 0, counter3: 0,
+
+            init() {
+                this._rotate = setInterval(() => {
+                    this.taglineIdx = (this.taglineIdx + 1) % this.taglines.length;
+                }, 5500);
+                this._countTo('counter1', 12000, 1400);
+                this._countTo('counter2', 850, 1400);
+                this._countTo('counter3', 98, 1400);
+
+                // Sync autofill du navigateur (l'événement input ne se déclenche pas
+                // toujours sur autofill — on relit les valeurs DOM après render).
+                this.$nextTick(() => {
+                    const emailEl = document.getElementById('rec_email');
+                    const passEl  = document.getElementById('rec_pass');
+                    const sync = () => {
+                        if (emailEl && emailEl.value && this.email !== emailEl.value) this.email = emailEl.value;
+                        if (passEl  && passEl.value  && this.password !== passEl.value)  this.password = passEl.value;
+                    };
+                    sync();
+                    setTimeout(sync, 250);
+                    setTimeout(sync, 800);
+                });
+            },
+
+            _countTo(prop, target, duration) {
+                const start = performance.now();
+                const tick = (now) => {
+                    const t = Math.min((now - start) / duration, 1);
+                    const eased = 1 - Math.pow(1 - t, 3);
+                    this[prop] = Math.floor(eased * target);
+                    if (t < 1) requestAnimationFrame(tick);
+                    else this[prop] = target;
+                };
+                requestAnimationFrame(tick);
+            },
+
+            get emailValid() {
+                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email.trim());
+            },
+            get canSubmit() {
+                return this.emailValid && this.password.length > 0;
+            },
+
+            detectCaps(e) {
+                if (e.getModifierState && typeof e.getModifierState === 'function') {
+                    this.capsLock = e.getModifierState('CapsLock');
+                }
+            },
+
+            onSubmit(e) {
+                if (!this.canSubmit) {
+                    e.preventDefault();
+                    this.emailTouched = true;
+                    return;
+                }
+                this.submitting = true;
+            },
+        };
+    }
+</script>
+{% endblock %}

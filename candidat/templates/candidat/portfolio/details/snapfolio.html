@@ -1,0 +1,544 @@
+{% extends "candidat/base.html" %}
+{% load i18n static %}
+
+{% block titre %}{{ projet.nom }} — {{ candidat.prenom }} {{ candidat.nom }}{% endblock %}
+
+{% block css_extra %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Ubuntu:wght@400;500;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+  .sfd, .sfd * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  .sfd {
+    --sf-bg:        #1f1f1f;
+    --sf-fg:        #ffffff;
+    --sf-heading:   #ffffff;
+    --sf-accent:    {{ couleur_accent|default:'#ececec' }};
+    --sf-surface:   #232323;
+    --sf-surface-2: #2c2c2c;
+    --sf-contrast:  #310606;
+    --sf-rule:      rgba(255,255,255,0.08);
+    --sf-mute:      rgba(255,255,255,0.6);
+
+    --sf-default-font: 'Roboto', system-ui, sans-serif;
+    --sf-heading-font: 'Ubuntu', sans-serif;
+
+    background: var(--sf-bg);
+    color: var(--sf-fg);
+    font-family: var(--sf-default-font);
+    font-size: 16px; line-height: 1.6;
+    min-height: 100vh;
+  }
+  .sfd h1, .sfd h2, .sfd h3, .sfd h4 {
+    color: var(--sf-heading); font-family: var(--sf-heading-font); margin: 0;
+  }
+  /* Mêmes règles que le portfolio : on ne colore que les liens sans classe. */
+  .sfd a:not([class]) { color: var(--sf-accent); text-decoration: none; transition: .3s; }
+  .sfd a:not([class]):hover { color: color-mix(in srgb, var(--sf-accent), transparent 25%); }
+  .sfd a { text-decoration: none; transition: .3s; }
+
+  /* Reveal */
+  @keyframes sfd-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .sfd-reveal { opacity: 0; }
+  .sfd-reveal.in { animation: sfd-up .8s cubic-bezier(.16,.84,.44,1) both; }
+  .sfd-reveal.d1 { animation-delay: .08s; }
+  .sfd-reveal.d2 { animation-delay: .16s; }
+  .sfd-reveal.d3 { animation-delay: .24s; }
+  .sfd-reveal.d4 { animation-delay: .32s; }
+
+  /* Top bar : retour + démo. `top` = hauteur du navbar principal
+     (orange + bande tricolore). z-index < 50 pour rester sous le navbar. */
+  .sfd-topbar {
+    position: sticky; top: 60px; z-index: 30;
+    background: color-mix(in srgb, var(--sf-bg) 88%, transparent);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--sf-rule);
+    padding: 14px clamp(20px, 4vw, 64px);
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  @media (min-width: 768px) { .sfd-topbar { top: 76px; } }
+  .sfd-back {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--sf-heading-font);
+    font-size: 12px; letter-spacing: .12em; text-transform: uppercase; font-weight: 600;
+    color: var(--sf-fg);
+    padding: 10px 16px; border-radius: 50px;
+    border: 1px solid var(--sf-rule);
+    background: rgba(255,255,255,.04);
+    transition: .3s;
+  }
+  .sfd-back:hover { background: var(--sf-accent); color: var(--sf-contrast); border-color: var(--sf-accent); }
+  .sfd-back i { font-size: 14px; transition: transform .25s; }
+  .sfd-back:hover i { transform: translateX(-3px); }
+
+  .sfd-topbar-cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 18px; border-radius: 50px;
+    background: var(--sf-accent); color: var(--sf-contrast);
+    font-weight: 700; font-size: 13px; letter-spacing: .04em;
+    border: 2px solid var(--sf-accent);
+    transition: .3s;
+  }
+  .sfd-topbar-cta:hover { background: transparent; color: var(--sf-accent); }
+  .sfd-topbar-cta i { font-size: 14px; }
+
+  /* Hero du projet */
+  .sfd-hero {
+    padding: clamp(48px, 7vw, 96px) clamp(24px, 5vw, 96px) clamp(40px, 5vw, 56px);
+    position: relative; overflow: hidden;
+  }
+  .sfd-hero::before {
+    content: ''; position: absolute;
+    top: -100px; right: -50px;
+    width: 360px; height: 360px; border-radius: 50%;
+    background: linear-gradient(45deg,
+      color-mix(in srgb, var(--sf-accent), transparent 88%),
+      color-mix(in srgb, var(--sf-accent), transparent 95%));
+    pointer-events: none;
+    animation: sfd-float 6s ease-in-out infinite;
+  }
+  @keyframes sfd-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+  .sfd-hero-inner { max-width: 1320px; margin: 0 auto; position: relative; z-index: 1; }
+  .sfd-eyebrow {
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 6px 16px; border-radius: 50px;
+    background: color-mix(in srgb, var(--sf-accent), transparent 80%);
+    color: var(--sf-accent);
+    font-family: var(--sf-heading-font);
+    font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+    margin-bottom: 22px;
+  }
+  .sfd-title {
+    font-size: clamp(40px, 6vw, 72px); font-weight: 700;
+    line-height: 1.1; letter-spacing: -.02em;
+    margin-bottom: 24px;
+  }
+  .sfd-meta { display: flex; flex-wrap: wrap; gap: 12px; }
+  .sfd-meta-pill {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 10px 16px; border-radius: 50px;
+    background: var(--sf-surface);
+    border: 1px solid var(--sf-rule);
+    font-size: 13px; color: var(--sf-fg);
+  }
+  .sfd-meta-pill i { color: var(--sf-accent); font-size: 16px; }
+  .sfd-meta-pill .key { color: var(--sf-mute); font-weight: 500; }
+
+  /* Cover */
+  .sfd-cover { padding: 0 clamp(20px, 4vw, 64px); }
+  .sfd-cover-wrap {
+    max-width: 1320px; margin: 0 auto;
+    border-radius: 24px; overflow: hidden;
+    border: 1px solid var(--sf-rule);
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,.55);
+  }
+  .sfd-cover-wrap img { display: block; width: 100%; height: auto; max-height: 640px; object-fit: cover; }
+  .sfd-cover-fallback {
+    width: 100%; aspect-ratio: 21/9;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--sf-surface-2), var(--sf-bg));
+    color: var(--sf-mute); font-size: 80px;
+  }
+
+  /* Contenu : aside + blocs */
+  .sfd-section { padding: clamp(48px, 7vw, 96px) clamp(20px, 4vw, 64px); }
+  .sfd-content {
+    max-width: 1320px; margin: 0 auto;
+    display: grid; gap: clamp(28px, 4vw, 56px);
+    grid-template-columns: minmax(260px, 320px) 1fr;
+    align-items: start;
+  }
+  @media (max-width: 880px) { .sfd-content { grid-template-columns: 1fr; } }
+
+  .sfd-aside {
+    background: var(--sf-surface);
+    border: 1px solid var(--sf-rule);
+    border-radius: 20px;
+    padding: 28px;
+    /* sticky sous la topbar (qui est elle-même sous le navbar principal) */
+    position: sticky; top: 150px;
+  }
+  .sfd-aside-title {
+    font-family: var(--sf-heading-font);
+    font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--sf-accent);
+    padding-bottom: 12px; margin-bottom: 18px;
+    border-bottom: 2px solid var(--sf-accent);
+    display: inline-block;
+  }
+  .sfd-aside-row {
+    display: grid; grid-template-columns: 28px 1fr;
+    gap: 12px; padding: 12px 0;
+    border-bottom: 1px solid var(--sf-rule);
+    font-size: 14px;
+  }
+  .sfd-aside-row:last-child { border-bottom: 0; }
+  .sfd-aside-row .icon {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: color-mix(in srgb, var(--sf-accent), transparent 85%);
+    color: var(--sf-accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .sfd-aside-row .body .key { display: block; font-size: 11px; font-weight: 600; letter-spacing: .1em; color: var(--sf-mute); text-transform: uppercase; margin-bottom: 2px; }
+  .sfd-aside-row .body .val { color: var(--sf-fg); font-weight: 500; word-break: break-word; }
+  .sfd-aside-row .body .val a { color: var(--sf-accent); }
+
+  .sfd-block { margin-bottom: 36px; }
+  .sfd-block:last-child { margin-bottom: 0; }
+  .sfd-block-title {
+    font-size: clamp(24px, 3vw, 36px); font-weight: 700;
+    line-height: 1.2; letter-spacing: -.01em;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--sf-accent);
+    display: inline-block;
+  }
+  .sfd-block-text { font-size: 16px; line-height: 1.75; color: rgba(255,255,255,.85); }
+  .sfd-block-text p { margin: 0 0 14px; }
+
+  .sfd-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  .sfd-gallery-item {
+    border-radius: 16px; overflow: hidden;
+    border: 1px solid var(--sf-rule);
+    transition: transform .3s, box-shadow .3s;
+  }
+  .sfd-gallery-item:hover { transform: translateY(-4px); box-shadow: 0 16px 40px -10px rgba(0,0,0,.5); }
+  .sfd-gallery-item img { display: block; width: 100%; height: 200px; object-fit: cover; transition: transform .8s; }
+  .sfd-gallery-item:hover img { transform: scale(1.06); }
+
+  .sfd-videos { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  .sfd-video {
+    position: relative; display: block; width: 100%;
+    border-radius: 16px; overflow: hidden;
+    background: #000; border: 1px solid var(--sf-rule);
+    cursor: pointer; padding: 0;
+    transition: transform .3s, box-shadow .3s, border-color .3s;
+  }
+  .sfd-video:hover { transform: translateY(-4px); border-color: var(--sf-accent); box-shadow: 0 18px 44px -12px rgba(0,0,0,.55); }
+  .sfd-video-preview {
+    display: block; width: 100%; aspect-ratio: 16/9;
+    background: #000; object-fit: cover;
+    pointer-events: none;
+  }
+  .sfd-video-overlay {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(180deg, rgba(0,0,0,.05) 0%, rgba(0,0,0,.55) 100%);
+    transition: background .3s;
+    pointer-events: none;
+  }
+  .sfd-video:hover .sfd-video-overlay { background: linear-gradient(180deg, rgba(0,0,0,.10) 0%, rgba(0,0,0,.65) 100%); }
+  .sfd-video-play {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: var(--sf-accent); color: var(--sf-contrast);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.5);
+    transition: transform .3s;
+  }
+  .sfd-video:hover .sfd-video-play { transform: scale(1.12); }
+  .sfd-video-play i { margin-left: 4px; }
+  .sfd-video-name {
+    position: absolute; left: 14px; right: 14px; bottom: 12px;
+    color: #fff; font-size: 14px; font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,.6);
+    word-break: break-word; text-align: left;
+  }
+  .sfd-video-fallback {
+    width: 100%; aspect-ratio: 16/9;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--sf-surface-2), var(--sf-bg));
+    color: var(--sf-mute); font-size: 56px;
+  }
+
+  .sfd-bottom-cta {
+    margin-top: 56px;
+    padding: clamp(28px, 4vw, 48px);
+    background: var(--sf-surface);
+    border: 1px solid var(--sf-rule);
+    border-radius: 24px;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 22px;
+  }
+  .sfd-bottom-cta-text { font-size: clamp(22px, 2.6vw, 30px); font-weight: 600; line-height: 1.3; }
+  .sfd-bottom-cta-text em { color: var(--sf-accent); font-style: normal; font-weight: 700; }
+  .sfd-bottom-cta-btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 14px 28px; border-radius: 50px;
+    background: var(--sf-accent); color: var(--sf-contrast);
+    font-weight: 700; font-size: 14px; letter-spacing: .04em; text-transform: uppercase;
+    border: 2px solid var(--sf-accent);
+    transition: .3s;
+  }
+  .sfd-bottom-cta-btn:hover { background: transparent; color: var(--sf-accent); }
+
+  .sfd-empty {
+    padding: 28px; border-radius: 16px;
+    background: rgba(255,255,255,.03); border: 1px dashed var(--sf-rule);
+    color: var(--sf-mute); font-style: italic;
+  }
+  .sfd-empty a { color: var(--sf-accent); text-decoration: underline; text-underline-offset: 3px; }
+
+  /* ── Lightbox vidéo / image ──────────────────────────────────── */
+  .sfd-lightbox {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,.92);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    padding: clamp(12px, 3vw, 32px);
+    animation: sfd-fade .25s ease-out;
+  }
+  @keyframes sfd-fade { from { opacity: 0; } to { opacity: 1; } }
+  .sfd-lightbox-body {
+    position: relative;
+    width: 100%; max-width: 1200px; max-height: 90vh;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sfd-lightbox video,
+  .sfd-lightbox img {
+    max-width: 100%; max-height: 90vh;
+    border-radius: 16px;
+    box-shadow: 0 30px 80px rgba(0,0,0,.6);
+    background: #000;
+  }
+  .sfd-lightbox video { width: 100%; }
+  .sfd-lightbox-iframe {
+    width: 100%; height: 80vh;
+    border: 0; border-radius: 16px; background: #fff;
+    box-shadow: 0 30px 80px rgba(0,0,0,.6);
+  }
+  .sfd-lightbox-close {
+    position: absolute; top: -50px; right: 0;
+    width: 42px; height: 42px; border-radius: 50%;
+    background: var(--sf-accent); color: var(--sf-contrast);
+    border: 0; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; transition: .25s;
+  }
+  .sfd-lightbox-close:hover { transform: rotate(90deg); }
+  .sfd-lightbox-caption {
+    position: absolute; left: 0; right: 0; bottom: -38px;
+    text-align: center; color: rgba(255,255,255,.7); font-size: 13px;
+  }
+
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="sfd -mx-3 sm:-mx-6 -my-4 sm:-my-8"
+     x-data="{ lightbox: null, open(type, src, name) { this.lightbox = { type, src, name: name || '' }; document.body.style.overflow = 'hidden'; }, close() { this.lightbox = null; document.body.style.overflow = ''; } }"
+     @keydown.escape.window="close()"
+     x-init="(() => {
+        const io = new IntersectionObserver((entries) => {
+            for (const e of entries) {
+                if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+            }
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+        document.querySelectorAll('.sfd-reveal').forEach(el => io.observe(el));
+     })()">
+
+  <!-- Top bar : retour + démo -->
+  <div class="sfd-topbar">
+    <a href="{% url 'candidat:portfolio_public' candidat.id %}#portfolio" class="sfd-back">
+      <i class="bi bi-arrow-left"></i>Retour au portfolio
+    </a>
+    {% if projet.has_demo %}
+    <a href="{{ projet.lien }}" target="_blank" rel="noopener" class="sfd-topbar-cta">
+      Voir la démo<i class="bi bi-box-arrow-up-right"></i>
+    </a>
+    {% endif %}
+  </div>
+
+  <!-- Hero -->
+  <section class="sfd-hero">
+    <div class="sfd-hero-inner">
+      <div class="sfd-eyebrow sfd-reveal">
+        Réalisation · {{ candidat.prenom }} {{ candidat.nom }}
+      </div>
+      <h1 class="sfd-title sfd-reveal d1">{{ projet.nom }}</h1>
+      <div class="sfd-meta sfd-reveal d2">
+        {% if projet.dateDebut or projet.dateFin %}
+        <span class="sfd-meta-pill">
+          <i class="bi bi-calendar3"></i>
+          <span class="key">{% trans "Période" %}</span>
+          <span>{{ projet.dateDebut|slice:":7"|default:'—' }}{% if projet.dateFin %} → {{ projet.dateFin|slice:":7" }}{% endif %}</span>
+        </span>
+        {% endif %}
+        {% if projet.tailleEquipe %}
+        <span class="sfd-meta-pill">
+          <i class="bi bi-people"></i>
+          <span class="key">{% trans "Équipe" %}</span>
+          <span>{{ projet.tailleEquipe }} personne{{ projet.tailleEquipe|pluralize }}</span>
+        </span>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <!-- Cover -->
+  {% if projet.images.0.url %}
+  <div class="sfd-cover">
+    <div class="sfd-cover-wrap sfd-reveal d2">
+      <img src="{{ projet.images.0.url }}" alt="{{ projet.nom }}">
+    </div>
+  </div>
+  {% else %}
+  <div class="sfd-cover">
+    <div class="sfd-cover-wrap sfd-reveal d2">
+      <div class="sfd-cover-fallback"><i class="bi bi-image"></i></div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Contenu : aside + blocs -->
+  <section class="sfd-section">
+    <div class="sfd-content">
+
+      <aside class="sfd-aside sfd-reveal">
+        <div class="sfd-aside-title">{% trans "Fiche projet" %}</div>
+
+        {% if projet.dateDebut %}
+        <div class="sfd-aside-row">
+          <span class="icon"><i class="bi bi-clock"></i></span>
+          <div class="body"><span class="key">{% trans "Démarré" %}</span><span class="val">{{ projet.dateDebut|slice:":7" }}</span></div>
+        </div>
+        {% endif %}
+
+        {% if projet.dateFin %}
+        <div class="sfd-aside-row">
+          <span class="icon"><i class="bi bi-check2"></i></span>
+          <div class="body"><span class="key">{% trans "Terminé" %}</span><span class="val">{{ projet.dateFin|slice:":7" }}</span></div>
+        </div>
+        {% endif %}
+
+        {% if projet.tailleEquipe %}
+        <div class="sfd-aside-row">
+          <span class="icon"><i class="bi bi-people"></i></span>
+          <div class="body"><span class="key">{% trans "Taille d'équipe" %}</span><span class="val">{{ projet.tailleEquipe }} personne{{ projet.tailleEquipe|pluralize }}</span></div>
+        </div>
+        {% endif %}
+
+        {% if projet.has_demo %}
+        <div class="sfd-aside-row">
+          <span class="icon"><i class="bi bi-link-45deg"></i></span>
+          <div class="body"><span class="key">{% trans "Démo en ligne" %}</span><span class="val"><a href="{{ projet.lien }}" target="_blank" rel="noopener">{{ projet.lien|truncatechars:38 }}</a></span></div>
+        </div>
+        {% endif %}
+
+        {% if projet.images %}
+        <div class="sfd-aside-row">
+          <span class="icon"><i class="bi bi-image"></i></span>
+          <div class="body"><span class="key">{% trans "Images" %}</span><span class="val">{{ projet.images|length }} fichier{{ projet.images|length|pluralize }}</span></div>
+        </div>
+        {% endif %}
+
+        {% if projet.videos %}
+        <div class="sfd-aside-row">
+          <span class="icon"><i class="bi bi-film"></i></span>
+          <div class="body"><span class="key">{% trans "Vidéos" %}</span><span class="val">{{ projet.videos|length }} fichier{{ projet.videos|length|pluralize }}</span></div>
+        </div>
+        {% endif %}
+      </aside>
+
+      <div>
+        {% if projet.contexte %}
+        <div class="sfd-block sfd-reveal d1">
+          <h2 class="sfd-block-title">{% trans "Contexte" %}</h2>
+          <div class="sfd-block-text">{{ projet.contexte|linebreaks }}</div>
+        </div>
+        {% endif %}
+
+        {% if projet.realisation %}
+        <div class="sfd-block sfd-reveal d2">
+          <h2 class="sfd-block-title">{% trans "Mes contributions" %}</h2>
+          <div class="sfd-block-text">{{ projet.realisation|linebreaks }}</div>
+        </div>
+        {% endif %}
+
+        {% if projet.images|length > 1 %}
+        <div class="sfd-block sfd-reveal d3">
+          <h2 class="sfd-block-title">{% trans "Galerie" %}</h2>
+          <div class="sfd-gallery">
+            {% for img in projet.images %}
+            {% if img.url %}
+            <button type="button" class="sfd-gallery-item"
+                    @click="open('image', '{{ img.url|escapejs }}', '{{ img.name|default:projet.nom|escapejs }}')"
+                    style="border:0; padding:0; cursor:pointer;">
+              <img src="{{ img.url }}" alt="{{ img.name|default:projet.nom }}" loading="lazy">
+            </button>
+            {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if projet.videos %}
+        <div class="sfd-block sfd-reveal d4">
+          <h2 class="sfd-block-title">{% trans "Vidéos" %}</h2>
+          <div class="sfd-videos">
+            {% for vid in projet.videos %}
+            {% if vid.url %}
+            <button type="button" class="sfd-video"
+                    @click="open('video', '{{ vid.url|escapejs }}', '{{ vid.name|default:'Vidéo'|escapejs }}')"
+                    aria-label="Lire la vidéo {{ vid.name|default:'sans titre' }}">
+              <video class="sfd-video-preview" preload="metadata" muted playsinline
+                     src="{{ vid.url }}#t=0.5"></video>
+              <span class="sfd-video-overlay">
+                <span class="sfd-video-play"><i class="bi bi-play-fill"></i></span>
+              </span>
+              <span class="sfd-video-name">{{ vid.name|default:'Vidéo' }}</span>
+            </button>
+            {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if projet.has_demo %}
+        <div class="sfd-bottom-cta sfd-reveal">
+          <span class="sfd-bottom-cta-text">{% trans "Découvrir" %} <em>{% trans "le projet en ligne" %}</em>.</span>
+          <a href="{{ projet.lien }}" target="_blank" rel="noopener" class="sfd-bottom-cta-btn">
+            Voir la démo<i class="bi bi-box-arrow-up-right"></i>
+          </a>
+        </div>
+        {% endif %}
+
+        {% if not projet.contexte and not projet.realisation and not projet.images and not projet.videos %}
+        <div class="sfd-empty">
+          Ce projet n'a pas encore de description détaillée.
+          {% if est_proprio %}Ajoutez son contexte, vos contributions et des médias depuis l'onglet <a href="{% url 'candidat:profil' %}?onglet=rubriques">Profil → Rubriques → Réalisations</a>.{% endif %}
+        </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Lightbox vidéo / image — joue le média en place, sans nouvel onglet -->
+  <div class="sfd-lightbox" x-show="lightbox" x-cloak @click.self="close()" x-transition.opacity>
+    <div class="sfd-lightbox-body">
+      <button type="button" class="sfd-lightbox-close" @click="close()" aria-label="{% trans "Fermer" %}">
+        <i class="bi bi-x-lg"></i>
+      </button>
+
+      <template x-if="lightbox && lightbox.type === 'video'">
+        <video :src="lightbox.src" controls autoplay playsinline preload="metadata"></video>
+      </template>
+
+      <template x-if="lightbox && lightbox.type === 'image'">
+        <img :src="lightbox.src" :alt="{% trans "lightbox.name" %}">
+      </template>
+
+      <div class="sfd-lightbox-caption" x-text="lightbox && lightbox.name"></div>
+    </div>
+  </div>
+
+</div>
+<style>[x-cloak] { display: none !important; }</style>
+{% endblock %}

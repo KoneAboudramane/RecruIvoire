@@ -1,0 +1,621 @@
+{% extends "candidat/base.html" %}
+{% load i18n %}
+{% block titre %}Créer mon CV — {{ modele.nom }} · {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+{% include "candidat/cv/_form_styles.html" %}
+<style>
+/* ═══════════════════════════════════════════════════════
+   TERRE CUITE — Rouille #8C3A2C + Crème #FDF6EC + Or #C9A14A
+   Header pleine largeur · 38% Gauche crème · 62% Droit blanc
+═══════════════════════════════════════════════════════ */
+
+.cv-sheet-tc {
+  width: 794px;
+  min-height: 1123px;
+  background: #fff;
+  font-family: 'Georgia', 'Segoe UI', serif;
+  font-size: 12px;
+  color: #2C1810;
+  box-shadow: 0 4px 32px rgba(0,0,0,.15);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Header ──────────────────────────────────────── */
+.tc-header {
+  background: #8C3A2C;
+  padding: 28px 36px 28px 36px;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  flex-shrink: 0;
+}
+
+/* ─── Photo ovale portrait ────────────────────────── */
+.tc-photo-wrap {
+  width: 128px; height: 139px;
+  border-radius: 50%;
+  border: 3px solid #C9A14A;
+  overflow: hidden;
+  background: #6B2A1E;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 34px; color: rgba(201,161,74,.55);
+  flex-shrink: 0;
+}
+.tc-photo-wrap img { width: 130%; height: 130%; object-fit: cover; object-position: center top; }
+
+/* ─── Infos header ────────────────────────────────── */
+.tc-header-info { flex: 1; }
+.tc-prenom {
+  font-size: 9.5px; font-weight: 400;
+  color: rgba(255,255,255,.55);
+  letter-spacing: 3px; text-transform: uppercase;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  margin-bottom: 3px;
+}
+.tc-nom {
+  font-size: 26px; font-weight: 700;
+  color: #fff; text-transform: uppercase;
+  letter-spacing: .5px; line-height: 1;
+  margin-bottom: 8px; word-break: break-word;
+}
+.tc-titre {
+  display: inline-block;
+  font-size: 14px; font-weight: 400;
+  color: #2C1810;
+  background: #C9A14A;
+  padding: 3px 14px; border-radius: 2px;
+  margin-bottom: 14px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  letter-spacing: .3px;
+}
+.tc-contacts {
+  display: flex; flex-wrap: wrap; gap: 4px 16px;
+}
+.tc-contact {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 9.5px; color: rgba(255,255,255,.78);
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+.tc-contact-icon { color: #C9A14A; width: 13px; text-align: center; flex-shrink: 0; }
+
+/* ─── Bande déco ──────────────────────────────────── */
+.tc-band {
+  height: 4px;
+  background: linear-gradient(to right, #C9A14A 0%, #8C3A2C 40%, #2C1810 100%);
+  flex-shrink: 0;
+}
+
+/* ─── Corps ───────────────────────────────────────── */
+.tc-body { display: flex; flex: 1; }
+
+.tc-col-left {
+  width: 38%;
+  background: #FDF6EC;
+  padding: 26px 18px 32px 22px;
+  border-right: 1px solid #EDD9C0;
+}
+.tc-col-right {
+  flex: 1;
+  background: #fff;
+  padding: 26px 30px 32px 22px;
+}
+
+/* ─── Titres sidebar ──────────────────────────────── */
+.tc-sb-sec { margin-bottom: 20px; }
+.tc-sb-title {
+  font-size: 8px; font-weight: 700;
+  color: #8C3A2C; text-transform: uppercase;
+  letter-spacing: 2px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  display: flex; align-items: center; gap: 7px;
+  margin-bottom: 11px;
+}
+.tc-sb-title::before {
+  content: '';
+  width: 10px; height: 10px;
+  background: #C9A14A;
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+.tc-sb-title::after {
+  content: ''; flex: 1;
+  height: 1px; background: #EDD9C0;
+}
+
+/* ─── Profil ──────────────────────────────────────── */
+.tc-profil {
+  font-size: 10.5px; color: #4A3728;
+  line-height: 1.72; font-style: italic;
+}
+
+/* ─── Compétences ─────────────────────────────────── */
+.tc-skill { margin-bottom: 8px; }
+.tc-skill-name {
+  font-size: 10px; color: #2C1810;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  margin-bottom: 3px;
+}
+.tc-skill-bar-bg {
+  height: 4px; background: #EDD9C0;
+  border-radius: 2px; overflow: hidden;
+}
+.tc-skill-bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, #C9A14A, #8C3A2C);
+  border-radius: 2px;
+}
+
+/* ─── Langues ─────────────────────────────────────── */
+.tc-lang { margin-bottom: 5px; }
+.tc-lang-head {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 3px;
+}
+.tc-lang-name { font-size: 10px; color: #2C1810; font-family: 'Segoe UI', Arial, sans-serif; }
+.tc-lang-badge {
+  font-size: 7.5px; font-weight: 700;
+  color: #fff; background: #8C3A2C;
+  padding: 1px 6px; border-radius: 2px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+.tc-lang-bar-bg { height: 3px; background: #EDD9C0; border-radius: 2px; overflow: hidden; }
+.tc-lang-bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, #C9A14A, #8C3A2C);
+  border-radius: 2px;
+}
+
+/* ─── Grille 2 colonnes ───────────────────────────── */
+.tc-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+}
+
+/* ─── Intérêts ────────────────────────────────────── */
+.tc-interest-item {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 9.5px; color: #4A3728;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  padding: 2px 0;
+}
+.tc-interest-dot {
+  width: 5px; height: 5px;
+  background: #C9A14A; border-radius: 50%; flex-shrink: 0;
+}
+
+/* ─── Certifications sidebar ──────────────────────── */
+.tc-certif {
+  margin-bottom: 8px; padding-bottom: 8px;
+  border-bottom: 1px solid #EDD9C0;
+}
+.tc-certif:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.tc-certif-title {
+  font-size: 10px; font-weight: 700; color: #2C1810;
+  font-family: 'Segoe UI', Arial, sans-serif; margin-bottom: 2px;
+}
+.tc-certif-sub {
+  font-size: 9px; color: #7A6355;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  display: flex; justify-content: space-between;
+}
+.tc-certif-year { color: #8C3A2C; font-weight: 700; }
+
+/* ─── Titres sections principales ────────────────── */
+.tc-sec { margin-bottom: 22px; }
+.tc-sec-hdr {
+  display: flex; align-items: center;
+  gap: 10px; margin-bottom: 13px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid #8C3A2C;
+}
+.tc-sec-title {
+  font-size: 10px; font-weight: 700;
+  color: #8C3A2C; text-transform: uppercase;
+  letter-spacing: 2px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+.tc-sec-icon { font-size: 13px; }
+
+/* ─── Entrées (expériences, formation) ────────────── */
+.tc-entry {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  background: #FDF6EC;
+  border-left: 3px solid #C9A14A;
+  border-radius: 0 4px 4px 0;
+}
+.tc-entry-head {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; gap: 8px; margin-bottom: 3px;
+}
+.tc-entry-title {
+  font-weight: 700; font-size: 12px;
+  color: #2C1810; line-height: 1.25;
+}
+.tc-entry-date {
+  font-size: 8px; font-weight: 700;
+  color: #8C3A2C;
+  background: #FAEBD7;
+  border: 1px solid #C9A14A;
+  padding: 2px 8px; border-radius: 20px;
+  white-space: nowrap; flex-shrink: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+.tc-entry-org {
+  font-size: 10.5px; color: #8C3A2C;
+  font-weight: 600; margin-bottom: 4px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+.tc-entry-desc {
+  font-size: 11px; color: #4A3728; line-height: 1.65;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+/* ─── Projets ─────────────────────────────────────── */
+.tc-proj {
+  margin-bottom: 9px; padding-bottom: 9px;
+  border-bottom: 1px dashed #EDD9C0;
+}
+.tc-proj:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.tc-proj-head {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; gap: 8px; margin-bottom: 2px;
+}
+.tc-proj-name { font-weight: 700; font-size: 11px; color: #2C1810; }
+.tc-proj-year { font-size: 9px; color: #C9A14A; font-weight: 700; white-space: nowrap; }
+.tc-proj-desc { font-size: 10.5px; color: #4A3728; font-family: 'Segoe UI', Arial, sans-serif; }
+.tc-proj-link { font-size: 9.5px; color: #7A6355; margin-top: 2px; }
+
+/* ─── Bénévolat ───────────────────────────────────── */
+.tc-benev {
+  margin-bottom: 9px; padding-bottom: 9px;
+  border-bottom: 1px solid #F5EFE8;
+}
+.tc-benev:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.tc-benev-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.tc-benev-role { font-weight: 700; font-size: 11px; color: #2C1810; }
+.tc-benev-date { font-size: 9px; color: #C9A14A; font-weight: 700; white-space: nowrap; }
+.tc-benev-orga { font-size: 10px; color: #7A6355; margin-top: 1px; font-family: 'Segoe UI', Arial, sans-serif; }
+
+/* ─── Références ──────────────────────────────────── */
+.tc-ref {
+  font-style: italic; font-size: 11px; color: #7A6355;
+  padding: 10px 16px;
+  border: 1px dashed #C9A14A;
+  border-radius: 4px; text-align: center;
+  background: #FDF6EC;
+}
+
+/* ─── Footer ──────────────────────────────────────── */
+.tc-footer {
+  height: 4px;
+  background: linear-gradient(to right, #C9A14A 0%, #8C3A2C 40%, #2C1810 100%);
+  flex-shrink: 0;
+}
+
+/* ─── Missions clients ────────────────────────────── */
+.cv-mc-section {
+  margin-top: 8px; padding: 7px 10px 7px 12px;
+  background: rgba(140,58,44,.05);
+  border-left: 3px solid #C9A14A;
+  border-radius: 0 5px 5px 0;
+}
+.cv-mc-label {
+  font-size: 7pt; font-weight: 700; color: #8C3A2C;
+  text-transform: uppercase; letter-spacing: .7px; margin-bottom: 6px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+.cv-mc-item {
+  margin-bottom: 6px; padding-bottom: 6px;
+  border-bottom: 1px dashed rgba(140,58,44,.2);
+}
+.cv-mc-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.cv-mc-hdr { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+.cv-mc-title { font-size: 9pt; font-weight: 600; color: #2C1810; }
+.cv-mc-badge {
+  font-size: 6.5pt; color: #fff; background: #8C3A2C;
+  padding: 1px 7px; border-radius: 3px; white-space: nowrap; flex-shrink: 0;
+}
+.cv-mc-client { font-size: 8pt; color: #7A6355; margin-top: 1px; }
+.cv-mc-desc { font-size: 7.5pt; color: #4A3728; margin-top: 2px; line-height: 1.5; }
+</style>
+{% endblock %}
+
+{% block contenu %}<div class="-mx-6 -my-8" x-data="cvBuilder()"><div class="cv-builder">
+  {% include "candidat/cv/_form_panel.html" %}
+  <div class="preview-panel">
+  <div id="cv-sheet">
+  <div class="cv-sheet-tc">
+
+    <!-- ══ HEADER ══ -->
+    <div class="tc-header">
+      <div class="tc-photo-wrap">
+        <img x-show="cv.photo" :src="cv.photo" alt="{% trans "Photo" %}">
+        <span x-show="!cv.photo">👤</span>
+      </div>
+      <div class="tc-header-info">
+        <div class="tc-prenom" x-text="cv.prenom || 'Prénom'"></div>
+        <div class="tc-nom" x-text="cv.nom || 'NOM'"></div>
+        <div class="tc-titre" x-show="cv.titre" x-text="cv.titre"></div>
+        <div class="tc-contacts">
+          <div class="tc-contact" x-show="cv.email">
+            <span class="tc-contact-icon">✉</span><span x-text="cv.email"></span>
+          </div>
+          <div class="tc-contact" x-show="cv.telephone">
+            <span class="tc-contact-icon">☎</span><span x-text="cv.telephone"></span>
+          </div>
+          <div class="tc-contact" x-show="cvLoc()">
+            <span class="tc-contact-icon">⌖</span><span x-text="cvLoc()"></span>
+          </div>
+          <div class="tc-contact" x-show="cv.age">
+            <span class="tc-contact-icon">◑</span><span x-text="cv.age + ' ans'"></span>
+          </div>
+          <div class="tc-contact" x-show="cv.linkedin">
+            <span class="tc-contact-icon">in</span><span x-text="cv.linkedin"></span>
+          </div>
+          <div class="tc-contact" x-show="cv.permis">
+            <span class="tc-contact-icon">🪪</span><span x-text="'Permis ' + cv.permis"></span>
+          </div>
+          <div class="tc-contact" x-show="cv.portfolio">
+            <span class="tc-contact-icon">⊕</span><span x-text="cv.portfolio"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ BANDE DÉCO ══ -->
+    <div class="tc-band"></div>
+
+    <!-- ══ CORPS ══ -->
+    <div class="tc-body">
+
+      <!-- ── COLONNE GAUCHE : Profil + Compétences + Langues ── -->
+      <div class="tc-col-left">
+
+        <!-- Profil -->
+        <template x-if="cv.profil">
+          <div class="tc-sb-sec">
+            <div class="tc-sb-title">{% trans "Profil" %}</div>
+            <div class="tc-profil" x-text="cv.profil"></div>
+          </div>
+        </template>
+
+        <!-- Compétences -->
+        <template x-if="vis(cv.competences).filter(c=>c.nom).length > 0">
+          <div class="tc-sb-sec">
+            <div class="tc-sb-title">{% trans "Compétences" %}</div>
+            <template x-for="skill in vis(cv.competences)" :key="skill.id">
+              <div class="tc-skill" x-show="skill.nom">
+                <div class="tc-skill-name" x-text="skill.nom"></div>
+                <div class="tc-skill-bar-bg">
+                  <div class="tc-skill-bar-fill" :style="'width:' + (niveauDots(skill.niveau) * 20) + '%'"></div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Langues — 2 par ligne -->
+        <template x-if="vis(cv.langues).filter(l=>l.nom).length > 0">
+          <div class="tc-sb-sec">
+            <div class="tc-sb-title">{% trans "Langues" %}</div>
+            <div class="tc-two-col">
+              <template x-for="lang in vis(cv.langues)" :key="lang.id">
+                <div class="tc-lang" x-show="lang.nom">
+                  <div class="tc-lang-head">
+                    <span class="tc-lang-name" x-text="lang.nom"></span>
+                    <span class="tc-lang-badge" x-text="niveauCode(lang.niveau, 'langue')"></span>
+                  </div>
+                  <div class="tc-lang-bar-bg">
+                    <div class="tc-lang-bar-fill" :style="'width:' + (niveauDots(lang.niveau) * 20) + '%'"></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- Intérêts — 2 par ligne -->
+        <template x-if="cv.interets.filter((i,ii)=>i && !isInteretMasque(ii)).length > 0">
+          <div class="tc-sb-sec">
+            <div class="tc-sb-title">{% trans "Intérêts" %}</div>
+            <div class="tc-two-col">
+              <template x-for="(interet, idx) in cv.interets" :key="idx">
+                <div x-show="interet && !isInteretMasque(idx)" class="tc-interest-item">
+                  <div class="tc-interest-dot"></div>
+                  <span x-text="interet"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- Certifications -->
+        <template x-if="cv.showCertif && cv.certifs.filter(c=>c.nom).length > 0">
+          <div class="tc-sb-sec">
+            <div class="tc-sb-title">{% trans "Certifications" %}</div>
+            <template x-for="certif in cv.certifs" :key="certif.id">
+              <div class="tc-certif" x-show="certif.nom">
+                <div class="tc-certif-title" x-text="certif.nom"></div>
+                <div class="tc-certif-sub">
+                  <span x-text="certif.organisme"></span>
+                  <span class="tc-certif-year" x-text="certif.annee"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+      </div><!-- /.tc-col-left -->
+
+      <!-- ── COLONNE DROITE : Expériences + Formation + Projets ── -->
+      <div class="tc-col-right">
+
+        <!-- Expériences -->
+        <template x-if="cv.experiences.some(e=>expVisible(e))">
+          <div class="tc-sec">
+            <div class="tc-sec-hdr">
+              <span class="tc-sec-icon">💼</span>
+              <div class="tc-sec-title">{% trans "Expériences professionnelles" %}</div>
+            </div>
+            <template x-for="exp in cv.experiences" :key="exp.id">
+              <div class="tc-entry" x-show="expVisible(exp)">
+                <div class="tc-entry-head">
+                  <div class="tc-entry-title" x-text="expTitre(exp)"></div>
+                  <div class="tc-entry-date" x-show="expTitrePeriodeShow(exp)" x-text="expTitrePeriodeStr(exp)"></div>
+                </div>
+                <template x-if="!exp.postes||exp.postes.length<=1">
+                  <div x-show="exp.entreprise||exp.lieu" class="tc-entry-org">
+                    <span x-text="exp.entreprise"></span>
+                    <span x-show="exp.lieu" x-text="exp.lieu?' · '+exp.lieu:''"></span>
+                    <span x-show="expPeriodeShow(exp)" style="font-size:7.5pt;color:#94a3b8;margin-left:4px;white-space:nowrap" x-text="expPeriodeStr(exp)"></span>
+                  </div>
+                </template>
+                <template x-if="exp.postes&&exp.postes.length>1">
+                  <div>
+                    <div x-show="exp.lieu" class="tc-entry-org" x-text="'· '+exp.lieu" style="margin-bottom:3px"></div>
+                    <div class="cv-postes-list">
+                      <template x-for="p in exp.postes" :key="p.id">
+                        <div x-show="p.titre" class="cv-postes-row">
+                          <span class="cv-postes-titre" x-text="p.titre"></span>
+                          <span x-show="p.debut||p.enCours" class="cv-postes-date" x-text="formatPeriode(p.debut,p.fin,p.enCours)"></span>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+                <div class="tc-entry-desc" x-show="exp.desc" x-text="exp.desc"></div>
+                <template x-if="exp.hasMissionsClient && exp.missionsClient && exp.missionsClient.filter(mc=>mc.client).length>0">
+                  <div class="cv-mc-section">
+                    <div class="cv-mc-label">🏢 Missions clients</div>
+                    <template x-for="mc in exp.missionsClient.filter(mc=>mc.client)" :key="mc.id">
+                      <div class="cv-mc-item">
+                        <div class="cv-mc-hdr">
+                          <div class="cv-mc-title" x-text="mc.client||'—'"></div>
+                          <div x-show="mc.debut||mc.enCours" class="cv-mc-badge" x-text="formatPeriode(mc.debut,mc.fin,mc.enCours)"></div>
+                        </div>
+                        <div x-show="mc.pays||mc.ville" class="cv-mc-client">
+                          <span x-show="mc.pays" x-text="mc.pays"></span>
+                          <span x-show="mc.ville" x-text="mc.pays&&mc.ville?' · '+mc.ville:mc.ville||''"></span>
+                        </div>
+                        <div x-show="mc.desc" class="cv-mc-desc" x-text="mc.desc"></div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Formation -->
+        <template x-if="vis(cv.formations).filter(f=>f.diplome||f.ecole).length > 0">
+          <div class="tc-sec">
+            <div class="tc-sec-hdr">
+              <span class="tc-sec-icon">🎓</span>
+              <div class="tc-sec-title">{% trans "Formation" %}</div>
+            </div>
+            <template x-for="form in vis(cv.formations)" :key="form.id">
+              <div class="tc-entry" x-show="form.diplome||form.ecole">
+                <div class="tc-entry-head">
+                  <div class="tc-entry-title" x-text="(form.typeSortie==='certification'?'🏅 ':form.typeSortie==='attestation'?'📄 ':'')+(form.diplome||'—')"></div>
+                  <div class="tc-entry-date" x-text="form.typeSortie==='certification'?(form.expiration?'Exp. '+formatMonth(form.expiration):(form.fin?formatMonth(form.fin):'')):(formatPeriode(form.debut,form.fin,form.enCours)||'—')"></div>
+                </div>
+                <div class="tc-entry-org">
+                  <span x-text="form.ecole"></span>
+                  <span x-show="form.lieu&&form.typeSortie!=='certification'" x-text="form.lieu?' · '+form.lieu:''"></span>
+                </div>
+                <div class="tc-entry-desc" x-show="form.domaine" x-text="form.domaine" style="font-style:italic;opacity:.8"></div>
+                <div class="tc-entry-desc" x-show="form.typeSortie==='certification'&&form.numero" x-text="'N° '+form.numero"></div>
+                <div class="tc-entry-desc" x-show="form.desc" x-text="form.desc"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Projets -->
+        <template x-if="cv.showProjets && vis(cv.projets).filter(p=>p.nom).length > 0">
+          <div class="tc-sec">
+            <div class="tc-sec-hdr">
+              <span class="tc-sec-icon">🚀</span>
+              <div class="tc-sec-title">{% trans "Projets" %}</div>
+            </div>
+            <template x-for="projet in vis(cv.projets)" :key="projet.id">
+              <div class="tc-proj tc-certif" x-show="projet.nom">
+                <div class="tc-proj-head">
+                  <div class="tc-proj-name" x-text="projet.nom"></div>
+                  <span class="tc-proj-year" x-text="projet.annee"></span>
+                </div>
+                <div class="tc-proj-desc" x-text="projet.desc"></div>
+                <div class="tc-proj-link" x-show="projet.lien" x-text="projet.lien"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Bénévolat -->
+        <template x-if="cv.showBenev && cv.benevs && vis(cv.benevs).filter(b=>b.role||b.orga).length > 0">
+          <div class="tc-sec">
+            <div class="tc-sec-hdr">
+              <span class="tc-sec-icon">🤝</span>
+              <div class="tc-sec-title">{% trans "Engagement &amp; Bénévolat" %}</div>
+            </div>
+            <template x-for="benev in vis(cv.benevs)" :key="benev.id">
+              <div class="tc-benev tc-entry" x-show="benev.role||benev.orga">
+                <div class="tc-benev-head">
+                  <div class="tc-benev-role" x-text="benev.role"></div>
+                  <div class="tc-benev-date" x-text="formatPeriode(benev.debut, benev.fin, benev.enCours)"></div>
+                </div>
+                <div class="tc-benev-orga" x-text="benev.orga"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Références -->
+        <template x-if="cv.showRef">
+          <div class="tc-sec">
+            <div class="tc-sec-hdr">
+              <span class="tc-sec-icon">📋</span>
+              <div class="tc-sec-title">{% trans "Références" %}</div>
+            </div>
+            <div class="tc-ref tc-profil">{% trans "Références disponibles sur demande." %}</div>
+          </div>
+        </template>
+
+      </div><!-- /.tc-col-right -->
+    </div><!-- /.tc-body -->
+
+    <div class="tc-footer"></div>
+
+  </div><!-- /.cv-sheet-tc -->
+  </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+
+{% block js_extra %}{% include "candidat/cv/_cvbuilder_js.html" %}
+<script>
+(function () {
+  var PAGE_H = 1123;
+  var _timer = null;
+  function adjustSheet() {
+    var el = document.querySelector('.cv-sheet-tc');
+    if (!el) return;
+    el.style.minHeight = '0px';
+    var pages = Math.max(1, Math.ceil(el.scrollHeight / PAGE_H));
+    el.style.minHeight = (pages * PAGE_H) + 'px';
+  }
+  function schedule() { clearTimeout(_timer); _timer = setTimeout(adjustSheet, 60); }
+  document.addEventListener('DOMContentLoaded', function () {
+    adjustSheet();
+    var preview = document.querySelector('.preview-panel');
+    if (preview) new MutationObserver(schedule).observe(preview, { childList:true, subtree:true, characterData:true });
+  });
+})();
+</script>
+{% endblock %}

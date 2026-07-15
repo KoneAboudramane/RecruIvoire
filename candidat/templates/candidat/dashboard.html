@@ -1,0 +1,505 @@
+﻿{% extends "candidat/base.html" %}
+{% load static i18n %}
+
+{% block titre %}{% trans "Tableau de bord" %} — {% trans "Espace Candidat" %}{% endblock %}
+
+{% block css_extra %}
+<style>
+  .stat-card { transition: transform .15s, box-shadow .15s; }
+  .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.09); }
+
+  /* ── Hero candidat — suppression dégradé ─────────────────── */
+  .cand-hero { background:#fff; color:#1f2937; border:1px solid #e5e7eb; }
+  .cand-hero .deco-cercle { display:none; }
+  .cand-hero .text-white { color:#1f2937 !important; }
+  .cand-hero .text-white\/80,.cand-hero .text-white\/90 { color:#4b5563 !important; }
+  .cand-hero .bg-white\/10,.cand-hero .bg-white\/15 { background:rgba(0,0,0,.04) !important; }
+  .cand-hero .bg-white\/20 { background:rgba(0,0,0,.06) !important; }
+  .cand-hero .bg-white\/25,.cand-hero .bg-white\/30 { background:rgba(0,0,0,.07) !important; }
+  .cand-hero .bg-white\/40 { background:rgba(0,0,0,.08) !important; }
+  .cand-hero .hover\:bg-white\/25:hover,.cand-hero .hover\:bg-white\/30:hover { background:rgba(0,0,0,.07) !important; }
+  .cand-hero .border-white\/30,.cand-hero .border-white\/50 { border-color:rgba(0,0,0,.12) !important; }
+  .cand-hero .border-white\/40 { border-color:rgba(0,0,0,.15) !important; }
+  .cand-hero .ring-white { --tw-ring-color:rgba(0,0,0,.22) !important; }
+  .cand-hero .text-green-300 { color:#15803d !important; }
+  .cand-hero .text-red-300   { color:#b91c1c !important; }
+  .cand-hero .text-gray-300  { color:#4b5563 !important; }
+  .cand-hero a.bg-white { background:#fff !important; border:1px solid #e5e7eb; box-shadow:0 1px 4px rgba(0,0,0,.07); }
+  html.dark .cand-hero { background:#1e293b; color:#f1f5f9; border-color:#334155; }
+  html.dark .cand-hero .deco-cercle { display:block; opacity:.25; }
+  html.dark .cand-hero .text-white { color:#f1f5f9 !important; }
+  html.dark .cand-hero .text-white\/80 { color:rgba(241,245,249,.8) !important; }
+  html.dark .cand-hero .text-white\/90 { color:rgba(241,245,249,.9) !important; }
+  html.noir .cand-hero { background:linear-gradient(135deg,#000 0%,#080808 60%,#111 100%); color:#f1f5f9; border-color:#222; }
+  html.noir .cand-hero .deco-cercle { display:block; opacity:.12; }
+  html.noir .cand-hero .text-white { color:#f1f5f9 !important; }
+  html.noir .cand-hero .text-white\/80 { color:rgba(241,245,249,.8) !important; }
+  html.noir .cand-hero .text-white\/90 { color:rgba(241,245,249,.9) !important; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-950 pb-16">
+
+  <!-- ── Hero ── -->
+  <div class="cand-hero relative overflow-hidden px-6 py-8 shadow-sm">
+    <div class="deco-cercle absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
+    <div class="deco-cercle absolute bottom-0 left-0 w-56 h-56 bg-white/10 rounded-full -translate-x-1/3 translate-y-1/3 pointer-events-none"></div>
+    <div class="w-full relative flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        {% if candidat.photoProfil %}
+        <img src="{{ candidat.photoProfil.url }}" alt="{{ candidat.prenom }}"
+             class="w-14 h-14 rounded-full object-cover border-4 border-white/40 shadow-lg flex-shrink-0">
+        {% else %}
+        <div class="w-14 h-14 rounded-full bg-white/25 border-4 border-white/40 flex items-center justify-center text-white font-extrabold text-xl shadow-lg flex-shrink-0">
+          {{ candidat.prenom|first|upper }}
+        </div>
+        {% endif %}
+        <div>
+          <!-- Bonjour + profil complété sur la même ligne -->
+          <div class="flex items-center gap-4 flex-wrap">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-white">
+              {% trans "Bonjour," %} {{ candidat.prenom }} 👋
+            </h1>
+            <a href="{% url 'candidat:profil' %}"
+               class="group inline-flex items-center gap-3 bg-white/10 hover:bg-white/25 border border-white/30 rounded-xl px-3 py-2 transition flex-shrink-0">
+              <div class="flex flex-col gap-1.5">
+                <div class="flex items-center justify-between gap-3">
+                  <span class="text-[11px] font-bold text-white/80 uppercase tracking-wider">{% trans "Profil" %}</span>
+                  <span class="text-sm font-extrabold
+                    {% if profil_score < 60 %}text-red-300{% elif profil_score < 90 %}text-yellow-300{% else %}text-green-300{% endif %}">
+                    {{ profil_score }}%
+                  </span>
+                </div>
+                <div class="w-28 bg-white/20 rounded-full h-1.5">
+                  <div class="h-1.5 rounded-full transition-all duration-700"
+                       style="width:{{ profil_score }}%; background:{% if profil_score < 60 %}#f97316{% elif profil_score < 90 %}#facc15{% else %}#4ade80{% endif %};"></div>
+                </div>
+              </div>
+              {% if profil_manquants %}
+              <span class="text-[11px] text-white/60 group-hover:text-white/90 transition hidden sm:block">{{ profil_manquants|length }} {% trans "manquant(s)" %} →</span>
+              {% else %}
+              <span class="text-sm">🎉</span>
+              {% endif %}
+            </a>
+          </div>
+          <p class="text-white/80 text-sm mt-1">{% trans "Voici un aperçu de votre activité." %}</p>
+        </div>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <a href="{% url 'candidat:offres' %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 border border-white/30 text-white text-sm font-bold transition">
+          💼 {% trans "Offres d'emploi" %}
+        </a>
+        <a href="{% url 'candidat:profil' %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-orange-700 text-sm font-bold hover:bg-orange-50 transition shadow-sm">
+          ✏️ {% trans "Mon profil" %}
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Layout 2 colonnes : Actions gauche | Stats droite ── -->
+  <div class="w-full px-4 sm:px-6 py-8 flex gap-6 items-start">
+
+    <!-- ════ COLONNE GAUCHE : Actions rapides ════ -->
+    <aside class="hidden lg:flex flex-col gap-2 w-56 flex-shrink-0 sticky top-24">
+      <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest px-2 mb-1">{% trans "Actions rapides" %}</p>
+
+      <a href="{% url 'candidat:offres' %}"
+         class="flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/10 hover:text-orange-700 transition group">
+        <span class="text-lg w-6 text-center">💼</span>
+        {% trans "Chercher des offres" %}
+      </a>
+
+      <a href="{% url 'candidat:mes_candidatures' %}"
+         class="flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/10 hover:text-orange-700 transition">
+        <span class="text-lg w-6 text-center">📋</span>
+        {% trans "Mes candidatures" %}
+      </a>
+
+      <a href="{% url 'candidat:modeles_cv' %}"
+         class="flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/10 hover:text-orange-700 transition">
+        <span class="text-lg w-6 text-center">📄</span>
+        {% trans "Créer un CV" %}
+      </a>
+
+      <a href="{% url 'candidat:modeles_lettre' %}"
+         class="flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/10 hover:text-orange-700 transition">
+        <span class="text-lg w-6 text-center">✉️</span>
+        {% trans "Créer une lettre" %}
+      </a>
+
+      <a href="{% url 'candidat:invitations' %}"
+         class="relative flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-semibold transition
+                {% if nb_inv_attente %}bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-700/50 text-orange-700{% else %}bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 text-gray-700 dark:text-gray-200 hover:border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/10 hover:text-orange-700{% endif %}">
+        <span class="text-lg w-6 text-center">💌</span>
+        {% trans "Invitations" %}
+        {% if nb_inv_attente %}
+        <span class="ml-auto min-w-[20px] h-5 px-1 rounded-full text-white text-[10px] font-extrabold flex items-center justify-center" style="background:#c96010;">{{ nb_inv_attente }}</span>
+        {% endif %}
+      </a>
+
+      <a href="{% url 'candidat:mes_favoris' %}"
+         class="flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 transition">
+        <span class="text-lg w-6 text-center">❤️</span>
+        {% trans "Mes favoris" %}
+      </a>
+
+      <a href="{% url 'candidat:profil' %}"
+         class="flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/10 hover:text-orange-700 transition">
+        <span class="text-lg w-6 text-center">👤</span>
+        {% trans "Mon profil" %}
+      </a>
+
+      <a href="{% url 'candidat:portfolio' %}"
+         class="flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/10 hover:text-orange-700 transition">
+        <span class="text-lg w-6 text-center">🌐</span>
+        {% trans "Mon portfolio" %}
+      </a>
+
+    </aside>
+
+    <!-- ════ ZONE DROITE : Stats + graphiques + tableaux ════ -->
+    <div class="flex-1 min-w-0 space-y-6">
+
+      <!-- ── Cartes stats ──────────────────────────────────────────────── -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-4">
+
+        <!-- Candidatures -->
+        <div class="stat-card bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 flex flex-col gap-1">
+          <span class="text-2xl">📋</span>
+          <p class="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{{ nb_total }}</p>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{% trans "Candidatures" %}</p>
+          <a href="{% url 'candidat:mes_candidatures' %}" class="text-xs text-orange-500 hover:underline mt-1">{% trans "Voir tout →" %}</a>
+        </div>
+
+        <!-- Invitations -->
+        <div class="stat-card bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 flex flex-col gap-1">
+          <span class="text-2xl">💌</span>
+          <p class="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{{ nb_inv_attente }}</p>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{% trans "Invitations en attente" %}</p>
+          <a href="{% url 'candidat:invitations' %}" class="text-xs text-orange-500 hover:underline mt-1">{% trans "Voir tout →" %}</a>
+        </div>
+
+        <!-- Messages non lus -->
+        <div class="stat-card bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 flex flex-col gap-1">
+          <span class="text-2xl">💬</span>
+          <p class="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{{ nb_messages_non_lus }}</p>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{% trans "Messages non lus" %}</p>
+          <p class="text-xs text-gray-400 mt-1">{% trans "Cliquez sur 💬 en bas à droite" %}</p>
+        </div>
+
+        <!-- CVs -->
+        <div class="stat-card bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 flex flex-col gap-1">
+          <span class="text-2xl">📄</span>
+          <p class="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{{ nb_cvs }}</p>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{% trans "CV créés" %}</p>
+          <a href="{% url 'candidat:modeles_cv' %}" class="text-xs text-orange-500 hover:underline mt-1">{% trans "Créer un CV →" %}</a>
+        </div>
+
+        <!-- Lettres de motivation -->
+        <div class="stat-card bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 flex flex-col gap-1">
+          <span class="text-2xl">✉️</span>
+          <p class="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{{ nb_lettres }}</p>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{% trans "Lettres de motivation" %}</p>
+          <a href="{% url 'candidat:modeles_lettre' %}" class="text-xs text-orange-500 hover:underline mt-1">{% trans "Créer une lettre →" %}</a>
+        </div>
+      </div>
+
+      <!-- ── Entretiens à venir ─────────────────────────────────────────── -->
+      {% if prochains_entretiens %}
+      <div class="bg-white dark:bg-gray-900 rounded-2xl border-2 border-blue-200 dark:border-blue-700/50 overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-blue-100 dark:border-blue-800/50" style="background:linear-gradient(135deg,#1d4ed810,#3b82f610);">
+          <p class="text-sm font-bold text-blue-700 dark:text-blue-300">📅 {% trans "Prochains entretiens" %}</p>
+          <a href="{% url 'candidat:mes_candidatures' %}" class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold">{% trans "Voir mes candidatures →" %}</a>
+        </div>
+        <div class="divide-y divide-blue-50 dark:divide-blue-900/30">
+          {% for e in prochains_entretiens %}
+          <div class="px-5 py-4 flex items-center gap-4 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition">
+            <div class="w-12 text-center flex-shrink-0">
+              <p class="text-xs font-bold text-blue-500 dark:text-blue-400 uppercase">{{ e.dateEntretien|date:"D" }}</p>
+              <p class="text-xl font-extrabold text-blue-700 dark:text-blue-300 leading-none">{{ e.dateEntretien|date:"d" }}</p>
+              <p class="text-[10px] text-blue-400 uppercase">{{ e.dateEntretien|date:"M" }}</p>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">{{ e.candidature.offre.titre }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">🏢 {{ e.candidature.offre.entreprise.raisonSocial }}</p>
+            </div>
+            <div class="flex-shrink-0 text-right">
+              <p class="text-sm font-extrabold text-blue-700 dark:text-blue-300">{{ e.dateEntretien|date:"H:i" }}</p>
+              <p class="text-[10px] text-gray-400">{{ e.get_mode_display }}</p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- ── Graphiques : Barres + Donut ───────────────────────────────── -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6">
+          <p class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4">📊 {% trans "Candidatures par mois (6 derniers mois)" %}</p>
+          <div class="relative h-56"><canvas id="chartBarMois"></canvas></div>
+        </div>
+        <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6">
+          <p class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4">🍩 {% trans "Répartition par statut" %}</p>
+          {% if nb_total > 0 %}
+          <div class="relative h-48"><canvas id="chartDonutStatut"></canvas></div>
+          <ul class="mt-4 space-y-1.5">
+            {% for s in candidatures_par_statut %}
+            <li class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+              <span class="w-3 h-3 rounded-full flex-shrink-0" style="background:{{ s.statut__couleur|default:'#6B7280' }};"></span>
+              {{ s.statut__libelle }} — <strong>{{ s.nb }}</strong>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="h-48 flex flex-col items-center justify-center text-gray-400 dark:text-gray-600 text-sm gap-2">
+            <span class="text-4xl">📭</span>{% trans "Aucune candidature" %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ── Courbe d'évolution ─────────────────────────────────────────── -->
+      <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6">
+        <p class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4">📈 {% trans "Évolution des candidatures (6 derniers mois)" %}</p>
+        <div class="relative h-48"><canvas id="chartLineMois"></canvas></div>
+      </div>
+
+      <!-- ── Tableaux candidatures + invitations ────────────────────────── -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Dernières candidatures -->
+        <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+            <p class="text-sm font-bold text-gray-700 dark:text-gray-200">📋 {% trans "Dernières candidatures" %}</p>
+            <a href="{% url 'candidat:mes_candidatures' %}" class="text-xs text-orange-500 hover:underline font-semibold">{% trans "Voir tout →" %}</a>
+          </div>
+          {% if dernieres_candidatures %}
+          <ul class="divide-y divide-gray-50 dark:divide-gray-800">
+            {% for c in dernieres_candidatures %}
+            <li class="px-5 py-3.5 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+              <div class="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-950 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="text-sm">🏢</span></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{{ c.offre.titre }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ c.offre.entreprise.raisonSocial }}</p>
+              </div>
+              <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                {% if c.statut %}<span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold text-white" style="background:{{ c.statut.couleur|default:'#6B7280' }};">{{ c.statut.libelle }}</span>{% endif %}
+                <span class="text-[10px] text-gray-400">{{ c.dateCandidature|date:"d M Y" }}</span>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="px-5 py-10 text-center text-gray-400 dark:text-gray-600 text-sm">
+            <span class="text-3xl block mb-2">📭</span>
+            {% trans "Aucune candidature pour le moment." %}<br>
+            <a href="{% url 'candidat:offres' %}" class="text-orange-500 hover:underline font-semibold">{% trans "Voir les offres →" %}</a>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Dernières invitations -->
+        <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+            <p class="text-sm font-bold text-gray-700 dark:text-gray-200">💌 {% trans "Dernières invitations" %}</p>
+            <a href="{% url 'candidat:invitations' %}" class="text-xs text-orange-500 hover:underline font-semibold">{% trans "Voir tout →" %}</a>
+          </div>
+          {% if dernieres_invitations %}
+          <ul class="divide-y divide-gray-50 dark:divide-gray-800">
+            {% for inv in dernieres_invitations %}
+            <li class="px-5 py-3.5 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+              <div class="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-950 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="text-sm">💌</span></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{{ inv.offre.titre }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ inv.offre.entreprise.raisonSocial }}</p>
+              </div>
+              <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                {% if inv.statut == 'en_attente' %}<span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold text-white bg-yellow-500">{% trans "En attente" %}</span>
+                {% elif inv.statut == 'acceptee' %}<span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold text-white bg-green-500">{% trans "Acceptée" %}</span>
+                {% else %}<span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold text-white bg-gray-400">{% trans "Ignorée" %}</span>{% endif %}
+                <span class="text-[10px] text-gray-400">{{ inv.date_envoi|date:"d M Y" }}</span>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="px-5 py-10 text-center text-gray-400 dark:text-gray-600 text-sm">
+            <span class="text-3xl block mb-2">📭</span>{% trans "Aucune invitation reçue pour le moment." %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ── Récap invitations ──────────────────────────────────────────── -->
+      {% if nb_inv_attente or nb_inv_acceptee or nb_inv_ignoree %}
+      <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6">
+        <p class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-5">💌 {% trans "Récapitulatif des invitations" %}</p>
+        <div class="relative h-48"><canvas id="chartBarInvitations"></canvas></div>
+      </div>
+      {% endif %}
+
+    </div><!-- /zone droite -->
+  </div><!-- /layout 2 colonnes -->
+</div><!-- /min-h-screen -->
+{% endblock %}
+
+{% block js_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const isDark = document.documentElement.classList.contains('dark')
+              || document.documentElement.classList.contains('noir');
+  const gridColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)';
+  const tickColor = isDark ? '#CBD5E1' : '#475569';
+  const axisColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)';
+  const tooltipBg  = isDark ? '#1F2937' : '#fff';
+  const tooltipFg  = isDark ? '#F9FAFB' : '#111827';
+
+  const ORANGE = '#c96010';
+  const ORANGE_LIGHT = 'rgba(201,96,16,0.15)';
+  const GREEN  = '#2e7d52';
+
+  // ── Bar — candidatures par mois ────────────────────────────────────────
+  const ctxBar = document.getElementById('chartBarMois');
+  if (ctxBar) {
+    new Chart(ctxBar, {
+      type: 'bar',
+      data: {
+        labels: {{ chart_mois_labels|safe }},
+        datasets: [{
+          label: 'Candidatures',
+          data: {{ chart_mois_data|safe }},
+          backgroundColor: ORANGE,
+          borderRadius: 8,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: tooltipBg, titleColor: tooltipFg, bodyColor: tooltipFg,
+            borderColor: isDark ? '#374151' : '#E5E7EB', borderWidth: 1,
+          }
+        },
+        scales: {
+          x: { display: true, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 } } },
+          y: { type: 'linear', display: true, position: 'left', beginAtZero: true, grace: '5%',
+               grid:   { display: true, color: gridColor },
+               border: { display: true, color: axisColor, width: 1 },
+               ticks:  { display: true, color: tickColor, precision: 0, maxTicksLimit: 5, font: { size: 11 } } },
+        }
+      }
+    });
+  }
+
+  // ── Line — évolution candidatures ─────────────────────────────────────
+  const ctxLine = document.getElementById('chartLineMois');
+  if (ctxLine) {
+    new Chart(ctxLine, {
+      type: 'line',
+      data: {
+        labels: {{ chart_mois_labels|safe }},
+        datasets: [{
+          label: 'Candidatures',
+          data: {{ chart_mois_data|safe }},
+          borderColor: ORANGE,
+          backgroundColor: ORANGE_LIGHT,
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: ORANGE,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: tooltipBg, titleColor: tooltipFg, bodyColor: tooltipFg,
+            borderColor: isDark ? '#374151' : '#E5E7EB', borderWidth: 1,
+          }
+        },
+        scales: {
+          x: { display: true, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 } } },
+          y: { type: 'linear', display: true, position: 'left', beginAtZero: true, grace: '5%',
+               grid:   { display: true, color: gridColor },
+               border: { display: true, color: axisColor, width: 1 },
+               ticks:  { display: true, color: tickColor, precision: 0, maxTicksLimit: 5, font: { size: 11 } } },
+        }
+      }
+    });
+  }
+
+  // ── Donut — répartition par statut ────────────────────────────────────
+  const ctxDonut = document.getElementById('chartDonutStatut');
+  if (ctxDonut) {
+    new Chart(ctxDonut, {
+      type: 'doughnut',
+      data: {
+        labels: {{ chart_statut_labels|safe }},
+        datasets: [{
+          data: {{ chart_statut_data|safe }},
+          backgroundColor: {{ chart_statut_couleurs|safe }},
+          borderWidth: 2,
+          borderColor: isDark ? '#111827' : '#fff',
+          hoverOffset: 6,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '68%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: tooltipBg, titleColor: tooltipFg, bodyColor: tooltipFg,
+            borderColor: isDark ? '#374151' : '#E5E7EB', borderWidth: 1,
+          }
+        }
+      }
+    });
+  }
+
+  // ── Bar — invitations (en attente / acceptées / ignorées) ─────────────
+  const ctxInv = document.getElementById('chartBarInvitations');
+  if (ctxInv) {
+    new Chart(ctxInv, {
+      type: 'bar',
+      data: {
+        labels: ['En attente', 'Acceptées', 'Ignorées'],
+        datasets: [{
+          label: 'Invitations',
+          data: [{{ nb_inv_attente }}, {{ nb_inv_acceptee }}, {{ nb_inv_ignoree }}],
+          backgroundColor: ['#EAB308', GREEN, '#9CA3AF'],
+          borderRadius: 8,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: tooltipBg, titleColor: tooltipFg, bodyColor: tooltipFg,
+            borderColor: isDark ? '#374151' : '#E5E7EB', borderWidth: 1,
+          }
+        },
+        scales: {
+          x: { display: true, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 } } },
+          y: { type: 'linear', display: true, position: 'left', beginAtZero: true, grace: '5%',
+               grid:   { display: true, color: gridColor },
+               border: { display: true, color: axisColor, width: 1 },
+               ticks:  { display: true, color: tickColor, precision: 0, maxTicksLimit: 5, font: { size: 11 } } },
+        }
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,704 @@
+{% extends "candidat/base.html" %}
+{% load i18n %}
+{% block titre %}Créer mon CV — {{ modele.nom }} · {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+{% include "candidat/cv/_form_styles.html" %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600&family=Raleway:wght@300;400;500;600&display=swap');
+
+/* ═══════════════════════════════════════════════════════
+   CALLIGRAPHIE — Bordeaux #3D1A24 · Ivoire #FEFCF5 · Or #B8860B
+   Header centré · Playfair Display · Ornements décoratifs
+═══════════════════════════════════════════════════════ */
+
+.cv-sheet-cg {
+  width: 794px;
+  min-height: 1123px;
+  background: #fff;
+  font-family: 'Raleway', 'Segoe UI', Arial, sans-serif;
+  font-size: 11.5px;
+  color: #1A0A0E;
+  box-shadow: 0 4px 32px rgba(0,0,0,.15);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Bande top bordeaux ──────────────────────────── */
+.cg-top-band {
+  height: 6px;
+  background: linear-gradient(to right, #3D1A24, #B8860B 40%, #3D1A24);
+  flex-shrink: 0;
+}
+
+/* ─── HEADER centré · ivoire ──────────────────────── */
+.cg-header {
+  background: #FEFCF5;
+  padding: 26px 48px 22px;
+  text-align: center;
+  border-bottom: 1px solid rgba(184,134,11,.25);
+  flex-shrink: 0;
+}
+.cg-header-top-line {
+  display: flex; align-items: center;
+  justify-content: center; gap: 10px;
+  margin-bottom: 14px;
+}
+.cg-header-top-line::before,
+.cg-header-top-line::after {
+  content: '';
+  width: 80px; height: 1px;
+  background: linear-gradient(to right, transparent, #B8860B);
+}
+.cg-header-top-line::after {
+  background: linear-gradient(to left, transparent, #B8860B);
+}
+.cg-ornament-icon { color: #B8860B; font-size: 11px; letter-spacing: 4px; }
+
+.cg-prenom {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 11px; font-weight: 400; font-style: italic;
+  color: #6B5459; letter-spacing: 5px; text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.cg-nom {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 34px; font-weight: 900;
+  color: #3D1A24; text-transform: uppercase;
+  letter-spacing: 5px; line-height: 1;
+  margin-bottom: 10px; word-break: break-word;
+}
+.cg-titre-wrap {
+  display: flex; align-items: center;
+  justify-content: center; gap: 10px;
+  margin-bottom: 16px;
+}
+.cg-titre-line { width: 40px; height: 1px; background: #B8860B; }
+.cg-titre {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 18px; font-weight: 400; font-style: italic;
+  color: #3D1A24; letter-spacing: .5px;
+}
+.cg-contacts {
+  display: flex; flex-wrap: wrap;
+  justify-content: center; gap: 4px 20px;
+}
+.cg-contact {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 9.5px; color: #6B5459;
+  font-family: 'Raleway', sans-serif; font-weight: 500;
+}
+.cg-contact-icon { color: #B8860B; width: 12px; text-align: center; flex-shrink: 0; }
+
+.cg-header-bot-line {
+  display: flex; align-items: center;
+  justify-content: center; gap: 10px;
+  margin-top: 14px;
+}
+.cg-header-bot-line::before,
+.cg-header-bot-line::after {
+  content: '';
+  width: 80px; height: 1px;
+  background: linear-gradient(to right, transparent, #B8860B);
+}
+.cg-header-bot-line::after {
+  background: linear-gradient(to left, transparent, #B8860B);
+}
+
+/* ─── Corps 36/64 ─────────────────────────────────── */
+.cg-body { display: flex; flex: 1; }
+.cg-col-left {
+  width: 36%;
+  background: #F5EFE6;
+  padding: 26px 18px 32px 22px;
+  border-right: 1px solid rgba(184,134,11,.2);
+}
+.cg-col-right {
+  flex: 1;
+  background: #fff;
+  padding: 26px 28px 32px 22px;
+}
+
+/* ─── Photo — double anneau oval ──────────────────── */
+.cg-photo-outer {
+  width: 100px; height: 118px;
+  border-radius: 50%;
+  border: 1px solid #B8860B;
+  display: flex; align-items: center; justify-content: center;
+  padding: 5px;
+  background: #FEFCF5;
+  margin: 0 auto 20px;
+  flex-shrink: 0;
+}
+.cg-photo-inner {
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  border: 2px solid #3D1A24;
+  overflow: hidden;
+  background: #2D1018;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px; color: rgba(184,134,11,.45);
+}
+.cg-photo-inner img { width: 130%; height: 130%; object-fit: cover; object-position: center top; }
+
+/* ─── Titres sections sidebar ─────────────────────── */
+.cg-sb-sec { margin-bottom: 18px; }
+.cg-sb-hdr {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 11px;
+}
+.cg-sb-leaf { color: #B8860B; font-size: 13px; line-height: 1; }
+.cg-sb-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 10px; font-weight: 700; font-style: italic;
+  color: #3D1A24; letter-spacing: 1px; text-transform: uppercase;
+}
+.cg-sb-line {
+  flex: 1; height: 1px;
+  background: linear-gradient(to right, rgba(184,134,11,.5), transparent);
+}
+
+/* ─── Profil ──────────────────────────────────────── */
+.cg-profil {
+  font-size: 10px; color: #5C4A50; line-height: 1.72;
+  font-style: italic;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 400;
+}
+
+/* ─── Compétences ─────────────────────────────────── */
+.cg-skill { margin-bottom: 8px; }
+.cg-skill-name {
+  font-size: 10px; color: #3D1A24;
+  font-family: 'Raleway', sans-serif; font-weight: 600;
+  margin-bottom: 3px;
+}
+.cg-skill-bar-bg {
+  height: 3px; background: rgba(184,134,11,.15);
+  border-radius: 2px; overflow: hidden;
+}
+.cg-skill-bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, #B8860B, #3D1A24);
+  border-radius: 2px;
+}
+
+/* ─── Grille 2 colonnes ───────────────────────────── */
+.cg-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
+
+/* ─── Langues ─────────────────────────────────────── */
+.cg-lang { margin-bottom: 5px; }
+.cg-lang-head {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 3px;
+}
+.cg-lang-name {
+  font-size: 10px; color: #3D1A24;
+  font-family: 'Raleway', sans-serif; font-weight: 500;
+}
+.cg-lang-badge {
+  font-size: 7px; font-weight: 700;
+  color: #FEFCF5; background: #3D1A24;
+  padding: 1px 5px; border-radius: 2px;
+  font-family: 'Raleway', sans-serif;
+}
+.cg-lang-bar-bg { height: 3px; background: rgba(184,134,11,.15); border-radius: 2px; overflow: hidden; }
+.cg-lang-bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, #B8860B, #3D1A24);
+  border-radius: 2px;
+}
+
+/* ─── Intérêts ────────────────────────────────────── */
+.cg-interest-item {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 9.5px; color: #5C4A50;
+  font-family: 'Raleway', sans-serif; padding: 2px 0;
+}
+.cg-interest-dot {
+  width: 4px; height: 4px;
+  background: #B8860B; border-radius: 50%; flex-shrink: 0;
+}
+
+/* ─── Certifications sidebar ──────────────────────── */
+.cg-certif {
+  margin-bottom: 8px; padding-bottom: 8px;
+  border-bottom: 1px solid rgba(184,134,11,.2);
+}
+.cg-certif:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.cg-certif-title {
+  font-size: 10px; font-weight: 600; color: #3D1A24;
+  font-family: 'Raleway', sans-serif; margin-bottom: 2px;
+}
+.cg-certif-sub {
+  font-size: 9px; color: #6B5459;
+  font-family: 'Raleway', sans-serif;
+  display: flex; justify-content: space-between;
+}
+.cg-certif-year { color: #B8860B; font-weight: 700; }
+
+/* ─── Sections principales droite ────────────────── */
+.cg-sec { margin-bottom: 22px; }
+.cg-sec-hdr {
+  display: flex; align-items: center; gap: 9px;
+  margin-bottom: 13px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgba(184,134,11,.25);
+}
+.cg-sec-leaf { color: #B8860B; font-size: 14px; flex-shrink: 0; }
+.cg-sec-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 11px; font-weight: 700; font-style: italic;
+  color: #3D1A24; letter-spacing: 1px; text-transform: uppercase;
+}
+.cg-sec-diamond {
+  margin-left: auto;
+  color: #B8860B; font-size: 8px; opacity: .6;
+}
+
+/* ─── Entrées expériences / formation ─────────────── */
+.cg-entry {
+  margin-bottom: 14px;
+  padding-bottom: 13px;
+  border-bottom: 1px dashed rgba(184,134,11,.2);
+}
+.cg-entry:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.cg-entry-head {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; gap: 8px; margin-bottom: 3px;
+}
+.cg-entry-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 700; font-size: 12px;
+  color: #1A0A0E; line-height: 1.25;
+}
+.cg-entry-date {
+  font-size: 8px; font-weight: 600;
+  color: #FEFCF5;
+  background: #3D1A24;
+  padding: 2px 9px; border-radius: 2px;
+  white-space: nowrap; flex-shrink: 0;
+  font-family: 'Raleway', sans-serif;
+  letter-spacing: .3px;
+}
+.cg-entry-org {
+  font-size: 10.5px; color: #B8860B;
+  font-weight: 600; margin-bottom: 4px;
+  font-family: 'Raleway', sans-serif; font-style: italic;
+}
+.cg-entry-desc {
+  font-size: 10.5px; color: #4A3A3E; line-height: 1.68;
+  font-family: 'Raleway', sans-serif;
+}
+
+/* ─── Projets ─────────────────────────────────────── */
+.cg-proj {
+  margin-bottom: 9px; padding-bottom: 9px;
+  border-bottom: 1px dashed rgba(184,134,11,.18);
+}
+.cg-proj:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.cg-proj-head {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; gap: 8px; margin-bottom: 2px;
+}
+.cg-proj-name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 700; font-size: 11px; color: #1A0A0E;
+}
+.cg-proj-year { font-size: 9px; color: #B8860B; font-weight: 700; white-space: nowrap; }
+.cg-proj-desc { font-size: 10.5px; color: #4A3A3E; font-family: 'Raleway', sans-serif; }
+.cg-proj-link { font-size: 9.5px; color: #6B5459; margin-top: 2px; }
+
+/* ─── Bénévolat ───────────────────────────────────── */
+.cg-benev {
+  margin-bottom: 9px; padding-bottom: 9px;
+  border-bottom: 1px dashed rgba(184,134,11,.18);
+}
+.cg-benev:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.cg-benev-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.cg-benev-role {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 700; font-size: 11px; color: #1A0A0E;
+}
+.cg-benev-date { font-size: 9px; color: #B8860B; font-weight: 700; white-space: nowrap; }
+.cg-benev-orga { font-size: 10px; color: #6B5459; margin-top: 1px; font-style: italic; }
+
+/* ─── Références ──────────────────────────────────── */
+.cg-ref {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-style: italic; font-size: 11px; color: #6B5459;
+  padding: 10px 18px;
+  border-top: 1px solid rgba(184,134,11,.3);
+  border-bottom: 1px solid rgba(184,134,11,.3);
+  text-align: center;
+  letter-spacing: .3px;
+}
+
+/* ─── Footer ──────────────────────────────────────── */
+.cg-footer {
+  height: 6px;
+  background: linear-gradient(to right, #3D1A24, #B8860B 40%, #3D1A24);
+  flex-shrink: 0;
+}
+
+/* ─── Missions clients ────────────────────────────── */
+.cv-mc-section {
+  margin-top: 8px; padding: 7px 10px 7px 12px;
+  background: rgba(184,134,11,.05);
+  border-left: 3px solid #B8860B;
+  border-radius: 0 4px 4px 0;
+}
+.cv-mc-label {
+  font-size: 7pt; font-weight: 700; color: #3D1A24;
+  text-transform: uppercase; letter-spacing: .7px; margin-bottom: 6px;
+  font-family: 'Raleway', sans-serif;
+}
+.cv-mc-item {
+  margin-bottom: 6px; padding-bottom: 6px;
+  border-bottom: 1px dashed rgba(184,134,11,.2);
+}
+.cv-mc-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.cv-mc-hdr { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+.cv-mc-title { font-size: 9pt; font-weight: 600; color: #1A0A0E; }
+.cv-mc-badge {
+  font-size: 6.5pt; color: #FEFCF5; background: #3D1A24;
+  padding: 1px 7px; border-radius: 2px; white-space: nowrap; flex-shrink: 0;
+}
+.cv-mc-client { font-size: 8pt; color: #6B5459; margin-top: 1px; }
+.cv-mc-desc { font-size: 7.5pt; color: #4A3A3E; margin-top: 2px; line-height: 1.5; }
+</style>
+{% endblock %}
+
+{% block contenu %}<div class="-mx-6 -my-8" x-data="cvBuilder()"><div class="cv-builder">
+  {% include "candidat/cv/_form_panel.html" %}
+  <div class="preview-panel">
+  <div id="cv-sheet">
+  <div class="cv-sheet-cg">
+
+    <div class="cg-top-band"></div>
+
+    <!-- ══ HEADER CENTRÉ ══ -->
+    <div class="cg-header">
+      <div class="cg-header-top-line">
+        <span class="cg-ornament-icon">✦ ✦ ✦</span>
+      </div>
+      <div class="cg-prenom" x-text="cv.prenom || 'Prénom'"></div>
+      <div class="cg-nom" x-text="cv.nom || 'NOM'"></div>
+      <div class="cg-titre-wrap" x-show="cv.titre">
+        <div class="cg-titre-line"></div>
+        <div class="cg-titre" x-text="cv.titre"></div>
+        <div class="cg-titre-line"></div>
+      </div>
+      <div class="cg-contacts">
+        <div class="cg-contact" x-show="cv.email">
+          <span class="cg-contact-icon">✉</span><span x-text="cv.email"></span>
+        </div>
+        <div class="cg-contact" x-show="cv.telephone">
+          <span class="cg-contact-icon">☎</span><span x-text="cv.telephone"></span>
+        </div>
+        <div class="cg-contact" x-show="cvLoc()">
+          <span class="cg-contact-icon">⌖</span><span x-text="cvLoc()"></span>
+        </div>
+        <div class="cg-contact" x-show="cv.age">
+          <span class="cg-contact-icon">◑</span><span x-text="cv.age + ' ans'"></span>
+        </div>
+        <div class="cg-contact" x-show="cv.linkedin">
+          <span class="cg-contact-icon">in</span><span x-text="cv.linkedin"></span>
+        </div>
+        <div class="cg-contact" x-show="cv.permis">
+          <span class="cg-contact-icon">🪪</span><span x-text="'Permis ' + cv.permis"></span>
+        </div>
+        <div class="cg-contact" x-show="cv.portfolio">
+          <span class="cg-contact-icon">⊕</span><span x-text="cv.portfolio"></span>
+        </div>
+      </div>
+      <div class="cg-header-bot-line">
+        <span class="cg-ornament-icon">◆</span>
+      </div>
+    </div>
+
+    <!-- ══ CORPS ══ -->
+    <div class="cg-body">
+
+      <!-- ── COLONNE GAUCHE ── -->
+      <div class="cg-col-left">
+
+        <!-- Photo double anneau oval -->
+        <div class="cg-photo-outer">
+          <div class="cg-photo-inner">
+            <img x-show="cv.photo" :src="cv.photo" alt="{% trans "Photo" %}">
+            <span x-show="!cv.photo">👤</span>
+          </div>
+        </div>
+
+        <!-- Profil -->
+        <template x-if="cv.profil">
+          <div class="cg-sb-sec">
+            <div class="cg-sb-hdr">
+              <span class="cg-sb-leaf">❧</span>
+              <div class="cg-sb-title">{% trans "Profil" %}</div>
+              <div class="cg-sb-line"></div>
+            </div>
+            <div class="cg-profil" x-text="cv.profil"></div>
+          </div>
+        </template>
+
+        <!-- Compétences -->
+        <template x-if="vis(cv.competences).filter(c=>c.nom).length > 0">
+          <div class="cg-sb-sec">
+            <div class="cg-sb-hdr">
+              <span class="cg-sb-leaf">❧</span>
+              <div class="cg-sb-title">{% trans "Compétences" %}</div>
+              <div class="cg-sb-line"></div>
+            </div>
+            <template x-for="skill in vis(cv.competences)" :key="skill.id">
+              <div class="cg-skill" x-show="skill.nom">
+                <div class="cg-skill-name" x-text="skill.nom"></div>
+                <div class="cg-skill-bar-bg">
+                  <div class="cg-skill-bar-fill" :style="'width:' + (niveauDots(skill.niveau) * 20) + '%'"></div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Langues — 2 par ligne -->
+        <template x-if="vis(cv.langues).filter(l=>l.nom).length > 0">
+          <div class="cg-sb-sec">
+            <div class="cg-sb-hdr">
+              <span class="cg-sb-leaf">❧</span>
+              <div class="cg-sb-title">{% trans "Langues" %}</div>
+              <div class="cg-sb-line"></div>
+            </div>
+            <div class="cg-two-col">
+              <template x-for="lang in vis(cv.langues)" :key="lang.id">
+                <div class="cg-lang" x-show="lang.nom">
+                  <div class="cg-lang-head">
+                    <span class="cg-lang-name" x-text="lang.nom"></span>
+                    <span class="cg-lang-badge" x-text="niveauCode(lang.niveau, 'langue')"></span>
+                  </div>
+                  <div class="cg-lang-bar-bg">
+                    <div class="cg-lang-bar-fill" :style="'width:' + (niveauDots(lang.niveau) * 20) + '%'"></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- Intérêts — 2 par ligne -->
+        <template x-if="cv.interets.filter((i,ii)=>i && !isInteretMasque(ii)).length > 0">
+          <div class="cg-sb-sec">
+            <div class="cg-sb-hdr">
+              <span class="cg-sb-leaf">❧</span>
+              <div class="cg-sb-title">{% trans "Intérêts" %}</div>
+              <div class="cg-sb-line"></div>
+            </div>
+            <div class="cg-two-col">
+              <template x-for="(interet, idx) in cv.interets" :key="idx">
+                <div x-show="interet && !isInteretMasque(idx)" class="cg-interest-item">
+                  <div class="cg-interest-dot"></div>
+                  <span x-text="interet"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- Certifications -->
+        <template x-if="cv.showCertif && cv.certifs.filter(c=>c.nom).length > 0">
+          <div class="cg-sb-sec">
+            <div class="cg-sb-hdr">
+              <span class="cg-sb-leaf">❧</span>
+              <div class="cg-sb-title">{% trans "Certifications" %}</div>
+              <div class="cg-sb-line"></div>
+            </div>
+            <template x-for="certif in cv.certifs" :key="certif.id">
+              <div class="cg-certif" x-show="certif.nom">
+                <div class="cg-certif-title" x-text="certif.nom"></div>
+                <div class="cg-certif-sub">
+                  <span x-text="certif.organisme"></span>
+                  <span class="cg-certif-year" x-text="certif.annee"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+      </div><!-- /.cg-col-left -->
+
+      <!-- ── COLONNE DROITE ── -->
+      <div class="cg-col-right">
+
+        <!-- Expériences -->
+        <template x-if="cv.experiences.some(e=>expVisible(e))">
+          <div class="cg-sec">
+            <div class="cg-sec-hdr">
+              <span class="cg-sec-leaf">❦</span>
+              <div class="cg-sec-title">{% trans "Expériences professionnelles" %}</div>
+              <span class="cg-sec-diamond">◆</span>
+            </div>
+            <template x-for="exp in cv.experiences" :key="exp.id">
+              <div class="cg-entry" x-show="expVisible(exp)">
+                <div class="cg-entry-head">
+                  <div class="cg-entry-title" x-text="expTitre(exp)"></div>
+                  <div class="cg-entry-date" x-show="expTitrePeriodeShow(exp)" x-text="expTitrePeriodeStr(exp)"></div>
+                </div>
+                <template x-if="!exp.postes||exp.postes.length<=1">
+                  <div x-show="exp.entreprise||exp.lieu" class="cg-entry-org">
+                    <span x-text="exp.entreprise"></span>
+                    <span x-show="exp.lieu" x-text="exp.lieu?' · '+exp.lieu:''"></span>
+                    <span x-show="expPeriodeShow(exp)" style="font-size:7.5pt;color:#94a3b8;margin-left:4px;white-space:nowrap" x-text="expPeriodeStr(exp)"></span>
+                  </div>
+                </template>
+                <template x-if="exp.postes&&exp.postes.length>1">
+                  <div>
+                    <div x-show="exp.lieu" class="cg-entry-org" x-text="'· '+exp.lieu" style="margin-bottom:3px"></div>
+                    <div class="cv-postes-list">
+                      <template x-for="p in exp.postes" :key="p.id">
+                        <div x-show="p.titre" class="cv-postes-row">
+                          <span class="cv-postes-titre" x-text="p.titre"></span>
+                          <span x-show="p.debut||p.enCours" class="cv-postes-date" x-text="formatPeriode(p.debut,p.fin,p.enCours)"></span>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+                <div class="cg-entry-desc" x-show="exp.desc" x-text="exp.desc"></div>
+                <template x-if="exp.hasMissionsClient && exp.missionsClient && exp.missionsClient.filter(mc=>mc.client).length>0">
+                  <div class="cv-mc-section">
+                    <div class="cv-mc-label">🏢 Missions clients</div>
+                    <template x-for="mc in exp.missionsClient.filter(mc=>mc.client)" :key="mc.id">
+                      <div class="cv-mc-item">
+                        <div class="cv-mc-hdr">
+                          <div class="cv-mc-title" x-text="mc.client||'—'"></div>
+                          <div x-show="mc.debut||mc.enCours" class="cv-mc-badge" x-text="formatPeriode(mc.debut,mc.fin,mc.enCours)"></div>
+                        </div>
+                        <div x-show="mc.pays||mc.ville" class="cv-mc-client">
+                          <span x-show="mc.pays" x-text="mc.pays"></span>
+                          <span x-show="mc.ville" x-text="mc.pays&&mc.ville?' · '+mc.ville:mc.ville||''"></span>
+                        </div>
+                        <div x-show="mc.desc" class="cv-mc-desc" x-text="mc.desc"></div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Formation -->
+        <template x-if="vis(cv.formations).filter(f=>f.diplome||f.ecole).length > 0">
+          <div class="cg-sec">
+            <div class="cg-sec-hdr">
+              <span class="cg-sec-leaf">❦</span>
+              <div class="cg-sec-title">{% trans "Formation" %}</div>
+              <span class="cg-sec-diamond">◆</span>
+            </div>
+            <template x-for="form in vis(cv.formations)" :key="form.id">
+              <div class="cg-entry" x-show="form.diplome||form.ecole">
+                <div class="cg-entry-head">
+                  <div class="cg-entry-title" x-text="(form.typeSortie==='certification'?'🏅 ':form.typeSortie==='attestation'?'📄 ':'')+(form.diplome||'—')"></div>
+                  <div class="cg-entry-date" x-text="form.typeSortie==='certification'?(form.expiration?'Exp. '+formatMonth(form.expiration):(form.fin?formatMonth(form.fin):'')):(formatPeriode(form.debut,form.fin,form.enCours)||'—')"></div>
+                </div>
+                <div class="cg-entry-org">
+                  <span x-text="form.ecole"></span>
+                  <span x-show="form.lieu&&form.typeSortie!=='certification'" x-text="form.lieu?' · '+form.lieu:''"></span>
+                </div>
+                <div class="cg-entry-desc" x-show="form.domaine" x-text="form.domaine" style="font-style:italic;opacity:.8"></div>
+                <div class="cg-entry-desc" x-show="form.typeSortie==='certification'&&form.numero" x-text="'N° '+form.numero"></div>
+                <div class="cg-entry-desc" x-show="form.desc" x-text="form.desc"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Projets -->
+        <template x-if="cv.showProjets && vis(cv.projets).filter(p=>p.nom).length > 0">
+          <div class="cg-sec">
+            <div class="cg-sec-hdr">
+              <span class="cg-sec-leaf">❦</span>
+              <div class="cg-sec-title">{% trans "Projets" %}</div>
+              <span class="cg-sec-diamond">◆</span>
+            </div>
+            <template x-for="projet in vis(cv.projets)" :key="projet.id">
+              <div class="cg-proj cg-certif" x-show="projet.nom">
+                <div class="cg-proj-head">
+                  <div class="cg-proj-name" x-text="projet.nom"></div>
+                  <span class="cg-proj-year" x-text="projet.annee"></span>
+                </div>
+                <div class="cg-proj-desc" x-text="projet.desc"></div>
+                <div class="cg-proj-link" x-show="projet.lien" x-text="projet.lien"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Bénévolat -->
+        <template x-if="cv.showBenev && cv.benevs && vis(cv.benevs).filter(b=>b.role||b.orga).length > 0">
+          <div class="cg-sec">
+            <div class="cg-sec-hdr">
+              <span class="cg-sec-leaf">❦</span>
+              <div class="cg-sec-title">{% trans "Engagement &amp; Bénévolat" %}</div>
+              <span class="cg-sec-diamond">◆</span>
+            </div>
+            <template x-for="benev in vis(cv.benevs)" :key="benev.id">
+              <div class="cg-benev cg-entry" x-show="benev.role||benev.orga">
+                <div class="cg-benev-head">
+                  <div class="cg-benev-role" x-text="benev.role"></div>
+                  <div class="cg-benev-date" x-text="formatPeriode(benev.debut, benev.fin, benev.enCours)"></div>
+                </div>
+                <div class="cg-benev-orga" x-text="benev.orga"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Références -->
+        <template x-if="cv.showRef">
+          <div class="cg-sec">
+            <div class="cg-sec-hdr">
+              <span class="cg-sec-leaf">❦</span>
+              <div class="cg-sec-title">{% trans "Références" %}</div>
+              <span class="cg-sec-diamond">◆</span>
+            </div>
+            <div class="cg-ref cg-profil">
+              ✦ &nbsp; Références disponibles sur demande &nbsp; ✦
+            </div>
+          </div>
+        </template>
+
+      </div><!-- /.cg-col-right -->
+    </div><!-- /.cg-body -->
+
+    <div class="cg-footer"></div>
+
+  </div><!-- /.cv-sheet-cg -->
+  </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+
+{% block js_extra %}{% include "candidat/cv/_cvbuilder_js.html" %}
+<script>
+(function () {
+  var PAGE_H = 1123;
+  var _timer = null;
+  function adjustSheet() {
+    var el = document.querySelector('.cv-sheet-cg');
+    if (!el) return;
+    el.style.minHeight = '0px';
+    var pages = Math.max(1, Math.ceil(el.scrollHeight / PAGE_H));
+    el.style.minHeight = (pages * PAGE_H) + 'px';
+  }
+  function schedule() { clearTimeout(_timer); _timer = setTimeout(adjustSheet, 60); }
+  document.addEventListener('DOMContentLoaded', function () {
+    adjustSheet();
+    var preview = document.querySelector('.preview-panel');
+    if (preview) new MutationObserver(schedule).observe(preview, { childList:true, subtree:true, characterData:true });
+  });
+})();
+</script>
+{% endblock %}

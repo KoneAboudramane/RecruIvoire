@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page introuvable — RecrutePro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            opacity: .08;
+            filter: blur(60px);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50 flex flex-col items-center justify-center relative overflow-hidden">
+
+    <!-- Blobs décoratifs -->
+    <div class="blob w-96 h-96 bg-green-500 -top-24 -left-24"></div>
+    <div class="blob w-80 h-80 bg-orange-400 bottom-0 right-0"></div>
+
+    <div class="relative z-10 text-center px-6 max-w-lg">
+
+        <!-- Logo / Brand -->
+        <div class="flex items-center justify-center gap-2 mb-10">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-extrabold text-sm" style="background:#009A44;">R</div>
+            <span class="font-extrabold text-xl text-gray-800">Recrute<span style="color:#009A44;">Pro</span></span>
+        </div>
+
+        <!-- Erreur -->
+        <div class="mb-6">
+            <p class="text-8xl font-black mb-2" style="color:#009A44; line-height:1;">404</p>
+            <div class="w-16 h-1 rounded-full mx-auto mb-6" style="background:#F77F00;"></div>
+            <h1 class="text-2xl font-extrabold text-gray-800 mb-3">Page introuvable</h1>
+            <p class="text-gray-500 text-sm leading-relaxed">
+                La page que vous recherchez n'existe pas, a été déplacée ou l'URL est incorrecte.
+            </p>
+        </div>
+
+        <!-- Illustration -->
+        <div class="text-7xl mb-8 select-none">🔍</div>
+
+        <!-- Actions -->
+        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+            <a href="/candidat/"
+               class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm transition hover:opacity-90 shadow-md"
+               style="background:#009A44;">
+                🏠 Accueil candidat
+            </a>
+            <a href="/candidat/offres/"
+               class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm border-2 transition hover:bg-gray-100"
+               style="border-color:#F77F00; color:#F77F00;">
+                🔎 Voir les offres
+            </a>
+        </div>
+
+        <p class="text-xs text-gray-400 mt-8">
+            <a href="javascript:history.back()" class="hover:underline">← Retour à la page précédente</a>
+        </p>
+    </div>
+
+</body>
+</html>

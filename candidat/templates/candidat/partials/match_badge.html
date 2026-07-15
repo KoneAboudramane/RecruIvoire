@@ -1,0 +1,23 @@
+{% load i18n %}
+{% comment %}
+    Badge de matching candidat ↔ offre.
+
+    Variables attendues :
+      score    : int (0-100)
+      couleur  : hex string (vert / orange / jaune / gris) — fourni par matching.couleur_score
+      libelle  : "Très bon match" / "Bon match" / "Match partiel" / "Faible match"
+      taille   : 'sm' (badge compact, par défaut) ou 'lg' (badge en pill)
+{% endcomment %}
+{% if taille == 'lg' %}
+  <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-white font-bold text-sm shadow-sm"
+        style="background:{{ couleur }};"
+        title="{{ libelle }}">
+    🎯 {{ score }}% — {{ libelle }}
+  </span>
+{% else %}
+  <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-white font-bold text-[11px] shadow-sm"
+        style="background:{{ couleur }};"
+        title="{{ libelle }}">
+    🎯 {{ score }}%
+  </span>
+{% endif %}

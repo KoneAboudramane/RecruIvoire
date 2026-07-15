@@ -1,0 +1,332 @@
+﻿{% extends "entreprise/base.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Mes notifications" %} — {{ request.entreprise.raisonSocial }}{% endblock %}
+
+{% block css_extra %}
+<style>
+    .notif-card {
+        transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    .notif-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(0,0,0,.07);
+        border-color: #FED7AA;
+    }
+    .notif-non-lue {
+        background: #FFF8F0;
+        border-color: #FED7AA;
+    }
+    @keyframes slideOut {
+        to { opacity: 0; transform: translateX(-30px); height: 0; padding: 0; margin: 0; }
+    }
+    .notif-disparait {
+        animation: slideOut .35s ease forwards;
+        overflow: hidden;
+    }
+
+    /* ── Mode sombre ──────────────────────────────────────────────────── */
+    html.dark .notif-card { background:#1e293b !important; border-color:#334155 !important; }
+    html.dark .notif-non-lue { background:rgba(201,96,16,.08) !important; border-color:rgba(201,96,16,.3) !important; }
+    html.dark .notif-card:hover { box-shadow:0 12px 28px rgba(0,0,0,.4) !important; border-color:rgba(201,96,16,.5) !important; }
+
+    /* ── Mode NOIR (OLED) ─────────────────────────────────────────────── */
+    html.noir .notif-card { background:#0d0d0d !important; border-color:#222 !important; }
+    html.noir .notif-non-lue { background:rgba(201,96,16,.06) !important; border-color:rgba(201,96,16,.24) !important; }
+    html.noir .notif-card:hover { box-shadow:0 12px 28px rgba(0,0,0,.55) !important; border-color:rgba(201,96,16,.40) !important; }
+
+    /* ── En-tête notifications — suppression fond orange ─────────────── */
+    .notif-header { background:#fff; color:#1f2937; border:1px solid #e5e7eb; }
+    .notif-header .deco-cercle { display:none; }
+    .notif-header .sous-titre { color:#4b5563; }
+    .notif-header .badge-total { background:rgba(201,96,16,.10); color:#9a3412; }
+    .notif-header .badge-non-lues { background:rgba(201,96,16,.15); color:#9a3412; }
+
+    html.dark .notif-header { background:#1e293b; color:#f1f5f9; border-color:#334155; }
+    html.dark .notif-header .deco-cercle { display:block; opacity:.4; }
+    html.dark .notif-header .sous-titre { color:#94a3b8; }
+    html.dark .notif-header .badge-total { background:rgba(201,96,16,.15); color:#fb923c; }
+    html.dark .notif-header .badge-non-lues { background:rgba(201,96,16,.22); color:#fb923c; }
+
+    html.noir .notif-header { background:linear-gradient(135deg,#000 0%,#080808 60%,#111 100%); color:#f1f5f9; border-color:#222; }
+    html.noir .notif-header .deco-cercle { display:block; opacity:.2; }
+    html.noir .notif-header .sous-titre { color:#94a3b8; }
+    html.noir .notif-header .badge-total { background:rgba(201,96,16,.12); color:#fb923c; }
+    html.noir .notif-header .badge-non-lues { background:rgba(201,96,16,.18); color:#fb923c; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<section x-data="notificationsEntreprisePage()" x-init="init()" class="max-w-5xl mx-auto px-3 sm:px-6 lg:px-10 py-6">
+
+    {# ── En-tête ──────────────────────────────────────────────────────── #}
+    <div class="notif-header rounded-3xl px-6 sm:px-10 py-10 mb-8 relative overflow-hidden shadow-sm">
+        <div class="deco-cercle absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full translate-x-1/3 -translate-y-1/3"></div>
+        <div class="deco-cercle absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full -translate-x-1/2 translate-y-1/2"></div>
+        <div class="relative">
+            <div class="flex items-center gap-3 mb-3">
+                <span class="text-3xl">🔔</span>
+                <h1 class="text-3xl sm:text-4xl font-extrabold">{% trans "Mes notifications" %}</h1>
+            </div>
+            <p class="sous-titre text-base sm:text-lg mb-4">
+                {% blocktrans %}Retrouvez ici toutes les alertes ATS (profils candidats correspondant à vos offres) ainsi que les messages système.{% endblocktrans %}
+            </p>
+            <div class="flex flex-wrap items-center gap-3 text-sm">
+                <span class="badge-total px-3 py-1.5 rounded-full font-semibold">
+                    📦 <span x-text="items.length"></span> {% trans "au total" %}
+                </span>
+                <span x-show="nbNonLues > 0" x-cloak
+                      class="badge-non-lues px-3 py-1.5 rounded-full font-bold">
+                    🔥 <span x-text="nbNonLues"></span> {% trans "non lue(s)" %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    {# ── Barre d'actions ──────────────────────────────────────────────── #}
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6 bg-white rounded-2xl p-3 border border-gray-100 shadow-sm">
+        <div class="flex flex-wrap items-center gap-2">
+            <button type="button" @click="filtre='toutes'"
+                    :class="filtre==='toutes' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300'"
+                    class="text-xs font-semibold px-3 py-2 rounded-lg border transition">
+                {% trans "Toutes" %}
+            </button>
+            <button type="button" @click="filtre='non-lues'"
+                    :class="filtre==='non-lues' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300'"
+                    class="text-xs font-semibold px-3 py-2 rounded-lg border transition flex items-center gap-1.5">
+                {% trans "Non lues" %}
+                <span x-show="nbNonLues > 0"
+                      :class="filtre==='non-lues' ? 'bg-white/30 text-white' : 'bg-orange-100 text-orange-700'"
+                      class="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full"
+                      x-text="nbNonLues"></span>
+            </button>
+            <button type="button" @click="filtre='profil-match'"
+                    :class="filtre==='profil-match' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300'"
+                    class="text-xs font-semibold px-3 py-2 rounded-lg border transition">
+                🎯 {% trans "Profils ATS" %}
+            </button>
+            <button type="button" @click="filtre='candidature'"
+                    :class="filtre==='candidature' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300'"
+                    class="text-xs font-semibold px-3 py-2 rounded-lg border transition">
+                📩 {% trans "Candidatures" %}
+            </button>
+            <button type="button" @click="filtre='systeme'"
+                    :class="filtre==='systeme' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300'"
+                    class="text-xs font-semibold px-3 py-2 rounded-lg border transition">
+                ⚙️ {% trans "Système" %}
+            </button>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <button type="button" @click="toutesLues()"
+                    x-show="nbNonLues > 0" x-cloak
+                    class="text-xs font-bold text-white px-4 py-2 rounded-lg transition hover:opacity-90"
+                    style="background:#c96010;">
+                ✓ {% trans "Tout marquer comme lu" %}
+            </button>
+            <button type="button" @click="supprimerToutes()"
+                    x-show="items.length > 0" x-cloak
+                    class="text-xs font-bold text-red-600 bg-white px-4 py-2 rounded-lg transition hover:bg-red-50 border border-red-200 dark:border-red-700/40">
+                🗑 {% trans "Tout supprimer" %}
+            </button>
+        </div>
+    </div>
+
+    {# ── Liste ───────────────────────────────────────────────────────── #}
+    <div x-show="filteredItems().length > 0" class="space-y-3">
+        <template x-for="n in filteredItems()" :key="n.id">
+            <div :id="`notif-${n.id}`"
+                 class="notif-card relative bg-white rounded-2xl p-5 border-2 flex items-start gap-4"
+                 :class="!n.lue ? 'notif-non-lue' : 'border-gray-100'">
+
+                {# Icône / avatar #}
+                <template x-if="n.photo_url">
+                    <img :src="n.photo_url" :alt="n.candidat_nom"
+                         class="w-14 h-14 rounded-2xl object-cover shadow-md flex-shrink-0">
+                </template>
+                <template x-if="!n.photo_url">
+                    <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 shadow-md"
+                         :class="!n.lue ? 'text-white' : 'bg-gray-100 text-gray-600'"
+                         :style="!n.lue ? 'background:#c96010' : ''">
+                        <span x-show="n.type === 'PROFIL_MATCH'">🎯</span>
+                        <span x-show="n.type === 'CANDIDATURE'">📩</span>
+                        <span x-show="n.type === 'SYSTEME'">⚙️</span>
+                    </div>
+                </template>
+
+                {# Contenu #}
+                <div class="flex-1 min-w-0">
+                    <div class="flex flex-wrap items-start justify-between gap-2 mb-1">
+                        <a :href="lienConv(n)" @click="lire(n)"
+                           class="font-extrabold hover:text-orange-600 transition leading-tight"
+                           :class="!n.lue ? 'text-gray-800' : 'text-gray-600'"
+                           x-text="n.titre"></a>
+                        <span x-show="n.score !== null && n.score !== undefined"
+                              x-text="n.score + '%'"
+                              class="text-xs font-bold px-2 py-1 rounded-full text-white whitespace-nowrap"
+                              style="background:#009A44;"></span>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-2" x-text="n.message"></p>
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                        <span x-text="formatDate(n.dateCreation)"></span>
+                        <template x-if="n.offre_titre">
+                            <span>• <span x-text="n.offre_titre"></span></span>
+                        </template>
+                    </div>
+                </div>
+
+                {# Actions #}
+                <div class="flex flex-col gap-1 flex-shrink-0">
+                    <button type="button" @click="lire(n); window.location = lienConv(n);"
+                            x-show="n.lien" x-cloak
+                            class="text-xs font-bold text-white px-3 py-1.5 rounded-lg transition hover:opacity-90"
+                            style="background:#009A44;">
+                        {% trans "Voir" %}
+                    </button>
+                    <button type="button" @click="supprimer(n)"
+                            class="text-xs font-semibold text-gray-400 hover:text-red-500 px-3 py-1.5 rounded-lg transition"
+                            title="{% trans "Supprimer" %}">
+                        🗑
+                    </button>
+                </div>
+
+                {# Pastille non-lue #}
+                <span x-show="!n.lue" class="absolute top-3 right-3 w-2.5 h-2.5 rounded-full"
+                      style="background:#c96010;"></span>
+            </div>
+        </template>
+    </div>
+
+    {# ── Empty state ──────────────────────────────────────────────────── #}
+    <div x-show="filteredItems().length === 0" x-cloak
+         class="bg-white rounded-2xl p-16 border border-dashed border-gray-200 text-center">
+        <div class="text-6xl mb-4">📭</div>
+        <h3 class="text-xl font-bold text-gray-700 mb-2">
+            <span x-show="filtre === 'toutes'">{% trans "Aucune notification" %}</span>
+            <span x-show="filtre === 'non-lues'">{% trans "Aucune notification non lue" %}</span>
+            <span x-show="filtre === 'profil-match'">{% trans "Aucune alerte de profil ATS" %}</span>
+            <span x-show="filtre === 'candidature'">{% trans "Aucune notification de candidature" %}</span>
+            <span x-show="filtre === 'systeme'">{% trans "Aucun message système" %}</span>
+        </h3>
+        <p class="text-gray-500 text-sm mb-6">
+            {% trans "Publiez des offres pour recevoir des suggestions ATS de profils correspondants." %}
+        </p>
+        <a href="{% url 'entreprise:offres_liste' %}"
+           class="inline-block text-white font-bold px-6 py-3 rounded-xl text-sm shadow-sm hover:opacity-90 transition"
+           style="background:#c96010;">
+            📋 {% trans "Voir mes offres" %}
+        </a>
+    </div>
+
+</section>
+
+{% csrf_token %}
+{% endblock %}
+
+{% block js_extra %}
+<script>
+function notificationsEntreprisePage() {
+    return {
+        items:      [],
+        nbNonLues:  0,
+        filtre:     'toutes',
+        loading:    false,
+
+        async init() {
+            await this.refresh();
+        },
+
+        async refresh() {
+            this.loading = true;
+            try {
+                const r = await fetch("{% url 'entreprise:notifications_liste' %}?limit=50", {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                });
+                const d = await r.json();
+                this.items     = d.items || [];
+                this.nbNonLues = d.nb_non_lues || 0;
+            } catch (e) { console.warn(e); }
+            finally { this.loading = false; }
+        },
+
+        filteredItems() {
+            switch (this.filtre) {
+                case 'non-lues':     return this.items.filter(n => !n.lue);
+                case 'profil-match': return this.items.filter(n => n.type === 'PROFIL_MATCH');
+                case 'candidature':  return this.items.filter(n => n.type === 'CANDIDATURE');
+                case 'systeme':      return this.items.filter(n => n.type === 'SYSTEME');
+                default:             return this.items;
+            }
+        },
+
+        async lire(n) {
+            if (n.lue) return;
+            try {
+                await fetch(`/entreprise/notifications/${n.id}/lire/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                });
+                n.lue = true;
+                this.nbNonLues = Math.max(0, this.nbNonLues - 1);
+            } catch (e) { console.warn(e); }
+        },
+
+        async toutesLues() {
+            try {
+                await fetch("{% url 'entreprise:notifications_tout_marquer_lues' %}", {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                });
+                this.items.forEach(n => n.lue = true);
+                this.nbNonLues = 0;
+            } catch (e) { console.warn(e); }
+        },
+
+        async supprimerToutes() {
+            if (!confirm("Supprimer toutes les notifications ? Cette action est définitive.")) return;
+            try {
+                await fetch("{% url 'entreprise:notifications_tout_supprimer' %}", {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                });
+                this.items     = [];
+                this.nbNonLues = 0;
+            } catch (e) { console.warn(e); }
+        },
+
+        async supprimer(n) {
+            try {
+                const el = document.getElementById(`notif-${n.id}`);
+                if (el) el.classList.add('notif-disparait');
+                await new Promise(r => setTimeout(r, 350));
+                await fetch(`/entreprise/notifications/${n.id}/supprimer/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                });
+                if (!n.lue) this.nbNonLues = Math.max(0, this.nbNonLues - 1);
+                this.items = this.items.filter(x => x.id !== n.id);
+            } catch (e) { console.warn(e); }
+        },
+
+        lienConv(n) {
+            if (n.type !== 'MESSAGE') return n.lien || '#';
+            if (n.lien && n.lien.includes('?conv=')) return n.lien;
+            const match = n.lien && n.lien.match(/\/conversations\/(\d+)\//);
+            if (match) return `/entreprise/recruteur/conversations/?conv=${match[1]}`;
+            return n.lien || '#';
+        },
+
+        formatDate(iso) {
+            try {
+                const d = new Date(iso);
+                const diff = (Date.now() - d.getTime()) / 1000;
+                if (diff < 60)        return "À l'instant";
+                if (diff < 3600)      return `Il y a ${Math.floor(diff / 60)} min`;
+                if (diff < 86400)     return `Il y a ${Math.floor(diff / 3600)} h`;
+                if (diff < 86400 * 7) return `Il y a ${Math.floor(diff / 86400)} j`;
+                return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+            } catch (e) { return ''; }
+        },
+    };
+}
+</script>
+{% endblock %}

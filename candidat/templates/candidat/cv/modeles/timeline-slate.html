@@ -1,0 +1,623 @@
+{% extends "candidat/base.html" %}
+{% load i18n %}
+{% block titre %}Créer mon CV — {{ modele.nom }} · {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+{% include "candidat/cv/_form_styles.html" %}
+<style>
+/* ═══════════════════════════════════════════════════════
+   TIMELINE SLATE — Ardoise #1E3A5F + Cyan #00BCD4
+   Header pleine largeur · Timeline chronologique · 50/50
+═══════════════════════════════════════════════════════ */
+
+.cv-sheet-ts {
+  width: 794px;
+  min-height: 1123px;
+  background: #ffffff;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 12px;
+  color: #1F2937;
+  box-shadow: 0 4px 32px rgba(0,0,0,.15);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Header ──────────────────────────────────────── */
+.ts-header {
+  background: #1E3A5F;
+  padding: 30px 40px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-shrink: 0;
+}
+.ts-header-info { flex: 1; }
+.ts-prenom {
+  font-size: 10px; font-weight: 600;
+  color: rgba(255,255,255,.55);
+  letter-spacing: 3.5px; text-transform: uppercase;
+  margin-bottom: 3px;
+}
+.ts-nom {
+  font-size: 27px; font-weight: 900;
+  color: #fff; text-transform: uppercase;
+  letter-spacing: 1px; line-height: 1;
+  margin-bottom: 7px; word-break: break-word;
+}
+.ts-titre {
+  font-size: 13px; color: #fff;
+  font-weight: 600; letter-spacing: .5px;
+  background: rgba(0,188,212,.22);
+  border-left: 3px solid #00BCD4;
+  padding: 3px 10px;
+  display: inline-block;
+  margin-bottom: 16px;
+  border-radius: 0 3px 3px 0;
+}
+.ts-contacts { display: flex; flex-wrap: wrap; gap: 5px 18px; }
+.ts-contact-item {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10px; color: rgba(255,255,255,.80);
+}
+.ts-contact-icon {
+  color: #00BCD4; font-size: 11px;
+  width: 14px; text-align: center; flex-shrink: 0;
+}
+
+/* ─── Photo octogonale ────────────────────────────── */
+/* Cadre externe cyan + photo interne — forme 8 côtés,
+   ni ronde ni carrée, géométrique et moderne.          */
+.ts-photo-wrap {
+  width: 128px; height: 128px;
+  clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+  background: #00BCD4;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.ts-photo {
+  width: 116px; height: 116px;
+  clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+  background: #122540;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 38px; color: rgba(0,188,212,.65);
+  overflow: hidden;
+}
+.ts-photo img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+
+/* ─── Barre accent ────────────────────────────────── */
+.ts-accent-bar {
+  height: 3px;
+  background: linear-gradient(to right, #00BCD4 0%, #1E3A5F 100%);
+  flex-shrink: 0;
+}
+
+/* ─── Corps 50/50 ─────────────────────────────────── */
+.ts-body { display: flex; flex: 1; }
+.ts-col-left {
+  width: 50%; background: #F7FBFD;
+  padding: 28px 20px 32px 32px;
+  border-right: 1px solid #E0F7FA;
+}
+.ts-col-right {
+  width: 50%; background: #fff;
+  padding: 28px 32px 32px 24px;
+}
+
+/* ─── En-têtes de section ─────────────────────────── */
+.ts-sec { margin-bottom: 22px; }
+.ts-sec-hdr {
+  display: flex; align-items: center;
+  gap: 8px; margin-bottom: 14px;
+}
+.ts-sec-bar {
+  width: 3px; height: 16px;
+  background: #00BCD4; border-radius: 2px; flex-shrink: 0;
+}
+.ts-sec-title {
+  font-size: 9px; font-weight: 800;
+  color: #1E3A5F; text-transform: uppercase;
+  letter-spacing: 2.5px;
+}
+
+/* ─── Rail de la timeline ─────────────────────────── */
+.ts-rail {
+  border-left: 2px solid rgba(0,188,212,.38);
+  padding-left: 22px;
+  padding-top: 2px;
+  margin-left: 8px;
+}
+
+/* ─── Entrées timeline ────────────────────────────── */
+.ts-entry {
+  position: relative;
+  margin-bottom: 18px;
+  padding-bottom: 2px;
+}
+/* Dot plein (expériences) */
+.ts-entry-dot {
+  position: absolute;
+  left: -28px; top: 5px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #00BCD4;
+  border: 2px solid #F7FBFD;
+  box-shadow: 0 0 0 2px rgba(0,188,212,.35);
+  z-index: 2;
+}
+/* Dot creux (formations) */
+.ts-dot-sm {
+  width: 10px; height: 10px;
+  background: #fff;
+  border: 2px solid #00BCD4;
+  left: -27px; top: 6px;
+  border-color: #00BCD4;
+}
+/* Dot droit (formations dans colonne droite) */
+.ts-dot-right {
+  border-color: #fff;
+  background: #00BCD4;
+}
+
+.ts-entry-head {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; gap: 8px; margin-bottom: 2px;
+}
+.ts-entry-title {
+  font-weight: 700; font-size: 12px;
+  color: #111827; line-height: 1.25;
+}
+.ts-entry-date {
+  font-size: 8px; color: #00BCD4; font-weight: 800;
+  background: rgba(0,188,212,.10);
+  border: 1px solid rgba(0,188,212,.30);
+  padding: 2px 8px; border-radius: 20px;
+  white-space: nowrap; flex-shrink: 0; letter-spacing: .2px;
+}
+.ts-entry-org {
+  font-size: 10.5px; color: #1E3A5F;
+  font-weight: 600; margin-bottom: 4px; opacity: .85;
+}
+.ts-entry-desc {
+  font-size: 11px; color: #4B5563; line-height: 1.65;
+}
+
+/* ─── Profil ──────────────────────────────────────── */
+.ts-profil {
+  font-size: 11px; color: #374151; line-height: 1.72;
+  padding: 10px 14px;
+  background: #E0F7FA;
+  border-left: 3px solid #00BCD4;
+  border-radius: 0 5px 5px 0;
+  font-style: italic;
+}
+
+/* ─── Compétences — pills avec dots ──────────────── */
+.ts-skill-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.ts-skill {
+  display: flex; align-items: center; gap: 5px;
+  background: #EBF5FB; border: 1px solid #B2EBF2;
+  border-radius: 4px; padding: 4px 9px;
+  font-size: 10px; color: #1E3A5F; font-weight: 600;
+}
+.ts-skill-dots { display: flex; gap: 2px; }
+.ts-skill-dot { width: 5px; height: 5px; border-radius: 50%; background: #CFD8DC; }
+.ts-skill-dot.on { background: #00BCD4; }
+
+/* ─── Grille 2 colonnes (langues & intérêts) ─────── */
+.ts-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 14px;
+}
+
+/* ─── Langues — barre ─────────────────────────────── */
+.ts-lang { margin-bottom: 5px; }
+.ts-lang-label {
+  display: flex; justify-content: space-between;
+  align-items: center; font-size: 10.5px; color: #374151; margin-bottom: 4px;
+}
+.ts-lang-badge {
+  font-size: 8px; font-weight: 700;
+  background: #1E3A5F; color: #fff;
+  padding: 2px 7px; border-radius: 3px; letter-spacing: .3px;
+}
+.ts-lang-bar-bg { height: 5px; background: #E0F7FA; border-radius: 3px; overflow: hidden; }
+.ts-lang-bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, #00BCD4, #1E3A5F);
+  border-radius: 3px; transition: width .3s;
+}
+
+/* ─── Intérêts — liste simple (paginable) ──────────── */
+.ts-interest-item {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 10.5px; color: #374151;
+  padding: 2px 0;
+}
+.ts-interest-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: #00BCD4; flex-shrink: 0;
+}
+
+/* ─── Certifications & Projets ────────────────────── */
+.ts-certif {
+  margin-bottom: 9px; padding-bottom: 9px;
+  border-bottom: 1px solid #E0F7FA;
+}
+.ts-certif:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.ts-certif-title { font-weight: 700; font-size: 11px; color: #111827; margin-bottom: 2px; }
+.ts-certif-sub { font-size: 10px; color: #6B7280; display: flex; justify-content: space-between; }
+.ts-certif-year { color: #00BCD4; font-weight: 700; }
+
+/* ─── Bénévolat ───────────────────────────────────── */
+.ts-benev {
+  margin-bottom: 9px; padding-bottom: 9px;
+  border-bottom: 1px solid #F3F4F6;
+}
+.ts-benev:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.ts-benev-role { font-weight: 700; font-size: 11px; color: #111827; }
+.ts-benev-orga { font-size: 10px; color: #6B7280; margin-top: 1px; }
+.ts-benev-date { font-size: 9px; color: #00BCD4; font-weight: 700; }
+
+/* ─── Références ──────────────────────────────────── */
+.ts-ref {
+  font-style: italic; color: #6B7280; font-size: 11px;
+  padding: 10px 14px; border: 1px dashed rgba(0,188,212,.5);
+  border-radius: 5px; text-align: center; background: #F0FDFF;
+}
+
+/* ─── Footer ──────────────────────────────────────── */
+.ts-footer {
+  height: 3px;
+  background: linear-gradient(to right, #00BCD4 0%, #1E3A5F 100%);
+  flex-shrink: 0;
+}
+
+/* ─── Missions clients (classes cv-mc-* obligatoires) ─ */
+.cv-mc-section {
+  margin-top: 8px; padding: 7px 10px 7px 12px;
+  background: rgba(30,58,95,.05);
+  border-left: 3px solid #00BCD4;
+  border-radius: 0 5px 5px 0;
+}
+.cv-mc-label {
+  font-size: 7pt; font-weight: 700; color: #1E3A5F;
+  text-transform: uppercase; letter-spacing: .7px; margin-bottom: 6px;
+}
+.cv-mc-item {
+  margin-bottom: 6px; padding-bottom: 6px;
+  border-bottom: 1px dashed rgba(30,58,95,.2);
+}
+.cv-mc-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.cv-mc-hdr { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+.cv-mc-title { font-size: 9pt; font-weight: 600; color: #111827; }
+.cv-mc-badge {
+  font-size: 6.5pt; color: #fff; background: #1E3A5F;
+  padding: 1px 7px; border-radius: 3px; white-space: nowrap; flex-shrink: 0;
+}
+.cv-mc-client { font-size: 8pt; color: #6B7280; margin-top: 1px; }
+.cv-mc-desc { font-size: 7.5pt; color: #4B5563; margin-top: 2px; line-height: 1.5; }
+</style>
+{% endblock %}
+
+{% block contenu %}<div class="-mx-6 -my-8" x-data="cvBuilder()"><div class="cv-builder">
+  {% include "candidat/cv/_form_panel.html" %}
+  <div class="preview-panel">
+  <div id="cv-sheet">
+  <div class="cv-sheet-ts">
+
+    <!-- ══ HEADER ══ -->
+    <div class="ts-header">
+      <div class="ts-header-info">
+        <div class="ts-prenom" x-text="cv.prenom || 'Prénom'"></div>
+        <div class="ts-nom ts-name" x-text="cv.nom || 'NOM'"></div>
+        <div class="ts-titre" x-text="cv.titre || 'Titre professionnel'"></div>
+        <div class="ts-contacts">
+          <div class="ts-contact-item" x-show="cv.email">
+            <span class="ts-contact-icon">✉</span><span x-text="cv.email"></span>
+          </div>
+          <div class="ts-contact-item" x-show="cv.telephone">
+            <span class="ts-contact-icon">☎</span><span x-text="cv.telephone"></span>
+          </div>
+          <div class="ts-contact-item" x-show="cvLoc()">
+            <span class="ts-contact-icon">⌖</span><span x-text="cvLoc()"></span>
+          </div>
+          <div class="ts-contact-item" x-show="cv.age">
+            <span class="ts-contact-icon">◑</span><span x-text="cv.age + ' ans'"></span>
+          </div>
+          <div class="ts-contact-item" x-show="cv.linkedin">
+            <span class="ts-contact-icon">in</span><span x-text="cv.linkedin"></span>
+          </div>
+          <div class="ts-contact-item" x-show="cv.permis">
+            <span class="ts-contact-icon">🪪</span><span x-text="'Permis ' + cv.permis"></span>
+          </div>
+          <div class="ts-contact-item" x-show="cv.portfolio">
+            <span class="ts-contact-icon">⊕</span><span x-text="cv.portfolio"></span>
+          </div>
+        </div>
+      </div>
+      <div class="ts-photo-wrap">
+        <div class="ts-photo">
+          <img x-show="cv.photo" :src="cv.photo" alt="{% trans "Photo" %}">
+          <span x-show="!cv.photo">👤</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ BARRE ACCENT ══ -->
+    <div class="ts-accent-bar"></div>
+
+    <!-- ══ CORPS 50/50 ══ -->
+    <div class="ts-body">
+
+      <!-- ── COLONNE GAUCHE : Timeline expériences ── -->
+      <div class="ts-col-left">
+
+        <template x-if="cv.experiences.some(e=>expVisible(e))">
+          <div class="ts-sec">
+            <div class="ts-sec-hdr">
+              <div class="ts-sec-bar"></div>
+              <div class="ts-sec-title">{% trans "Expériences professionnelles" %}</div>
+            </div>
+            <div class="ts-rail">
+              <template x-for="exp in cv.experiences" :key="exp.id">
+                <div class="ts-entry" x-show="expVisible(exp)">
+                  <div class="ts-entry-dot"></div>
+                  <div class="ts-entry-head">
+                    <div class="ts-entry-title" x-text="expTitre(exp)"></div>
+                    <div class="ts-entry-date" x-show="expTitrePeriodeShow(exp)" x-text="expTitrePeriodeStr(exp)"></div>
+                  </div>
+                  <template x-if="!exp.postes||exp.postes.length<=1">
+                    <div x-show="exp.entreprise||exp.lieu" class="ts-entry-org">
+                      <span x-text="exp.entreprise"></span>
+                      <span x-show="exp.lieu" x-text="exp.lieu?' · '+exp.lieu:''"></span>
+                      <span x-show="expPeriodeShow(exp)" style="font-size:7.5pt;color:#94a3b8;margin-left:4px;white-space:nowrap" x-text="expPeriodeStr(exp)"></span>
+                    </div>
+                  </template>
+                  <template x-if="exp.postes&&exp.postes.length>1">
+                    <div>
+                      <div x-show="exp.lieu" class="ts-entry-org" x-text="'· '+exp.lieu" style="margin-bottom:3px"></div>
+                      <div class="cv-postes-list">
+                        <template x-for="p in exp.postes" :key="p.id">
+                          <div x-show="p.titre" class="cv-postes-row">
+                            <span class="cv-postes-titre" x-text="p.titre"></span>
+                            <span x-show="p.debut||p.enCours" class="cv-postes-date" x-text="formatPeriode(p.debut,p.fin,p.enCours)"></span>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                  </template>
+                  <div class="ts-entry-desc" x-show="exp.desc" x-text="exp.desc"></div>
+                  <template x-if="exp.hasMissionsClient && exp.missionsClient && exp.missionsClient.filter(mc=>mc.client).length>0">
+                    <div class="cv-mc-section">
+                      <div class="cv-mc-label">🏢 Missions clients</div>
+                      <template x-for="mc in exp.missionsClient.filter(mc=>mc.client)" :key="mc.id">
+                        <div class="cv-mc-item">
+                          <div class="cv-mc-hdr">
+                            <div class="cv-mc-title" x-text="mc.client||'—'"></div>
+                            <div x-show="mc.debut||mc.enCours" class="cv-mc-badge" x-text="formatPeriode(mc.debut,mc.fin,mc.enCours)"></div>
+                          </div>
+                          <div x-show="mc.pays||mc.ville" class="cv-mc-client">
+                            <span x-show="mc.pays" x-text="mc.pays"></span>
+                            <span x-show="mc.ville" x-text="mc.pays&&mc.ville?' · '+mc.ville:mc.ville||''"></span>
+                          </div>
+                          <div x-show="mc.desc" class="cv-mc-desc" x-text="mc.desc"></div>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- Formation — mini timeline (colonne gauche) -->
+        <template x-if="vis(cv.formations).filter(f=>f.diplome||f.ecole).length > 0">
+          <div class="ts-sec">
+            <div class="ts-sec-hdr">
+              <div class="ts-sec-bar"></div>
+              <div class="ts-sec-title">{% trans "Formation" %}</div>
+            </div>
+            <div class="ts-rail">
+              <template x-for="form in vis(cv.formations)" :key="form.id">
+                <div class="ts-entry" x-show="form.diplome||form.ecole">
+                  <div class="ts-entry-dot ts-dot-sm"></div>
+                  <div class="ts-entry-head">
+                    <div class="ts-entry-title" x-text="(form.typeSortie==='certification'?'🏅 ':form.typeSortie==='attestation'?'📄 ':'')+(form.diplome||'—')"></div>
+                    <div class="ts-entry-date" x-text="form.typeSortie==='certification'?(form.expiration?'Exp. '+formatMonth(form.expiration):(form.fin?formatMonth(form.fin):'')):(formatPeriode(form.debut,form.fin,form.enCours)||'—')"></div>
+                  </div>
+                  <div class="ts-entry-org">
+                    <span x-text="form.ecole"></span>
+                    <span x-show="form.lieu&&form.typeSortie!=='certification'" x-text="form.lieu?' · '+form.lieu:''"></span>
+                  </div>
+                  <div class="ts-entry-desc" x-show="form.domaine" x-text="form.domaine" style="font-style:italic;opacity:.8"></div>
+                  <div class="ts-entry-desc" x-show="form.typeSortie==='certification'&&form.numero" x-text="'N° '+form.numero"></div>
+                  <div class="ts-entry-desc" x-show="form.desc" x-text="form.desc"></div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- Projets (colonne gauche) -->
+        <template x-if="cv.showProjets && vis(cv.projets).filter(p=>p.nom).length > 0">
+          <div class="ts-sec">
+            <div class="ts-sec-hdr">
+              <div class="ts-sec-bar"></div>
+              <div class="ts-sec-title">{% trans "Projets" %}</div>
+            </div>
+            <template x-for="projet in vis(cv.projets)" :key="projet.id">
+              <div class="ts-certif" x-show="projet.nom">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                  <div class="ts-certif-title" x-text="projet.nom"></div>
+                  <span class="ts-certif-year" x-text="projet.annee"></span>
+                </div>
+                <div class="ts-certif-sub"><span x-text="projet.desc"></span></div>
+                <div x-show="projet.lien" style="font-size:9.5px;color:#6B7280;margin-top:2px;" x-text="projet.lien"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+      </div><!-- /.ts-col-left -->
+
+      <!-- ── COLONNE DROITE ── -->
+      <div class="ts-col-right">
+
+        <!-- Profil -->
+        <template x-if="cv.profil">
+          <div class="ts-sec">
+            <div class="ts-sec-hdr">
+              <div class="ts-sec-bar"></div>
+              <div class="ts-sec-title">{% trans "Profil" %}</div>
+            </div>
+            <div class="ts-profil ts-profil" x-text="cv.profil"></div>
+          </div>
+        </template>
+
+        <!-- Compétences — pills -->
+        <template x-if="vis(cv.competences).filter(c=>c.nom).length > 0">
+          <div class="ts-sec">
+            <div class="ts-sec-hdr">
+              <div class="ts-sec-bar"></div>
+              <div class="ts-sec-title">{% trans "Compétences" %}</div>
+            </div>
+            <div class="ts-skill-tags">
+              <template x-for="skill in vis(cv.competences)" :key="skill.id">
+                <div class="ts-skill" x-show="skill.nom">
+                  <span x-text="skill.nom"></span>
+                  <div class="ts-skill-dots">
+                    <template x-for="s in 5" :key="s">
+                      <div class="ts-skill-dot" :class="s <= niveauDots(skill.niveau) ? 'on' : ''"></div>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- Langues -->
+        <template x-if="vis(cv.langues).filter(l=>l.nom).length > 0">
+          <div class="ts-sec">
+            <div class="ts-sec-hdr">
+              <div class="ts-sec-bar"></div>
+              <div class="ts-sec-title">{% trans "Langues" %}</div>
+            </div>
+            <div class="ts-two-col">
+              <template x-for="lang in vis(cv.langues)" :key="lang.id">
+                <div class="ts-lang" x-show="lang.nom">
+                  <div class="ts-lang-label">
+                    <span x-text="lang.nom"></span>
+                    <span class="ts-lang-badge" x-text="niveauCode(lang.niveau, 'langue')"></span>
+                  </div>
+                  <div class="ts-lang-bar-bg">
+                    <div class="ts-lang-bar-fill" :style="'width:' + (niveauDots(lang.niveau) * 20) + '%'"></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- Intérêts — chips -->
+        <template x-if="cv.interets.filter((i,ii)=>i && !isInteretMasque(ii)).length > 0">
+          <div class="ts-sec">
+            <div class="ts-sec-hdr">
+              <div class="ts-sec-bar"></div>
+              <div class="ts-sec-title">{% trans "Intérêts" %}</div>
+            </div>
+            <div class="ts-two-col">
+              <template x-for="(interet, idx) in cv.interets" :key="idx">
+                <div x-show="interet && !isInteretMasque(idx)" class="ts-interest-item">
+                  <div class="ts-interest-dot"></div>
+                  <span x-text="interet"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- Certifications -->
+        <template x-if="cv.showCertif && cv.certifs.filter(c=>c.nom).length > 0">
+          <div class="ts-sec">
+            <div class="ts-sec-hdr">
+              <div class="ts-sec-bar"></div>
+              <div class="ts-sec-title">{% trans "Certifications" %}</div>
+            </div>
+            <template x-for="certif in cv.certifs" :key="certif.id">
+              <div class="ts-certif" x-show="certif.nom">
+                <div class="ts-certif-title" x-text="certif.nom"></div>
+                <div class="ts-certif-sub">
+                  <span x-text="certif.organisme"></span>
+                  <span class="ts-certif-year" x-text="certif.annee"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Bénévolat -->
+        <template x-if="cv.showBenev && cv.benevs && vis(cv.benevs).filter(b=>b.role||b.orga).length > 0">
+          <div class="ts-sec">
+            <div class="ts-sec-hdr">
+              <div class="ts-sec-bar"></div>
+              <div class="ts-sec-title">{% trans "Engagement &amp; Bénévolat" %}</div>
+            </div>
+            <template x-for="benev in vis(cv.benevs)" :key="benev.id">
+              <div class="ts-benev ts-entry" x-show="benev.role||benev.orga">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                  <div class="ts-benev-role" x-text="benev.role"></div>
+                  <div class="ts-benev-date" x-text="formatPeriode(benev.debut, benev.fin, benev.enCours)"></div>
+                </div>
+                <div class="ts-benev-orga" x-text="benev.orga"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Références -->
+        <template x-if="cv.showRef">
+          <div class="ts-sec">
+            <div class="ts-sec-hdr">
+              <div class="ts-sec-bar"></div>
+              <div class="ts-sec-title">{% trans "Références" %}</div>
+            </div>
+            <div class="ts-ref ts-profil">{% trans "Références disponibles sur demande." %}</div>
+          </div>
+        </template>
+
+      </div><!-- /.ts-col-right -->
+    </div><!-- /.ts-body -->
+
+    <div class="ts-footer"></div>
+
+  </div><!-- /.cv-sheet-ts -->
+  </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+
+{% block js_extra %}{% include "candidat/cv/_cvbuilder_js.html" %}
+<script>
+(function () {
+  var PAGE_H = 1123;
+  var _timer = null;
+  function adjustSheet() {
+    var el = document.querySelector('.cv-sheet-ts');
+    if (!el) return;
+    el.style.minHeight = '0px';
+    var pages = Math.max(1, Math.ceil(el.scrollHeight / PAGE_H));
+    el.style.minHeight = (pages * PAGE_H) + 'px';
+  }
+  function schedule() { clearTimeout(_timer); _timer = setTimeout(adjustSheet, 60); }
+  document.addEventListener('DOMContentLoaded', function () {
+    adjustSheet();
+    var preview = document.querySelector('.preview-panel');
+    if (preview) new MutationObserver(schedule).observe(preview, { childList:true, subtree:true, characterData:true });
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,326 @@
+{% load i18n %}{% comment %}
+    Carte candidat — palette restreinte (orange / blanc / vert).
+    Variable attendue :
+      cand : instance de candidat.Candidat
+{% endcomment %}<article class="group relative bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+
+    {# ── Bandeau vert uni en haut ── #}
+    <div class="relative h-28 overflow-hidden rounded-t-3xl c-card-banner">
+        <div class="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-white/10"></div>
+        <div class="absolute -bottom-12 -left-8 w-28 h-28 rounded-full bg-white/10"></div>
+
+        {% if cand.typeContratRecherche %}
+            <span class="absolute top-3 right-3 inline-flex items-center gap-1.5 bg-white dark:bg-gray-800 dark:border dark:border-gray-600 text-gray-800 dark:text-gray-100 text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-md">
+                <span class="w-2 h-2 rounded-full c-badge-dot"></span>
+                {% trans "Disponible" %}
+            </span>
+        {% endif %}
+    </div>
+
+    {# ── Photo profil — chevauche, blanche encadrée ── #}
+    <div class="-mt-14 mx-auto z-10">
+        {% if cand.photoProfil %}
+            <img src="{{ cand.photoProfil.url }}" alt="{{ cand.prenom }} {{ cand.nom }}"
+                 class="w-28 h-28 rounded-full object-cover bg-white shadow-xl"
+                 style="border:4px solid white;">
+        {% else %}
+            <div class="w-28 h-28 rounded-full flex items-center justify-center text-white font-extrabold text-3xl shadow-xl"
+                 style="background:#009A44; border:4px solid white;">
+                {{ cand.prenom|slice:":1"|upper }}{{ cand.nom|slice:":1"|upper }}
+            </div>
+        {% endif %}
+    </div>
+
+    {# ── Identité ── #}
+    <div class="px-6 pt-4 text-center min-h-[5.5rem]">
+        <h3 class="font-extrabold text-gray-900 dark:text-white text-2xl leading-tight truncate">
+            {{ cand.prenom }} {{ cand.nom }}
+        </h3>
+        {% if cand.titreProfessionnel %}
+            <p class="text-lg font-extrabold truncate mt-1.5" style="color:#c96010;">{{ cand.titreProfessionnel }}</p>
+        {% endif %}
+        {% if cand.informationPersonnelle.ville %}
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1.5 truncate flex items-center justify-center gap-1">
+                <span>📍</span>
+                <span class="truncate">{{ cand.informationPersonnelle.ville }}{% if cand.informationPersonnelle.pays %}, {{ cand.informationPersonnelle.pays }}{% endif %}</span>
+            </p>
+        {% endif %}
+    </div>
+
+    {# ── Slogan / bio ── #}
+    <div class="px-6 mt-4 flex-1 min-h-[4rem]">
+        {% if cand.sloganPortfolio %}
+            <p class="text-base text-gray-700 dark:text-gray-300 italic text-center line-clamp-2 leading-relaxed">
+                «&nbsp;{{ cand.sloganPortfolio }}&nbsp;»
+            </p>
+        {% elif cand.biographie %}
+            <p class="text-base text-gray-700 dark:text-gray-300 text-center line-clamp-3 leading-relaxed">
+                {{ cand.biographie|truncatewords:22 }}
+            </p>
+        {% endif %}
+    </div>
+
+    {# ── Pastilles + boutons ── #}
+    <div class="px-6 pt-5 pb-5"
+         {% if request.recruteur or request.entreprise %}
+         x-data="{
+             ouvert: false,
+             collegues: [],
+             charge: false,
+             feedback: '',
+             feedbackOk: true,
+             partageOuvert: false,
+             partageEtape: 'form',
+             partageEmail: '',
+             partageMsg: '',
+             partageLien: '',
+             partageErreur: '',
+             partageCopie: false,
+             init() {
+                 window.addEventListener('sugg:close', () => { this.ouvert = false; });
+                 window.addEventListener('partage:close', () => { this.partageOuvert = false; });
+             },
+             async toggle() {
+                 if (this.ouvert) { this.ouvert = false; return; }
+                 if (this.collegues.length === 0 && !this.charge) {
+                     this.charge = true;
+                     try {
+                         const r = await fetch('/entreprise/candidats/{{ cand.id }}/suggerer/', {
+                             headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                         });
+                         const d = await r.json();
+                         this.collegues = d.collegues || [];
+                     } catch(e) { this.collegues = []; }
+                     finally { this.charge = false; }
+                 }
+                 this.feedback = '';
+                 window.dispatchEvent(new CustomEvent('sugg:close'));
+                 window.dispatchEvent(new CustomEvent('partage:close'));
+                 this.ouvert = true;
+             },
+             async suggerer(id, nom) {
+                 try {
+                     const r = await fetch('/entreprise/candidats/{{ cand.id }}/suggerer/', {
+                         method: 'POST',
+                         headers: {
+                             'Content-Type': 'application/json',
+                             'X-CSRFToken': '{{ csrf_token }}',
+                             'X-Requested-With': 'XMLHttpRequest',
+                         },
+                         body: JSON.stringify({ destinataire_id: id }),
+                     });
+                     const d = await r.json();
+                     this.feedback    = d.message || (d.ok ? 'Suggestion envoyée !' : 'Erreur.');
+                     this.feedbackOk  = d.ok;
+                     if (d.ok) setTimeout(() => { this.ouvert = false; this.feedback = ''; }, 1600);
+                 } catch(e) {
+                     this.feedback   = 'Erreur réseau.';
+                     this.feedbackOk = false;
+                 }
+             },
+             togglePartage() {
+                 if (this.partageOuvert) { this.partageOuvert = false; return; }
+                 window.dispatchEvent(new CustomEvent('sugg:close'));
+                 window.dispatchEvent(new CustomEvent('partage:close'));
+                 this.partageOuvert = true;
+             },
+             resetPartage() { this.partageEtape = 'form'; this.partageEmail = ''; this.partageMsg = ''; this.partageLien = ''; this.partageErreur = ''; this.partageCopie = false; },
+             async soumettrePartage() {
+                 this.partageEtape = 'loading';
+                 try {
+                     const fd = new FormData();
+                     fd.append('email_destinataire', this.partageEmail);
+                     fd.append('message', this.partageMsg);
+                     const r = await fetch('{% url 'entreprise:partage_creer' candidat_id=cand.id %}', {
+                         method: 'POST',
+                         headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                         body: fd,
+                     });
+                     const d = await r.json();
+                     if (d.ok) { this.partageLien = d.lien; this.partageEtape = 'success'; }
+                     else { this.partageErreur = d.error || 'Erreur.'; this.partageEtape = 'error'; }
+                 } catch(e) { this.partageErreur = 'Erreur réseau.'; this.partageEtape = 'error'; }
+             },
+             async copierPartage() {
+                 try { await navigator.clipboard.writeText(this.partageLien); this.partageCopie = true; setTimeout(() => { this.partageCopie = false; }, 2000); }
+                 catch(e) {}
+             }
+         }"
+         {% endif %}>
+
+        {# Pastilles #}
+        <div class="flex flex-wrap gap-2 justify-center mb-4 min-h-[2rem]">
+            {% if cand.secteurActivite %}
+                <span class="text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-1.5 rounded-full">
+                    {{ cand.secteurActivite|truncatechars:22 }}
+                </span>
+            {% endif %}
+            {% if cand.typeMobilite %}
+                <span class="text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-1.5 rounded-full">
+                    {{ cand.typeMobilite.libelle }}
+                </span>
+            {% endif %}
+            {% if cand.typeContratRecherche %}
+                <span class="text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-1.5 rounded-full">
+                    {{ cand.typeContratRecherche.libelle }}
+                </span>
+            {% endif %}
+        </div>
+
+        {# ── Boutons ── #}
+        <div class="flex gap-2">
+            <a href="{% url 'entreprise:voir_portfolio' cand.id %}"
+               class="inline-flex items-center justify-center gap-1.5 flex-1 font-bold px-3 py-3 rounded-xl text-sm text-white shadow-md transition-all hover:shadow-lg hover:scale-[1.02] c-btn-portfolio">
+                🌐 {% trans "Voir portfolio" %}
+            </a>
+
+            {% if request.recruteur or request.entreprise %}
+            {# Wrapper relatif pour ancrer le dropdown au bouton #}
+            <div class="relative flex-shrink-0">
+
+                {# ── Dropdown (s'ouvre vers le haut, ancré à droite du bouton) ── #}
+                <div x-show="ouvert" x-cloak
+                     x-transition:enter="transition ease-out duration-150"
+                     x-transition:enter-start="opacity-0 translate-y-2"
+                     x-transition:enter-end="opacity-100 translate-y-0"
+                     x-transition:leave="transition ease-in duration-100"
+                     x-transition:leave-start="opacity-100 translate-y-0"
+                     x-transition:leave-end="opacity-0 translate-y-2"
+                     class="absolute bottom-full right-0 mb-2 w-60 z-50 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-xl bg-white dark:bg-gray-800">
+
+                    {# En-tête #}
+                    <div class="flex items-center justify-between px-3 py-2 text-xs font-bold text-white c-sugg-header">
+                        <span>👥 {% trans "Suggérer à" %}</span>
+                        <button @click="ouvert = false" class="hover:opacity-70 transition text-base leading-none font-bold">×</button>
+                    </div>
+
+                    {# Chargement #}
+                    <div x-show="charge" class="py-4 text-center">
+                        <div class="inline-block w-4 h-4 border-2 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
+                    </div>
+
+                    {# Liste #}
+                    <div x-show="!charge && collegues.length > 0" class="max-h-40 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
+                        <template x-for="c in collegues" :key="c.id">
+                            <button type="button"
+                                    @click="suggerer(c.id, c.nom)"
+                                    class="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-orange-50 dark:hover:bg-gray-700 transition text-left">
+                                <span class="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0"
+                                      style="background:#009A44;"
+                                      x-text="c.nom.split(' ').map(p => p[0]||'').join('').toUpperCase().slice(0,2)"></span>
+                                <span class="flex-1 min-w-0">
+                                    <span class="block text-xs font-semibold text-gray-800 dark:text-gray-100 truncate" x-text="c.nom"></span>
+                                    <span class="block text-[10px] text-gray-400" x-text="c.role"></span>
+                                </span>
+                                <span class="text-xs font-bold shrink-0" style="color:#c96010;">→</span>
+                            </button>
+                        </template>
+                    </div>
+
+                    {# Aucun collègue #}
+                    <p x-show="!charge && collegues.length === 0"
+                       class="px-3 py-3 text-center text-xs text-gray-500 dark:text-gray-400">
+                        {% trans "Aucun collègue actif." %}
+                    </p>
+
+                    {# Feedback #}
+                    <p x-show="feedback"
+                       x-text="feedback"
+                       :class="feedbackOk ? 'text-green-600' : 'text-red-600'"
+                       class="px-3 py-2 text-center text-xs font-semibold border-t border-gray-100 dark:border-gray-700"></p>
+                </div>
+
+                <button type="button"
+                        @click="toggle()"
+                        :class="ouvert ? 'scale-95' : ''"
+                        class="inline-flex items-center justify-center gap-1 font-semibold px-3 py-3 rounded-xl text-sm border-2 transition-all hover:scale-[1.02] c-btn-suggerer"
+                        style="border-color:#c96010; color:#c96010; background:transparent;"
+                        title="{% trans 'Suggérer' %}">
+                    👥
+                </button>
+            </div>
+
+            {# ── Bouton Partager ── #}
+            {% if request.entreprise or request.recruteur and request.recruteur.roleMembre != 'LECTEUR' %}
+            <div class="relative flex-shrink-0">
+
+                {# Dropdown partage (s'ouvre vers le haut) #}
+                <div x-show="partageOuvert" x-cloak
+                     x-transition:enter="transition ease-out duration-150"
+                     x-transition:enter-start="opacity-0 translate-y-2"
+                     x-transition:enter-end="opacity-100 translate-y-0"
+                     x-transition:leave="transition ease-in duration-100"
+                     x-transition:leave-start="opacity-100 translate-y-0"
+                     x-transition:leave-end="opacity-0 translate-y-2"
+                     class="absolute bottom-full right-0 mb-2 w-64 z-50 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-xl bg-white dark:bg-gray-800">
+
+                    <div class="flex items-center justify-between px-3 py-2 text-xs font-bold text-white"
+                         style="background:linear-gradient(135deg,#374151,#4b5563);">
+                        <span>🔗 {% trans "Partager le profil" %}</span>
+                        <button @click="partageOuvert = false" class="hover:opacity-70 transition text-base leading-none font-bold">×</button>
+                    </div>
+
+                    <div x-show="partageEtape === 'form'" class="p-3 space-y-2">
+                        <input type="email" x-model="partageEmail" placeholder="{% trans 'Email destinataire (optionnel)' %}"
+                               class="w-full text-xs border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
+                        <textarea x-model="partageMsg" rows="2" placeholder="{% trans 'Message (optionnel)' %}"
+                                  class="w-full text-xs border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"></textarea>
+                        <p class="text-[10px] text-gray-400">{% trans "Lien valable 30 jours. Coordonnées non divulguées." %}</p>
+                        <button @click="soumettrePartage()"
+                                class="w-full py-2 bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold rounded-lg transition">
+                            {% trans "Partager le lien" %} →
+                        </button>
+                    </div>
+
+                    <div x-show="partageEtape === 'loading'" class="py-6 text-center">
+                        <div class="inline-block w-4 h-4 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                    </div>
+
+                    <div x-show="partageEtape === 'success'" class="p-3 space-y-2">
+                        <template x-if="partageEmail">
+                            <div>
+                                <p class="text-xs font-bold text-green-600">✅ {% trans "Email envoyé à" %} <span x-text="partageEmail"></span></p>
+                                <p class="text-[10px] text-gray-400 mt-1">{% trans "Le lien a été envoyé au destinataire." %}</p>
+                            </div>
+                        </template>
+                        <template x-if="!partageEmail">
+                            <div class="space-y-2">
+                                <p class="text-xs font-bold text-green-600">✅ {% trans "Lien généré !" %}</p>
+                                <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-2.5 py-1.5 text-[10px] text-gray-600 dark:text-gray-300 break-all font-mono border border-gray-100 dark:border-gray-600"
+                                     x-text="partageLien"></div>
+                                <button @click="copierPartage()"
+                                        :class="partageCopie ? 'bg-green-600' : 'bg-cyan-600 hover:bg-cyan-700'"
+                                        class="w-full py-2 text-white text-xs font-bold rounded-lg transition">
+                                    <span x-show="!partageCopie">📋 {% trans "Copier" %}</span>
+                                    <span x-show="partageCopie" x-cloak>✅ {% trans "Copié !" %}</span>
+                                </button>
+                            </div>
+                        </template>
+                        <button @click="resetPartage()" class="w-full py-1.5 text-[10px] text-gray-400 hover:text-gray-600 transition">
+                            {% trans "Nouveau lien" %}
+                        </button>
+                    </div>
+
+                    <div x-show="partageEtape === 'error'" class="p-3 space-y-2">
+                        <p class="text-xs text-red-600 font-semibold" x-text="partageErreur"></p>
+                        <button @click="partageEtape = 'form'" class="w-full py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs font-semibold rounded-lg transition">
+                            {% trans "Réessayer" %}
+                        </button>
+                    </div>
+                </div>
+
+                <button type="button"
+                        @click="togglePartage()"
+                        :class="partageOuvert ? 'scale-95' : ''"
+                        class="inline-flex items-center justify-center gap-1 font-semibold px-3 py-3 rounded-xl text-sm border-2 transition-all hover:scale-[1.02] c-btn-partager"
+                        style="border-color:#6b7280; color:#6b7280; background:transparent;"
+                        title="{% trans 'Partager ce profil' %}">
+                    🔗
+                </button>
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+
+    </div>
+</article>

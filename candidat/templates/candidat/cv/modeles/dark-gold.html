@@ -1,0 +1,315 @@
+{% extends "candidat/base.html" %}
+{% load i18n %}
+{% block titre %}Créer mon CV — {{ modele.nom }} · {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+{% include "candidat/cv/_form_styles.html" %}
+<style>
+/* ── Dark Gold (Miller Burt) ── #1A1A1A sidebar + #F5C518 accents ──────── */
+#cv-sheet {
+  width: 794px; min-height: 1123px;
+  background: #FFFFFF;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 10pt; color: #333; line-height: 1.5;
+  box-shadow: 0 8px 48px rgba(0,0,0,.18);
+  display: flex;
+}
+
+/* ─── Sidebar gauche ─────────────────────────────────────────────────────── */
+.dg-sidebar {
+  width: 258px; flex-shrink: 0;
+  background: #1A1A1A;
+  display: flex; flex-direction: column;
+  padding: 0 0 28px 0;
+}
+
+/* Photo circulaire */
+.dg-photo-zone {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 34px 20px 18px;
+}
+.dg-photo-wrap {
+  width: 116px; height: 116px;
+  border-radius: 50%; overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,.5);
+}
+.dg-photo { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dg-ph {
+  width: 116px; height: 116px; border-radius: 50%;
+  background: #333; display: flex; align-items: center;
+  justify-content: center; font-size: 36px; color: #888;
+}
+.dg-name {
+  font-size: 20pt; font-weight: 900; color: #FFFFFF;
+  text-transform: uppercase; text-align: center;
+  line-height: 1.05; margin-top: 14px;
+}
+.dg-job {
+  font-size: 9pt; color: #F5C518; font-weight: 600;
+  text-align: center; margin-top: 5px; letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* Sections sidebar */
+.dg-sec {
+  font-size: 7pt; font-weight: 800; letter-spacing: 2.5px;
+  text-transform: uppercase; color: #F5C518;
+  padding: 14px 22px 6px; border-bottom: 1px solid #333;
+  margin-bottom: 8px;
+}
+.dg-contact-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 3px 22px; font-size: 7.5pt; color: #CCCCCC;
+}
+.dg-contact-icon { color: #F5C518; flex-shrink: 0; width: 14px; text-align: center; margin-top: 1px; }
+
+.dg-social-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 3px 22px; font-size: 7.5pt; color: #CCCCCC;
+}
+.dg-social-icon { color: #F5C518; flex-shrink: 0; width: 14px; text-align: center; }
+
+.dg-lang-item {
+  padding: 3px 22px; font-size: 7.5pt; color: #DDDDDD; margin-bottom: 4px;
+}
+.dg-lang-name { margin-bottom: 3px; }
+.dg-lang-bar-bg { height: 4px; background: #333; border-radius: 2px; overflow: hidden; }
+.dg-lang-bar { height: 100%; background: #F5C518; border-radius: 2px; }
+
+.dg-hobby-item {
+  display: flex; align-items: center; gap: 7px;
+  padding: 3px 22px; font-size: 7.5pt; color: #CCCCCC;
+}
+.dg-hobby-dot { width: 6px; height: 6px; border-radius: 50%; background: #F5C518; flex-shrink: 0; }
+
+/* ─── Corps droit ────────────────────────────────────────────────────────── */
+.dg-main {
+  flex: 1; padding: 32px 30px 28px 28px;
+  display: flex; flex-direction: column;
+}
+
+.dg-sec-r {
+  font-size: 10pt; font-weight: 800; letter-spacing: 1.5px;
+  text-transform: uppercase; color: #1A1A1A;
+  border-bottom: 2px solid #F5C518;
+  padding-bottom: 4px; margin-bottom: 14px; margin-top: 22px;
+}
+.dg-sec-r:first-child { margin-top: 0; }
+
+.dg-about { font-size: 8.5pt; color: #555; line-height: 1.65; }
+
+/* Expériences */
+.dg-exp { margin-bottom: 14px; }
+.dg-exp-hdr { display: flex; justify-content: space-between; align-items: baseline; }
+.dg-exp-title { font-size: 9.5pt; font-weight: 700; color: #1A1A1A; }
+.dg-exp-date { font-size: 7.5pt; color: #888; font-style: italic; white-space: nowrap; }
+.dg-exp-sub { font-size: 8pt; color: #F5C518; font-weight: 600; margin: 1px 0 5px; }
+.dg-exp-bullet {
+  font-size: 8pt; color: #555; padding-left: 14px; position: relative; margin-bottom: 2px; line-height: 1.55;
+}
+.dg-exp-bullet::before { content: '▶'; position: absolute; left: 0; color: #F5C518; font-size: 6pt; top: 2px; }
+
+/* Formation */
+.dg-edu { margin-bottom: 12px; }
+.dg-edu-hdr { display: flex; justify-content: space-between; align-items: baseline; }
+.dg-edu-title { font-size: 9pt; font-weight: 700; color: #1A1A1A; }
+.dg-edu-date { font-size: 7.5pt; color: #888; font-style: italic; }
+.dg-edu-sub { font-size: 8pt; color: #666; margin: 1px 0; }
+.dg-edu-desc { font-size: 8pt; color: #555; line-height: 1.55; }
+
+/* Skills */
+.dg-skill { margin-bottom: 7px; }
+.dg-skill-hdr { display: flex; justify-content: space-between; font-size: 8pt; color: #333; margin-bottom: 3px; }
+.dg-skill-bar-bg { height: 5px; background: #E5E5E5; border-radius: 3px; overflow: hidden; }
+.dg-skill-bar { height: 100%; background: #1A1A1A; border-radius: 3px; }
+</style>
+{% endblock %}
+
+{% block contenu %}<div class="-mx-6 -my-8" x-data="cvBuilder()"><div class="cv-builder">
+  {% include "candidat/cv/_form_panel.html" %}
+  <div class="preview-panel">
+  <div id="cv-sheet">
+
+    <!-- SIDEBAR -->
+    <div class="dg-sidebar">
+
+      <!-- Photo + Nom -->
+      <div class="dg-photo-zone">
+        <template x-if="cv.photo"><div class="dg-photo-wrap"><img :src="cv.photo" class="dg-photo" alt="{% trans "Photo" %}"></div></template>
+        <template x-if="!cv.photo"><div class="dg-ph">👤</div></template>
+        <div class="dg-name">
+          <span x-text="cv.prenom || 'Prénom'"></span><br><span x-text="cv.nom || 'NOM'"></span>
+        </div>
+        <div class="dg-job" x-text="cv.titre || 'Titre professionnel'"></div>
+      </div>
+
+      <!-- Contact -->
+      <div class="dg-sec">{% trans "Contact" %}</div>
+      <template x-if="cvLoc()">
+        <div class="dg-contact-item">
+          <span class="dg-contact-icon">📍</span><span x-text="cvLoc()"></span>
+        </div>
+      </template>
+      <template x-if="cv.email">
+        <div class="dg-contact-item">
+          <span class="dg-contact-icon">✉</span><span x-text="cv.email"></span>
+        </div>
+      </template>
+      <template x-if="cv.telephone">
+        <div class="dg-contact-item">
+          <span class="dg-contact-icon">☎</span><span x-text="cv.telephone"></span>
+        </div>
+      </template>
+      <template x-if="cv.age">
+        <div class="dg-contact-item">
+          <span class="dg-contact-icon">📅</span><span x-text="cv.age"></span>
+        </div>
+      </template>
+      <template x-if="cv.permis">
+        <div class="dg-contact-item">
+          <span class="dg-contact-icon">🪪</span><span x-text="cv.permis"></span>
+        </div>
+      </template>
+
+      <!-- Langues -->
+      <template x-if="vis(cv.langues).filter(l => l.nom).length > 0">
+        <div>
+          <div class="dg-sec">{% trans "Langues" %}</div>
+          <template x-for="l in vis(cv.langues)" :key="l.id">
+            <div x-show="l.nom" class="dg-lang-item">
+              <div class="dg-lang-name" x-text="l.nom"></div>
+              <div class="dg-lang-bar-bg">
+                <div class="dg-lang-bar" :style="`width:${niveauDots(l.niveau)*20}%`"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Compétences -->
+      <template x-if="vis(cv.competences).filter(c => c.nom).length > 0">
+        <div>
+          <div class="dg-sec">{% trans "Compétences" %}</div>
+          <template x-for="c in vis(cv.competences)" :key="c.id">
+            <div x-show="c.nom" class="dg-hobby-item">
+              <span class="dg-hobby-dot"></span><span x-text="c.nom"></span>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Intérêts -->
+      <template x-if="cv.interets.filter((i,ii) => i && !isInteretMasque(ii)).length > 0">
+        <div>
+          <div class="dg-sec">{% trans "Hobbies" %}</div>
+          <template x-for="(ci, idx) in cv.interets" :key="idx">
+            <div x-show="ci && !isInteretMasque(idx)" class="dg-hobby-item">
+              <span class="dg-hobby-dot"></span><span x-text="ci"></span>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <template x-if="cv.showRef">
+        <div>
+          <div class="dg-sec">{% trans "Références" %}</div>
+          <div class="dg-contact-item" style="font-style:italic;color:#999">{% trans "Sur demande" %}</div>
+        </div>
+      </template>
+
+    </div><!-- /sidebar -->
+
+    <!-- MAIN -->
+    <div class="dg-main">
+
+      <!-- Profil -->
+      <template x-if="cv.profil">
+        <div>
+          <div class="dg-sec-r">{% trans "À propos" %}</div>
+          <div class="dg-about" x-text="cv.profil"></div>
+        </div>
+      </template>
+
+      <!-- Expériences -->
+      <template x-if="cv.experiences.some(e => expVisible(e))">
+        <div>
+          <div class="dg-sec-r">{% trans "Expériences professionnelles" %}</div>
+          <template x-for="e in cv.experiences" :key="e.id">
+            <div x-show="expVisible(e)" class="dg-exp">
+              <div class="dg-exp-hdr">
+                <div class="dg-exp-title" x-text="expTitre(e)"></div>
+                <div class="dg-exp-date" x-text="expTitrePeriodeStr(e)"></div>
+              </div>
+              <div x-show="e.entreprise" class="dg-exp-sub" x-text="e.entreprise"></div>
+              <div x-show="e.desc" class="dg-exp-bullet" x-text="e.desc"></div>
+              <template x-if="e.postes && e.postes.length > 1">
+                <div class="cv-postes-list">
+                  <template x-for="p in e.postes" :key="p.id">
+                    <div x-show="p.titre" class="cv-postes-row">
+                      <span class="cv-postes-titre" x-text="p.titre"></span>
+                      <span x-show="p.debut||p.enCours" class="cv-postes-date" x-text="formatPeriode(p.debut,p.fin,p.enCours)"></span>
+                    </div>
+                  </template>
+                </div>
+              </template>
+              <template x-if="e.hasMissionsClient && e.missionsClient && e.missionsClient.filter(mc=>mc.client).length>0">
+                <div class="cv-mc-section">
+                  <div class="cv-mc-label">🏢 Missions clients</div>
+                  <template x-for="mc in e.missionsClient.filter(mc=>mc.client)" :key="mc.id">
+                    <div class="cv-mc-item">
+                      <div class="cv-mc-hdr">
+                        <div class="cv-mc-title" x-text="mc.client||'—'"></div>
+                        <div x-show="mc.debut||mc.enCours" class="cv-mc-badge" x-text="formatPeriode(mc.debut,mc.fin,mc.enCours)"></div>
+                      </div>
+                      <div x-show="mc.desc" class="cv-mc-desc" x-text="mc.desc"></div>
+                    </div>
+                  </template>
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Formation -->
+      <template x-if="vis(cv.formations).filter(f => f.diplome || f.ecole).length > 0">
+        <div>
+          <div class="dg-sec-r">{% trans "Formation" %}</div>
+          <template x-for="f in vis(cv.formations)" :key="f.id">
+            <div x-show="f.diplome || f.ecole" class="dg-edu">
+              <div class="dg-edu-hdr">
+                <div class="dg-edu-title" x-text="f.diplome || '—'"></div>
+                <div class="dg-edu-date" x-text="(f.debut||'').substring(0,4) + (f.fin ? ' – '+(f.fin||'').substring(0,4) : '')"></div>
+              </div>
+              <div x-show="f.ecole" class="dg-edu-sub" x-text="f.ecole"></div>
+              <div x-show="f.domaine" class="dg-edu-desc" style="font-style:italic" x-text="f.domaine"></div>
+              <div x-show="f.desc" class="dg-edu-desc" x-text="f.desc"></div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Projets -->
+      <template x-if="cv.showProjets && vis(cv.projets).filter(p=>p.nom).length > 0">
+        <div>
+          <div class="dg-sec-r">{% trans "Projets" %}</div>
+          <template x-for="p in vis(cv.projets)" :key="p.id">
+            <div x-show="p.nom" class="dg-edu">
+              <div class="dg-edu-hdr">
+                <div class="dg-edu-title" x-text="p.nom"></div>
+                <div class="dg-edu-date" x-text="p.annee || ''"></div>
+              </div>
+              <div x-show="p.desc" class="dg-edu-desc" x-text="p.desc"></div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+    </div><!-- /main -->
+
+  </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+{% block js_extra %}{% include "candidat/cv/_cvbuilder_js.html" %}{% endblock %}

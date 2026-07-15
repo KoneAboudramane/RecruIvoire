@@ -1,0 +1,60 @@
+{% load i18n %}
+{#
+  Combobox générique.
+  Paramètres Django à passer via {% include ... with ... %} :
+    cbx_url        : URL de l'API (ex: {% url 'referentiel:api_pays' %})
+    cbx_key        : clé de l'objet JSON à afficher (ex: 'nomPays' ou 'nomVille')
+    cbx_sub        : clé secondaire (optionnel, ex: 'region' pour les villes)
+    cbx_init       : valeur initiale (ex: {{ candidat.pays|default:''|escapejs }})
+    cbx_name       : name de l'input hidden pour la soumission du formulaire
+    cbx_placeholder: texte placeholder
+    cbx_disabled   : expression Alpine.js pour désactiver (optionnel, ex: '!edition')
+    cbx_model      : variable Alpine.js parente à sync (optionnel, ex: 'form.ville')
+    cbx_ref        : x-ref name (optionnel, pour cascade, ex: 'villeCbx')
+#}
+<div class="relative"
+     x-data="cbx({ url: '{{ cbx_url }}', v: '{{ cbx_init|default:'' }}', k: '{{ cbx_key|default:'label' }}', s: '{{ cbx_sub|default:'' }}' })"
+     {% if cbx_ref %}x-ref="{{ cbx_ref }}"{% endif %}
+     {% if cbx_model %}@cbxpick="{{cbx_model}} = $event.detail.val" x-init="$watch('q', v => { {{cbx_model}} = v; })"{% endif %}>
+
+  <input type="text"
+         x-model="q"
+         @focus="onfocus()"
+         @blur="onblur()"
+         @input="oninput()"
+         @keydown="onkey($event)"
+         placeholder="{{ cbx_placeholder|default:'Choisir ou saisir…' }}"
+         class="fi w-full pr-8"
+         autocomplete="off"
+         {% if cbx_disabled %}:disabled="{{ cbx_disabled }}"{% endif %}>
+
+  <!-- Chevron -->
+  <svg class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400"
+       fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+  </svg>
+
+  <!-- Dropdown -->
+  <div x-show="open"
+       x-cloak
+       class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
+       style="z-index:9999; max-height:220px; overflow-y:auto;">
+    <template x-for="(o, i) in sh" :key="o.id">
+      <button type="button"
+              @mousedown.prevent="pick(o)"
+              class="w-full px-3 py-2.5 text-sm text-left flex items-center justify-between transition-colors"
+              :class="i === hi ? 'bg-orange-50 text-orange-600 font-medium' : 'text-gray-700 hover:bg-gray-50'">
+        <span x-text="o.label"></span>
+        <span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-3 flex-shrink-0"></span>
+      </button>
+    </template>
+    <div x-show="!sh.length"
+         class="px-3 py-3 text-xs text-gray-400 italic text-center">
+      Aucun résultat — votre saisie sera conservée
+    </div>
+  </div>
+
+  {% if cbx_name %}
+  <input type="hidden" name="{{ cbx_name }}" :value="q">
+  {% endif %}
+</div>

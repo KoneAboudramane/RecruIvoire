@@ -1,0 +1,425 @@
+﻿{% extends "candidat/base_auth.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Confirmez votre email" %} — {{ logo_site.nom_site }}{% endblock %}
+
+{% block contenu %}
+{# Token CSRF disponible pour les appels fetch (garantit aussi le cookie CSRF) #}
+<div style="display:none;">{% csrf_token %}</div>
+
+<div class="w-full max-w-md mx-auto py-16 px-4">
+
+  <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden"
+       x-data="verificationCode()"
+       x-init="init()">
+
+    <!-- Bande orange haut -->
+    <div class="h-2" style="background:linear-gradient(to right,#c96010,#e06b00);"></div>
+
+    <div class="px-8 py-10 text-center">
+
+      <!-- Icône -->
+      <div class="flex justify-center mb-5">
+        <div class="relative">
+          <div class="absolute inset-0 rounded-full animate-ping opacity-20"
+               style="background:#c96010;"></div>
+          <div class="relative w-16 h-16 rounded-full flex items-center justify-center text-3xl shadow-md"
+               style="background:linear-gradient(135deg,#fff3e0,#ffe0b2);border:3px solid #c96010;">
+            🔐
+          </div>
+        </div>
+      </div>
+
+      <!-- Titre -->
+      <h1 class="text-xl font-extrabold text-gray-900 mb-1">{% trans "Confirmez votre email" %}</h1>
+      <p class="text-gray-500 text-sm mb-6">
+        {% trans "Un code à 4 chiffres a été envoyé à" %}<br>
+        <strong class="text-gray-800">{{ email }}</strong>
+      </p>
+
+      <!-- ── Saisie OTP ── -->
+      <div x-show="!confirme && !expire">
+
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
+          {% trans "Saisissez votre code" %}
+        </p>
+
+        <!-- 4 cases de saisie (statiques pour fiabilité) -->
+        <div class="flex justify-center gap-3 mb-3">
+
+          <input id="c0" type="text" inputmode="numeric" maxlength="1"
+                 autocomplete="one-time-code"
+                 :value="d[0]"
+                 @input="onInput(0, $event)"
+                 @keydown="onKey(0, $event)"
+                 @paste.prevent="onPaste($event)"
+                 :disabled="chargement"
+                 class="w-14 h-16 text-center text-2xl font-bold rounded-xl border-2 transition-all
+                        focus:outline-none focus:ring-2 focus:ring-orange-200
+                        disabled:opacity-50 disabled:cursor-not-allowed"
+                 :class="classeInput(0)">
+
+          <input id="c1" type="text" inputmode="numeric" maxlength="1"
+                 :value="d[1]"
+                 @input="onInput(1, $event)"
+                 @keydown="onKey(1, $event)"
+                 @paste.prevent="onPaste($event)"
+                 :disabled="chargement"
+                 class="w-14 h-16 text-center text-2xl font-bold rounded-xl border-2 transition-all
+                        focus:outline-none focus:ring-2 focus:ring-orange-200
+                        disabled:opacity-50 disabled:cursor-not-allowed"
+                 :class="classeInput(1)">
+
+          <input id="c2" type="text" inputmode="numeric" maxlength="1"
+                 :value="d[2]"
+                 @input="onInput(2, $event)"
+                 @keydown="onKey(2, $event)"
+                 @paste.prevent="onPaste($event)"
+                 :disabled="chargement"
+                 class="w-14 h-16 text-center text-2xl font-bold rounded-xl border-2 transition-all
+                        focus:outline-none focus:ring-2 focus:ring-orange-200
+                        disabled:opacity-50 disabled:cursor-not-allowed"
+                 :class="classeInput(2)">
+
+          <input id="c3" type="text" inputmode="numeric" maxlength="1"
+                 :value="d[3]"
+                 @input="onInput(3, $event)"
+                 @keydown="onKey(3, $event)"
+                 @paste.prevent="onPaste($event)"
+                 :disabled="chargement"
+                 class="w-14 h-16 text-center text-2xl font-bold rounded-xl border-2 transition-all
+                        focus:outline-none focus:ring-2 focus:ring-orange-200
+                        disabled:opacity-50 disabled:cursor-not-allowed"
+                 :class="classeInput(3)">
+
+        </div>
+
+        <!-- Indicateur vérification -->
+        <div x-show="chargement" x-cloak
+             class="flex items-center justify-center gap-2 text-sm text-orange-500 font-medium mb-3">
+          <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+          {% trans "Vérification en cours..." %}
+        </div>
+
+        <!-- Erreur -->
+        <p x-show="erreur" x-text="erreur" x-cloak
+           class="text-red-500 text-sm font-medium mb-3 animate-pulse"></p>
+
+        <!-- Minuterie -->
+        <div class="flex items-center justify-center gap-2 text-sm text-gray-400 mb-6">
+          <span>⏱️</span>
+          <span>{% trans "Code valable encore" %}</span>
+          <span class="font-bold tabular-nums"
+                :class="minutes === 0 && secondes < 30 ? 'text-red-500' : 'text-orange-500'"
+                x-text="minutes + ':' + String(secondes).padStart(2,'0')"></span>
+        </div>
+
+        <!-- Renvoyer le code -->
+        <button @click="renvoyerCode()"
+                :disabled="!peutRenvoyer || chargementRenvoi"
+                class="w-full py-2.5 rounded-xl text-sm font-semibold transition
+                       border border-gray-200 text-gray-600 hover:bg-gray-50
+                       disabled:opacity-40 disabled:cursor-not-allowed mb-3">
+          <span x-show="chargementRenvoi" x-cloak>
+            <svg class="inline animate-spin w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            </svg>
+            {% trans "Envoi en cours..." %}
+          </span>
+          <span x-show="!chargementRenvoi">
+            <span x-show="peutRenvoyer">{% trans "Renvoyer le code" %}</span>
+            <span x-show="!peutRenvoyer" x-cloak>
+              {% trans "Renvoyer le code" %} (<span x-text="delaiRenvoi"></span>s)
+            </span>
+          </span>
+        </button>
+
+        <!-- Message renvoi réussi -->
+        <p x-show="renvoiOk" x-cloak
+           class="text-green-600 text-xs font-medium mb-3">
+          {% trans "Nouveau code envoyé ! Vérifiez votre boîte mail." %}
+        </p>
+
+        <a href="{% url 'candidat:inscription' %}"
+           class="block text-xs text-gray-400 hover:text-gray-600 transition">
+          {% trans "Recommencer l'inscription" %}
+        </a>
+
+        <p class="mt-4 text-xs text-gray-400">
+          {% trans "Pas reçu ? Vérifiez votre dossier" %} <strong>{% trans "spam" %}</strong>.
+        </p>
+      </div>
+
+      <!-- ── État : connexion en cours ── -->
+      <div x-show="confirme" x-cloak class="py-4">
+        <div class="flex justify-center mb-4">
+          <div class="w-16 h-16 rounded-full flex items-center justify-center text-3xl"
+               style="background:#f0fdf4;border:3px solid #2e7d52;">
+            ✅
+          </div>
+        </div>
+        <p class="text-green-700 font-bold text-lg mb-1">{% trans "Code correct !" %}</p>
+        <p class="text-gray-500 text-sm">{% trans "Connexion en cours, patientez…" %}</p>
+        <div class="mt-4 flex justify-center">
+          <svg class="animate-spin w-6 h-6 text-orange-500" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- ── État : code expiré ── -->
+      <div x-show="expire" x-cloak class="py-4">
+        <div class="flex justify-center mb-4">
+          <div class="w-16 h-16 rounded-full flex items-center justify-center text-3xl"
+               style="background:#fef2f2;border:3px solid #ef4444;">
+            ⌛
+          </div>
+        </div>
+        <p class="text-red-600 font-bold text-lg mb-1">{% trans "Code expiré" %}</p>
+        <p class="text-gray-500 text-sm mb-6">
+          {% trans "Le délai de 10 minutes est dépassé." %}<br>{% trans "Votre inscription a été annulée." %}
+        </p>
+        <a href="{% url 'candidat:inscription' %}"
+           class="block w-full py-3 rounded-xl font-bold text-sm text-white text-center
+                  transition hover:opacity-90"
+           style="background:#c96010;">
+          {% trans "Recommencer l'inscription" %}
+        </a>
+      </div>
+
+    </div>
+
+    <!-- Bande tricolore bas -->
+    <div class="h-1.5" style="background:linear-gradient(to right,
+      #c96010 0%,#c96010 33.33%,
+      #FFFFFF 33.33%,#FFFFFF 66.66%,
+      #2e7d52 66.66%,#2e7d52 100%);"></div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block js_extra %}
+<script>
+function verificationCode() {
+    return {
+        /* Chiffres saisis */
+        d: ['', '', '', ''],
+
+        /* États */
+        chargement:      false,
+        chargementRenvoi: false,
+        confirme:        false,
+        expire:          false,
+        erreur:          '',
+        renvoiOk:        false,
+
+        /* Minuterie principale (10 min) */
+        minutes:  10,
+        secondes: 0,
+        _timer:   null,
+
+        /* Délai avant renvoi */
+        delaiRenvoi:  60,
+        peutRenvoyer: false,
+        _timerRenvoi: null,
+
+        /* ── Initialisation ── */
+        init() {
+            this._timer = setInterval(() => {
+                if (this.secondes > 0) {
+                    this.secondes--;
+                } else if (this.minutes > 0) {
+                    this.minutes--;
+                    this.secondes = 59;
+                } else {
+                    clearInterval(this._timer);
+                }
+            }, 1000);
+
+            this._timerRenvoi = setInterval(() => {
+                if (this.delaiRenvoi > 0) {
+                    this.delaiRenvoi--;
+                } else {
+                    this.peutRenvoyer = true;
+                    clearInterval(this._timerRenvoi);
+                }
+            }, 1000);
+
+            this.$nextTick(() => document.getElementById('c0')?.focus());
+        },
+
+        /* ── Classe CSS d'une case ── */
+        classeInput(i) {
+            if (this.erreur)   return 'border-red-400 bg-red-50 text-red-600';
+            if (this.confirme) return 'border-green-400 bg-green-50 text-green-700';
+            if (this.d[i])     return 'border-orange-400 bg-orange-50 text-orange-700';
+            return 'border-gray-300 bg-white text-gray-900';
+        },
+
+        /* ── Saisie d'un chiffre ── */
+        onInput(i, event) {
+            /* Filtrer : garder uniquement le dernier chiffre saisi */
+            const digit = event.target.value.replace(/\D/g, '').slice(-1);
+            this.d[i]          = digit;
+            event.target.value = digit;   /* forcer la valeur affichée */
+            this.erreur        = '';
+            this.renvoiOk      = false;
+
+            if (digit && i < 3) {
+                document.getElementById('c' + (i + 1))?.focus();
+            }
+
+            /* Auto-soumission dès que les 4 chiffres sont remplis */
+            if (this.d.every(c => c !== '')) {
+                this.$nextTick(() => this.verifier());
+            }
+        },
+
+        /* ── Gestion du clavier (retour arrière) ── */
+        onKey(i, event) {
+            if (event.key === 'Backspace') {
+                if (this.d[i]) {
+                    this.d[i] = '';
+                    document.getElementById('c' + i).value = '';
+                } else if (i > 0) {
+                    document.getElementById('c' + (i - 1))?.focus();
+                }
+                this.erreur = '';
+            }
+        },
+
+        /* ── Collage du code complet ── */
+        onPaste(event) {
+            const text   = (event.clipboardData || window.clipboardData).getData('text');
+            const digits = text.replace(/\D/g, '').slice(0, 4).split('');
+            digits.forEach((c, i) => {
+                this.d[i] = c;
+                const input = document.getElementById('c' + i);
+                if (input) input.value = c;
+            });
+            this.erreur = '';
+            const last = Math.min(digits.length - 1, 3);
+            document.getElementById('c' + last)?.focus();
+            if (this.d.every(c => c !== '')) {
+                this.$nextTick(() => this.verifier());
+            }
+        },
+
+        /* ── Réinitialise les 4 cases et donne le focus à c0 ── */
+        _resetCases() {
+            this.d = ['', '', '', ''];
+            ['c0','c1','c2','c3'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            this.$nextTick(() => document.getElementById('c0')?.focus());
+        },
+
+        /* ── Vérification du code via API ── */
+        async verifier() {
+            if (this.chargement) return;
+            this.chargement = true;
+            this.erreur     = '';
+
+            try {
+                const resp = await fetch("{% url 'candidat:api_verifier_code_inscription' %}", {
+                    method:  'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken':  this._csrf(),
+                    },
+                    body: JSON.stringify({ code: this.d.join('') }),
+                });
+
+                /* Vérifier que la réponse est bien du JSON avant de la parser */
+                const ct = resp.headers.get('content-type') || '';
+                if (!ct.includes('application/json')) {
+                    /* Le serveur a retourné du HTML (erreur 403/500) */
+                    throw new Error(`Erreur serveur (HTTP ${resp.status}). Veuillez réessayer.`);
+                }
+
+                const data = await resp.json();
+
+                if (data.valide) {
+                    clearInterval(this._timer);
+                    clearInterval(this._timerRenvoi);
+                    this.confirme = true;
+                    setTimeout(() => { window.location.href = data.redirect; }, 1000);
+
+                } else if (data.expire) {
+                    clearInterval(this._timer);
+                    clearInterval(this._timerRenvoi);
+                    this.expire = true;
+
+                } else {
+                    this.erreur = data.message || 'Code incorrect. Réessayez.';
+                    this._resetCases();
+                }
+
+            } catch (e) {
+                this.erreur = e.message || 'Erreur réseau. Réessayez.';
+                this._resetCases();
+            } finally {
+                this.chargement = false;
+            }
+        },
+
+        /* ── Renvoi d'un nouveau code ── */
+        async renvoyerCode() {
+            if (!this.peutRenvoyer || this.chargementRenvoi) return;
+            this.chargementRenvoi = true;
+            this.erreur           = '';
+            this.renvoiOk         = false;
+
+            try {
+                const resp = await fetch("{% url 'candidat:api_renvoyer_code_inscription' %}", {
+                    method:  'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken':  this._csrf(),
+                    },
+                    body: JSON.stringify({}),
+                });
+
+                const ct = resp.headers.get('content-type') || '';
+                if (!ct.includes('application/json')) {
+                    throw new Error(`Erreur serveur (HTTP ${resp.status}). Veuillez réessayer.`);
+                }
+
+                const data = await resp.json();
+
+                if (data.succes) {
+                    this._resetCases();
+                    this.minutes      = 10;
+                    this.secondes     = 0;
+                    this.delaiRenvoi  = 60;
+                    this.peutRenvoyer = false;
+                    this.renvoiOk     = true;
+                    clearInterval(this._timer);
+                    clearInterval(this._timerRenvoi);
+                    this.init();
+                    setTimeout(() => { this.renvoiOk = false; }, 4000);
+                } else {
+                    this.erreur = data.message || 'Impossible de renvoyer le code.';
+                }
+            } catch (e) {
+                this.erreur = e.message || 'Erreur réseau. Réessayez.';
+            } finally {
+                this.chargementRenvoi = false;
+            }
+        },
+
+        /* ── Token CSRF lu depuis l'input DOM (plus fiable que le cookie) ── */
+        _csrf() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        },
+    };
+}
+</script>
+{% endblock %}

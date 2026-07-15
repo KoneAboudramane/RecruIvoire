@@ -1,0 +1,378 @@
+{% extends "candidat/base.html" %}
+{% load i18n static %}
+
+{% block titre %}{{ projet.nom }} — {{ candidat.prenom }} {{ candidat.nom }}{% endblock %}
+
+{% block css_extra %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+.cpd, .cpd * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+.cpd {
+  --cp-blue:    {{ couleur_accent|default:'#0d6efd' }};
+  --cp-blue-d:  color-mix(in srgb, var(--cp-blue) 80%, #000);
+  --cp-blue-l:  color-mix(in srgb, var(--cp-blue) 10%, #fff);
+  --cp-blue-2:  color-mix(in srgb, var(--cp-blue) 14%, transparent);
+  --cp-dark:    #0f1d35;
+  --cp-text:    #4a5568;
+  --cp-mute:    #8a9ab5;
+  --cp-border:  #e2eaf5;
+  --cp-bg:      #ffffff;
+  --cp-alt:     #f4f7fd;
+  --cp-head:    'Plus Jakarta Sans', system-ui, sans-serif;
+  --cp-body:    'Inter', system-ui, sans-serif;
+  --cp-radius:  12px;
+
+  font-family: var(--cp-body); font-size: 15px; line-height: 1.7;
+  color: var(--cp-text); background: var(--cp-bg); min-height: 100vh;
+}
+.cpd h1,.cpd h2,.cpd h3,.cpd h4 { font-family: var(--cp-head); color: var(--cp-dark); margin: 0; line-height: 1.2; }
+.cpd a { text-decoration: none; transition: .3s; color: inherit; }
+
+@keyframes cpd-up { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+.cpd-reveal { opacity:0; }
+.cpd-reveal.in { animation: cpd-up .7s cubic-bezier(.16,.84,.44,1) both; }
+.cpd-reveal.d1 { animation-delay: .08s; }
+.cpd-reveal.d2 { animation-delay: .16s; }
+.cpd-reveal.d3 { animation-delay: .24s; }
+.cpd-reveal.d4 { animation-delay: .32s; }
+
+.cpd-topbar {
+  position: sticky; top: 60px; z-index: 30;
+  background: rgba(255,255,255,.97); backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--cp-border);
+  padding: 12px clamp(20px,4vw,56px);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+@media (min-width:768px) { .cpd-topbar { top:76px; } }
+.cpd-back {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--cp-head); font-size: 13px; font-weight: 700; color: var(--cp-dark);
+  padding: 9px 18px; border-radius: 50px; background: var(--cp-alt);
+  border: 1px solid var(--cp-border); transition: .3s;
+}
+.cpd-back:hover { background: var(--cp-blue); color: #fff; border-color: var(--cp-blue); }
+.cpd-back i { transition: transform .25s; }
+.cpd-back:hover i { transform: translateX(-3px); }
+.cpd-topbar-cta {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 18px; border-radius: 50px;
+  background: var(--cp-blue); color: #fff;
+  font-family: var(--cp-head); font-weight: 700; font-size: 13px; transition: .3s;
+}
+.cpd-topbar-cta:hover { background: var(--cp-blue-d); transform: translateY(-2px); }
+
+.cpd-hero {
+  padding: clamp(48px,7vw,88px) clamp(24px,5vw,56px);
+  background: linear-gradient(135deg, var(--cp-alt), var(--cp-blue-l));
+  position: relative; overflow: hidden;
+}
+.cpd-hero::after {
+  content:''; position:absolute; top:-60px; right:-60px;
+  width:280px; height:280px; border-radius:50%;
+  background: var(--cp-blue-2); pointer-events:none;
+}
+.cpd-hero-inner { max-width:1200px; margin:0 auto; position:relative; z-index:1; }
+.cpd-eyebrow {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:6px 16px; border-radius:50px;
+  background: var(--cp-blue); color:#fff;
+  font-family:var(--cp-head); font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+  margin-bottom:18px;
+}
+.cpd-title { font-size:clamp(32px,5vw,58px); line-height:1.1; letter-spacing:-.02em; margin-bottom:20px; }
+.cpd-meta { display:flex; flex-wrap:wrap; gap:10px; }
+.cpd-meta-pill {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:8px 16px; border-radius:50px;
+  background:#fff; border:1px solid var(--cp-border);
+  font-size:13px; color:var(--cp-dark); font-weight:500;
+}
+.cpd-meta-pill i { color:var(--cp-blue); }
+.cpd-meta-pill .key { color:var(--cp-mute); }
+
+.cpd-cover { padding:0 clamp(20px,4vw,56px); margin-top:-32px; }
+.cpd-cover-wrap {
+  max-width:1200px; margin:0 auto;
+  border-radius:16px; overflow:hidden;
+  border:1px solid var(--cp-border);
+  box-shadow:0 24px 60px -16px rgba(13,110,253,.15);
+}
+.cpd-cover-wrap img { display:block; width:100%; height:auto; max-height:560px; object-fit:cover; }
+.cpd-cover-fallback {
+  width:100%; aspect-ratio:21/9;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--cp-alt); color:var(--cp-blue); font-size:72px;
+}
+
+.cpd-section { padding:clamp(48px,7vw,80px) clamp(20px,4vw,56px); }
+.cpd-content {
+  max-width:1200px; margin:0 auto;
+  display:grid; gap:clamp(24px,4vw,44px);
+  grid-template-columns:minmax(240px,300px) 1fr;
+  align-items:start;
+}
+@media (max-width:860px) { .cpd-content { grid-template-columns:1fr; } }
+
+.cpd-aside {
+  background:var(--cp-alt); border:1px solid var(--cp-border);
+  border-radius:var(--cp-radius); padding:24px;
+  position:sticky; top:148px;
+}
+.cpd-aside-title {
+  font-family:var(--cp-head); font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--cp-blue); padding-bottom:10px; margin-bottom:14px;
+  border-bottom:2px solid var(--cp-blue); display:inline-block;
+}
+.cpd-aside-row {
+  display:grid; grid-template-columns:34px 1fr;
+  gap:10px; padding:11px 0; border-bottom:1px solid var(--cp-border); font-size:13px;
+}
+.cpd-aside-row:last-child { border-bottom:0; }
+.cpd-aside-row .icon {
+  width:34px; height:34px; border-radius:10px;
+  background:var(--cp-blue-2); color:var(--cp-blue);
+  display:flex; align-items:center; justify-content:center; font-size:15px;
+}
+.cpd-aside-row .body .key { display:block; font-size:10px; font-weight:700; letter-spacing:.1em; color:var(--cp-mute); text-transform:uppercase; margin-bottom:2px; }
+.cpd-aside-row .body .val { color:var(--cp-dark); font-weight:600; word-break:break-word; }
+.cpd-aside-row .body .val a { color:var(--cp-blue); }
+
+.cpd-block { margin-bottom:36px; }
+.cpd-block:last-child { margin-bottom:0; }
+.cpd-block-title {
+  font-size:clamp(20px,2.8vw,30px); margin-bottom:14px;
+  padding-bottom:8px; border-bottom:3px solid var(--cp-blue); display:inline-block;
+}
+.cpd-block-text { font-size:15px; line-height:1.8; color:var(--cp-text); }
+.cpd-block-text p { margin:0 0 12px; }
+
+.cpd-gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
+.cpd-gallery-item {
+  border-radius:var(--cp-radius); overflow:hidden;
+  border:1px solid var(--cp-border); background:#fff;
+  transition:.3s; cursor:pointer; padding:0;
+}
+.cpd-gallery-item:hover { transform:translateY(-4px); border-color:var(--cp-blue); box-shadow:0 14px 36px -10px rgba(13,110,253,.18); }
+.cpd-gallery-item img { display:block; width:100%; height:190px; object-fit:cover; transition:transform .7s; }
+.cpd-gallery-item:hover img { transform:scale(1.06); }
+
+.cpd-videos { display:grid; gap:16px; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); }
+.cpd-video {
+  position:relative; display:block; width:100%;
+  border-radius:var(--cp-radius); overflow:hidden;
+  background:#000; border:1px solid var(--cp-border);
+  cursor:pointer; padding:0; transition:.3s;
+}
+.cpd-video:hover { transform:translateY(-4px); border-color:var(--cp-blue); box-shadow:0 16px 40px -12px rgba(13,110,253,.2); }
+.cpd-video-preview { display:block; width:100%; aspect-ratio:16/9; object-fit:cover; pointer-events:none; }
+.cpd-video-overlay {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(180deg,rgba(0,0,0,.04) 0%,rgba(13,110,253,.55) 100%); pointer-events:none; transition:.3s;
+}
+.cpd-video:hover .cpd-video-overlay { background:linear-gradient(180deg,rgba(0,0,0,.08) 0%,rgba(13,110,253,.65) 100%); }
+.cpd-video-play {
+  width:58px; height:58px; border-radius:50%;
+  background:#fff; color:var(--cp-blue);
+  display:flex; align-items:center; justify-content:center; font-size:26px;
+  box-shadow:0 8px 24px rgba(0,0,0,.3); transition:transform .3s;
+}
+.cpd-video:hover .cpd-video-play { transform:scale(1.12); }
+.cpd-video-play i { margin-left:3px; }
+.cpd-video-name {
+  position:absolute; left:12px; right:12px; bottom:10px;
+  color:#fff; font-size:13px; font-weight:600; text-shadow:0 1px 2px rgba(0,0,0,.5);
+}
+
+.cpd-bottom-cta {
+  margin-top:44px; padding:clamp(24px,4vw,40px);
+  background:var(--cp-alt); border:1px solid var(--cp-border); border-radius:16px;
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:20px;
+}
+.cpd-bottom-cta-text { font-family:var(--cp-head); font-size:clamp(18px,2.2vw,26px); font-weight:700; color:var(--cp-dark); line-height:1.3; }
+.cpd-bottom-cta-text em { color:var(--cp-blue); font-style:normal; }
+.cpd-bottom-cta-btn {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:12px 24px; border-radius:50px;
+  background:var(--cp-blue); color:#fff;
+  font-family:var(--cp-head); font-weight:700; font-size:14px; transition:.3s;
+}
+.cpd-bottom-cta-btn:hover { background:var(--cp-blue-d); transform:translateY(-2px); }
+
+.cpd-empty {
+  padding:22px; border-radius:var(--cp-radius);
+  background:var(--cp-alt); border:1px dashed var(--cp-border);
+  color:var(--cp-mute); font-style:italic;
+}
+.cpd-empty a { color:var(--cp-blue); text-decoration:underline; text-underline-offset:3px; }
+
+.cpd-lightbox {
+  position:fixed; inset:0; z-index:9999;
+  background:rgba(15,29,53,.92); backdrop-filter:blur(8px);
+  display:flex; align-items:center; justify-content:center;
+  padding:clamp(12px,3vw,32px);
+}
+.cpd-lightbox-body { position:relative; width:100%; max-width:1200px; max-height:90vh; display:flex; align-items:center; justify-content:center; }
+.cpd-lightbox video,.cpd-lightbox img { max-width:100%; max-height:90vh; border-radius:14px; box-shadow:0 30px 80px rgba(0,0,0,.5); background:#000; }
+.cpd-lightbox video { width:100%; }
+.cpd-lightbox-close {
+  position:absolute; top:-48px; right:0;
+  width:40px; height:40px; border-radius:50%;
+  background:var(--cp-blue); color:#fff; border:0; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; font-size:20px; transition:.25s;
+}
+.cpd-lightbox-close:hover { transform:rotate(90deg); }
+.cpd-lightbox-caption { position:absolute; left:0; right:0; bottom:-36px; text-align:center; color:rgba(255,255,255,.8); font-size:13px; }
+[x-cloak] { display:none !important; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="cpd -mx-3 sm:-mx-6 -my-4 sm:-my-8"
+     x-data="{ lightbox: null, open(type,src,name){ this.lightbox={type,src,name:name||''}; document.body.style.overflow='hidden'; }, close(){ this.lightbox=null; document.body.style.overflow=''; } }"
+     @keydown.escape.window="close()"
+     x-init="(() => {
+       const io = new IntersectionObserver(entries => { for(const e of entries){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } } }, {threshold:.1,rootMargin:'0px 0px -40px 0px'});
+       document.querySelectorAll('.cpd-reveal').forEach(el => io.observe(el));
+     })()">
+
+  <div class="cpd-topbar">
+    <a href="{% url 'candidat:portfolio_public' candidat.id %}#portfolio" class="cpd-back">
+      <i class="bi bi-arrow-left"></i>Retour au portfolio
+    </a>
+    {% if projet.has_demo %}
+    <a href="{{ projet.lien }}" target="_blank" rel="noopener" class="cpd-topbar-cta">
+      Voir la démo<i class="bi bi-box-arrow-up-right"></i>
+    </a>
+    {% endif %}
+  </div>
+
+  <section class="cpd-hero">
+    <div class="cpd-hero-inner">
+      <div class="cpd-eyebrow cpd-reveal"><i class="bi bi-star-fill"></i> {% trans "Réalisation ·" %} {{ candidat.prenom }} {{ candidat.nom }}</div>
+      <h1 class="cpd-title cpd-reveal d1">{{ projet.nom }}</h1>
+      <div class="cpd-meta cpd-reveal d2">
+        {% if projet.dateDebut or projet.dateFin %}
+        <span class="cpd-meta-pill">
+          <i class="bi bi-calendar3"></i><span class="key">{% trans "Période" %}</span>
+          <span>{{ projet.dateDebut|slice:":7"|default:'—' }}{% if projet.dateFin %} → {{ projet.dateFin|slice:":7" }}{% endif %}</span>
+        </span>
+        {% endif %}
+        {% if projet.tailleEquipe %}
+        <span class="cpd-meta-pill">
+          <i class="bi bi-people"></i><span class="key">{% trans "Équipe" %}</span>
+          <span>{{ projet.tailleEquipe }} personne{{ projet.tailleEquipe|pluralize }}</span>
+        </span>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  {% if projet.images.0.url %}
+  <div class="cpd-cover">
+    <div class="cpd-cover-wrap cpd-reveal d2">
+      <img src="{{ projet.images.0.url }}" alt="{{ projet.nom }}">
+    </div>
+  </div>
+  {% else %}
+  <div class="cpd-cover">
+    <div class="cpd-cover-wrap cpd-reveal d2">
+      <div class="cpd-cover-fallback"><i class="bi bi-image"></i></div>
+    </div>
+  </div>
+  {% endif %}
+
+  <section class="cpd-section">
+    <div class="cpd-content">
+
+      <aside class="cpd-aside cpd-reveal">
+        <div class="cpd-aside-title">{% trans "Fiche projet" %}</div>
+        {% if projet.dateDebut %}<div class="cpd-aside-row"><span class="icon"><i class="bi bi-clock"></i></span><div class="body"><span class="key">Démarré</span><span class="val">{{ projet.dateDebut|slice:":7" }}</span></div></div>{% endif %}
+        {% if projet.dateFin %}<div class="cpd-aside-row"><span class="icon"><i class="bi bi-check2"></i></span><div class="body"><span class="key">Terminé</span><span class="val">{{ projet.dateFin|slice:":7" }}</span></div></div>{% endif %}
+        {% if projet.tailleEquipe %}<div class="cpd-aside-row"><span class="icon"><i class="bi bi-people"></i></span><div class="body"><span class="key">Équipe</span><span class="val">{{ projet.tailleEquipe }} personne{{ projet.tailleEquipe|pluralize }}</span></div></div>{% endif %}
+        {% if projet.has_demo %}<div class="cpd-aside-row"><span class="icon"><i class="bi bi-link-45deg"></i></span><div class="body"><span class="key">Démo en ligne</span><span class="val"><a href="{{ projet.lien }}" target="_blank" rel="noopener">{{ projet.lien|truncatechars:36 }}</a></span></div></div>{% endif %}
+        {% if projet.images %}<div class="cpd-aside-row"><span class="icon"><i class="bi bi-image"></i></span><div class="body"><span class="key">Images</span><span class="val">{{ projet.images|length }} fichier{{ projet.images|length|pluralize }}</span></div></div>{% endif %}
+        {% if projet.videos %}<div class="cpd-aside-row"><span class="icon"><i class="bi bi-film"></i></span><div class="body"><span class="key">Vidéos</span><span class="val">{{ projet.videos|length }} fichier{{ projet.videos|length|pluralize }}</span></div></div>{% endif %}
+      </aside>
+
+      <div>
+        {% if projet.contexte %}
+        <div class="cpd-block cpd-reveal d1">
+          <h2 class="cpd-block-title">{% trans "Contexte" %}</h2>
+          <div class="cpd-block-text">{{ projet.contexte|linebreaks }}</div>
+        </div>
+        {% endif %}
+
+        {% if projet.realisation %}
+        <div class="cpd-block cpd-reveal d2">
+          <h2 class="cpd-block-title">{% trans "Mes contributions" %}</h2>
+          <div class="cpd-block-text">{{ projet.realisation|linebreaks }}</div>
+        </div>
+        {% endif %}
+
+        {% if projet.images|length > 1 %}
+        <div class="cpd-block cpd-reveal d3">
+          <h2 class="cpd-block-title">{% trans "Galerie" %}</h2>
+          <div class="cpd-gallery">
+            {% for img in projet.images %}{% if img.url %}
+            <button type="button" class="cpd-gallery-item"
+                    @click="open('image','{{ img.url|escapejs }}','{{ img.name|default:projet.nom|escapejs }}')">
+              <img src="{{ img.url }}" alt="{{ img.name|default:projet.nom }}" loading="lazy">
+            </button>
+            {% endif %}{% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if projet.videos %}
+        <div class="cpd-block cpd-reveal d4">
+          <h2 class="cpd-block-title">{% trans "Vidéos" %}</h2>
+          <div class="cpd-videos">
+            {% for vid in projet.videos %}{% if vid.url %}
+            <button type="button" class="cpd-video" @click="open('video','{{ vid.url|escapejs }}','{{ vid.name|default:'Vidéo'|escapejs }}')" aria-label="{% trans "Lire la vidéo" %}">
+              <video class="cpd-video-preview" preload="metadata" muted playsinline src="{{ vid.url }}#t=0.5"></video>
+              <span class="cpd-video-overlay"><span class="cpd-video-play"><i class="bi bi-play-fill"></i></span></span>
+              <span class="cpd-video-name">{{ vid.name|default:'Vidéo' }}</span>
+            </button>
+            {% endif %}{% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if projet.has_demo %}
+        <div class="cpd-bottom-cta cpd-reveal">
+          <span class="cpd-bottom-cta-text">{% trans "Découvrir" %} <em>{% trans "le projet en ligne" %}</em>.</span>
+          <a href="{{ projet.lien }}" target="_blank" rel="noopener" class="cpd-bottom-cta-btn">
+            Voir la démo<i class="bi bi-box-arrow-up-right"></i>
+          </a>
+        </div>
+        {% endif %}
+
+        {% if not projet.contexte and not projet.realisation and not projet.images and not projet.videos %}
+        <div class="cpd-empty">
+          Ce projet n'a pas encore de description détaillée.
+          {% if est_proprio %}Ajoutez son contexte, vos contributions et des médias depuis l'onglet <a href="{% url 'candidat:profil' %}?onglet=rubriques">Profil → Rubriques → Réalisations</a>.{% endif %}
+        </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </section>
+
+  <div class="cpd-lightbox" x-show="lightbox" x-cloak @click.self="close()" x-transition.opacity>
+    <div class="cpd-lightbox-body">
+      <button type="button" class="cpd-lightbox-close" @click="close()" aria-label="{% trans "Fermer" %}"><i class="bi bi-x-lg"></i></button>
+      <template x-if="lightbox && lightbox.type === 'video'">
+        <video :src="lightbox.src" controls autoplay playsinline preload="metadata"></video>
+      </template>
+      <template x-if="lightbox && lightbox.type === 'image'">
+        <img :src="lightbox.src" :alt="{% trans "lightbox.name" %}">
+      </template>
+      <div class="cpd-lightbox-caption" x-text="lightbox && lightbox.name"></div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

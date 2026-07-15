@@ -1,0 +1,216 @@
+﻿{% load i18n %}
+{% comment %}
+    Cloche de notifications dans la navbar candidat.
+
+    Comportement :
+      - Charge le compteur de non-lues au mount (init).
+      - Au clic : ouvre un dropdown qui fetch les 10 dernières notifications.
+      - Polling soft toutes les 60 s pour refresh le compteur (économe).
+      - Click sur une notification : marque comme lue + navigue vers le lien.
+{% endcomment %}
+<div x-data="notificationsBell()"
+     x-init="init()"
+     class="relative"
+     @keydown.escape.window="ouvert = false"
+     @click.outside="ouvert = false">
+
+    {# ── Cloche ─────────────────────────────────────────────────────────── #}
+    <button type="button" @click="ouvrir()" :aria-expanded="ouvert"
+            class="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-orange-50 transition group"
+            :title="nbNonLues > 0 ? `${nbNonLues} notification(s) non lue(s)` : '{% trans "Notifications" %}'">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             class="w-6 h-6 text-gray-600 group-hover:text-orange-600 transition"
+             :class="{ 'animate-bell-shake': nbNonLues > 0 }">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+        </svg>
+        <span x-show="nbNonLues > 0" x-cloak
+              x-text="nbNonLues > 9 ? '9+' : nbNonLues"
+              class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-extrabold flex items-center justify-center shadow-sm ring-2 ring-white">
+        </span>
+    </button>
+
+    {# ── Dropdown panel ────────────────────────────────────────────────── #}
+    <div x-show="ouvert" x-cloak
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 translate-y-1 scale-95"
+         x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+         x-transition:leave-end="opacity-0 translate-y-1 scale-95"
+         class="notif-bell-panel absolute right-0 mt-2 w-[380px] sm:w-[420px] max-w-[95vw] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50">
+
+        {# ── En-tête ──────────────────────────────────────────────────── #}
+        <div class="notif-bell-header flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-orange-50">
+            <div class="flex items-center gap-2">
+                <span class="text-lg">🔔</span>
+                <p class="font-extrabold text-gray-800 text-sm">{% trans "Notifications" %}</p>
+                <span x-show="nbNonLues > 0" x-cloak
+                      class="text-[10px] font-bold text-white px-1.5 py-0.5 rounded-full"
+                      style="background:#c96010;"
+                      x-text="nbNonLues"></span>
+            </div>
+            <button type="button" @click="toutesLues()"
+                    x-show="nbNonLues > 0" x-cloak
+                    class="toutlire-btn text-xs font-semibold text-orange-600 hover:underline">
+                ✓ {% trans "Tout marquer lu" %}
+            </button>
+        </div>
+
+        {# ── Loading ──────────────────────────────────────────────────── #}
+        <div x-show="loading" x-cloak class="notif-bell-loading px-4 py-8 text-center">
+            <div class="inline-block w-6 h-6 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin"></div>
+            <p class="text-xs text-gray-400 mt-2">{% trans "Chargement..." %}</p>
+        </div>
+
+        {# ── Liste ────────────────────────────────────────────────────── #}
+        <div x-show="!loading && items.length > 0" x-cloak
+             class="notif-bell-list max-h-[420px] overflow-y-auto divide-y divide-gray-100">
+            <template x-for="n in items" :key="n.id">
+                <a :href="lienConv(n)"
+                   @click="lire(n)"
+                   class="flex items-start gap-3 px-4 py-3 bg-orange-50/40 hover:bg-orange-50/60 transition cursor-pointer">
+                    {# Icône type #}
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 text-white"
+                         style="background: #c96010">
+                        <span x-show="n.type === 'OFFRE_MATCH'">🎯</span>
+                        <span x-show="n.type === 'CANDIDATURE'">📋</span>
+                        <span x-show="n.type === 'INVITATION'">💌</span>
+                        <span x-show="n.type === 'ENTRETIEN'">🎤</span>
+                        <span x-show="n.type === 'MESSAGE'">💬</span>
+                        <span x-show="n.type === 'PROFIL_VU'">👁️</span>
+                        <span x-show="n.type === 'SYSTEME'">⚙️</span>
+                    </div>
+                    {# Contenu #}
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-gray-900 leading-tight line-clamp-2" x-text="n.titre"></p>
+                        <p class="text-xs text-gray-700 mt-0.5 line-clamp-2" x-text="n.message"></p>
+                        <p class="text-[11px] text-gray-400 mt-1.5" x-text="formatDate(n.date)"></p>
+                    </div>
+                    {# Pastille non-lue #}
+                    <span class="w-2 h-2 rounded-full mt-2 flex-shrink-0"
+                          style="background:#c96010;"
+                          title="{% trans "Non lue" %}"></span>
+                </a>
+            </template>
+        </div>
+
+        {# ── Empty state ──────────────────────────────────────────────── #}
+        <div x-show="!loading && items.length === 0" x-cloak
+             class="px-4 py-12 text-center">
+            <div class="text-4xl mb-2">📭</div>
+            <p class="text-sm font-semibold text-gray-700">{% trans "Aucune notification" %}</p>
+            <p class="text-xs text-gray-400 mt-1">{% trans "Les alertes d'offres correspondant à votre profil apparaîtront ici." %}</p>
+        </div>
+
+        {# ── Footer ───────────────────────────────────────────────────── #}
+        <a href="{% url 'candidat:notifications' %}"
+           class="block text-center px-4 py-3 border-t border-gray-100 text-xs font-bold text-orange-600 hover:bg-orange-50 transition">
+            {% trans "Voir toutes les notifications" %} →
+        </a>
+    </div>
+
+    {# ── CSV / JS ──────────────────────────────────────────────────────── #}
+    <style>
+        @keyframes bell-shake {
+            0%, 100% { transform: rotate(0); }
+            10%, 30% { transform: rotate(-10deg); }
+            20%, 40% { transform: rotate(10deg); }
+            50% { transform: rotate(0); }
+        }
+        .animate-bell-shake { animation: bell-shake 2s ease-in-out infinite; transform-origin: top center; }
+    </style>
+</div>
+
+<script>
+function notificationsBell() {
+    return {
+        ouvert:     false,
+        loading:    false,
+        items:      [],
+        nbNonLues:  0,
+        _pollT:     null,
+
+        async init() {
+            await this.refresh();
+            // Polling (pas de SSE — hébergement mutualisé sans support ASGI/process persistant)
+            this._pollT = setInterval(() => this.refreshCounter(), 15000);
+        },
+
+        async ouvrir() {
+            this.ouvert = !this.ouvert;
+            if (this.ouvert) await this.refresh();
+        },
+
+        async refresh() {
+            this.loading = true;
+            try {
+                const r = await fetch('{% url "candidat:api_notifications_lister" %}');
+                const d = await r.json();
+                if (d.ok) {
+                    // Affichage : uniquement les non lues — les lues passent
+                    // dans la page complète /candidat/notifications/
+                    this.items     = (d.items || []).filter(n => !n.lue);
+                    this.nbNonLues = d.nb_non_lues || 0;
+                }
+            } catch (e) { console.warn(e); }
+            finally { this.loading = false; }
+        },
+
+        async refreshCounter() {
+            try {
+                const r = await fetch('{% url "candidat:api_notifications_lister" %}?limit=1');
+                const d = await r.json();
+                if (d.ok) this.nbNonLues = d.nb_non_lues || 0;
+            } catch (e) { /* silent */ }
+        },
+
+        async lire(notification) {
+            if (notification.lue) return;
+            try {
+                const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+                await fetch(`/candidat/api/notifications/${notification.id}/lire/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrf },
+                });
+                // Retire la notif du dropdown — elle reste accessible dans
+                // la page complète "Toutes les notifications" (historique).
+                this.items     = this.items.filter(n => n.id !== notification.id);
+                this.nbNonLues = Math.max(0, this.nbNonLues - 1);
+            } catch (e) { console.warn(e); }
+        },
+
+        async toutesLues() {
+            try {
+                const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+                await fetch('{% url "candidat:api_notifications_toutes_lues" %}', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrf },
+                });
+                // Vide le dropdown — historique conservé dans /candidat/notifications/
+                this.items     = [];
+                this.nbNonLues = 0;
+            } catch (e) { console.warn(e); }
+        },
+
+        lienConv(n) {
+            return n.lien || '#';
+        },
+
+        formatDate(iso) {
+            try {
+                const d = new Date(iso);
+                const diff = (Date.now() - d.getTime()) / 1000;
+                if (diff < 60)        return 'À l\'instant';
+                if (diff < 3600)      return `Il y a ${Math.floor(diff / 60)} min`;
+                if (diff < 86400)     return `Il y a ${Math.floor(diff / 3600)} h`;
+                if (diff < 86400 * 7) return `Il y a ${Math.floor(diff / 86400)} j`;
+                return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+            } catch (e) { return ''; }
+        },
+    };
+}
+</script>
+
+{% csrf_token %}

@@ -1,0 +1,95 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% trans "Lettre de motivation —" %} {{ lettre.prenom }} {{ lettre.nom }}</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:794px; min-height:1123px; background:#fff; }
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 11.5px;
+    line-height: 1.65;
+    color: #1f2937;
+    position: relative;
+}
+
+.bd-corner {
+    position:absolute; top:0; left:0; width:0; height:0;
+    border-top: 230px solid #0EA5A5;
+    border-right: 230px solid transparent;
+    z-index: 0;
+}
+.bd-corner2 {
+    position:absolute; top:0; left:0; width:0; height:0;
+    border-top: 165px solid #17494A;
+    border-right: 165px solid transparent;
+    z-index: 1;
+}
+
+.bd-header { position:relative; z-index:2; padding: 40px 60px 0; }
+.bd-name { color:#fff; font-size:22px; font-weight:800; max-width:280px; }
+.bd-contact { margin-top:150px; font-size:10px; color:#4b5563; display:flex; gap:16px; flex-wrap:wrap; }
+
+.bd-main { padding: 26px 60px 50px; position:relative; z-index:2; }
+.bd-date { text-align:right; font-size:10px; color:#6b7280; margin-bottom:24px; }
+
+.bd-recipient { margin-bottom:22px; }
+.bd-rcp-name  { font-weight:700; }
+.bd-rcp-fn, .bd-rcp-addr, .bd-rcp-city { font-size:10px; color:#6b7280; }
+
+.bd-objet {
+    font-weight:700; color:#0EA5A5; margin-bottom:22px; font-size:11.5px;
+}
+
+.bd-salut { margin-bottom:14px; font-weight:600; }
+.bd-para  { margin-bottom:13px; text-align:justify; white-space:pre-wrap; word-break:break-word; }
+.bd-formule { margin-top:24px; margin-bottom:46px; }
+.bd-sig   { font-weight:700; color:#17494A; }
+</style>
+</head>
+<body>
+
+<div class="bd-corner"></div>
+<div class="bd-corner2"></div>
+
+<div class="bd-header">
+    <div class="bd-name">{{ lettre.prenom }} {{ lettre.nom }}</div>
+    <div class="bd-contact">
+        {% if lettre.email %}<span>{{ lettre.email }}</span>{% endif %}
+        {% if lettre.telephone %}<span>{{ lettre.telephone }}</span>{% endif %}
+        {% if lettre.ville %}<span>{{ lettre.codePostal }} {{ lettre.ville }}</span>{% endif %}
+    </div>
+</div>
+
+<div class="bd-main">
+    <div class="bd-date">{{ lettre.lieu|default:"Abidjan" }}, le {{ lettre.date }}</div>
+
+    <div class="bd-recipient">
+        <div class="bd-rcp-name">{{ lettre.titreDestinataire }} {{ lettre.nomDestinataire }}</div>
+        {% if lettre.posteDestinataire %}<div class="bd-rcp-fn">{{ lettre.posteDestinataire }}</div>{% endif %}
+        {% if lettre.entreprise %}<div style="font-weight:600;">{{ lettre.entreprise }}</div>{% endif %}
+        {% if lettre.villeEntreprise %}<div class="bd-rcp-city">{{ lettre.villeEntreprise }}</div>{% endif %}
+    </div>
+
+    {% if lettre.objet %}
+    <div class="bd-objet">{{ lettre.objet }}</div>
+    {% endif %}
+
+    <p class="bd-salut">
+        {% if lettre.titreDestinataire == "M." or lettre.titreDestinataire == "M" %}Monsieur
+        {% elif lettre.titreDestinataire == "Mme" or lettre.titreDestinataire == "Mme." %}Madame
+        {% elif lettre.titreDestinataire == "Dr." %}Docteur
+        {% elif lettre.titreDestinataire == "Pr." %}Professeur
+        {% else %}{{ lettre.titreDestinataire }}{% endif %},
+    </p>
+    {% if lettre.corps %}<p class="bd-para">{{ lettre.corps }}</p>{% endif %}
+
+    <p class="bd-formule">{{ lettre.formuleFull }}</p>
+    <div class="bd-sig">{{ lettre.prenom }} {{ lettre.nom }}</div>
+</div>
+
+</body>
+</html>

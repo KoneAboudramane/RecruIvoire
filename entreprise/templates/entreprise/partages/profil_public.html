@@ -1,0 +1,122 @@
+{% extends "entreprise/partages/base_partage_public.html" %}
+{% load i18n %}
+
+{% block titre %}{{ candidat.prenom }} {{ candidat.nom }}{% if candidat.titreProfessionnel %} · {{ candidat.titreProfessionnel }}{% endif %}{% endblock %}
+
+{% block contenu %}
+<div class="max-w-3xl mx-auto px-4 py-8 space-y-6">
+
+    {# ── En-tête candidat ── #}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="h-20" style="background:linear-gradient(135deg,#1a4a2e,#2e7d52);"></div>
+        <div class="px-6 pb-6 -mt-10">
+            <div class="w-20 h-20 rounded-2xl overflow-hidden bg-gray-100 flex items-center justify-center text-3xl font-extrabold text-gray-400 border-4 border-white shadow-lg">
+                {% if candidat.photoProfil %}
+                <img src="{{ candidat.photoProfil.url }}" alt="" class="w-full h-full object-cover">
+                {% else %}
+                {{ candidat.prenom|slice:":1"|upper }}{{ candidat.nom|slice:":1"|upper }}
+                {% endif %}
+            </div>
+            <div class="mt-3">
+                <h1 class="text-2xl font-extrabold text-gray-900">{{ candidat.prenom }} {{ candidat.nom }}</h1>
+                {% if candidat.titreProfessionnel %}
+                <p class="font-semibold mt-1" style="color:#009A44;">{{ candidat.titreProfessionnel }}</p>
+                {% endif %}
+                <div class="flex flex-wrap gap-2 mt-3">
+                    {% if candidat.typeMobilite %}
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">📍 {{ candidat.typeMobilite }}</span>
+                    {% endif %}
+                    {% if candidat.typeContratRecherche %}
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-700">📄 {{ candidat.typeContratRecherche }}</span>
+                    {% endif %}
+                    {% if candidat.secteurActiviteRef %}
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">🏷 {{ candidat.secteurActiviteRef }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Profil / Biographie ── #}
+    {% if candidat.profilCV %}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h2 class="text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-3">{% trans "Profil" %}</h2>
+        <p class="text-gray-700 leading-relaxed text-sm">{{ candidat.profilCV }}</p>
+    </div>
+    {% endif %}
+
+    {# ── Compétences ── #}
+    {% if competences %}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h2 class="text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-4">{% trans "Compétences" %}</h2>
+        <div class="flex flex-wrap gap-2">
+            {% for c in competences %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+                {{ c.libelle }}{% if c.niveau %} · <span class="text-gray-500">{{ c.niveau }}</span>{% endif %}
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Langues ── #}
+    {% if langues %}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h2 class="text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-4">{% trans "Langues" %}</h2>
+        <div class="flex flex-wrap gap-2">
+            {% for l in langues %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
+                {{ l.langue }} — {{ l.niveau }}
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Expériences ── #}
+    {% if experiences %}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h2 class="text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-5">{% trans "Expériences" %}</h2>
+        <div class="space-y-5">
+            {% for exp in experiences %}
+            <div class="flex gap-4">
+                <div class="flex flex-col items-center flex-shrink-0">
+                    <div class="w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0" style="background:#009A44;"></div>
+                    {% if not forloop.last %}<div class="flex-1 w-px bg-gray-200 mt-1"></div>{% endif %}
+                </div>
+                <div class="pb-4 flex-1 min-w-0">
+                    <p class="font-bold text-gray-900 text-sm">{{ exp.posteLibre|default:exp.entrepriseLibre }}</p>
+                    <p class="text-xs font-semibold mt-0.5" style="color:#009A44;">{{ exp.entrepriseLibre }}</p>
+                    <p class="text-gray-400 text-xs mt-0.5">
+                        {{ exp.dateDebut|date:"M Y" }} → {% if exp.enCours %}{% trans "Présent" %}{% else %}{{ exp.dateFin|date:"M Y" }}{% endif %}
+                    </p>
+                    {% if exp.description %}
+                    <p class="text-gray-600 text-xs mt-1.5 leading-relaxed line-clamp-3">{{ exp.description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Formations ── #}
+    {% if formations %}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h2 class="text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-5">{% trans "Formations" %}</h2>
+        <div class="space-y-4">
+            {% for f in formations %}
+            <div class="flex items-start gap-3">
+                <span class="text-xl mt-0.5 flex-shrink-0">🎓</span>
+                <div>
+                    <p class="font-semibold text-gray-900 text-sm">{{ f.diplome }}</p>
+                    <p class="text-gray-500 text-xs mt-0.5">{{ f.institution }} · {{ f.dateDebut|date:"Y" }}{% if f.dateFin %} – {{ f.dateFin|date:"Y" }}{% endif %}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

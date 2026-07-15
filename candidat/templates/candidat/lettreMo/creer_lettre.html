@@ -1,0 +1,1493 @@
+﻿{% extends "candidat/base.html" %}
+{% load i18n static %}
+
+{% block titre %}{{ modele.nom }} — {% trans "Lettre de motivation" %} — {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+<style>
+[x-cloak] { display:none !important; }
+
+/* Masquer navbar, footer et son wrapper comme dans l'éditeur CV */
+nav, footer { display: none !important; }
+body > div:has(> nav) { display: none !important; }
+body { padding-top: 0 !important; }
+main { padding: 0 !important; }
+
+/* ══ LAYOUT RACINE (= .cv-builder) ══════════════════════ */
+.lb-root {
+    display: flex;
+    overflow: hidden;
+    height: 100vh;
+}
+@media (max-width: 767px) {
+    .lb-root { flex-direction:column; height:auto; min-height:100vh; }
+    .lb-form-panel { width:100% !important; border-right:none !important; border-bottom:1px solid #e5e7eb; }
+    .lb-preview-panel { display: none; }
+}
+
+/* ══ PANNEAU FORMULAIRE (= .form-panel) ════════════════ */
+.lb-form-panel {
+    width: 44%;
+    flex-shrink: 0;
+    overflow-y: auto;
+    background: #f8f9fb;
+    border-right: 1px solid #e5e7eb;
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db transparent;
+}
+
+/* En-tête sticky — identique à l'éditeur CV */
+.lb-subheader {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Sidebar onglets */
+.lb-sidebar {
+    width: 110px;
+    flex-shrink: 0;
+    background: #fff;
+    border-right: 1px solid #f0f0f0;
+    position: sticky;
+    top: 52px;
+    align-self: flex-start;
+    height: calc(100vh - 52px);
+    overflow-y: auto;
+}
+.lb-tab-btn {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px; width: 100%; padding: 12px 4px 10px;
+    border-radius: 12px; transition: all .15s;
+    cursor: pointer; border: none; background: none;
+}
+.lb-tab-btn.active { background: #fff7ed; color: #c96010; }
+.lb-tab-btn:not(.active) { color: #9ca3af; }
+.lb-tab-btn:not(.active):hover { background: #f9fafb; color: #6b7280; }
+.lb-tab-icon  { font-size: 22px; line-height: 1; }
+.lb-tab-label { font-size: 10.5px; font-weight: 700; line-height: 1.25; text-align: center; }
+
+/* Zone de contenu */
+.lb-content-area { flex: 1; min-width: 0; }
+.lb-section-panel { padding: 16px 18px; }
+.lb-section-title {
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 18px 10px;
+    margin: -16px -18px 14px;
+    border-bottom: 1px solid #f0f0f0;
+    position: sticky; top: 52px; z-index: 10;
+    background: #f8f9fb;
+}
+
+/* Champs formulaire — identiques à l'éditeur CV */
+.fi {
+    width: 100%; padding: 8px 12px;
+    border: 1.5px solid #e5e7eb; border-radius: 10px;
+    font-size: 13px; background: #fff; color: #111;
+    outline: none; transition: border-color .2s, box-shadow .2s;
+}
+.fi:focus { border-color: #c96010; box-shadow: 0 0 0 3px rgba(201,96,16,.12); }
+.fi-select { appearance: none; cursor: pointer; }
+
+/* ══ PANNEAU PRÉVISUALISATION (= .preview-panel) ════════ */
+.lb-preview-panel {
+    flex: 1;
+    background: #8fa3b1;
+    background-image: radial-gradient(circle at 50% 0%, #9eb4c2 0%, #7a95a6 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 28px 16px 20px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,0,0,.2) transparent;
+}
+/* Simple conteneur centrant */
+.lb-preview-outer { flex-shrink: 0; }
+/* Feuille A4 — JS applique zoom: X (rendu pixel-perfect, pas de flou) */
+.lb-preview-inner {
+    width: 794px; height: 1123px;
+    background: #fff;
+    box-shadow: 0 12px 48px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.15);
+    display: block;
+}
+/* Badge "A4 · Aperçu" sous la feuille */
+.lb-preview-label {
+    flex-shrink: 0;
+    margin-top: 14px;
+    background: rgba(0,0,0,.45);
+    color: #fff; font-size: 10px; font-weight: 600;
+    padding: 5px 14px; border-radius: 999px; letter-spacing: .3px;
+    white-space: nowrap; pointer-events: none;
+    backdrop-filter: blur(4px);
+}
+
+/* ══ MODE SOMBRE ════════════════════════════════════════ */
+html.dark .lb-subheader { background: #0f172a; border-color: #1e293b; }
+html.dark .lb-subheader .text-gray-800 { color: #f1f5f9 !important; }
+html.dark .lb-sidebar { background: #0f172a; border-color: #1e293b; }
+html.dark .lb-form-panel { background: #0a1020; border-right-color: #1e293b; }
+html.dark .lb-section-title { background: #0a1020; border-color: #1e293b; }
+html.dark .lb-section-title .text-gray-800 { color: #f1f5f9 !important; }
+html.dark .lb-tab-btn.active { background: rgba(201,96,16,.14); }
+html.dark .lb-tab-btn:not(.active):hover { background: #1e293b; color: #94a3b8; }
+html.dark .fi {
+    background: #0f172a; color: #e2e8f0; border-color: #334155;
+}
+html.dark .fi:focus {
+    border-color: #c96010; box-shadow: 0 0 0 3px rgba(201,96,16,.15);
+}
+html.dark .text-gray-500 { color: #94a3b8 !important; }
+html.dark .text-gray-400 { color: #64748b !important; }
+html.dark .text-gray-600 { color: #94a3b8 !important; }
+html.dark .border-gray-200 { border-color: #1e293b !important; }
+html.dark .bg-white { background-color: #0f172a !important; }
+html.dark .hover\:border-orange-400:hover { border-color: #c96010 !important; }
+html.dark .hover\:text-orange-600:hover { color: #fb923c !important; }
+
+/* ══ MODE NOIR (OLED) ══════════════════════════════════════════ */
+html.noir .lb-subheader { background: #000; border-color: #0d0d0d; }
+html.noir .lb-subheader .text-gray-800 { color: #f1f5f9 !important; }
+html.noir .lb-sidebar { background: #000; border-color: #0d0d0d; }
+html.noir .lb-form-panel { background: #000; border-right-color: #0d0d0d; }
+html.noir .lb-section-title { background: #000; border-color: #0d0d0d; }
+html.noir .lb-section-title .text-gray-800 { color: #f1f5f9 !important; }
+html.noir .lb-tab-btn.active { background: rgba(201,96,16,.11); }
+html.noir .lb-tab-btn:not(.active):hover { background: #0d0d0d; color: #94a3b8; }
+html.noir .fi {
+    background: #000; color: #e2e8f0; border-color: #222;
+}
+html.noir .fi:focus {
+    border-color: #c96010; box-shadow: 0 0 0 3px rgba(201,96,16,.12);
+}
+html.noir .text-gray-500 { color: #94a3b8 !important; }
+html.noir .text-gray-400 { color: #64748b !important; }
+html.noir .text-gray-600 { color: #94a3b8 !important; }
+html.noir .border-gray-200 { border-color: #0d0d0d !important; }
+html.noir .bg-white { background-color: #000 !important; }
+html.noir .hover\:border-orange-400:hover { border-color: #c96010 !important; }
+html.noir .hover\:text-orange-600:hover { color: #fb923c !important; }
+
+/* ══ SKINS LETTRE ═══════════════════════════════════════ */
+
+/* ── Base commune ───────────────────────────────────────── */
+.lp-wrap { width:100%; height:100%; overflow:hidden; font-size:11.5px; line-height:1.72; color:#1a1a1a; background:#fff; }
+.lp-date { text-align:right; font-size:10px; color:#555; margin-bottom:20px; }
+.lp-recipient { margin-bottom:20px; line-height:1.65; }
+.lp-rcp-name  { font-weight:600; font-size:11px; }
+.lp-rcp-fn, .lp-rcp-addr, .lp-rcp-city { font-size:10px; color:#555; }
+.lp-objet { margin-bottom:18px; font-size:11.5px; }
+.lp-objet-lbl { font-weight:700; }
+.lp-salut { margin-bottom:14px; font-weight:600; }
+.lp-para  { margin-bottom:13px; white-space:pre-wrap; word-break:break-word; }
+.lp-formule { margin-top:24px; margin-bottom:44px; }
+.lp-sig { font-weight:700; }
+
+/* ── Structure FAMILLE : bandeau latéral persistant ──
+   Positionnement absolu (pas flex) : le moteur d'impression PDF de Chromium
+   empile parfois les enfants flex au lieu de les garder côte à côte — avec
+   une page à taille fixe (794×1123), l'absolu est fiable dans les deux
+   contextes (aperçu navigateur ET export PDF). ── */
+.lp-family-sidebar .lp-wrap  { position:relative; }
+.lp-family-sidebar .lp-side  { position:absolute; left:0; top:0; bottom:0; width:220px; padding:50px 26px; overflow:hidden; }
+.lp-family-sidebar .lp-side-name  { font-size:19px; font-weight:800; line-height:1.25; margin-bottom:26px; }
+.lp-family-sidebar .lp-side-block { margin-bottom:10px; }
+.lp-family-sidebar .lp-side-item  { font-size:10.5px; line-height:1.8; word-break:break-word; margin-bottom:4px; }
+.lp-family-sidebar .lp-body  { margin-left:220px; padding:50px 44px 50px 40px; }
+
+/* ── Structure FAMILLE : accroche mise en avant ── */
+.lp-family-accroche .lp-top { padding:44px 60px 0; }
+.lp-family-accroche .lp-name { font-size:20px; font-weight:800; }
+.lp-family-accroche .lp-contact-row { font-size:10px; color:#6b7280; margin-top:8px; display:flex; gap:14px; flex-wrap:wrap; }
+.lp-family-accroche .lp-quote { margin:22px 60px; font-size:17px; font-weight:700; line-height:1.4; }
+.lp-family-accroche .lp-main { padding:0 60px 50px; }
+
+/* ── Structure FAMILLE : carte encadrée ── */
+.lp-family-carte .lp-page { margin:26px; min-height:1071px; }
+.lp-family-carte .lp-top  { padding:36px 48px 0; }
+.lp-family-carte .lp-main { padding:0 48px 40px; }
+
+/* ── CLASSIQUE — Serif élégant, expéditeur droite, objet souligné ── */
+.skin-classique .lp-wrap     { font-family: Georgia,'Times New Roman',serif; }
+.skin-classique .lp-top      { padding:44px 60px 0; display:flex; justify-content:flex-end; margin-bottom:30px; }
+.skin-classique .lp-sender   { text-align:right; }
+.skin-classique .lp-name     { font-size:15px; font-weight:700; color:#111; letter-spacing:.8px; text-transform:uppercase; margin-bottom:6px; }
+.skin-classique .lp-contact  { font-size:9.5px; color:#555; line-height:1.7; margin-top:1px; }
+.skin-classique .lp-main     { padding:0 60px 44px; }
+.skin-classique .lp-objet    { text-decoration:underline; font-weight:700; font-style:italic; }
+.skin-classique .lp-para     { text-align:justify; text-indent:2em; }
+.skin-classique .lp-sig      { text-align:right; }
+
+/* ── MODERNE — bordure gauche noire, divider, objet fond gris ── */
+.skin-moderne .lp-wrap    { font-family: Arial,Helvetica,sans-serif; border-left:4px solid #111; }
+.skin-moderne .lp-top     { padding:30px 44px 22px; border-bottom:1px solid #d1d5db; }
+.skin-moderne .lp-name    { font-size:19px; font-weight:800; color:#111; letter-spacing:-.2px; margin-bottom:5px; }
+.skin-moderne .lp-contact { font-size:9.5px; color:#6b7280; line-height:1.7; margin-top:1px; }
+.skin-moderne .lp-main    { padding:22px 44px 44px; }
+.skin-moderne .lp-objet   { padding:7px 12px; border-left:3px solid #374151; background:#f3f4f6; font-weight:700; }
+.skin-moderne .lp-objet-lbl { color:#374151; }
+.skin-moderne .lp-sig     { font-weight:700; color:#111; }
+
+/* ── ÉLÉGANT — Serif, nom centré en capitales, contacts inline, objet encadré ── */
+.skin-orange-pro .lp-wrap    { font-family: Georgia,'Times New Roman',serif; }
+.skin-orange-pro .lp-top     { padding:36px 56px 22px; text-align:center; border-bottom:2px solid #111; }
+.skin-orange-pro .lp-name    { font-size:20px; font-weight:700; color:#111; letter-spacing:2.5px; text-transform:uppercase; margin-bottom:10px; }
+.skin-orange-pro .lp-contact { display:inline; font-size:9px; color:#555; line-height:2; }
+.skin-orange-pro .lp-contact + .lp-contact::before { content:" · "; color:#aaa; }
+.skin-orange-pro .lp-main    { padding:22px 56px 44px; }
+.skin-orange-pro .lp-objet   { border-top:1px solid #ccc; border-bottom:1px solid #ccc; padding:8px 0; font-style:italic; font-weight:700; text-align:center; }
+.skin-orange-pro .lp-objet-lbl { font-style:normal; }
+.skin-orange-pro .lp-para    { text-align:justify; }
+.skin-orange-pro .lp-sig     { text-align:right; }
+
+/* ── SOBRE — Sans-serif propre, filet 2px bas, objet bordure gauche ── */
+.skin-vert-ivoire .lp-wrap    { font-family: Arial,Helvetica,sans-serif; }
+.skin-vert-ivoire .lp-top     { padding:28px 52px 20px; border-bottom:2px solid #111; }
+.skin-vert-ivoire .lp-name    { font-size:20px; font-weight:800; color:#111; margin-bottom:4px; }
+.skin-vert-ivoire .lp-contact { font-size:9.5px; color:#6b7280; line-height:1.65; margin-top:1px; }
+.skin-vert-ivoire .lp-main    { padding:22px 52px 44px; }
+.skin-vert-ivoire .lp-objet   { border-left:4px solid #111; padding-left:12px; font-weight:700; }
+.skin-vert-ivoire .lp-objet-lbl { color:#374151; }
+.skin-vert-ivoire .lp-sig     { font-weight:700; }
+
+/* ── EXECUTIVE — tout blanc, filet haut 5px, nom capitales, objet structuré ── */
+.skin-executive .lp-wrap    { font-family: Arial,Helvetica,sans-serif; border-top:5px solid #111; }
+.skin-executive .lp-top     { padding:24px 50px 18px; border-bottom:1px solid #e5e7eb; }
+.skin-executive .lp-name    { font-size:18px; font-weight:800; color:#111; text-transform:uppercase; letter-spacing:1.2px; margin-bottom:5px; }
+.skin-executive .lp-contact { font-size:9.5px; color:#6b7280; line-height:1.65; margin-top:1px; }
+.skin-executive .lp-main    { padding:22px 50px 44px; }
+.skin-executive .lp-objet   { font-weight:700; border-left:3px solid #111; padding-left:10px; }
+.skin-executive .lp-objet-lbl { text-transform:uppercase; font-size:10px; letter-spacing:.5px; }
+.skin-executive .lp-sig     { font-weight:700; color:#111; }
+
+/* ── MINIMALISTE — épuré, nom gauche / contacts droite, ligne fine ── */
+.skin-minimaliste .lp-wrap    { font-family: Arial,Helvetica,sans-serif; }
+.skin-minimaliste .lp-top     { padding:36px 58px 22px; border-bottom:1px solid #d1d5db; }
+.skin-minimaliste .lp-sender  { display:grid; grid-template-columns:1fr 1fr; align-items:start; }
+.skin-minimaliste .lp-name    { grid-column:1; font-size:15px; font-weight:700; color:#111; margin-bottom:3px; }
+.skin-minimaliste .lp-contact { grid-column:2; text-align:right; font-size:9px; color:#9ca3af; line-height:1.75; margin-top:1px; }
+.skin-minimaliste .lp-main    { padding:24px 58px 44px; }
+.skin-minimaliste .lp-objet   { font-weight:600; color:#111; }
+.skin-minimaliste .lp-objet-lbl { color:#9ca3af; font-weight:400; font-size:10px; }
+.skin-minimaliste .lp-sig     { font-weight:600; color:#111; }
+
+/* ── CORPORATE BLEU — sans-serif, bandeau bleu, objet en bloc bleu ── */
+.skin-corporate-bleu .lp-wrap    { font-family: Arial,Helvetica,sans-serif; }
+.skin-corporate-bleu .lp-top     { padding:34px 56px 20px; border-bottom:3px solid #0B3D91; }
+.skin-corporate-bleu .lp-name    { font-size:19px; font-weight:800; color:#0B3D91; margin-bottom:5px; }
+.skin-corporate-bleu .lp-contact { font-size:9.5px; color:#4b5c7a; line-height:1.7; margin-top:1px; }
+.skin-corporate-bleu .lp-main    { padding:22px 56px 44px; }
+.skin-corporate-bleu .lp-objet   { background:#EEF3FC; color:#0B3D91; border-radius:6px; padding:8px 14px; font-weight:700; }
+.skin-corporate-bleu .lp-objet-lbl { color:#0B3D91; }
+.skin-corporate-bleu .lp-sig     { font-weight:700; color:#0B3D91; }
+
+/* ── STARTUP TECH — monospace, accents code ── */
+.skin-startup-tech .lp-wrap    { font-family:'Consolas','Courier New',monospace; }
+.skin-startup-tech .lp-top     { padding:32px 54px 18px; }
+.skin-startup-tech .lp-name    { font-size:17px; font-weight:800; color:#0f172a; }
+.skin-startup-tech .lp-contact { font-size:9.5px; color:#4b5563; line-height:1.7; margin-top:2px; }
+.skin-startup-tech .lp-contact::before { content:"> "; color:#16a34a; font-weight:700; }
+.skin-startup-tech .lp-main    { padding:20px 54px 44px; border-top:1px dashed #0f172a; }
+.skin-startup-tech .lp-objet   { border:1px solid #0f172a; border-radius:6px; padding:8px 12px; font-weight:700; }
+.skin-startup-tech .lp-objet-lbl::before { content:"$ "; color:#16a34a; }
+.skin-startup-tech .lp-sig     { font-weight:700; }
+.skin-startup-tech .lp-sig::before { content:"~$ "; color:#16a34a; }
+
+/* ── ACADÉMIQUE — serif centré, capitales espacées ── */
+.skin-academique .lp-wrap    { font-family:'Cambria',Georgia,serif; }
+.skin-academique .lp-top     { padding:44px 56px 20px; text-align:center; border-bottom:2px double #26241f; }
+.skin-academique .lp-sender  { display:inline-block; }
+.skin-academique .lp-name    { font-size:17px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:8px; }
+.skin-academique .lp-contact { font-size:9.5px; color:#555; line-height:1.8; }
+.skin-academique .lp-main    { padding:22px 66px 44px; }
+.skin-academique .lp-objet   { text-align:center; text-transform:uppercase; font-weight:700; letter-spacing:.5px; }
+.skin-academique .lp-para    { text-align:justify; text-indent:2em; }
+.skin-academique .lp-sig     { text-align:center; font-weight:700; }
+
+/* ── SCANDINAVE (famille sidebar) — bandeau clair, léger, accent taupe ── */
+.skin-scandinave .lp-wrap        { font-family:'Helvetica Neue',Arial,sans-serif; font-weight:300; }
+.skin-scandinave .lp-side        { background:#fdfcfa; border-right:1px solid #e8e3da; }
+.skin-scandinave .lp-side-name   { font-weight:400; letter-spacing:.4px; color:#3a3a36; border-bottom:2px solid #c9a892; padding-bottom:10px; }
+.skin-scandinave .lp-side-item   { color:#9c9890; }
+.skin-scandinave .lp-objet       { font-weight:600; color:#3a3a36; }
+.skin-scandinave .lp-objet-lbl   { color:#9c9890; font-weight:400; }
+.skin-scandinave .lp-sig         { font-weight:400; }
+
+/* ── BOLD TYPO (famille accroche) — citation énorme, accent rouge ── */
+.skin-bold-typo .lp-wrap        { font-family:Arial,Helvetica,sans-serif; }
+.skin-bold-typo .lp-top         { border-top:6px solid #111; padding-top:24px; }
+.skin-bold-typo .lp-name        { font-size:26px; font-weight:900; text-transform:uppercase; letter-spacing:-.5px; }
+.skin-bold-typo .lp-contact-row { font-size:9.5px; color:#555; }
+.skin-bold-typo .lp-quote       { font-size:24px; font-weight:900; text-transform:uppercase; color:#E63946; line-height:1.15; }
+.skin-bold-typo .lp-sig         { font-weight:900; text-transform:uppercase; font-size:12px; }
+
+/* ── SIDEBAR COLONNE (famille sidebar) — colonne marine pleine hauteur ── */
+.skin-sidebar-colonne .lp-wrap      { font-family:'Segoe UI',Arial,sans-serif; }
+.skin-sidebar-colonne .lp-side      { background:#1a1a2e; color:#fff; }
+.skin-sidebar-colonne .lp-side-name { color:#fff; }
+.skin-sidebar-colonne .lp-side-item { color:#c7c9db; }
+.skin-sidebar-colonne .lp-objet     { border-left:3px solid #c96010; padding-left:10px; font-weight:700; color:#1a1a2e; }
+.skin-sidebar-colonne .lp-sig       { font-weight:700; color:#1a1a2e; }
+
+/* ── VINTAGE PAPIER (famille carte) — monospace, cadre double ── */
+.skin-vintage-papier .lp-wrap    { font-family:'Courier New',Courier,monospace; }
+.skin-vintage-papier .lp-page    { outline:1px solid #8a7256; outline-offset:-10px; }
+.skin-vintage-papier .lp-top     { text-align:center; border-bottom:1px dashed #8a7256; margin:0 20px; padding-left:0; padding-right:0; }
+.skin-vintage-papier .lp-sender  { display:inline-block; }
+.skin-vintage-papier .lp-name    { font-size:16px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; }
+.skin-vintage-papier .lp-contact { font-size:9px; color:#6b5b4d; }
+.skin-vintage-papier .lp-main    { margin:0 20px; }
+.skin-vintage-papier .lp-objet   { font-weight:700; text-decoration:underline wavy; text-align:center; }
+.skin-vintage-papier .lp-sig     { font-weight:700; font-style:italic; text-align:right; }
+
+/* ── GRADIENT CONTEMPORAIN (famille accroche) — citation sur fond dégradé ── */
+.skin-gradient-contemporain .lp-wrap        { font-family:'Segoe UI',Arial,sans-serif; }
+.skin-gradient-contemporain .lp-name        { font-size:19px; font-weight:800; }
+.skin-gradient-contemporain .lp-contact-row { font-size:9.5px; color:#6b7280; }
+.skin-gradient-contemporain .lp-quote {
+    background:linear-gradient(120deg,#6D28D9 0%,#DB2777 55%,#F97316 100%);
+    color:#fff; padding:18px 24px; border-radius:12px; font-size:15px;
+}
+.skin-gradient-contemporain .lp-sig     { font-weight:700; color:#6D28D9; }
+
+/* ── LIGNE ROUGE — minimal, filet rouge (famille classique) ── */
+.skin-ligne-rouge .lp-wrap    { font-family:'Helvetica Neue',Arial,sans-serif; }
+.skin-ligne-rouge .lp-top     { padding:44px 70px 0; border-top:2px solid #C81E1E; }
+.skin-ligne-rouge .lp-name    { font-size:16px; font-weight:600; margin-top:16px; }
+.skin-ligne-rouge .lp-contact { font-size:9.5px; color:#7a7a7a; line-height:1.8; }
+.skin-ligne-rouge .lp-main    { padding:24px 70px 44px; }
+.skin-ligne-rouge .lp-objet   { font-weight:600; color:#C81E1E; }
+.skin-ligne-rouge .lp-sig     { font-weight:600; border-top:2px solid #C81E1E; display:inline-block; padding-top:10px; }
+
+/* ── GRILLE STRUCTURÉE (famille carte) — carte grise, objet en encadré ── */
+.skin-grille-structuree .lp-wrap    { font-family:'Segoe UI',Arial,sans-serif; }
+.skin-grille-structuree .lp-page    { background:#f6f7f8; border:1px solid #e0e0e0; border-radius:14px; }
+.skin-grille-structuree .lp-top     { border-bottom:3px solid #202124; }
+.skin-grille-structuree .lp-name    { font-size:18px; font-weight:800; }
+.skin-grille-structuree .lp-contact { font-size:9.5px; color:#5f6368; line-height:1.7; }
+.skin-grille-structuree .lp-objet   { background:#fff; border-radius:8px; padding:9px 14px; font-weight:700; border:1px solid #e0e0e0; }
+.skin-grille-structuree .lp-sig     { font-weight:800; }
+
+/* ── SIGNATURE MANUSCRITE (famille accroche) — citation en script ── */
+.skin-signature-manuscrite .lp-wrap        { font-family:Georgia,'Times New Roman',serif; }
+.skin-signature-manuscrite .lp-name        { font-size:20px; font-weight:700; color:#9C6B3F; }
+.skin-signature-manuscrite .lp-contact-row { font-size:9.5px; color:#8a8378; }
+.skin-signature-manuscrite .lp-quote {
+    font-family:'Brush Script MT','Segoe Script',cursive; font-size:32px;
+    color:#9C6B3F; font-weight:400; line-height:1.2;
+}
+.skin-signature-manuscrite .lp-sig  { font-family:'Brush Script MT','Segoe Script',cursive; font-size:24px; color:#9C6B3F; font-weight:400; }
+
+/* ── ANGLO-SAXON (famille carte) — business letter US/UK, cadre sobre ── */
+.skin-anglo-saxon .lp-wrap    { font-family:'Times New Roman',Times,serif; }
+.skin-anglo-saxon .lp-page    { border:1px solid #999; }
+.skin-anglo-saxon .lp-sender  { text-align:left; }
+.skin-anglo-saxon .lp-name    { font-size:14px; font-weight:700; }
+.skin-anglo-saxon .lp-contact { font-size:10.5px; color:#333; line-height:1.6; }
+.skin-anglo-saxon .lp-objet   { font-weight:700; }
+.skin-anglo-saxon .lp-objet-lbl::before { content:"Re: "; }
+.skin-anglo-saxon .lp-para    { text-align:left; }
+.skin-anglo-saxon .lp-sig     { font-weight:700; text-align:left; }
+
+/* ── OR & NOIR LUXE — bandeau noir, accents or (famille classique) ── */
+.skin-or-noir-luxe .lp-wrap    { font-family:'Cambria',Georgia,serif; }
+.skin-or-noir-luxe .lp-top     { padding:34px 56px; background:#0d0d0d; }
+.skin-or-noir-luxe .lp-name    { font-size:20px; font-weight:700; letter-spacing:1px; color:#D4AF37; }
+.skin-or-noir-luxe .lp-contact { font-size:9.5px; color:#c9c9c9; line-height:1.7; }
+.skin-or-noir-luxe .lp-main    { padding:22px 56px 44px; }
+.skin-or-noir-luxe .lp-objet   { font-weight:700; border-bottom:1px solid #D4AF37; display:inline-block; padding-bottom:4px; }
+.skin-or-noir-luxe .lp-sig     { font-weight:700; }
+
+/* ── BICOLORE DIAGONAL (famille sidebar) — colonne diagonale bicolore ── */
+.skin-bicolore-diagonal .lp-wrap      { font-family:'Segoe UI',Arial,sans-serif; }
+.skin-bicolore-diagonal .lp-side      { background:linear-gradient(160deg,#0EA5A5 0%,#0EA5A5 55%,#17494A 55%,#17494A 100%); color:#fff; }
+.skin-bicolore-diagonal .lp-side-name { color:#fff; }
+.skin-bicolore-diagonal .lp-side-item { color:#e5f6f6; }
+.skin-bicolore-diagonal .lp-objet     { font-weight:700; color:#0EA5A5; }
+.skin-bicolore-diagonal .lp-sig       { font-weight:700; color:#17494A; }
+
+/* ── PREVIEW uniquement : fontes agrandies pour lisibilité (n'affecte pas le PDF) ── */
+#lbInner .lp-wrap    { font-size:15px; line-height:1.68; }
+#lbInner .lp-date,
+#lbInner .lp-rcp-fn,
+#lbInner .lp-rcp-addr,
+#lbInner .lp-rcp-city { font-size:13px; }
+#lbInner .lp-rcp-name { font-size:14.5px; }
+#lbInner .lp-objet    { font-size:15px; }
+#lbInner .skin-classique  .lp-name    { font-size:20px; }
+#lbInner .skin-classique  .lp-contact { font-size:13px; }
+#lbInner .skin-moderne    .lp-name    { font-size:25px; }
+#lbInner .skin-moderne    .lp-contact { font-size:13px; }
+#lbInner .skin-orange-pro .lp-name    { font-size:26px; }
+#lbInner .skin-orange-pro .lp-contact { font-size:12px; }
+#lbInner .skin-vert-ivoire .lp-name   { font-size:26px; }
+#lbInner .skin-vert-ivoire .lp-contact{ font-size:13px; }
+#lbInner .skin-executive  .lp-name    { font-size:24px; }
+#lbInner .skin-executive  .lp-contact { font-size:13px; }
+#lbInner .skin-minimaliste .lp-name   { font-size:20px; }
+#lbInner .skin-minimaliste .lp-contact{ font-size:12px; }
+#lbInner .skin-corporate-bleu .lp-name        { font-size:25px; }
+#lbInner .skin-corporate-bleu .lp-contact     { font-size:13px; }
+#lbInner .skin-startup-tech .lp-name          { font-size:22px; }
+#lbInner .skin-startup-tech .lp-contact       { font-size:13px; }
+#lbInner .skin-academique .lp-name            { font-size:22px; }
+#lbInner .skin-academique .lp-contact         { font-size:13px; }
+#lbInner .skin-scandinave .lp-side-name          { font-size:22px; }
+#lbInner .skin-scandinave .lp-side-item          { font-size:13px; }
+#lbInner .skin-bold-typo .lp-name                { font-size:34px; }
+#lbInner .skin-bold-typo .lp-contact-row         { font-size:13px; }
+#lbInner .skin-bold-typo .lp-quote               { font-size:30px; }
+#lbInner .skin-sidebar-colonne .lp-side-name     { font-size:25px; }
+#lbInner .skin-sidebar-colonne .lp-side-item     { font-size:13px; }
+#lbInner .skin-vintage-papier .lp-name           { font-size:21px; }
+#lbInner .skin-vintage-papier .lp-contact        { font-size:12px; }
+#lbInner .skin-gradient-contemporain .lp-name    { font-size:25px; }
+#lbInner .skin-gradient-contemporain .lp-contact-row { font-size:13px; }
+#lbInner .skin-gradient-contemporain .lp-quote   { font-size:19px; }
+#lbInner .skin-ligne-rouge .lp-name           { font-size:21px; }
+#lbInner .skin-ligne-rouge .lp-contact        { font-size:13px; }
+#lbInner .skin-grille-structuree .lp-name     { font-size:24px; }
+#lbInner .skin-grille-structuree .lp-contact  { font-size:13px; }
+#lbInner .skin-signature-manuscrite .lp-name       { font-size:26px; }
+#lbInner .skin-signature-manuscrite .lp-contact-row { font-size:13px; }
+#lbInner .skin-signature-manuscrite .lp-quote      { font-size:40px; }
+#lbInner .skin-anglo-saxon .lp-name           { font-size:18px; }
+#lbInner .skin-anglo-saxon .lp-contact        { font-size:14px; }
+#lbInner .skin-or-noir-luxe .lp-name          { font-size:26px; }
+#lbInner .skin-or-noir-luxe .lp-contact       { font-size:13px; }
+#lbInner .skin-bicolore-diagonal .lp-side-name   { font-size:25px; }
+#lbInner .skin-bicolore-diagonal .lp-side-item   { font-size:13px; }
+</style>
+{% endblock %}
+
+
+{% block contenu %}
+{% csrf_token %}
+{{ modeles_json|json_script:"lm-modeles-data" }}
+{{ candidat_info|json_script:"lm-candidat-data" }}
+{% if lettre_initial %}{{ lettre_initial|json_script:"lm-lettre-initial" }}{% endif %}
+
+<div x-data="lettreBuilder()" x-cloak class="lb-root">
+
+    <!-- ══ FORMULAIRE (= .form-panel) ══════════════════════════════════════════ -->
+    <div class="lb-form-panel">
+
+        <!-- En-tête sticky — identique à l'éditeur CV -->
+        <div class="lb-subheader">
+            <button onclick="cvEditorRetour()"
+                    class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition text-xs font-semibold text-gray-600 flex-shrink-0 cursor-pointer">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                Retour
+            </button>
+            <script>
+            function cvEditorRetour() {
+                try { localStorage.removeItem('lettremo_draft'); } catch(e) {}
+                if (window.history.length > 1) { window.history.back(); }
+                else { window.location.href = "{% url 'candidat:modeles_lettre' %}"; }
+            }
+            </script>
+            <div class="w-px h-5 bg-gray-200 flex-shrink-0"></div>
+            <div class="flex items-center gap-2.5 flex-1 min-w-0">
+                <div class="w-3.5 h-3.5 rounded-full shadow-sm flex-shrink-0" style="background:#c96010"></div>
+                <div class="min-w-0">
+                    <p class="text-sm font-bold text-gray-800 leading-tight truncate" x-text="selectedTemplate ? selectedTemplate.nom : 'Lettre de motivation'"></p>
+                    <p class="text-xs text-gray-400">{% trans "Édition en temps réel" %}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <!-- Changer de modèle -->
+                <button @click="switcherOpen = true"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition text-xs font-semibold text-gray-600">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"/></svg>
+                    Changer
+                </button>
+
+                <!-- Sauvegarder (brouillon localStorage) -->
+                <div class="relative">
+                    <button @click="sauvegarderDraft()" :disabled="saving"
+                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all"
+                            :class="saving ? 'border-green-400 bg-green-100 text-green-800' : 'border-green-200 bg-green-50 hover:bg-green-100 text-green-700'">
+                        <template x-if="!saving">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </template>
+                        <template x-if="saving">
+                            <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                        </template>
+                        <span x-text="saving ? (lettreId ? 'Mise à jour…' : 'Sauvegarde…') : (lettreId ? 'Mettre à jour' : 'Sauvegarder')"></span>
+                    </button>
+                </div>
+
+                <!-- Toast confirmation sauvegarde -->
+                <span x-show="saveMessage" x-transition x-text="saveMessage"
+                      class="text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg px-2 py-1 whitespace-nowrap"></span>
+
+                <!-- Télécharger avec dropdown -->
+                <div class="relative">
+                    <button @click.stop="dlToggle($event)" :disabled="!!downloading"
+                            class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-white text-xs font-bold shadow-md transition hover:shadow-lg hover:-translate-y-px active:scale-95 disabled:opacity-50"
+                            style="background:linear-gradient(135deg,#c96010,#e06b00)">
+                        <template x-if="!downloading">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        </template>
+                        <template x-if="downloading">
+                            <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                        </template>
+                        <span x-text="downloading ? 'Génération...' : 'Télécharger'"></span>
+                        <svg class="w-3 h-3 transition-transform duration-200" :class="dlOpen ? 'rotate-180':''"
+                             fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+
+                    <template x-teleport="body">
+                        <div x-show="dlOpen" @click.outside="dlOpen = false"
+                             :style="'position:fixed;z-index:9999;' + dlStyle"
+                             class="bg-white rounded-2xl shadow-xl border border-gray-100 py-2"
+                             style="min-width:220px;display:none">
+                            <p class="px-4 pt-1 pb-2 text-xs font-bold text-gray-400 uppercase tracking-widest">{% trans "Choisir le format" %}</p>
+                            <!-- PDF -->
+                            <button @click="download('pdf'); dlOpen = false" :disabled="!!downloading"
+                                    class="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-orange-50 active:bg-orange-100 transition disabled:opacity-40 disabled:cursor-not-allowed text-left">
+                                <span class="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0" style="background:#FFF0E0">📄</span>
+                                <div>
+                                    <p class="text-xs font-bold text-gray-800">PDF</p>
+                                    <p class="text-xs text-gray-400">{% trans "Format universel · A4" %}</p>
+                                </div>
+                                <span class="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full text-green-700 bg-green-100">✓ Recommandé</span>
+                            </button>
+                            <!-- PNG -->
+                            <button @click="download('png'); dlOpen = false" :disabled="!!downloading"
+                                    class="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-orange-50 active:bg-orange-100 transition disabled:opacity-40 disabled:cursor-not-allowed text-left">
+                                <span class="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0" style="background:#F0F7FF">🖼️</span>
+                                <div>
+                                    <p class="text-xs font-bold text-gray-800">{% trans "Image PNG" %}</p>
+                                    <p class="text-xs text-gray-400">{% trans "Haute qualité · sans perte" %}</p>
+                                </div>
+                            </button>
+                            <!-- JPG -->
+                            <button @click="download('jpg'); dlOpen = false" :disabled="!!downloading"
+                                    class="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-orange-50 active:bg-orange-100 transition disabled:opacity-40 disabled:cursor-not-allowed text-left">
+                                <span class="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0" style="background:#FFF8F0">📸</span>
+                                <div>
+                                    <p class="text-xs font-bold text-gray-800">{% trans "Image JPG" %}</p>
+                                    <p class="text-xs text-gray-400">{% trans "Compressé · partage rapide" %}</p>
+                                </div>
+                            </button>
+                            <!-- Word -->
+                            <button @click="alert('Téléchargement Word (.docx) pas disponible pour le moment.'); dlOpen = false"
+                                    class="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-orange-50 active:bg-orange-100 transition text-left">
+                                <span class="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0" style="background:#EEF2FF">📝</span>
+                                <div>
+                                    <p class="text-xs font-bold text-gray-800">{% trans "Word (.docx)" %}</p>
+                                    <p class="text-xs text-gray-400">{% trans "Pas disponible pour le moment" %}</p>
+                                </div>
+                            </button>
+                            <div class="mx-4 my-1.5 border-t border-gray-100"></div>
+                            <!-- Imprimer -->
+                            <button @click="printLetter(); dlOpen = false"
+                                    class="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-gray-50 active:bg-gray-100 transition text-left">
+                                <span class="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0 bg-gray-100">🖨️</span>
+                                <div>
+                                    <p class="text-xs font-bold text-gray-700">{% trans "Imprimer" %}</p>
+                                    <p class="text-xs text-gray-400">{% trans "Aperçu exact · A4" %}</p>
+                                </div>
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Layout sidebar + contenu -->
+        <div class="flex">
+
+                <!-- Sidebar onglets -->
+                <div class="lb-sidebar">
+                    <div class="flex flex-col pt-2 pb-6 gap-0.5 px-2">
+
+                        <button type="button" @click="activeSection='expediteur'"
+                                class="lb-tab-btn" :class="activeSection==='expediteur' ? 'active' : ''">
+                            <span class="lb-tab-icon">👤</span>
+                            <span class="lb-tab-label">{% trans "Coordonnées" %}</span>
+                        </button>
+
+                        <button type="button" @click="activeSection='destinataire'"
+                                class="lb-tab-btn" :class="activeSection==='destinataire' ? 'active' : ''">
+                            <span class="lb-tab-icon">🏢</span>
+                            <span class="lb-tab-label">{% trans "Destinataire" %}</span>
+                        </button>
+
+                        <button type="button" @click="activeSection='date'"
+                                class="lb-tab-btn" :class="activeSection==='date' ? 'active' : ''">
+                            <span class="lb-tab-icon">📅</span>
+                            <span class="lb-tab-label">{% trans "Date &amp; Objet" %}</span>
+                        </button>
+
+                        <button type="button" @click="activeSection='corps'"
+                                class="lb-tab-btn" :class="activeSection==='corps' ? 'active' : ''">
+                            <span class="lb-tab-icon">✍️</span>
+                            <span class="lb-tab-label">{% trans "Corps" %}</span>
+                        </button>
+
+                        <button type="button" @click="activeSection='formule'"
+                                class="lb-tab-btn" :class="activeSection==='formule' ? 'active' : ''">
+                            <span class="lb-tab-icon">🤝</span>
+                            <span class="lb-tab-label">{% trans "Formule" %}</span>
+                        </button>
+
+                    </div>
+                </div>
+
+                <!-- Zone de contenu -->
+                <div class="lb-content-area">
+
+                    <!-- §1 Coordonnées -->
+                    <div x-show="activeSection==='expediteur'" x-transition.duration.150ms class="lb-section-panel space-y-3">
+                        <div class="lb-section-title">
+                            <span>👤</span>
+                            <p class="text-sm font-bold text-gray-800">{% trans "Vos coordonnées" %}</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">{% trans "Nom de la lettre" %} <span class="text-gray-400 font-normal">({% trans "identifiant interne" %})</span></label>
+                            <input type="text" class="fi" x-model="nomLettre" placeholder="{% trans "Ex : Candidature Orange CI — Juin 2026" %}">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">{% trans "Prénom" %}</label>
+                                <input type="text" class="fi" x-model="prenom" placeholder="{% trans "Jean" %}">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">{% trans "Nom" %}</label>
+                                <input type="text" class="fi" x-model="nom" placeholder="{% trans "KOUAMÉ" %}" @input="nom = nom.toUpperCase()">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">{% trans "Adresse" %}</label>
+                            <input type="text" class="fi" x-model="adresse" placeholder="{% trans "12 Rue des Palmiers, Cocody" %}">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">{% trans "Code postal" %}</label>
+                                <input type="text" class="fi" x-model="codePostal" placeholder="{% trans "01 BP 1234" %}">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">{% trans "Ville" %}</label>
+                                <div class="relative"
+                                     x-data="cbx({ url: '{% url 'referentiel:api_villes' %}', k: 'nomVille', s: 'region', v: ville })"
+                                     x-init="$watch('q', v => ville = v)"
+                                     @cbxpick="ville = $event.detail.val">
+                                    <input type="text" x-model="q"
+                                           @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)"
+                                           placeholder="{% trans "Abidjan…" %}" class="fi w-full pr-7" autocomplete="off">
+                                    <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                                    <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                                        <template x-for="(o,i) in sh" :key="o.id">
+                                            <button type="button" @mousedown.prevent="pick(o)"
+                                                    class="w-full px-3 py-2 text-sm text-left flex items-center justify-between"
+                                                    :class="i===hi ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-50'">
+                                                <span x-text="o.label"></span>
+                                                <span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-2"></span>
+                                            </button>
+                                        </template>
+                                        <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">{% trans "Téléphone" %}</label>
+                                <input type="tel" class="fi" x-model="telephone" placeholder="+225 07 00 00 00 00">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">{% trans "E-mail" %}</label>
+                                <input type="email" class="fi" x-model="email" placeholder="{% trans "jean@email.com" %}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- §2 Destinataire -->
+                    <div x-show="activeSection==='destinataire'" x-transition.duration.150ms class="lb-section-panel space-y-3">
+                        <div class="lb-section-title">
+                            <span>🏢</span>
+                            <p class="text-sm font-bold text-gray-800">{% trans "Destinataire" %}</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">{% trans "Titre" %}</label>
+                                <select class="fi fi-select" x-model="titreDestinataire">
+                                    <option>M.</option>
+                                    <option>{% trans "Mme" %}</option>
+                                    <option>{% trans "Dr." %}</option>
+                                    <option>{% trans "Pr." %}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">{% trans "Nom" %}</label>
+                                <input type="text" class="fi" x-model="nomDestinataire" placeholder="KONAN" @input="nomDestinataire = nomDestinataire.toUpperCase()">
+                            </div>
+                        </div>
+                        <!-- Poste du destinataire (cbx référentiel) -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">{% trans "Poste / Fonction" %}</label>
+                            <div class="relative"
+                                 x-data="cbx({ url: '{% url 'referentiel:api_postes' %}', k: 'nomPoste', v: posteDestinataire })"
+                                 x-init="$watch('q', v => posteDestinataire = v)"
+                                 @cbxpick="posteDestinataire = $event.detail.val; posteDestId = $event.detail.id">
+                                <input type="text" x-model="q"
+                                       @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)"
+                                       placeholder="{% trans "Directeur des Ressources Humaines…" %}" class="fi w-full pr-7" autocomplete="off">
+                                <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                                <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                                    <template x-for="(o,i) in sh" :key="o.id">
+                                        <button type="button" @mousedown.prevent="pick(o)"
+                                                class="w-full px-3 py-2 text-sm text-left"
+                                                :class="i===hi ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-50'"
+                                                x-text="o.label"></button>
+                                    </template>
+                                    <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Entreprise (cbx référentiel) -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">{% trans "Entreprise" %}</label>
+                            <div class="relative"
+                                 x-data="cbx({ url: '{% url 'referentiel:api_entreprises' %}', k: 'nomEntreprise', s: 'secteur', v: entreprise })"
+                                 x-init="$watch('q', v => entreprise = v)"
+                                 @cbxpick="entreprise = $event.detail.val; entrepriseId = $event.detail.id">
+                                <input type="text" x-model="q"
+                                       @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)"
+                                       placeholder="{% trans "Orange CI…" %}" class="fi w-full pr-7" autocomplete="off">
+                                <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                                <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                                    <template x-for="(o,i) in sh" :key="o.id">
+                                        <button type="button" @mousedown.prevent="pick(o)"
+                                                class="w-full px-3 py-2 text-sm text-left flex items-center justify-between"
+                                                :class="i===hi ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-50'">
+                                            <span x-text="o.label"></span>
+                                            <span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-2"></span>
+                                        </button>
+                                    </template>
+                                    <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Pays + Ville entreprise (cascade) -->
+                        <div class="grid grid-cols-2 gap-2" data-loc-row>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">{% trans "Pays" %}</label>
+                                <div class="relative" data-loc="pays-ent"
+                                     x-data="cbx({ url: '{% url 'referentiel:api_pays' %}', k: 'nomPays', v: paysNom })"
+                                     x-init="$watch('q', v => paysNom = v)"
+                                     @cbxpick="paysNom = $event.detail.val; paysId = $event.detail.id;
+                                               const ve = $el.closest('[data-loc-row]')?.querySelector('[data-loc=ville-ent]');
+                                               if(ve){ const s = Alpine.$data(ve); if(s) s.reload('{% url 'referentiel:api_villes' %}?pays_id=' + $event.detail.id); }">
+                                    <input type="text" x-model="q"
+                                           @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)"
+                                           placeholder="{% trans "Côte d'Ivoire…" %}" class="fi w-full pr-7" autocomplete="off">
+                                    <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                                    <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                                        <template x-for="(o,i) in sh" :key="o.id">
+                                            <button type="button" @mousedown.prevent="pick(o)"
+                                                    class="w-full px-3 py-2 text-sm text-left"
+                                                    :class="i===hi ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-50'"
+                                                    x-text="o.label"></button>
+                                        </template>
+                                        <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">{% trans "Ville" %}</label>
+                                <div class="relative" data-loc="ville-ent"
+                                     x-data="cbx({ url: '{% url 'referentiel:api_villes' %}', k: 'nomVille', s: 'region', v: villeEntreprise })"
+                                     x-init="$watch('q', v => villeEntreprise = v);
+                                             $nextTick(() => { if(paysId) reload('{% url 'referentiel:api_villes' %}?pays_id=' + paysId, true); else if(paysNom) reload('{% url 'referentiel:api_villes' %}?pays_nom=' + encodeURIComponent(paysNom), true); })"
+                                     @cbxpick="villeEntreprise = $event.detail.val; villeEntrepriseId = $event.detail.id">
+                                    <input type="text" x-model="q"
+                                           @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)"
+                                           placeholder="{% trans "Abidjan…" %}" class="fi w-full pr-7" autocomplete="off">
+                                    <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                                    <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                                        <template x-for="(o,i) in sh" :key="o.id">
+                                            <button type="button" @mousedown.prevent="pick(o)"
+                                                    class="w-full px-3 py-2 text-sm text-left flex items-center justify-between"
+                                                    :class="i===hi ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-50'">
+                                                <span x-text="o.label"></span>
+                                                <span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-2"></span>
+                                            </button>
+                                        </template>
+                                        <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- §3 Date & Objet -->
+                    <div x-show="activeSection==='date'" x-transition.duration.150ms class="lb-section-panel space-y-3">
+                        <div class="lb-section-title">
+                            <span>📅</span>
+                            <p class="text-sm font-bold text-gray-800">{% trans "Date &amp; Objet" %}</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">{% trans "Lieu" %}</label>
+                                <div class="relative" x-data="cbx({ url: '{% url 'referentiel:api_villes' %}', k: 'nomVille', s: 'region', v: lieu })" @cbxpick="lieu=$event.detail.val" x-init="$watch('q', v => lieu = v)">
+                                    <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" placeholder="{% trans "Abidjan…" %}" class="fi w-full pr-7" autocomplete="off">
+                                    <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                                    <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                                        <template x-for="(o,i) in sh" :key="o.id">
+                                            <button type="button" @mousedown.prevent="pick(o)" class="w-full px-3 py-2 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'">
+                                                <span x-text="o.label"></span>
+                                                <span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-2"></span>
+                                            </button>
+                                        </template>
+                                        <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">{% trans "Date" %}</label>
+                                <input type="date" class="fi" x-model="dateRaw">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">{% trans "Objet de la lettre" %}</label>
+                            <input type="text" class="fi" x-model="objet" placeholder="{% trans "Candidature au poste de…" %}">
+                            <p class="text-xs text-gray-400 mt-1">{% trans "Ex : Candidature au poste de Développeur Full Stack" %}</p>
+                        </div>
+                    </div>
+
+                    <!-- §4 Corps de la lettre -->
+                    <div x-show="activeSection==='corps'" x-transition.duration.150ms class="lb-section-panel space-y-3">
+                        <div class="lb-section-title">
+                            <span>✍️</span>
+                            <p class="text-sm font-bold text-gray-800">{% trans "Corps de la lettre" %}</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">{% trans "Contenu de la lettre" %}</label>
+                            <textarea class="fi" x-model="corps"
+                                      placeholder="{% trans "Je me permets de vous adresser ma candidature pour le poste de…&#10;&#10;Titulaire d'un… je dispose de… ans d'expérience…&#10;&#10;[Entreprise] est reconnue pour… Ce qui me motive particulièrement…&#10;&#10;Mon expérience en… me permettrait de contribuer à…" %}"
+                                      rows="14" style="resize:vertical;min-height:200px;font-family:inherit;line-height:1.6;white-space:pre-wrap"></textarea>
+                            <p class="text-xs text-gray-400 mt-1">{% trans "Rédigez votre lettre librement. Utilisez des sauts de ligne pour séparer les paragraphes." %}</p>
+                        </div>
+                    </div>
+
+                    <!-- §5 Formule de politesse -->
+                    <div x-show="activeSection==='formule'" x-transition.duration.150ms class="lb-section-panel space-y-3">
+                        <div class="lb-section-title">
+                            <span>🤝</span>
+                            <p class="text-sm font-bold text-gray-800">{% trans "Formule de politesse" %}</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">{% trans "Formule (utilisez [titre] et [nom])" %}</label>
+                            <textarea class="fi" x-model="formuleConge" rows="3" style="resize:vertical;min-height:72px;font-family:inherit;line-height:1.6"></textarea>
+                            <p class="text-xs text-gray-400 mt-1" x-text="'Aperçu : ' + formuleFull"></p>
+                        </div>
+                        <div class="flex gap-2 flex-wrap">
+                            <button type="button"
+                                    class="text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:border-orange-400 hover:text-orange-600 transition"
+                                    @click="formuleConge = 'Veuillez agréer, [titre] [nom], l\'expression de mes salutations distinguées.'">{% trans "Classique" %}</button>
+                            <button type="button"
+                                    class="text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:border-orange-400 hover:text-orange-600 transition"
+                                    @click="formuleConge = 'Dans l\'attente de votre réponse, je vous prie d\'agréer, [titre] [nom], l\'expression de ma considération distinguée.'">{% trans "Longue" %}</button>
+                            <button type="button"
+                                    class="text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:border-orange-400 hover:text-orange-600 transition"
+                                    @click="formuleConge = 'Cordialement,'">{% trans "Courte" %}</button>
+                        </div>
+                    </div>
+
+                </div><!-- /lb-content-area -->
+            </div><!-- /flex sidebar+contenu -->
+    </div><!-- /lb-form-panel -->
+
+    <!-- ══ PRÉVISUALISATION (= .preview-panel) ════════════════════════════════ -->
+    <div class="lb-preview-panel">
+            <div class="lb-preview-outer" id="lbOuter">
+                <div class="lb-preview-inner" id="lbInner" :class="'skin-' + (hoverSkin || selectedSkin)">
+
+                    <!-- Famille : bandeau latéral persistant -->
+                    <template x-if="familleActuelle() === 'sidebar'">
+                    <div class="lp-family-sidebar">
+                    <div class="lp-wrap">
+                        <div class="lp-side">
+                            <div class="lp-side-name" x-text="(prenom + ' ' + nom).trim() || 'Prénom NOM'"></div>
+                            <div class="lp-side-block">
+                                <div class="lp-side-item" x-show="email" x-text="email"></div>
+                                <div class="lp-side-item" x-show="telephone" x-text="telephone"></div>
+                                <div class="lp-side-item" x-show="adresse" x-text="adresse"></div>
+                                <div class="lp-side-item" x-show="codePostal || ville" x-text="(codePostal + ' ' + ville).trim()"></div>
+                            </div>
+                        </div>
+                        <div class="lp-body">
+                            <div class="lp-date" x-text="(lieu || 'Abidjan') + ', le ' + (date || '...')"></div>
+                            <div class="lp-recipient">
+                                <div class="lp-rcp-name" x-text="(titreDestinataire + ' ' + (nomDestinataire || '...')).trim()"></div>
+                                <div class="lp-rcp-fn" x-show="posteDestinataire" x-text="posteDestinataire"></div>
+                                <div x-show="entreprise" x-text="entreprise" style="font-weight:600;"></div>
+                                <div class="lp-rcp-city" x-show="villeEntreprise" x-text="villeEntreprise"></div>
+                            </div>
+                            <div class="lp-objet" x-show="objet">
+                                <span class="lp-objet-lbl">{% trans "Objet :" %} </span><span x-text="objet"></span>
+                            </div>
+                            <div class="lp-letter">
+                                <p class="lp-salut" x-text="salutation + ','"></p>
+                                <p class="lp-para" x-show="corps" x-text="corps" style="white-space:pre-wrap"></p>
+                                <p class="lp-formule" x-text="formuleFull"></p>
+                            </div>
+                            <div class="lp-sig" x-text="(prenom + ' ' + nom).trim() || 'Prénom NOM'"></div>
+                        </div>
+                    </div>
+                    </div>
+                    </template>
+
+                    <!-- Famille : accroche mise en avant -->
+                    <template x-if="familleActuelle() === 'accroche'">
+                    <div class="lp-family-accroche">
+                    <div class="lp-wrap">
+                        <div class="lp-top">
+                            <div class="lp-name" x-text="(prenom + ' ' + nom).trim() || 'Prénom NOM'"></div>
+                            <div class="lp-contact-row">
+                                <span x-show="email" x-text="email"></span>
+                                <span x-show="telephone" x-text="telephone"></span>
+                                <span x-show="ville" x-text="(codePostal + ' ' + ville).trim()"></span>
+                            </div>
+                        </div>
+                        <div class="lp-quote" x-show="objet" x-text="objet"></div>
+                        <div class="lp-main">
+                            <div class="lp-date" x-text="(lieu || 'Abidjan') + ', le ' + (date || '...')"></div>
+                            <div class="lp-recipient">
+                                <div class="lp-rcp-name" x-text="(titreDestinataire + ' ' + (nomDestinataire || '...')).trim()"></div>
+                                <div class="lp-rcp-fn" x-show="posteDestinataire" x-text="posteDestinataire"></div>
+                                <div x-show="entreprise" x-text="entreprise" style="font-weight:600;"></div>
+                                <div class="lp-rcp-city" x-show="villeEntreprise" x-text="villeEntreprise"></div>
+                            </div>
+                            <div class="lp-letter">
+                                <p class="lp-salut" x-text="salutation + ','"></p>
+                                <p class="lp-para" x-show="corps" x-text="corps" style="white-space:pre-wrap"></p>
+                                <p class="lp-formule" x-text="formuleFull"></p>
+                            </div>
+                            <div class="lp-sig" x-text="(prenom + ' ' + nom).trim() || 'Prénom NOM'"></div>
+                        </div>
+                    </div>
+                    </div>
+                    </template>
+
+                    <!-- Famille : carte encadrée -->
+                    <template x-if="familleActuelle() === 'carte'">
+                    <div class="lp-family-carte">
+                    <div class="lp-page">
+                    <div class="lp-wrap">
+                        <div class="lp-top">
+                            <div class="lp-sender">
+                                <div class="lp-name" x-text="(prenom + ' ' + nom).trim() || 'Prénom NOM'"></div>
+                                <div class="lp-contact" x-show="adresse" x-text="adresse"></div>
+                                <div class="lp-contact">
+                                    <span x-text="codePostal" x-show="codePostal"></span>
+                                    <span x-show="codePostal && ville"> </span>
+                                    <span x-text="ville" x-show="ville"></span>
+                                </div>
+                                <div class="lp-contact" x-show="telephone" x-text="telephone"></div>
+                                <div class="lp-contact" x-show="email" x-text="email"></div>
+                            </div>
+                        </div>
+                        <div class="lp-main">
+                            <div class="lp-date" x-text="(lieu || 'Abidjan') + ', le ' + (date || '...')"></div>
+                            <div class="lp-recipient">
+                                <div class="lp-rcp-name" x-text="(titreDestinataire + ' ' + (nomDestinataire || '...')).trim()"></div>
+                                <div class="lp-rcp-fn" x-show="posteDestinataire" x-text="posteDestinataire"></div>
+                                <div x-show="entreprise" x-text="entreprise" style="font-weight:600;"></div>
+                                <div class="lp-rcp-city" x-show="villeEntreprise" x-text="villeEntreprise"></div>
+                            </div>
+                            <div class="lp-objet" x-show="objet">
+                                <span class="lp-objet-lbl">{% trans "Objet :" %} </span><span x-text="objet"></span>
+                            </div>
+                            <div class="lp-letter">
+                                <p class="lp-salut" x-text="salutation + ','"></p>
+                                <p class="lp-para" x-show="corps" x-text="corps" style="white-space:pre-wrap"></p>
+                                <p class="lp-formule" x-text="formuleFull"></p>
+                            </div>
+                            <div class="lp-sig" x-text="(prenom + ' ' + nom).trim() || 'Prénom NOM'"></div>
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                    </template>
+
+                    <!-- Famille : classique (bloc unique) — repli par défaut -->
+                    <template x-if="familleActuelle() !== 'sidebar' && familleActuelle() !== 'accroche' && familleActuelle() !== 'carte'">
+                    <div class="lp-wrap">
+                        <div class="lp-top">
+                            <div class="lp-sender">
+                                <div class="lp-name" x-text="(prenom + ' ' + nom).trim() || 'Prénom NOM'"></div>
+                                <div class="lp-contact" x-show="adresse" x-text="adresse"></div>
+                                <div class="lp-contact">
+                                    <span x-text="codePostal" x-show="codePostal"></span>
+                                    <span x-show="codePostal && ville"> </span>
+                                    <span x-text="ville" x-show="ville"></span>
+                                </div>
+                                <div class="lp-contact" x-show="telephone" x-text="telephone"></div>
+                                <div class="lp-contact" x-show="email" x-text="email"></div>
+                            </div>
+                        </div>
+                        <div class="lp-main">
+                            <div class="lp-date" x-text="(lieu || 'Abidjan') + ', le ' + (date || '...')"></div>
+                            <div class="lp-recipient">
+                                <div class="lp-rcp-name" x-text="(titreDestinataire + ' ' + (nomDestinataire || '...')).trim()"></div>
+                                <div class="lp-rcp-fn" x-show="posteDestinataire" x-text="posteDestinataire"></div>
+                                <div x-show="entreprise" x-text="entreprise" style="font-weight:600;"></div>
+                                <div class="lp-rcp-city" x-show="villeEntreprise" x-text="villeEntreprise"></div>
+                            </div>
+                            <div class="lp-objet" x-show="objet">
+                                <span class="lp-objet-lbl">{% trans "Objet :" %} </span><span x-text="objet"></span>
+                            </div>
+                            <div class="lp-letter">
+                                <p class="lp-salut" x-text="salutation + ','"></p>
+                                <p class="lp-para" x-show="corps" x-text="corps" style="white-space:pre-wrap"></p>
+                                <p class="lp-formule" x-text="formuleFull"></p>
+                            </div>
+                            <div class="lp-sig" x-text="(prenom + ' ' + nom).trim() || 'Prénom NOM'"></div>
+                        </div>
+                    </div>
+                    </template>
+
+                </div>
+            </div>
+            <div class="lb-preview-label">{% trans "A4 · Aperçu en temps réel" %}</div>
+        </div><!-- /lb-preview-panel -->
+
+    <!-- ══ MODAL SÉLECTEUR DE MODÈLE — identique à l'éditeur CV ══════════════ -->
+    <div x-show="switcherOpen"
+         x-cloak
+         x-transition
+         @click="switcherOpen = false; hoverSkin = null"
+         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+         style="background:rgba(0,0,0,.55);padding-right:56vw">
+        <div @click.stop class="bg-white rounded-2xl shadow-2xl w-full flex flex-col" style="max-width:720px;max-height:85vh">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+                <div>
+                    <h3 class="text-base font-bold text-gray-800">{% trans "Choisir un modèle" %}</h3>
+                    <p class="text-xs text-gray-400 mt-0.5">{% trans "Vos données sont conservées lors du changement" %}</p>
+                </div>
+                <button @click="switcherOpen = false; hoverSkin = null"
+                        class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition text-sm font-bold">✕</button>
+            </div>
+
+            <!-- Hint survol -->
+            <div class="px-5 py-2 flex items-center gap-1.5 border-b border-gray-50">
+                <svg class="w-3.5 h-3.5 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+                <span class="text-xs text-gray-400">{% trans "Survolez un modèle pour voir l'aperçu en direct · Cliquez pour confirmer" %}</span>
+            </div>
+
+            <!-- Grille des modèles -->
+            <div class="overflow-y-auto p-4">
+                <div class="grid grid-cols-4 gap-3" @mouseleave="hoverSkin = null">
+                    {% for m in modeles %}
+                    <button type="button"
+                            @mouseenter="if ('{{ m.slug }}' !== selectedSkin) hoverSkin = '{{ m.slug }}'"
+                            @click="selectTemplate(modeles.find(x => {% trans "x.slug === '" %}{{ m.slug }}')); switcherOpen = false; hoverSkin = null"
+                            class="relative rounded-xl overflow-hidden border-2 text-left transition"
+                            :class="'{{ m.slug }}' === selectedSkin
+                                ? 'border-orange-400 ring-2 ring-orange-100'
+                                : (hoverSkin === '{{ m.slug }}'
+                                    ? 'border-blue-400 ring-2 ring-blue-100 shadow-lg -translate-y-0.5'
+                                    : 'border-gray-200 hover:border-gray-300 hover:shadow-md hover:-translate-y-0.5')">
+                        {% if m.apercu %}
+                        <img src="{{ m.apercu.url }}" alt="{{ m.nom }}"
+                             class="w-full object-cover object-top" style="height:72px;display:block">
+                        {% else %}
+                        <div class="h-10 flex items-center px-2.5 gap-1.5"
+                             style="background:{{ m.couleur }}{% if m.couleur == '#ffffff' %};border-bottom:1px solid #e5e7eb{% endif %}">
+                            <div class="w-5 h-5 rounded-full flex-shrink-0"
+                                 style="background:rgba(255,255,255,.25);border:1.5px solid rgba(255,255,255,.5)"></div>
+                            <div>
+                                <div class="rounded-full" style="width:36px;height:5px;background:rgba(255,255,255,.7);margin-bottom:3px"></div>
+                                <div class="rounded-full" style="width:22px;height:3px;background:rgba(255,255,255,.4)"></div>
+                            </div>
+                        </div>
+                        <div class="flex gap-1 px-1.5 py-1.5" style="background:#f8f9fa">
+                            <div class="space-y-1" style="width:35%">
+                                <div class="rounded" style="height:3px;background:#d1d5db"></div>
+                                <div class="rounded" style="height:3px;background:#e5e7eb;width:80%"></div>
+                                <div class="rounded" style="height:3px;background:#e5e7eb;width:60%"></div>
+                            </div>
+                            <div class="flex-1 space-y-1">
+                                <div class="rounded" style="height:3px;background:#d1d5db"></div>
+                                <div class="rounded" style="height:3px;background:#e5e7eb;width:85%"></div>
+                                <div class="rounded" style="height:3px;background:#e5e7eb;width:70%"></div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div class="px-2 py-1.5 bg-white border-t border-gray-100">
+                            <p class="text-xs font-bold text-gray-800 truncate leading-tight">{{ m.nom }}</p>
+                            <p class="truncate text-gray-400" style="font-size:9px">{{ m.categorie|default:"" }}</p>
+                        </div>
+                        <!-- Badge actif -->
+                        <template x-if="'{{ m.slug }}' === selectedSkin && hoverSkin !== '{{ m.slug }}'">
+                            <div class="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold" style="font-size:10px">✓</div>
+                        </template>
+                        <!-- Badge survol -->
+                        <template x-if="hoverSkin === '{{ m.slug }}'">
+                            <div class="absolute top-1.5 right-1.5 flex items-center gap-0.5 bg-blue-500 text-white rounded-full" style="padding:2px 7px;font-size:9px;font-weight:700;line-height:1.4">👁 Aperçu</div>
+                        </template>
+                        {% if m.premium %}
+                        <div class="absolute top-1.5 left-1.5 rounded" style="background:#f59e0b;color:#78350f;font-size:8px;font-weight:700;padding:1px 6px">★ Pro</div>
+                        {% endif %}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div><!-- /lb-root -->
+{% endblock %}
+
+
+{% block js_extra %}
+<script>
+const INNER_W = 794;
+function adjustScale() {
+    const panel = document.querySelector('.lb-preview-panel');
+    const inner = document.getElementById('lbInner');
+    if (!panel || !inner) return;
+    // Largeur disponible = panneau - padding latéral (16px × 2)
+    const availW = panel.clientWidth - 32;
+    if (!availW) return;
+    // zoom basé sur la largeur uniquement → scroll vertical pour voir le bas
+    // zoom (pas transform) = rendu pixel-perfect, texte net à toutes résolutions
+    const z = Math.min(1, availW / INNER_W);
+    inner.style.zoom = z;
+}
+window.addEventListener('resize', adjustScale);
+requestAnimationFrame(() => requestAnimationFrame(adjustScale));
+document.addEventListener('alpine:initialized', () => requestAnimationFrame(adjustScale));
+
+
+function lettreBuilder() {
+    const FIELDS = [
+        'prenom','nom','adresse','codePostal','ville',
+        'email','telephone',
+        'titreDestinataire','nomDestinataire',
+        'posteDestinataire','posteDestId',
+        'entreprise','entrepriseId',
+        'paysNom','paysId',
+        'villeEntreprise','villeEntrepriseId',
+        'lieu','dateRaw','objet',
+        'corps',
+        'formuleConge','selectedSkin',
+        'nomLettre','lettreId',
+    ];
+
+    return {
+        prenom: '', nom: '',
+        adresse: '', codePostal: '', ville: 'Abidjan',
+        email: '', telephone: '',
+        titreDestinataire: 'M.', nomDestinataire: '',
+        posteDestinataire: '', posteDestId: null,
+        entreprise: '', entrepriseId: null,
+        paysNom: '', paysId: null,
+        villeEntreprise: '', villeEntrepriseId: null,
+        lieu: '',
+        dateRaw: '', objet: '',
+        corps: '',
+        formuleConge: "Veuillez agréer, [titre] [nom], l'expression de mes salutations distinguées.",
+        nomLettre: '', lettreId: null,
+        selectedSkin: '{{ modele.slug }}',
+        selectedTemplate: null,
+        modeles: [],
+        activeSection: 'expediteur',
+        downloading: false,
+        saved: false,
+        switcherOpen: false,
+        hoverSkin: null,
+        dlOpen: false,
+        dlStyle: '',
+        saving: false,
+        saveMessage: '',
+
+        init() {
+            try {
+                const raw = document.getElementById('lm-modeles-data');
+                if (raw) {
+                    let v = JSON.parse(raw.textContent);
+                    this.modeles = typeof v === 'string' ? JSON.parse(v) : v;
+                }
+            } catch(e) {}
+            this.selectedTemplate = this.modeles.find(m => m.slug === this.selectedSkin) || this.modeles[0];
+            if (this.selectedTemplate) this.selectedSkin = this.selectedTemplate.slug;
+            this.dateRaw = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+            // Chargement depuis la BD (mode édition d'une lettre existante)
+            let loadedFromDb = false;
+            try {
+                const rawInit = document.getElementById('lm-lettre-initial');
+                if (rawInit) {
+                    const li = JSON.parse(rawInit.textContent);
+                    if (li && li.lettreId) {
+                        this.lettreId        = li.lettreId;
+                        this.nomLettre       = li.nomLettre || '';
+                        this.titreDestinataire = li.titreDestinataire || 'M.';
+                        this.nomDestinataire = li.nomDestinataire || '';
+                        this.posteDestinataire = li.posteDestinataire || '';
+                        this.posteDestId     = li.posteDestId || null;
+                        this.entreprise      = li.entreprise || '';
+                        this.entrepriseId    = li.entrepriseId || null;
+                        this.paysNom         = li.paysNom || '';
+                        this.paysId          = li.paysId || null;
+                        this.villeEntreprise = li.villeEntreprise || '';
+                        this.villeEntrepriseId = li.villeEntrepriseId || null;
+                        if (li.lieu)       this.lieu      = li.lieu;
+                        if (li.dateLettre) this.dateRaw   = li.dateLettre;
+                        this.objet           = li.objet || '';
+                        this.corps           = li.corps || '';
+                        if (li.formuleConge) this.formuleConge = li.formuleConge;
+                        const tm = this.modeles.find(m => m.slug === this.selectedSkin);
+                        if (tm) this.selectedTemplate = tm;
+                        loadedFromDb = true;
+                    }
+                }
+            } catch(e) {}
+
+            if (!loadedFromDb) {
+                this.lettreId = null;
+                // Restaurer le brouillon si la page a été actualisée
+                try {
+                    const draft = localStorage.getItem('lettremo_draft');
+                    if (draft) {
+                        const d = JSON.parse(draft);
+                        FIELDS.forEach(f => {
+                            if (f !== 'lettreId' && d[f] !== undefined && d[f] !== null && d[f] !== '') {
+                                this[f] = d[f];
+                            }
+                        });
+                        this.lettreId = null; // sécurité
+                    }
+                } catch(e) {}
+            }
+            // dateRaw ne doit jamais être vide
+            if (!this.dateRaw) this.dateRaw = new Date().toISOString().split('T')[0];
+
+            // Pré-remplir les champs encore vides avec les infos du compte candidat
+            try {
+                const rawCdt = document.getElementById('lm-candidat-data');
+                if (rawCdt) {
+                    const cd = JSON.parse(rawCdt.textContent);
+                    const fill = (f, v) => { if (!this[f] && v) this[f] = v; };
+                    fill('prenom',    cd.prenom);
+                    fill('nom',       cd.nom);
+                    fill('email',     cd.email);
+                    fill('telephone', cd.telephone);
+                    fill('adresse',   cd.adresse);
+                    fill('codePostal',cd.codePostal);
+                    fill('ville',     cd.ville);
+                    // lieu par défaut = ville du candidat
+                    fill('lieu',      cd.ville);
+                }
+            } catch(e) {}
+
+            FIELDS.forEach(f => this.$watch(f, () => this.autosave()));
+            this.$nextTick(() => adjustScale());
+        },
+
+        get date() {
+            if (!this.dateRaw) return '';
+            const d = new Date(this.dateRaw + 'T00:00:00');
+            return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+        },
+
+        get salutation() {
+            const map = {
+                'M.': 'Monsieur', 'M': 'Monsieur',
+                'Mme': 'Madame', 'Mme.': 'Madame',
+                'Dr.': 'Docteur', 'Pr.': 'Professeur',
+            };
+            return map[this.titreDestinataire] || this.titreDestinataire;
+        },
+
+        get formuleFull() {
+            const dest = (this.titreDestinataire + ' ' + (this.nomDestinataire || '...')).trim();
+            return this.formuleConge
+                .replace('[titre]', this.salutation)
+                .replace('[nom]', dest);
+        },
+
+        selectTemplate(m) {
+            if (m.premium) return;
+            this.selectedTemplate = m;
+            this.selectedSkin = m.slug;
+            this.$nextTick(() => adjustScale());
+        },
+
+        familleActuelle() {
+            const m = this.modeles.find(x => x.slug === (this.hoverSkin || this.selectedSkin));
+            return m ? m.famille : 'classique';
+        },
+
+        autosave() {
+            // En mode modification (lettre existante en BD), on ne pollue pas le localStorage
+            if (this.lettreId) return;
+            try {
+                const data = {};
+                FIELDS.forEach(f => data[f] = this[f]);
+                localStorage.setItem('lettremo_draft', JSON.stringify(data));
+            } catch(e) {}
+        },
+
+        getLetterData() {
+            return {
+                prenom: this.prenom, nom: this.nom,
+                adresse: this.adresse, codePostal: this.codePostal,
+                ville: this.ville,
+                email: this.email, telephone: this.telephone,
+                titreDestinataire: this.titreDestinataire,
+                nomDestinataire: this.nomDestinataire,
+                posteDestinataire: this.posteDestinataire,
+                posteDestId: this.posteDestId,
+                entreprise: this.entreprise,
+                entrepriseId: this.entrepriseId,
+                paysNom: this.paysNom,
+                paysId: this.paysId,
+                villeEntreprise: this.villeEntreprise,
+                villeEntrepriseId: this.villeEntrepriseId,
+                lieu: this.lieu || this.ville,
+                date: this.date,
+                dateLettre: this.dateRaw,
+                objet: this.objet,
+                corps: this.corps,
+                formuleConge: this.formuleConge,
+                formuleFull: this.formuleFull,
+                nomLettre: this.nomLettre,
+                lettreId: this.lettreId,
+            };
+        },
+
+        async download(fmt) {
+            if (this.downloading) return;
+            this.downloading = fmt;
+            try {
+                const tmId = this.selectedTemplate ? this.selectedTemplate.id : {{ modele.id }};
+                const resp = await fetch(
+                    `/candidat/lettre/${tmId}/telecharger/${fmt}/`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(this.getLetterData()),
+                    }
+                );
+                if (!resp.ok) { alert('Erreur : ' + await resp.text()); return; }
+                const blob = await resp.blob();
+                const url  = URL.createObjectURL(blob);
+                const a    = document.createElement('a');
+                a.href     = url;
+                a.download = `Lettre-${(this.prenom + '-' + this.nom).trim() || 'ma-lettre'}.${fmt}`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch(e) {
+                alert('Erreur lors du téléchargement : ' + e.message);
+            } finally {
+                this.downloading = false;
+            }
+        },
+
+        dlToggle(e) {
+            this.dlOpen = !this.dlOpen;
+            if (this.dlOpen) {
+                const r = e.currentTarget.getBoundingClientRect();
+                this.dlStyle = `top:${r.bottom + 4}px;right:${window.innerWidth - r.right}px`;
+            }
+        },
+
+        async sauvegarderDraft() {
+            if (this.saving) return;
+            this.saving = true;
+            this.autosave();
+            try {
+                const resp = await fetch(
+                    '{% url "candidat:api_sauvegarder_lettre" modele.id %}',
+                    {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(this.getLetterData()),
+                    }
+                );
+                const result = await resp.json();
+                if (result.ok) {
+                    this.lettreId = result.lettreId;
+                    if (!this.nomLettre) this.nomLettre = result.nomLettre;
+                    try { localStorage.removeItem('lettremo_draft'); } catch(e) {}
+                    this.saveMessage = '✓ Sauvegardée';
+                    try { sessionStorage.setItem('lettre_editor_returned', '1'); } catch(e) {}
+                } else {
+                    this.saveMessage = '⚠ ' + (result.error || 'Erreur');
+                }
+            } catch(e) {
+                this.saveMessage = '⚠ Erreur réseau';
+            }
+            setTimeout(() => { this.saving = false; }, 600);
+            clearTimeout(this._msgTimer);
+            this._msgTimer = setTimeout(() => this.saveMessage = '', 3000);
+        },
+
+        resetDraft() {
+            if (!confirm('Effacer le brouillon et recommencer ?')) return;
+            localStorage.removeItem('lettremo_draft');
+            location.reload();
+        },
+
+        printLetter() {
+            const inner = document.getElementById('lbInner');
+            if (!inner) return;
+            const skinClass = 'skin-' + (this.hoverSkin || this.selectedSkin);
+
+            // Extraire uniquement les règles CSS des skins lettre
+            let skinCss = '';
+            for (const sheet of document.styleSheets) {
+                try {
+                    for (const rule of sheet.cssRules) {
+                        const t = rule.cssText;
+                        if (t.includes('.lp-') || t.includes('.skin-')) skinCss += t + '\n';
+                    }
+                } catch(e) {}
+            }
+
+            const html = `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:794px;height:1123px;overflow:hidden;background:#fff;}
+@page{size:A4 portrait;margin:0;}
+${skinCss}
+</style></head>
+<body><div class="${skinClass}">${inner.innerHTML}</div></body></html>`;
+
+            const win = window.open('', '_blank');
+            win.document.write(html);
+            win.document.close();
+            win.addEventListener('load', () => { win.focus(); win.print(); setTimeout(() => win.close(), 800); });
+        },
+    };
+}
+</script>
+{% endblock %}

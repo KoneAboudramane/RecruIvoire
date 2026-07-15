@@ -1,0 +1,224 @@
+﻿{% extends "entreprise/base.html" %}
+{% load i18n %}
+
+{% block titre %}{{ modele.sujet_modele|truncatechars:50 }} — {% trans "Modèle de message" %}{% endblock %}
+
+{% block contenu %}
+<section class="mb-10 px-2 sm:px-6 lg:px-10">
+
+  {# ── Fil d'Ariane ── #}
+  <nav class="text-sm text-gray-500 mb-4 flex items-center gap-2 flex-wrap">
+    <a href="{% url 'entreprise:tableau_bord' %}" class="hover:underline">{% trans "Tableau de bord" %}</a>
+    <span>›</span>
+    <a href="{% url 'entreprise:modeles_messages' %}" class="hover:underline">{% trans "Modèles de message" %}</a>
+    <span>›</span>
+    <span class="text-gray-700 font-semibold truncate">{{ modele.sujet_modele|truncatechars:40 }}</span>
+  </nav>
+
+  {# ── En-tête + actions ── #}
+  <div class="bg-white rounded-2xl p-6 sm:p-8 border border-gray-100 shadow-sm mb-6">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div class="flex items-start gap-4 flex-1 min-w-0">
+        <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl shadow-md flex-shrink-0"
+             style="background:#c96010;">
+          ✉️
+        </div>
+        <div class="flex-1 min-w-0">
+          {# Badge contexte (statut OU type d'entretien) #}
+          <div class="flex flex-wrap items-center gap-2 mb-2">
+            {% if modele.statut %}
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white shadow-sm"
+                    style="background:{{ modele.statut.couleur|default:'#10b981' }};">
+                📨 {% if modele.statut.icone %}{{ modele.statut.icone }}{% endif %} {{ modele.statut.libelle }}
+              </span>
+              <span class="text-[10px] text-gray-400 uppercase tracking-wider">{% trans "Changement de statut" %}</span>
+            {% elif modele.typeEntretien %}
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white shadow-sm"
+                    style="background:#c96010;">
+                🤝 {% if modele.typeEntretien.icone %}{{ modele.typeEntretien.icone }}{% endif %} {{ modele.typeEntretien.libelle }}
+              </span>
+              <span class="text-[10px] text-gray-400 uppercase tracking-wider">{% trans "Planification d'entretien" %}</span>
+            {% endif %}
+            {% if modele.est_actif %}
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-50 text-green-700">✓ {% trans "Actif" %}</span>
+            {% else %}
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">⏸ {% trans "Inactif" %}</span>
+            {% endif %}
+          </div>
+          <h1 class="text-xl sm:text-2xl font-extrabold text-gray-800 leading-snug">
+            {{ modele.sujet_modele }}
+          </h1>
+          <p class="text-xs text-gray-400 mt-2">
+            {% trans "Créé le" %} {{ modele.date_creation|date:"d M Y, H:i" }}
+            {% if modele.creePar %} · {% trans "par" %} {{ modele.creePar.nomComplet|default:modele.creePar.email }}{% endif %}
+            · {% trans "Dernière modification" %} {{ modele.date_modification|date:"d M Y, H:i" }}
+          </p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
+        <a href="{% url 'entreprise:modeles_messages' %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition">
+          ← {% trans "Liste" %}
+        </a>
+        {% if peut_modifier %}
+        <a href="{% url 'entreprise:modele_message_modifier' modele.pk %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white shadow-sm hover:shadow transition"
+           style="background:#2e7d52;">
+          ✏️ {% trans "Modifier" %}
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ── Aperçu du message (sujet + corps) ── #}
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5"
+       x-data="{
+           preview: false,
+           prenom: 'Konan',
+           nom: 'Adjoumani',
+           offre: 'Développeur Full Stack',
+           date: '15/06/2025',
+           heure: '10h00',
+           sujet: `{{ modele.sujet_modele|escapejs }}`,
+           corps: `{{ modele.corps_message|escapejs }}`,
+           get sujetRendu() {
+               return this.sujet
+                   .replace(/\{\{[ ]*candidat\.prenom[ ]*\}\}/g, this.prenom)
+                   .replace(/\{\{[ ]*candidat\.nom[ ]*\}\}/g, this.nom)
+                   .replace(/\{\{[ ]*offre\.titre[ ]*\}\}/g, this.offre)
+                   .replace(/\{\{[ ]*entretien\.date[ ]*\}\}/g, this.date)
+                   .replace(/\{\{[ ]*entretien\.heure[ ]*\}\}/g, this.heure);
+           },
+           get corpsRendu() {
+               return this.corps
+                   .replace(/\{\{[ ]*candidat\.prenom[ ]*\}\}/g, this.prenom)
+                   .replace(/\{\{[ ]*candidat\.nom[ ]*\}\}/g, this.nom)
+                   .replace(/\{\{[ ]*offre\.titre[ ]*\}\}/g, this.offre)
+                   .replace(/\{\{[ ]*entretien\.date[ ]*\}\}/g, this.date)
+                   .replace(/\{\{[ ]*entretien\.heure[ ]*\}\}/g, this.heure);
+           }
+       }">
+
+    <div class="lg:col-span-2 space-y-5">
+
+      {# ── Bascule Brut / Aperçu ── #}
+      <div class="flex items-center gap-2 bg-white rounded-xl border border-gray-100 shadow-sm p-1 w-fit">
+        <button @click="preview = false"
+                :class="!preview ? 'bg-gray-800 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                class="px-4 py-1.5 rounded-lg text-xs font-bold transition">
+          📄 {% trans "Brut" %}
+        </button>
+        <button @click="preview = true"
+                :class="preview ? 'text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                class="px-4 py-1.5 rounded-lg text-xs font-bold transition"
+                :style="preview ? 'background:#c96010;' : ''">
+          👁 {% trans "Prévisualiser" %}
+        </button>
+      </div>
+
+      {# Variables de prévisualisation (visible si preview actif) #}
+      <div x-show="preview" x-cloak
+           class="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700/40 rounded-2xl p-4">
+        <p class="text-xs font-bold text-amber-800 dark:text-amber-300 mb-3">✏️ {% trans "Valeurs de test" %}</p>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">{% trans "Prénom" %}</label>
+            <input type="text" x-model="prenom"
+                   class="w-full text-xs border border-amber-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white">
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">{% trans "Nom" %}</label>
+            <input type="text" x-model="nom"
+                   class="w-full text-xs border border-amber-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white">
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">{% trans "Offre" %}</label>
+            <input type="text" x-model="offre"
+                   class="w-full text-xs border border-amber-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white">
+          </div>
+          {% if modele.typeEntretien %}
+          <div>
+            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">{% trans "Date" %}</label>
+            <input type="text" x-model="date"
+                   class="w-full text-xs border border-amber-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white">
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Sujet #}
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="px-5 py-3 bg-gray-50/60 dark:bg-slate-900/40 border-b border-gray-100">
+          <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">📝 {% trans "Sujet" %}</p>
+        </div>
+        <div class="p-5">
+          <p x-show="!preview" class="text-base font-bold text-gray-800 break-words">{{ modele.sujet_modele }}</p>
+          <p x-show="preview" x-cloak x-text="sujetRendu"
+             class="text-base font-bold text-gray-800 break-words"></p>
+        </div>
+      </div>
+
+      {# Corps #}
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="px-5 py-3 bg-gray-50/60 dark:bg-slate-900/40 border-b border-gray-100 flex items-center justify-between">
+          <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">📄 {% trans "Corps du message" %}</p>
+          <p x-show="!preview" class="text-[10px] text-gray-400 italic">{% trans "Les variables seront remplacées à l'envoi." %}</p>
+          <p x-show="preview" x-cloak class="text-[10px] font-bold" style="color:#c96010;">👁 {% trans "Aperçu avec valeurs de test" %}</p>
+        </div>
+        <div class="p-5">
+          <pre x-show="!preview"
+               class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">{{ modele.corps_message }}</pre>
+          <pre x-show="preview" x-cloak x-text="corpsRendu"
+               class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-sans leading-relaxed"></pre>
+        </div>
+      </div>
+    </div>
+
+    {# ── Panneau latéral : variables utilisées ── #}
+    <aside class="space-y-5">
+      <div class="bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-100 dark:border-amber-700/40 p-5">
+        <p class="text-xs font-bold text-amber-800 dark:text-amber-300 mb-3 flex items-center gap-1.5">
+          💡 {% trans "Aide à la lecture" %}
+        </p>
+        <ul class="text-xs text-gray-700 dark:text-gray-300 space-y-2 leading-relaxed">
+          <li>
+            <span class="font-mono bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded text-[11px]">{% templatetag openvariable %} candidat.prenom {% templatetag closevariable %}</span>
+            {% trans "→ remplacé par le prénom du destinataire" %}
+          </li>
+          <li>
+            <span class="font-mono bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded text-[11px]">{% templatetag openvariable %} offre.titre {% templatetag closevariable %}</span>
+            {% trans "→ titre de l'offre concernée" %}
+          </li>
+          {% if modele.typeEntretien %}
+          <li>
+            <span class="font-mono bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded text-[11px]">{% templatetag openvariable %} entretien.date {% templatetag closevariable %}</span>
+            {% trans "→ date de l'entretien planifié" %}
+          </li>
+          <li>
+            <span class="font-mono bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded text-[11px]">{% templatetag openvariable %} entretien.heure {% templatetag closevariable %}</span>
+            {% trans "→ heure de l'entretien planifié" %}
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+
+      {% if peut_modifier %}
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">⚠️ {% trans "Zone sensible" %}</p>
+        <form method="post" action="{% url 'entreprise:modele_message_supprimer' modele.pk %}"
+              onsubmit="return confirm('Supprimer le modèle « {{ modele.sujet_modele|escapejs }} » ?');">
+          {% csrf_token %}
+          <button type="submit"
+                  class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-red-600 bg-white hover:bg-red-50 border border-red-200 dark:border-red-700/40 transition">
+            🗑 {% trans "Supprimer ce modèle" %}
+          </button>
+        </form>
+      </div>
+      {% endif %}
+    </aside>
+  </div>
+
+</section>
+{% endblock %}

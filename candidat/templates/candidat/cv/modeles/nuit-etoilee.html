@@ -1,0 +1,740 @@
+{% extends "candidat/base.html" %}
+{% load i18n %}
+{% block titre %}Créer mon CV — {{ modele.nom }} · {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+{% include "candidat/cv/_form_styles.html" %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Raleway:wght@300;400;500;600&display=swap');
+
+/* ═══════════════════════════════════════════════════════
+   NUIT ÉTOILÉE — Indigo #1A1040 · Or #F2C94C · Lavande #F0EDF8
+   Cinzel (romaine gravée) · Halo doré · Ornements stellaires
+   Couleurs qui épatent · Calligraphique & Stylé
+═══════════════════════════════════════════════════════ */
+
+.cv-sheet-ne {
+  width: 794px;
+  min-height: 1123px;
+  background: #fff;
+  font-family: 'Raleway', 'Segoe UI', Arial, sans-serif;
+  font-size: 11.5px;
+  color: #1A1040;
+  box-shadow: 0 4px 32px rgba(0,0,0,.18);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Barre stellaire top ─────────────────────────── */
+.ne-starband {
+  height: 5px;
+  background: linear-gradient(to right,
+    #1A1040 0%, #7C3AED 20%, #F2C94C 50%, #7C3AED 80%, #1A1040 100%);
+  flex-shrink: 0;
+}
+
+/* ─── HEADER — nuit indigo ────────────────────────── */
+.ne-header {
+  background: #1A1040;
+  padding: 30px 38px 28px;
+  display: flex; align-items: center; gap: 28px;
+  flex-shrink: 0; position: relative; overflow: hidden;
+}
+/* Constellation décorative */
+.ne-header::before {
+  content: '✦  ·  ★  ·  ✦  ·  ·  ★  ·  ✦  ·  ★';
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  font-size: 9px; color: rgba(242,201,76,.2); letter-spacing: 6px;
+  white-space: nowrap; pointer-events: none;
+}
+.ne-header::after {
+  content: '·  ✦  ·  ★  ·  ✦  ·  ·  ★  ·  ✦  ·';
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+  font-size: 9px; color: rgba(242,201,76,.15); letter-spacing: 6px;
+  white-space: nowrap; pointer-events: none;
+}
+
+/* ─── Photo — halo doré rayonnant ─────────────────── */
+.ne-photo-halo {
+  width: 100px; height: 100px; border-radius: 50%;
+  border: 2px solid #F2C94C;
+  box-shadow:
+    0 0 0 5px rgba(242,201,76,.18),
+    0 0 0 10px rgba(242,201,76,.09),
+    0 0 28px rgba(242,201,76,.35);
+  overflow: hidden;
+  background: #0D0828;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 34px; color: rgba(242,201,76,.45);
+  flex-shrink: 0;
+}
+.ne-photo-halo img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+
+/* ─── Identité ────────────────────────────────────── */
+.ne-header-info { flex: 1; }
+.ne-prenom {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 9px; font-weight: 400;
+  color: rgba(255,255,255,.4);
+  letter-spacing: 5px; text-transform: uppercase;
+  margin-bottom: 5px;
+}
+.ne-nom {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 27px; font-weight: 900;
+  color: #F2C94C;
+  text-transform: uppercase;
+  letter-spacing: 4px; line-height: 1;
+  margin-bottom: 10px; word-break: break-word;
+  text-shadow: 0 0 30px rgba(242,201,76,.4);
+}
+.ne-titre-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 16px;
+}
+.ne-titre-star { color: #7C3AED; font-size: 10px; }
+.ne-titre {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 13px; font-weight: 400; font-style: italic;
+  color: rgba(255,255,255,.78); letter-spacing: .5px;
+}
+.ne-contacts { display: flex; flex-wrap: wrap; gap: 5px 16px; }
+.ne-contact {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 9.5px; color: rgba(255,255,255,.6);
+  font-family: 'Raleway', sans-serif;
+}
+.ne-contact-icon { color: #F2C94C; width: 13px; text-align: center; flex-shrink: 0; }
+
+/* ─── Séparateur or irisé ─────────────────────────── */
+.ne-divider {
+  height: 2px;
+  background: linear-gradient(to right,
+    #1A1040 0%, #7C3AED 15%, #F2C94C 40%, #fff 50%, #F2C94C 60%, #7C3AED 85%, #1A1040 100%);
+  flex-shrink: 0;
+}
+
+/* ─── Corps ───────────────────────────────────────── */
+.ne-body { display: flex; flex: 1; }
+
+/* ─── Colonne gauche — lavande ────────────────────── */
+.ne-col-left {
+  width: 36%;
+  background: #F0EDF8;
+  padding: 26px 18px 32px 22px;
+  border-right: 1px solid rgba(124,58,237,.2);
+  position: relative;
+}
+.ne-col-left::after {
+  content: '✦';
+  position: absolute; bottom: 20px; right: 16px;
+  font-size: 36px; color: rgba(124,58,237,.08);
+  pointer-events: none;
+}
+
+/* ─── Sections sidebar ────────────────────────────── */
+.ne-sb-sec { margin-bottom: 18px; }
+.ne-sb-hdr {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 11px;
+}
+.ne-sb-star { color: #7C3AED; font-size: 11px; flex-shrink: 0; }
+.ne-sb-title {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 8.5px; font-weight: 600;
+  color: #1A1040; letter-spacing: 2px; text-transform: uppercase;
+  flex: 1;
+}
+.ne-sb-line {
+  height: 1px;
+  background: linear-gradient(to right, rgba(124,58,237,.4), transparent);
+}
+
+/* ─── Profil ──────────────────────────────────────── */
+.ne-profil {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 12px; font-weight: 400; font-style: italic;
+  color: #3B2A6B; line-height: 1.72;
+}
+
+/* ─── Compétences ─────────────────────────────────── */
+.ne-skill { margin-bottom: 8px; }
+.ne-skill-name {
+  font-family: 'Raleway', sans-serif;
+  font-size: 10px; font-weight: 500; color: #1A1040;
+  margin-bottom: 3px;
+}
+.ne-skill-bar-bg {
+  height: 4px; background: rgba(26,16,64,.1);
+  border-radius: 2px; overflow: hidden;
+}
+.ne-skill-bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, #7C3AED, #F2C94C);
+  border-radius: 2px;
+}
+
+/* ─── Grille 2 colonnes ───────────────────────────── */
+.ne-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
+
+/* ─── Langues ─────────────────────────────────────── */
+.ne-lang { margin-bottom: 5px; }
+.ne-lang-head {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 3px;
+}
+.ne-lang-name {
+  font-family: 'Raleway', sans-serif;
+  font-size: 10px; font-weight: 500; color: #1A1040;
+}
+.ne-lang-badge {
+  font-family: 'Raleway', sans-serif;
+  font-size: 7px; font-weight: 700;
+  color: #fff; background: #1A1040;
+  padding: 1px 5px; border-radius: 2px;
+}
+.ne-lang-bar-bg { height: 3px; background: rgba(26,16,64,.1); border-radius: 2px; overflow: hidden; }
+.ne-lang-bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, #7C3AED, #F2C94C);
+  border-radius: 2px;
+}
+
+/* ─── Intérêts ────────────────────────────────────── */
+.ne-interest-item {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'Raleway', sans-serif;
+  font-size: 9.5px; color: #3B2A6B; padding: 2px 0;
+}
+.ne-interest-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: linear-gradient(135deg, #7C3AED, #F2C94C);
+  flex-shrink: 0;
+}
+
+/* ─── Certifications ──────────────────────────────── */
+.ne-certif {
+  margin-bottom: 8px; padding-bottom: 8px;
+  border-bottom: 1px solid rgba(124,58,237,.2);
+}
+.ne-certif:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.ne-certif-title {
+  font-family: 'Raleway', sans-serif;
+  font-size: 10px; font-weight: 600; color: #1A1040; margin-bottom: 2px;
+}
+.ne-certif-sub {
+  font-family: 'Raleway', sans-serif;
+  font-size: 9px; color: #6B5E9B;
+  display: flex; justify-content: space-between;
+}
+.ne-certif-year { color: #7C3AED; font-weight: 700; }
+
+/* ─── Colonne droite blanche ──────────────────────── */
+.ne-col-right {
+  flex: 1; background: #fff;
+  padding: 26px 28px 32px 22px;
+}
+
+/* ─── Sections principales ────────────────────────── */
+.ne-sec { margin-bottom: 22px; }
+.ne-sec-hdr {
+  display: flex; align-items: center; gap: 9px;
+  margin-bottom: 13px; padding-bottom: 7px;
+  border-bottom: 1px solid rgba(242,201,76,.4);
+  position: relative;
+}
+.ne-sec-hdr::after {
+  content: '';
+  position: absolute; bottom: -1px; left: 0;
+  width: 40px; height: 2px;
+  background: linear-gradient(to right, #7C3AED, #F2C94C);
+  border-radius: 2px;
+}
+.ne-sec-star { color: #F2C94C; font-size: 12px; flex-shrink: 0; }
+.ne-sec-title {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 10px; font-weight: 600;
+  color: #1A1040; letter-spacing: 2px; text-transform: uppercase;
+  flex: 1;
+}
+.ne-sec-dots {
+  font-size: 9px; color: rgba(124,58,237,.4);
+  letter-spacing: 2px;
+}
+
+/* ─── Entrées ─────────────────────────────────────── */
+.ne-entry {
+  margin-bottom: 14px;
+  padding-left: 14px;
+  border-left: 2px solid rgba(124,58,237,.25);
+  position: relative;
+}
+.ne-entry::before {
+  content: '★';
+  position: absolute; left: -10px; top: 2px;
+  font-size: 11px;
+  background: linear-gradient(135deg, #7C3AED, #F2C94C);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; line-height: 1;
+}
+.ne-entry-head {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; gap: 8px; margin-bottom: 3px;
+}
+.ne-entry-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 700; font-size: 13px;
+  color: #1A1040; line-height: 1.2;
+}
+.ne-entry-date {
+  font-family: 'Raleway', sans-serif;
+  font-size: 7.5px; font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #1A1040, #7C3AED);
+  padding: 2px 9px; border-radius: 20px;
+  white-space: nowrap; flex-shrink: 0; letter-spacing: .3px;
+}
+.ne-entry-org {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 11.5px; font-style: italic; font-weight: 600;
+  color: #7C3AED; margin-bottom: 4px;
+}
+.ne-entry-desc {
+  font-family: 'Raleway', sans-serif;
+  font-size: 10.5px; color: #3B2A6B; line-height: 1.68;
+}
+
+/* ─── Projets ─────────────────────────────────────── */
+.ne-proj {
+  margin-bottom: 9px; padding-bottom: 9px;
+  border-bottom: 1px dashed rgba(124,58,237,.2);
+}
+.ne-proj:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.ne-proj-head {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; gap: 8px; margin-bottom: 2px;
+}
+.ne-proj-name {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 700; font-size: 12px; color: #1A1040;
+}
+.ne-proj-year {
+  font-family: 'Raleway', sans-serif;
+  font-size: 9px; font-weight: 700; white-space: nowrap;
+  background: linear-gradient(135deg, #7C3AED, #F2C94C);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.ne-proj-desc {
+  font-family: 'Raleway', sans-serif;
+  font-size: 10.5px; color: #3B2A6B;
+}
+.ne-proj-link {
+  font-family: 'Raleway', sans-serif;
+  font-size: 9.5px; color: #6B5E9B; margin-top: 2px;
+}
+
+/* ─── Bénévolat ───────────────────────────────────── */
+.ne-benev {
+  margin-bottom: 9px; padding-bottom: 9px;
+  border-bottom: 1px dashed rgba(124,58,237,.2);
+}
+.ne-benev:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.ne-benev-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.ne-benev-role {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 700; font-size: 12px; color: #1A1040;
+}
+.ne-benev-date {
+  font-family: 'Raleway', sans-serif;
+  font-size: 9px; font-weight: 700; white-space: nowrap; color: #7C3AED;
+}
+.ne-benev-orga {
+  font-family: 'Raleway', sans-serif;
+  font-size: 10px; color: #6B5E9B; margin-top: 1px; font-style: italic;
+}
+
+/* ─── Références ──────────────────────────────────── */
+.ne-ref {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic; font-size: 12px; color: #6B5E9B;
+  padding: 10px 18px; text-align: center; letter-spacing: .3px;
+  background: linear-gradient(135deg, rgba(26,16,64,.03), rgba(124,58,237,.04));
+  border: 1px solid rgba(124,58,237,.2); border-radius: 4px;
+}
+
+/* ─── Footer ──────────────────────────────────────── */
+.ne-footer {
+  background: #1A1040;
+  text-align: center;
+  padding: 7px 0 6px;
+  font-family: 'Cinzel', serif;
+  font-size: 10px; color: rgba(242,201,76,.5);
+  letter-spacing: 8px;
+  flex-shrink: 0;
+}
+
+/* ─── Missions clients ────────────────────────────── */
+.cv-mc-section {
+  margin-top: 8px; padding: 7px 10px 7px 12px;
+  background: rgba(124,58,237,.05);
+  border-left: 3px solid #7C3AED;
+  border-radius: 0 4px 4px 0;
+}
+.cv-mc-label {
+  font-size: 7pt; font-weight: 700; color: #1A1040;
+  text-transform: uppercase; letter-spacing: .7px; margin-bottom: 6px;
+  font-family: 'Raleway', sans-serif;
+}
+.cv-mc-item {
+  margin-bottom: 6px; padding-bottom: 6px;
+  border-bottom: 1px dashed rgba(124,58,237,.2);
+}
+.cv-mc-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.cv-mc-hdr { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+.cv-mc-title { font-size: 9pt; font-weight: 600; color: #1A1040; }
+.cv-mc-badge {
+  font-size: 6.5pt; color: #fff;
+  background: linear-gradient(135deg, #1A1040, #7C3AED);
+  padding: 1px 7px; border-radius: 10px; white-space: nowrap; flex-shrink: 0;
+}
+.cv-mc-client { font-size: 8pt; color: #6B5E9B; margin-top: 1px; }
+.cv-mc-desc { font-size: 7.5pt; color: #3B2A6B; margin-top: 2px; line-height: 1.5; }
+</style>
+{% endblock %}
+
+{% block contenu %}<div class="-mx-6 -my-8" x-data="cvBuilder()"><div class="cv-builder">
+  {% include "candidat/cv/_form_panel.html" %}
+  <div class="preview-panel">
+  <div id="cv-sheet">
+  <div class="cv-sheet-ne">
+
+    <div class="ne-starband"></div>
+
+    <!-- ══ HEADER ══ -->
+    <div class="ne-header">
+      <div class="ne-photo-halo">
+        <img x-show="cv.photo" :src="cv.photo" alt="{% trans "Photo" %}">
+        <span x-show="!cv.photo">👤</span>
+      </div>
+      <div class="ne-header-info">
+        <div class="ne-prenom" x-text="cv.prenom || 'Prénom'"></div>
+        <div class="ne-nom" x-text="cv.nom || 'NOM'"></div>
+        <div class="ne-titre-row" x-show="cv.titre">
+          <span class="ne-titre-star">✦</span>
+          <div class="ne-titre" x-text="cv.titre"></div>
+          <span class="ne-titre-star">✦</span>
+        </div>
+        <div class="ne-contacts">
+          <div class="ne-contact" x-show="cv.email">
+            <span class="ne-contact-icon">✉</span><span x-text="cv.email"></span>
+          </div>
+          <div class="ne-contact" x-show="cv.telephone">
+            <span class="ne-contact-icon">☎</span><span x-text="cv.telephone"></span>
+          </div>
+          <div class="ne-contact" x-show="cvLoc()">
+            <span class="ne-contact-icon">⌖</span><span x-text="cvLoc()"></span>
+          </div>
+          <div class="ne-contact" x-show="cv.age">
+            <span class="ne-contact-icon">◑</span><span x-text="cv.age + ' ans'"></span>
+          </div>
+          <div class="ne-contact" x-show="cv.linkedin">
+            <span class="ne-contact-icon">in</span><span x-text="cv.linkedin"></span>
+          </div>
+          <div class="ne-contact" x-show="cv.permis">
+            <span class="ne-contact-icon">🪪</span><span x-text="'Permis ' + cv.permis"></span>
+          </div>
+          <div class="ne-contact" x-show="cv.portfolio">
+            <span class="ne-contact-icon">⊕</span><span x-text="cv.portfolio"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ne-divider"></div>
+
+    <!-- ══ CORPS ══ -->
+    <div class="ne-body">
+
+      <!-- ── COLONNE GAUCHE ── -->
+      <div class="ne-col-left">
+
+        <!-- Profil -->
+        <template x-if="cv.profil">
+          <div class="ne-sb-sec">
+            <div class="ne-sb-hdr">
+              <span class="ne-sb-star">✦</span>
+              <div>
+                <div class="ne-sb-title">{% trans "Profil" %}</div>
+                <div class="ne-sb-line"></div>
+              </div>
+            </div>
+            <div class="ne-profil" x-text="cv.profil"></div>
+          </div>
+        </template>
+
+        <!-- Compétences -->
+        <template x-if="vis(cv.competences).filter(c=>c.nom).length > 0">
+          <div class="ne-sb-sec">
+            <div class="ne-sb-hdr">
+              <span class="ne-sb-star">✦</span>
+              <div>
+                <div class="ne-sb-title">{% trans "Compétences" %}</div>
+                <div class="ne-sb-line"></div>
+              </div>
+            </div>
+            <template x-for="skill in vis(cv.competences)" :key="skill.id">
+              <div class="ne-skill" x-show="skill.nom">
+                <div class="ne-skill-name" x-text="skill.nom"></div>
+                <div class="ne-skill-bar-bg">
+                  <div class="ne-skill-bar-fill" :style="'width:' + (niveauDots(skill.niveau) * 20) + '%'"></div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Langues — 2 par ligne -->
+        <template x-if="vis(cv.langues).filter(l=>l.nom).length > 0">
+          <div class="ne-sb-sec">
+            <div class="ne-sb-hdr">
+              <span class="ne-sb-star">✦</span>
+              <div>
+                <div class="ne-sb-title">{% trans "Langues" %}</div>
+                <div class="ne-sb-line"></div>
+              </div>
+            </div>
+            <div class="ne-two-col">
+              <template x-for="lang in vis(cv.langues)" :key="lang.id">
+                <div class="ne-lang" x-show="lang.nom">
+                  <div class="ne-lang-head">
+                    <span class="ne-lang-name" x-text="lang.nom"></span>
+                    <span class="ne-lang-badge" x-text="niveauCode(lang.niveau, 'langue')"></span>
+                  </div>
+                  <div class="ne-lang-bar-bg">
+                    <div class="ne-lang-bar-fill" :style="'width:' + (niveauDots(lang.niveau) * 20) + '%'"></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- Intérêts — 2 par ligne -->
+        <template x-if="cv.interets.filter((i,ii)=>i && !isInteretMasque(ii)).length > 0">
+          <div class="ne-sb-sec">
+            <div class="ne-sb-hdr">
+              <span class="ne-sb-star">✦</span>
+              <div>
+                <div class="ne-sb-title">{% trans "Intérêts" %}</div>
+                <div class="ne-sb-line"></div>
+              </div>
+            </div>
+            <div class="ne-two-col">
+              <template x-for="(interet, idx) in cv.interets" :key="idx">
+                <div x-show="interet && !isInteretMasque(idx)" class="ne-interest-item">
+                  <div class="ne-interest-dot"></div>
+                  <span x-text="interet"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- Certifications -->
+        <template x-if="cv.showCertif && cv.certifs.filter(c=>c.nom).length > 0">
+          <div class="ne-sb-sec">
+            <div class="ne-sb-hdr">
+              <span class="ne-sb-star">✦</span>
+              <div>
+                <div class="ne-sb-title">{% trans "Certifications" %}</div>
+                <div class="ne-sb-line"></div>
+              </div>
+            </div>
+            <template x-for="certif in cv.certifs" :key="certif.id">
+              <div class="ne-certif" x-show="certif.nom">
+                <div class="ne-certif-title" x-text="certif.nom"></div>
+                <div class="ne-certif-sub">
+                  <span x-text="certif.organisme"></span>
+                  <span class="ne-certif-year" x-text="certif.annee"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+      </div><!-- /.ne-col-left -->
+
+      <!-- ── COLONNE DROITE ── -->
+      <div class="ne-col-right">
+
+        <!-- Expériences -->
+        <template x-if="cv.experiences.some(e=>expVisible(e))">
+          <div class="ne-sec">
+            <div class="ne-sec-hdr">
+              <span class="ne-sec-star">★</span>
+              <div class="ne-sec-title">{% trans "Expériences" %}</div>
+              <span class="ne-sec-dots">· · ·</span>
+            </div>
+            <template x-for="exp in cv.experiences" :key="exp.id">
+              <div class="ne-entry" x-show="expVisible(exp)">
+                <div class="ne-entry-head">
+                  <div class="ne-entry-title" x-text="expTitre(exp)"></div>
+                  <div class="ne-entry-date" x-show="expTitrePeriodeShow(exp)" x-text="expTitrePeriodeStr(exp)"></div>
+                </div>
+                <template x-if="!exp.postes||exp.postes.length<=1">
+                  <div x-show="exp.entreprise||exp.lieu" class="ne-entry-org">
+                    <span x-text="exp.entreprise"></span>
+                    <span x-show="exp.lieu" x-text="exp.lieu?' · '+exp.lieu:''"></span>
+                    <span x-show="expPeriodeShow(exp)" style="font-size:7.5pt;color:#94a3b8;margin-left:4px;white-space:nowrap" x-text="expPeriodeStr(exp)"></span>
+                  </div>
+                </template>
+                <template x-if="exp.postes&&exp.postes.length>1">
+                  <div>
+                    <div x-show="exp.lieu" class="ne-entry-org" x-text="'· '+exp.lieu" style="margin-bottom:3px"></div>
+                    <div class="cv-postes-list">
+                      <template x-for="p in exp.postes" :key="p.id">
+                        <div x-show="p.titre" class="cv-postes-row">
+                          <span class="cv-postes-titre" x-text="p.titre"></span>
+                          <span x-show="p.debut||p.enCours" class="cv-postes-date" x-text="formatPeriode(p.debut,p.fin,p.enCours)"></span>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+                <div class="ne-entry-desc" x-show="exp.desc" x-text="exp.desc"></div>
+                <template x-if="exp.hasMissionsClient && exp.missionsClient && exp.missionsClient.filter(mc=>mc.client).length>0">
+                  <div class="cv-mc-section">
+                    <div class="cv-mc-label">🏢 Missions clients</div>
+                    <template x-for="mc in exp.missionsClient.filter(mc=>mc.client)" :key="mc.id">
+                      <div class="cv-mc-item">
+                        <div class="cv-mc-hdr">
+                          <div class="cv-mc-title" x-text="mc.client||'—'"></div>
+                          <div x-show="mc.debut||mc.enCours" class="cv-mc-badge" x-text="formatPeriode(mc.debut,mc.fin,mc.enCours)"></div>
+                        </div>
+                        <div x-show="mc.pays||mc.ville" class="cv-mc-client">
+                          <span x-show="mc.pays" x-text="mc.pays"></span>
+                          <span x-show="mc.ville" x-text="mc.pays&&mc.ville?' · '+mc.ville:mc.ville||''"></span>
+                        </div>
+                        <div x-show="mc.desc" class="cv-mc-desc" x-text="mc.desc"></div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Formation -->
+        <template x-if="vis(cv.formations).filter(f=>f.diplome||f.ecole).length > 0">
+          <div class="ne-sec">
+            <div class="ne-sec-hdr">
+              <span class="ne-sec-star">★</span>
+              <div class="ne-sec-title">{% trans "Formation" %}</div>
+              <span class="ne-sec-dots">· · ·</span>
+            </div>
+            <template x-for="form in vis(cv.formations)" :key="form.id">
+              <div class="ne-entry" x-show="form.diplome||form.ecole">
+                <div class="ne-entry-head">
+                  <div class="ne-entry-title" x-text="(form.typeSortie==='certification'?'🏅 ':form.typeSortie==='attestation'?'📄 ':'')+(form.diplome||'—')"></div>
+                  <div class="ne-entry-date" x-text="form.typeSortie==='certification'?(form.expiration?'Exp. '+formatMonth(form.expiration):(form.fin?formatMonth(form.fin):'')):(formatPeriode(form.debut,form.fin,form.enCours)||'—')"></div>
+                </div>
+                <div class="ne-entry-org">
+                  <span x-text="form.ecole"></span>
+                  <span x-show="form.lieu&&form.typeSortie!=='certification'" x-text="form.lieu?' · '+form.lieu:''"></span>
+                </div>
+                <div class="ne-entry-desc" x-show="form.domaine" x-text="form.domaine" style="font-style:italic;opacity:.8"></div>
+                <div class="ne-entry-desc" x-show="form.typeSortie==='certification'&&form.numero" x-text="'N° '+form.numero"></div>
+                <div class="ne-entry-desc" x-show="form.desc" x-text="form.desc"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Projets -->
+        <template x-if="cv.showProjets && vis(cv.projets).filter(p=>p.nom).length > 0">
+          <div class="ne-sec">
+            <div class="ne-sec-hdr">
+              <span class="ne-sec-star">★</span>
+              <div class="ne-sec-title">{% trans "Projets" %}</div>
+              <span class="ne-sec-dots">· · ·</span>
+            </div>
+            <template x-for="projet in vis(cv.projets)" :key="projet.id">
+              <div class="ne-proj ne-certif" x-show="projet.nom">
+                <div class="ne-proj-head">
+                  <div class="ne-proj-name" x-text="projet.nom"></div>
+                  <span class="ne-proj-year" x-text="projet.annee"></span>
+                </div>
+                <div class="ne-proj-desc" x-text="projet.desc"></div>
+                <div class="ne-proj-link" x-show="projet.lien" x-text="projet.lien"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Bénévolat -->
+        <template x-if="cv.showBenev && cv.benevs && vis(cv.benevs).filter(b=>b.role||b.orga).length > 0">
+          <div class="ne-sec">
+            <div class="ne-sec-hdr">
+              <span class="ne-sec-star">★</span>
+              <div class="ne-sec-title">{% trans "Engagement &amp; Bénévolat" %}</div>
+              <span class="ne-sec-dots">· · ·</span>
+            </div>
+            <template x-for="benev in vis(cv.benevs)" :key="benev.id">
+              <div class="ne-benev ne-entry" x-show="benev.role||benev.orga">
+                <div class="ne-benev-head">
+                  <div class="ne-benev-role" x-text="benev.role"></div>
+                  <div class="ne-benev-date" x-text="formatPeriode(benev.debut, benev.fin, benev.enCours)"></div>
+                </div>
+                <div class="ne-benev-orga" x-text="benev.orga"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Références -->
+        <template x-if="cv.showRef">
+          <div class="ne-sec">
+            <div class="ne-sec-hdr">
+              <span class="ne-sec-star">★</span>
+              <div class="ne-sec-title">{% trans "Références" %}</div>
+              <span class="ne-sec-dots">· · ·</span>
+            </div>
+            <div class="ne-ref ne-profil">✦ &nbsp; Références disponibles sur demande &nbsp; ✦</div>
+          </div>
+        </template>
+
+      </div><!-- /.ne-col-right -->
+    </div><!-- /.ne-body -->
+
+    <div class="ne-footer">✦ · · ★ · · ✦</div>
+
+  </div><!-- /.cv-sheet-ne -->
+  </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+
+{% block js_extra %}{% include "candidat/cv/_cvbuilder_js.html" %}
+<script>
+(function () {
+  var PAGE_H = 1123;
+  var _timer = null;
+  function adjustSheet() {
+    var el = document.querySelector('.cv-sheet-ne');
+    if (!el) return;
+    el.style.minHeight = '0px';
+    var pages = Math.max(1, Math.ceil(el.scrollHeight / PAGE_H));
+    el.style.minHeight = (pages * PAGE_H) + 'px';
+  }
+  function schedule() { clearTimeout(_timer); _timer = setTimeout(adjustSheet, 60); }
+  document.addEventListener('DOMContentLoaded', function () {
+    adjustSheet();
+    var preview = document.querySelector('.preview-panel');
+    if (preview) new MutationObserver(schedule).observe(preview, { childList:true, subtree:true, characterData:true });
+  });
+})();
+</script>
+{% endblock %}

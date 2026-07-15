@@ -1,0 +1,615 @@
+{% extends "candidat/base.html" %}
+{% load i18n %}
+{% block titre %}Créer mon CV — {{ modele.nom }} · {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+{% include "candidat/cv/_form_styles.html" %}
+<style>
+/* ═══════════════════════════════════════════════════════
+   MINUIT OR — Noir Minuit #0F172A + Ambre #F59E0B
+   Sidebar DROITE pleine hauteur · Corps GAUCHE épuré
+   Unique : sidebar à droite, aucun autre modèle n'a ça
+═══════════════════════════════════════════════════════ */
+
+.cv-sheet-mo {
+  width: 794px;
+  min-height: 1123px;
+  background: #fff;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 12px;
+  color: #1E293B;
+  box-shadow: 0 4px 32px rgba(0,0,0,.15);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Barre accent top ────────────────────────────── */
+.mo-top-bar {
+  height: 4px;
+  background: linear-gradient(to right, #0F172A 0%, #F59E0B 50%, #0F172A 100%);
+  flex-shrink: 0;
+}
+
+/* ─── Corps : gauche + droite ─────────────────────── */
+.mo-body { display: flex; flex: 1; }
+
+/* ─── Corps principal GAUCHE ──────────────────────── */
+.mo-main {
+  flex: 1;
+  background: #FAFAFA;
+  padding: 32px 28px 40px 32px;
+  border-right: 1px solid #E2E8F0;
+}
+
+/* ─── Titres sections gauche ──────────────────────── */
+.mo-sec { margin-bottom: 24px; }
+.mo-sec-hdr {
+  display: flex; align-items: center;
+  gap: 0; margin-bottom: 14px;
+}
+.mo-sec-accent {
+  width: 4px; height: 20px;
+  background: #F59E0B; border-radius: 2px;
+  flex-shrink: 0; margin-right: 10px;
+}
+.mo-sec-title {
+  font-size: 10px; font-weight: 800;
+  color: #0F172A; text-transform: uppercase;
+  letter-spacing: 2.5px; flex: 1;
+}
+.mo-sec-line {
+  height: 1px;
+  background: linear-gradient(to right, #E2E8F0, transparent);
+  margin-left: 10px; flex: 1;
+}
+
+/* ─── Entrées (expériences, formation) ────────────── */
+.mo-entry {
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #F1F5F9;
+}
+.mo-entry:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.mo-entry-head {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; gap: 8px; margin-bottom: 3px;
+}
+.mo-entry-title {
+  font-weight: 700; font-size: 12px;
+  color: #0F172A; line-height: 1.25;
+}
+.mo-entry-date {
+  font-size: 8px; font-weight: 700;
+  color: #92400E;
+  background: #FEF3C7;
+  border: 1px solid #F59E0B;
+  padding: 2px 9px; border-radius: 20px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.mo-entry-org {
+  font-size: 10.5px; color: #475569;
+  font-weight: 600; margin-bottom: 4px;
+}
+.mo-entry-desc { font-size: 11px; color: #4B5563; line-height: 1.65; }
+
+/* ─── Projets ─────────────────────────────────────── */
+.mo-proj {
+  margin-bottom: 9px; padding-bottom: 9px;
+  border-bottom: 1px dashed #E2E8F0;
+}
+.mo-proj:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.mo-proj-head {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; gap: 8px; margin-bottom: 2px;
+}
+.mo-proj-name { font-weight: 700; font-size: 11px; color: #0F172A; }
+.mo-proj-year { font-size: 9px; color: #F59E0B; font-weight: 700; white-space: nowrap; }
+.mo-proj-desc { font-size: 10.5px; color: #4B5563; }
+.mo-proj-link { font-size: 9.5px; color: #94A3B8; margin-top: 2px; }
+
+/* ─── Bénévolat ───────────────────────────────────── */
+.mo-benev {
+  margin-bottom: 9px; padding-bottom: 9px;
+  border-bottom: 1px solid #F1F5F9;
+}
+.mo-benev:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.mo-benev-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.mo-benev-role { font-weight: 700; font-size: 11px; color: #0F172A; }
+.mo-benev-date { font-size: 9px; color: #F59E0B; font-weight: 700; white-space: nowrap; }
+.mo-benev-orga { font-size: 10px; color: #64748B; margin-top: 1px; }
+
+/* ─── Références ──────────────────────────────────── */
+.mo-ref {
+  font-style: italic; font-size: 11px; color: #64748B;
+  padding: 10px 16px;
+  border: 1px dashed rgba(245,158,11,.4);
+  border-radius: 5px; text-align: center;
+  background: #FFFBEB;
+}
+
+/* ─── SIDEBAR DROITE ──────────────────────────────── */
+.mo-sidebar {
+  width: 34%;
+  background: #0F172A;
+  padding: 32px 18px 40px 20px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* ─── Photo ronde + cadre ambre ──────────────────── */
+.mo-photo-ring {
+  width: 140px; height: 140px;
+  border-radius: 50%;
+  border: 4px solid #F59E0B;
+  box-shadow: 0 0 0 6px rgba(245,158,11,.15);
+  overflow: hidden;
+  background: #1E293B;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px; color: rgba(245,158,11,.45);
+  margin: 0 auto 20px;
+  flex-shrink: 0;
+}
+.mo-photo-ring img { width: 130%; height: 130%; object-fit: cover; object-position: center top; }
+
+/* ─── Identité sidebar ────────────────────────────── */
+.mo-identity {
+  text-align: center;
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(245,158,11,.2);
+}
+.mo-prenom {
+  font-size: 9px; font-weight: 600;
+  color: rgba(255,255,255,.45);
+  letter-spacing: 3px; text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.mo-nom {
+  font-size: 17px; font-weight: 900;
+  color: #fff; text-transform: uppercase;
+  letter-spacing: .5px; line-height: 1.1;
+  word-break: break-word; margin-bottom: 10px;
+}
+.mo-titre {
+  display: inline-block;
+  font-size: 12.5px; font-weight: 700;
+  color: #0F172A; background: #F59E0B;
+  padding: 3px 12px; border-radius: 20px;
+  letter-spacing: .2px;
+}
+
+/* ─── Contacts sidebar ────────────────────────────── */
+.mo-contacts {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.mo-contact {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 9.5px; color: rgba(255,255,255,.65);
+  margin-bottom: 6px; word-break: break-all;
+}
+.mo-contact-icon {
+  color: #F59E0B; font-size: 10px;
+  width: 14px; text-align: center; flex-shrink: 0; margin-top: 1px;
+}
+
+/* ─── Sections sidebar ────────────────────────────── */
+.mo-sb-sec { margin-bottom: 18px; }
+.mo-sb-title {
+  font-size: 7.5px; font-weight: 800;
+  color: #F59E0B; text-transform: uppercase;
+  letter-spacing: 2.5px; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
+}
+.mo-sb-title::after {
+  content: ''; flex: 1;
+  height: 1px; background: rgba(245,158,11,.25);
+}
+
+/* ─── Profil sidebar ──────────────────────────────── */
+.mo-profil {
+  font-size: 10px; color: rgba(255,255,255,.62);
+  line-height: 1.7; font-style: italic;
+}
+
+/* ─── Compétences — barres courtes ───────────────── */
+.mo-skill { margin-bottom: 8px; }
+.mo-skill-row {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 3px;
+}
+.mo-skill-name { font-size: 10px; color: rgba(255,255,255,.82); }
+.mo-skill-bar-bg {
+  height: 3px; background: rgba(255,255,255,.12);
+  border-radius: 2px; overflow: hidden;
+}
+.mo-skill-bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, #F59E0B, #FCD34D);
+  border-radius: 2px;
+}
+
+/* ─── Grille 2 colonnes ───────────────────────────── */
+.mo-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+}
+
+/* ─── Langues ─────────────────────────────────────── */
+.mo-lang { margin-bottom: 5px; }
+.mo-lang-head {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 3px;
+}
+.mo-lang-name { font-size: 10px; color: rgba(255,255,255,.82); }
+.mo-lang-badge {
+  font-size: 7.5px; font-weight: 700;
+  color: #0F172A; background: #F59E0B;
+  padding: 1px 5px; border-radius: 2px;
+}
+.mo-lang-bar-bg { height: 3px; background: rgba(255,255,255,.12); border-radius: 2px; overflow: hidden; }
+.mo-lang-bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, #F59E0B, #FCD34D);
+  border-radius: 2px;
+}
+
+/* ─── Intérêts ────────────────────────────────────── */
+.mo-interest-item {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 9.5px; color: rgba(255,255,255,.65);
+  padding: 2px 0;
+}
+.mo-interest-dot {
+  width: 4px; height: 4px;
+  border-radius: 50%; background: #F59E0B; flex-shrink: 0;
+}
+
+/* ─── Certifications sidebar ──────────────────────── */
+.mo-certif {
+  margin-bottom: 8px; padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.mo-certif:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.mo-certif-title { font-size: 10px; font-weight: 700; color: rgba(255,255,255,.88); margin-bottom: 2px; }
+.mo-certif-sub {
+  font-size: 9px; color: rgba(255,255,255,.45);
+  display: flex; justify-content: space-between;
+}
+.mo-certif-year { color: #F59E0B; font-weight: 700; }
+
+/* ─── Barre accent bottom ─────────────────────────── */
+.mo-bottom-bar {
+  height: 4px;
+  background: linear-gradient(to right, #0F172A 0%, #F59E0B 50%, #0F172A 100%);
+  flex-shrink: 0;
+}
+
+/* ─── Missions clients ────────────────────────────── */
+.cv-mc-section {
+  margin-top: 8px; padding: 7px 10px 7px 12px;
+  background: rgba(245,158,11,.06);
+  border-left: 3px solid #F59E0B;
+  border-radius: 0 5px 5px 0;
+}
+.cv-mc-label {
+  font-size: 7pt; font-weight: 700; color: #92400E;
+  text-transform: uppercase; letter-spacing: .7px; margin-bottom: 6px;
+}
+.cv-mc-item {
+  margin-bottom: 6px; padding-bottom: 6px;
+  border-bottom: 1px dashed rgba(245,158,11,.2);
+}
+.cv-mc-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.cv-mc-hdr { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+.cv-mc-title { font-size: 9pt; font-weight: 600; color: #0F172A; }
+.cv-mc-badge {
+  font-size: 6.5pt; color: #fff; background: #0F172A;
+  padding: 1px 7px; border-radius: 3px; white-space: nowrap; flex-shrink: 0;
+}
+.cv-mc-client { font-size: 8pt; color: #64748B; margin-top: 1px; }
+.cv-mc-desc { font-size: 7.5pt; color: #4B5563; margin-top: 2px; line-height: 1.5; }
+</style>
+{% endblock %}
+
+{% block contenu %}<div class="-mx-6 -my-8" x-data="cvBuilder()"><div class="cv-builder">
+  {% include "candidat/cv/_form_panel.html" %}
+  <div class="preview-panel">
+  <div id="cv-sheet">
+  <div class="cv-sheet-mo">
+
+    <div class="mo-top-bar"></div>
+
+    <!-- ══ CORPS ══ -->
+    <div class="mo-body">
+
+      <!-- ── CONTENU PRINCIPAL GAUCHE ── -->
+      <div class="mo-main">
+
+        <!-- Expériences -->
+        <template x-if="cv.experiences.some(e=>expVisible(e))">
+          <div class="mo-sec">
+            <div class="mo-sec-hdr">
+              <div class="mo-sec-accent"></div>
+              <div class="mo-sec-title">{% trans "Expériences professionnelles" %}</div>
+            </div>
+            <template x-for="exp in cv.experiences" :key="exp.id">
+              <div class="mo-entry" x-show="expVisible(exp)">
+                <div class="mo-entry-head">
+                  <div class="mo-entry-title" x-text="expTitre(exp)"></div>
+                  <div class="mo-entry-date" x-show="expTitrePeriodeShow(exp)" x-text="expTitrePeriodeStr(exp)"></div>
+                </div>
+                <template x-if="!exp.postes||exp.postes.length<=1">
+                  <div x-show="exp.entreprise||exp.lieu" class="mo-entry-org">
+                    <span x-text="exp.entreprise"></span>
+                    <span x-show="exp.lieu" x-text="exp.lieu?' · '+exp.lieu:''"></span>
+                    <span x-show="expPeriodeShow(exp)" style="font-size:7.5pt;color:#94a3b8;margin-left:4px;white-space:nowrap" x-text="expPeriodeStr(exp)"></span>
+                  </div>
+                </template>
+                <template x-if="exp.postes&&exp.postes.length>1">
+                  <div>
+                    <div x-show="exp.lieu" class="mo-entry-org" x-text="'· '+exp.lieu" style="margin-bottom:3px"></div>
+                    <div class="cv-postes-list">
+                      <template x-for="p in exp.postes" :key="p.id">
+                        <div x-show="p.titre" class="cv-postes-row">
+                          <span class="cv-postes-titre" x-text="p.titre"></span>
+                          <span x-show="p.debut||p.enCours" class="cv-postes-date" x-text="formatPeriode(p.debut,p.fin,p.enCours)"></span>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+                <div class="mo-entry-desc" x-show="exp.desc" x-text="exp.desc"></div>
+                <template x-if="exp.hasMissionsClient && exp.missionsClient && exp.missionsClient.filter(mc=>mc.client).length>0">
+                  <div class="cv-mc-section">
+                    <div class="cv-mc-label">🏢 Missions clients</div>
+                    <template x-for="mc in exp.missionsClient.filter(mc=>mc.client)" :key="mc.id">
+                      <div class="cv-mc-item">
+                        <div class="cv-mc-hdr">
+                          <div class="cv-mc-title" x-text="mc.client||'—'"></div>
+                          <div x-show="mc.debut||mc.enCours" class="cv-mc-badge" x-text="formatPeriode(mc.debut,mc.fin,mc.enCours)"></div>
+                        </div>
+                        <div x-show="mc.pays||mc.ville" class="cv-mc-client">
+                          <span x-show="mc.pays" x-text="mc.pays"></span>
+                          <span x-show="mc.ville" x-text="mc.pays&&mc.ville?' · '+mc.ville:mc.ville||''"></span>
+                        </div>
+                        <div x-show="mc.desc" class="cv-mc-desc" x-text="mc.desc"></div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Formation -->
+        <template x-if="vis(cv.formations).filter(f=>f.diplome||f.ecole).length > 0">
+          <div class="mo-sec">
+            <div class="mo-sec-hdr">
+              <div class="mo-sec-accent"></div>
+              <div class="mo-sec-title">{% trans "Formation" %}</div>
+            </div>
+            <template x-for="form in vis(cv.formations)" :key="form.id">
+              <div class="mo-entry" x-show="form.diplome||form.ecole">
+                <div class="mo-entry-head">
+                  <div class="mo-entry-title" x-text="(form.typeSortie==='certification'?'🏅 ':form.typeSortie==='attestation'?'📄 ':'')+(form.diplome||'—')"></div>
+                  <div class="mo-entry-date" x-text="form.typeSortie==='certification'?(form.expiration?'Exp. '+formatMonth(form.expiration):(form.fin?formatMonth(form.fin):'')):(formatPeriode(form.debut,form.fin,form.enCours)||'—')"></div>
+                </div>
+                <div class="mo-entry-org">
+                  <span x-text="form.ecole"></span>
+                  <span x-show="form.lieu&&form.typeSortie!=='certification'" x-text="form.lieu?' · '+form.lieu:''"></span>
+                </div>
+                <div class="mo-entry-desc" x-show="form.domaine" x-text="form.domaine" style="font-style:italic;opacity:.8"></div>
+                <div class="mo-entry-desc" x-show="form.typeSortie==='certification'&&form.numero" x-text="'N° '+form.numero"></div>
+                <div class="mo-entry-desc" x-show="form.desc" x-text="form.desc"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Projets -->
+        <template x-if="cv.showProjets && vis(cv.projets).filter(p=>p.nom).length > 0">
+          <div class="mo-sec">
+            <div class="mo-sec-hdr">
+              <div class="mo-sec-accent"></div>
+              <div class="mo-sec-title">{% trans "Projets" %}</div>
+            </div>
+            <template x-for="projet in vis(cv.projets)" :key="projet.id">
+              <div class="mo-proj mo-certif" x-show="projet.nom">
+                <div class="mo-proj-head">
+                  <div class="mo-proj-name" x-text="projet.nom"></div>
+                  <span class="mo-proj-year" x-text="projet.annee"></span>
+                </div>
+                <div class="mo-proj-desc" x-text="projet.desc"></div>
+                <div class="mo-proj-link" x-show="projet.lien" x-text="projet.lien"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Bénévolat -->
+        <template x-if="cv.showBenev && cv.benevs && vis(cv.benevs).filter(b=>b.role||b.orga).length > 0">
+          <div class="mo-sec">
+            <div class="mo-sec-hdr">
+              <div class="mo-sec-accent"></div>
+              <div class="mo-sec-title">{% trans "Engagement &amp; Bénévolat" %}</div>
+            </div>
+            <template x-for="benev in vis(cv.benevs)" :key="benev.id">
+              <div class="mo-benev mo-entry" x-show="benev.role||benev.orga">
+                <div class="mo-benev-head">
+                  <div class="mo-benev-role" x-text="benev.role"></div>
+                  <div class="mo-benev-date" x-text="formatPeriode(benev.debut, benev.fin, benev.enCours)"></div>
+                </div>
+                <div class="mo-benev-orga" x-text="benev.orga"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Références -->
+        <template x-if="cv.showRef">
+          <div class="mo-sec">
+            <div class="mo-sec-hdr">
+              <div class="mo-sec-accent"></div>
+              <div class="mo-sec-title">{% trans "Références" %}</div>
+            </div>
+            <div class="mo-ref mo-profil">{% trans "Références disponibles sur demande." %}</div>
+          </div>
+        </template>
+
+      </div><!-- /.mo-main -->
+
+      <!-- ── SIDEBAR DROITE ── -->
+      <div class="mo-sidebar">
+
+        <!-- Photo -->
+        <div class="mo-photo-ring">
+          <img x-show="cv.photo" :src="cv.photo" alt="{% trans "Photo" %}">
+          <span x-show="!cv.photo">👤</span>
+        </div>
+
+        <!-- Identité -->
+        <div class="mo-identity">
+          <div class="mo-prenom" x-text="cv.prenom || 'Prénom'"></div>
+          <div class="mo-nom" x-text="cv.nom || 'NOM'"></div>
+          <div class="mo-titre" x-show="cv.titre" x-text="cv.titre"></div>
+        </div>
+
+        <!-- Contacts -->
+        <div class="mo-contacts">
+          <div class="mo-contact" x-show="cv.email">
+            <span class="mo-contact-icon">✉</span><span x-text="cv.email"></span>
+          </div>
+          <div class="mo-contact" x-show="cv.telephone">
+            <span class="mo-contact-icon">☎</span><span x-text="cv.telephone"></span>
+          </div>
+          <div class="mo-contact" x-show="cvLoc()">
+            <span class="mo-contact-icon">⌖</span><span x-text="cvLoc()"></span>
+          </div>
+          <div class="mo-contact" x-show="cv.age">
+            <span class="mo-contact-icon">◑</span><span x-text="cv.age + ' ans'"></span>
+          </div>
+          <div class="mo-contact" x-show="cv.linkedin">
+            <span class="mo-contact-icon">in</span><span x-text="cv.linkedin"></span>
+          </div>
+          <div class="mo-contact" x-show="cv.permis">
+            <span class="mo-contact-icon">🪪</span><span x-text="'Permis ' + cv.permis"></span>
+          </div>
+          <div class="mo-contact" x-show="cv.portfolio">
+            <span class="mo-contact-icon">⊕</span><span x-text="cv.portfolio"></span>
+          </div>
+        </div>
+
+        <!-- Profil -->
+        <template x-if="cv.profil">
+          <div class="mo-sb-sec">
+            <div class="mo-sb-title">{% trans "Profil" %}</div>
+            <div class="mo-profil" x-text="cv.profil"></div>
+          </div>
+        </template>
+
+        <!-- Compétences -->
+        <template x-if="vis(cv.competences).filter(c=>c.nom).length > 0">
+          <div class="mo-sb-sec">
+            <div class="mo-sb-title">{% trans "Compétences" %}</div>
+            <template x-for="skill in vis(cv.competences)" :key="skill.id">
+              <div class="mo-skill" x-show="skill.nom">
+                <div class="mo-skill-row">
+                  <span class="mo-skill-name" x-text="skill.nom"></span>
+                </div>
+                <div class="mo-skill-bar-bg">
+                  <div class="mo-skill-bar-fill" :style="'width:' + (niveauDots(skill.niveau) * 20) + '%'"></div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Langues — 2 par ligne -->
+        <template x-if="vis(cv.langues).filter(l=>l.nom).length > 0">
+          <div class="mo-sb-sec">
+            <div class="mo-sb-title">{% trans "Langues" %}</div>
+            <div class="mo-two-col">
+              <template x-for="lang in vis(cv.langues)" :key="lang.id">
+                <div class="mo-lang" x-show="lang.nom">
+                  <div class="mo-lang-head">
+                    <span class="mo-lang-name" x-text="lang.nom"></span>
+                    <span class="mo-lang-badge" x-text="niveauCode(lang.niveau, 'langue')"></span>
+                  </div>
+                  <div class="mo-lang-bar-bg">
+                    <div class="mo-lang-bar-fill" :style="'width:' + (niveauDots(lang.niveau) * 20) + '%'"></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- Intérêts — 2 par ligne -->
+        <template x-if="cv.interets.filter((i,ii)=>i && !isInteretMasque(ii)).length > 0">
+          <div class="mo-sb-sec">
+            <div class="mo-sb-title">{% trans "Intérêts" %}</div>
+            <div class="mo-two-col">
+              <template x-for="(interet, idx) in cv.interets" :key="idx">
+                <div x-show="interet && !isInteretMasque(idx)" class="mo-interest-item">
+                  <div class="mo-interest-dot"></div>
+                  <span x-text="interet"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- Certifications -->
+        <template x-if="cv.showCertif && cv.certifs.filter(c=>c.nom).length > 0">
+          <div class="mo-sb-sec">
+            <div class="mo-sb-title">{% trans "Certifications" %}</div>
+            <template x-for="certif in cv.certifs" :key="certif.id">
+              <div class="mo-certif" x-show="certif.nom">
+                <div class="mo-certif-title" x-text="certif.nom"></div>
+                <div class="mo-certif-sub">
+                  <span x-text="certif.organisme"></span>
+                  <span class="mo-certif-year" x-text="certif.annee"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+      </div><!-- /.mo-sidebar -->
+    </div><!-- /.mo-body -->
+
+    <div class="mo-bottom-bar"></div>
+
+  </div><!-- /.cv-sheet-mo -->
+  </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+
+{% block js_extra %}{% include "candidat/cv/_cvbuilder_js.html" %}
+<script>
+(function () {
+  var PAGE_H = 1123;
+  var _timer = null;
+  function adjustSheet() {
+    var el = document.querySelector('.cv-sheet-mo');
+    if (!el) return;
+    el.style.minHeight = '0px';
+    var pages = Math.max(1, Math.ceil(el.scrollHeight / PAGE_H));
+    el.style.minHeight = (pages * PAGE_H) + 'px';
+  }
+  function schedule() { clearTimeout(_timer); _timer = setTimeout(adjustSheet, 60); }
+  document.addEventListener('DOMContentLoaded', function () {
+    adjustSheet();
+    var preview = document.querySelector('.preview-panel');
+    if (preview) new MutationObserver(schedule).observe(preview, { childList:true, subtree:true, characterData:true });
+  });
+})();
+</script>
+{% endblock %}

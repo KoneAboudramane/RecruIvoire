@@ -1,0 +1,211 @@
+{% extends "candidat/base.html" %}
+{% load i18n %}
+{% block titre %}Créer mon CV — {{ modele.nom }} · {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+{% include "candidat/cv/_form_styles.html" %}
+<style>
+/* ── Corporate Vert ── #2e7d52 corporate professionnel ──────────────────────── */
+#cv-sheet { width:794px; min-height:1123px; background:white; font-family:'Segoe UI',system-ui,sans-serif; font-size:11pt; color:#1a2e1a; line-height:1.5; box-shadow:0 8px 48px rgba(0,0,0,.14); display:flex; flex-direction:column; }
+/* Top ribbon */
+.cg-ribbon { height:8px; background:#2e7d52; }
+/* Header */
+.cg-header { padding:24px 36px; display:flex; align-items:center; gap:20px; border-bottom:1px solid #D1FAE5; }
+.cg-photo-wrap { width:130px; height:130px; border-radius:50%; overflow:hidden; border:3px solid #2e7d52; flex-shrink:0; }
+.cg-photo { width:100%; height:100%; object-fit:cover; display:block; }
+.cg-ph    { width:130px; height:130px; border-radius:50%; background:#E8FFF3; display:flex; align-items:center; justify-content:center; font-size:24px; border:3px solid #2e7d52; flex-shrink:0; }
+.cg-info { flex:1; }
+.cg-name  { font-size:20pt; font-weight:800; color:#1a2e1a; letter-spacing:-.3px; line-height:1.1; }
+.cg-title { font-size:14pt; color:#2e7d52; font-weight:600; margin-top:4px; }
+.cg-contacts { display:flex; flex-wrap:wrap; gap:4px 16px; margin-top:8px; }
+.cg-ci { font-size:8.5pt; color:#4b5563; display:flex; align-items:center; gap:4px; }
+.cg-ci-dot { width:5px; height:5px; border-radius:50%; background:#2e7d52; flex-shrink:0; }
+/* Body */
+.cg-body { display:flex; flex-grow:1; }
+.cg-left { width:30%; background:#F0FFF6; padding:22px 16px; border-right:1px solid #D1FAE5; }
+.cg-right { flex:1; padding:22px 28px; }
+/* Section headers */
+.cg-sec { font-size:7.5pt; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:#2e7d52; border-bottom:2px solid #2e7d52; padding-bottom:4px; margin-bottom:12px; margin-top:20px; }
+.cg-sec:first-child { margin-top:0; }
+/* Profil */
+.cg-profil { font-size:9pt; color:#374151; line-height:1.7; }
+/* Skills */
+.cg-skill { margin-bottom:9px; }
+.cg-skill-lbl { font-size:8.5pt; color:#374151; margin-bottom:3px; display:flex; justify-content:space-between; align-items:center; }
+.cg-pct { font-size:7.5pt; color:#2e7d52; font-weight:600; }
+.cg-bar-bg { background:#D1FAE5; height:5px; border-radius:3px; }
+.cg-bar-fg { background:#2e7d52; height:5px; border-radius:3px; }
+/* Lang */
+.cg-lang { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding:6px 10px; background:white; border-radius:6px; border:1px solid #D1FAE5; }
+.cg-lang-name { font-size:9pt; font-weight:600; color:#1a2e1a; }
+.cg-lang-lvl  { font-size:8pt; color:#2e7d52; background:#E8FFF3; padding:2px 8px; border-radius:10px; }
+/* Interest */
+.cg-interest { display:flex; align-items:center; gap:7px; font-size:8.5pt; color:#374151; margin-bottom:7px; }
+.cg-interest-dot { width:7px; height:7px; border-radius:50%; background:#2e7d52; flex-shrink:0; }
+/* Entry */
+.cg-entry { margin-bottom:18px; }
+.cg-entry-hdr { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.cg-entry-title { font-size:10.5pt; font-weight:700; color:#1a2e1a; }
+.cg-entry-badge { font-size:7.5pt; color:white; background:#2e7d52; padding:2px 10px; border-radius:12px; white-space:nowrap; flex-shrink:0; }
+.cg-entry-sub   { font-size:9pt; color:#2e7d52; font-weight:600; margin-top:2px; }
+.cg-entry-place { font-size:8.5pt; color:#6b7280; }
+.cg-entry-desc  { font-size:8.5pt; color:#4b5563; margin-top:4px; line-height:1.6; }
+.cg-mission { font-size:8.5pt; color:#4b5563; padding-left:13px; position:relative; line-height:1.5; margin-top:3px; }
+.cg-mission::before { content:'●'; position:absolute; left:0; color:#2e7d52; font-size:6pt; top:3px; }
+.cg-divider { height:1px; background:#D1FAE5; margin:12px 0; }
+.cg-footer { height:8px; background:#2e7d52; }
+.cv-mc-section{margin-top:9px;padding:7px 10px 7px 12px;background:rgba(46,125,82,.07);border-left:3px solid #2e7d52;border-radius:0 6px 6px 0}
+.cv-mc-label{font-size:6.5pt;font-weight:700;color:#2e7d52;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+.cv-mc-item{margin-bottom:6px;padding-bottom:6px;border-bottom:1px dashed rgba(46,125,82,.25)}
+.cv-mc-item:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+.cv-mc-hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:6px}
+.cv-mc-title{font-size:9pt;font-weight:600}
+.cv-mc-badge{font-size:6.5pt;color:#2e7d52;background:rgba(46,125,82,.1);padding:1px 7px;border-radius:8px;white-space:nowrap;flex-shrink:0}
+.cv-mc-client{font-size:8pt;color:#6b7280;margin-top:1px}
+.cv-mc-desc{font-size:7.5pt;color:#4b5563;margin-top:2px;line-height:1.5}
+</style>
+{% endblock %}
+
+{% block contenu %}<div class="-mx-6 -my-8" x-data="cvBuilder()"><div class="cv-builder">
+  {% include "candidat/cv/_form_panel.html" %}
+  <div class="preview-panel">
+  <div id="cv-sheet">
+    <div class="cg-ribbon"></div>
+    <div class="cg-header">
+      <template x-if="cv.photo"><div class="cg-photo-wrap"><img :src="cv.photo" class="cg-photo"></div></template>
+      <template x-if="!cv.photo"><div class="cg-ph">👤</div></template>
+      <div class="cg-info">
+        <div class="cg-name"><span x-text="cv.prenom||'Prénom'"></span> <span x-text="cv.nom?cv.nom.toUpperCase():'NOM'"></span></div>
+        <div class="cg-title" x-text="cv.titre||'Titre professionnel'"></div>
+        <div class="cg-contacts">
+          <template x-if="cv.email"><span class="cg-ci"><span class="cg-ci-dot"></span><span x-text="cv.email"></span></span></template>
+          <template x-if="cv.telephone"><span class="cg-ci"><span class="cg-ci-dot"></span><span x-text="cv.telephone"></span></span></template>
+          <template x-if="cvLoc()"><span class="cg-ci"><span class="cg-ci-dot"></span><span x-text="cvLoc()"></span></span></template>
+          <template x-if="cv.age"><span class="cg-ci"><span class="cg-ci-dot"></span><span x-text="cv.age+' ans'"></span></span></template>
+          <template x-if="cv.linkedin"><span class="cg-ci"><span class="cg-ci-dot"></span><span x-text="cv.linkedin"></span></span></template>
+          <template x-if="cv.permis"><span class="cg-ci"><span class="cg-ci-dot"></span><span x-text="'Permis ' + cv.permis"></span></span></template>
+        </div>
+      </div>
+    </div>
+
+    <div class="cg-body">
+      <div class="cg-left">
+        <template x-if="cv.profil"><div><div class="cg-sec">{% trans "Profil" %}</div><p class="cg-profil" x-text="cv.profil"></p></div></template>
+
+        <template x-if="vis(cv.competences).filter(c=>c.nom).length > 0">
+          <div><div class="cg-sec">{% trans "Compétences" %}</div>
+            <template x-for="c in vis(cv.competences)" :key="c.id">
+              <div x-show="c.nom" class="cg-skill">
+                <div class="cg-skill-lbl"><span x-text="c.nom"></span><span class="cg-pct" x-text="(niveauDots(c.niveau)*20)+'%'"></span></div>
+                <div class="cg-bar-bg"><div class="cg-bar-fg" x-bind:style.width="(niveauDots(c.niveau)/5*100)+'%'"></div></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="vis(cv.langues).filter(l=>l.nom).length > 0">
+          <div><div class="cg-sec">{% trans "Langues" %}</div>
+            <template x-for="l in vis(cv.langues)" :key="l.id">
+              <div x-show="l.nom" class="cg-lang"><span class="cg-lang-name" x-text="l.nom"></span><span class="cg-lang-lvl" x-text="niveauCode(l.niveau, 'langue')"></span></div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="cv.interets.filter((i,ii)=>i && !isInteretMasque(ii)).length > 0">
+          <div><div class="cg-sec">{% trans "Centres d'intérêt" %}</div>
+            <template x-for="(ci,idx) in cv.interets" :key="idx">
+              <div x-show="ci && !isInteretMasque(idx)" class="cg-interest">
+                <div class="cg-interest-dot"></div>
+                <span x-text="ci"></span>
+              </div>
+            </template>
+          </div>
+        </template>
+        <template x-if="cv.showRef"><p style="font-size:8pt;color:#94a3b8;text-align:center;margin-top:14px;font-style:italic">{% trans "Références sur demande" %}</p></template>
+      </div>
+
+      <div class="cg-right">
+        <template x-if="cv.experiences.some(e=>expVisible(e))">
+          <div><div class="cg-sec">{% trans "Expériences professionnelles" %}</div>
+            <template x-for="(e,i) in cv.experiences" :key="e.id">
+              <div x-show="expVisible(e)" class="cg-entry">
+                <div class="cg-entry-hdr">
+                  <div class="cg-entry-title" x-text="expTitre(e)"></div>
+                  <div x-show="expTitrePeriodeShow(e)" class="cg-entry-badge" x-text="expTitrePeriodeStr(e)"></div>
+                </div>
+                <template x-if="!e.postes||e.postes.length<=1">
+                  <div x-show="e.entreprise||e.lieu"><span class="cg-entry-sub" x-text="e.entreprise"></span><span x-show="e.lieu" class="cg-entry-place" x-text="e.lieu?' · '+e.lieu:''"></span><span x-show="expPeriodeShow(e)" style="font-size:7.5pt;color:#94a3b8;margin-left:4px;white-space:nowrap" x-text="expPeriodeStr(e)"></span></div>
+                </template>
+                <template x-if="e.postes&&e.postes.length>1">
+                  <div><div x-show="e.lieu" class="cg-entry-place" x-text="'· '+e.lieu" style="margin-bottom:3px"></div><div class="cv-postes-list"><template x-for="p in e.postes" :key="p.id"><div x-show="p.titre" class="cv-postes-row"><span class="cv-postes-titre" x-text="p.titre"></span><span x-show="p.debut||p.enCours" class="cv-postes-date" x-text="formatPeriode(p.debut,p.fin,p.enCours)"></span></div></template></div></div>
+                </template>
+                <div x-show="e.desc" class="cg-entry-desc" x-text="e.desc"></div>
+                <template x-if="e.hasMissionsClient && e.missionsClient && e.missionsClient.filter(mc=>mc.client).length>0"><div class="cv-mc-section"><div class="cv-mc-label">🏢 Missions clients</div><template x-for="mc in e.missionsClient.filter(mc=>mc.client)" :key="mc.id"><div class="cv-mc-item"><div class="cv-mc-hdr"><div class="cv-mc-title" x-text="mc.client||'—'"></div><div x-show="mc.debut||mc.enCours" class="cv-mc-badge" x-text="formatPeriode(mc.debut,mc.fin,mc.enCours)"></div></div><div x-show="mc.pays||mc.ville" class="cv-mc-client"><span x-show="mc.pays" x-text="mc.pays"></span><span x-show="mc.ville" x-text="mc.pays&&mc.ville?' · '+mc.ville:mc.ville||''"></span></div><div x-show="mc.desc" class="cv-mc-desc" x-text="mc.desc"></div></div></template></div></template>
+                <div class="cg-divider" x-show="i < cv.experiences.filter(ex=>expVisible(ex)).length-1"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="vis(cv.formations).filter(f=>f.diplome||f.ecole).length > 0">
+          <div><div class="cg-sec">{% trans "Formations" %}</div>
+            <template x-for="f in vis(cv.formations)" :key="f.id">
+              <div x-show="f.diplome||f.ecole" class="cg-entry">
+                <div class="cg-entry-hdr">
+                  <div class="cg-entry-title" x-text="(f.typeSortie==='certification'?'🏅 ':f.typeSortie==='attestation'?'📄 ':'')+(f.diplome||'—')"></div>
+                  <div x-show="f.typeSortie==='certification'?(f.fin||f.expiration):(f.debut||f.enCours)" class="cg-entry-badge" x-text="f.typeSortie==='certification'?(f.expiration?'Exp. '+formatMonth(f.expiration):(f.fin?formatMonth(f.fin):'')):(formatPeriode(f.debut,f.fin,f.enCours))"></div>
+                </div>
+                <div x-show="f.ecole||f.lieu"><span class="cg-entry-sub" x-text="f.ecole"></span><span x-show="f.lieu&&f.typeSortie!=='certification'" class="cg-entry-place" x-text="f.lieu?' · '+f.lieu:''"></span></div>
+                <div x-show="f.domaine" class="cg-entry-desc" x-text="f.domaine" style="font-style:italic;opacity:0.8"></div>
+                <div x-show="f.typeSortie==='certification'&&f.numero" class="cg-entry-desc" x-text="'N° '+f.numero"></div>
+                <div x-show="f.desc" class="cg-entry-desc" x-text="f.desc"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="cv.showCertif && cv.certifs.filter(c=>c.nom).length > 0">
+          <div><div class="cg-sec">{% trans "Certifications" %}</div>
+            <template x-for="c in cv.certifs" :key="c.id">
+              <div x-show="c.nom" class="cg-entry">
+                <div class="cg-entry-title" x-text="c.nom"></div>
+                <div class="cg-entry-sub"><span x-text="c.organisme"></span><span x-show="c.annee" x-text="c.annee?' · '+c.annee:''"></span></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="cv.showProjets && vis(cv.projets).filter(p=>p.nom).length > 0">
+          <div><div class="cg-sec">{% trans "Projets personnels" %}</div>
+            <template x-for="p in vis(cv.projets)" :key="p.id">
+              <div x-show="p.nom" class="cg-entry">
+                <div class="cg-entry-hdr"><div class="cg-entry-title" x-text="p.nom"></div><div x-show="p.annee" class="cg-entry-badge" x-text="p.annee"></div></div>
+                <div x-show="p.desc" class="cg-entry-desc" x-text="p.desc"></div>
+                <div x-show="p.lien" style="font-size:8pt;color:#2e7d52;margin-top:3px">🔗 <span x-text="p.lien"></span></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="cv.showBenev && cv.benevs && vis(cv.benevs).filter(b=>b.role||b.orga).length > 0">
+          <div><div class="cg-sec">{% trans "Bénévolat" %}</div>
+            <template x-for="b in vis(cv.benevs)" :key="b.id">
+              <div x-show="b.role||b.orga" class="cg-entry">
+                <div class="cg-entry-hdr">
+                  <div class="cg-entry-title" x-text="b.role"></div>
+                  <div x-show="b.debut||b.enCours" class="cg-entry-badge" x-text="formatPeriode(b.debut,b.fin,b.enCours)"></div>
+                </div>
+                <div class="cg-entry-sub" x-text="b.orga"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+    </div>
+    <div class="cg-footer"></div>
+  </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+{% block js_extra %}{% include "candidat/cv/_cvbuilder_js.html" %}{% endblock %}

@@ -1,0 +1,103 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% trans "Lettre de motivation —" %} {{ lettre.prenom }} {{ lettre.nom }}</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:794px; min-height:1123px; background:#fff; }
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 11.5px;
+    line-height: 1.65;
+    color: #1f2937;
+    display: flex;
+    align-items: stretch;
+}
+
+/* Colonne latérale */
+.sb-side {
+    width: 220px; flex-shrink:0;
+    background: #1a1a2e;
+    color: #fff;
+    padding: 50px 26px;
+}
+.sb-name { font-size:19px; font-weight:800; line-height:1.25; margin-bottom:26px; }
+.sb-block { margin-bottom:22px; }
+.sb-label { font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#c96010; font-weight:700; margin-bottom:6px; }
+.sb-val   { font-size:10.5px; color:#e5e7eb; line-height:1.6; word-break:break-word; }
+
+/* Colonne principale */
+.sb-main { flex:1; padding: 50px 44px 50px 40px; }
+.sb-date { text-align:right; font-size:10px; color:#6b7280; margin-bottom:24px; }
+
+.sb-recipient { margin-bottom:22px; }
+.sb-rcp-name  { font-weight:700; color:#1a1a2e; }
+.sb-rcp-fn, .sb-rcp-addr, .sb-rcp-city { font-size:10px; color:#6b7280; }
+
+.sb-objet {
+    border-left:3px solid #c96010; padding-left:12px;
+    margin-bottom:22px; font-weight:700; color:#1a1a2e;
+}
+
+.sb-salut { margin-bottom:14px; font-weight:600; }
+.sb-para  { margin-bottom:13px; text-align:justify; white-space:pre-wrap; word-break:break-word; }
+.sb-formule { margin-top:24px; margin-bottom:46px; }
+.sb-sig   { font-weight:700; color:#1a1a2e; }
+</style>
+</head>
+<body>
+
+<div class="sb-side">
+    <div class="sb-name">{{ lettre.prenom }}<br>{{ lettre.nom }}</div>
+    {% if lettre.email %}
+    <div class="sb-block">
+        <div class="sb-label">{% trans "Email" %}</div>
+        <div class="sb-val">{{ lettre.email }}</div>
+    </div>
+    {% endif %}
+    {% if lettre.telephone %}
+    <div class="sb-block">
+        <div class="sb-label">{% trans "Téléphone" %}</div>
+        <div class="sb-val">{{ lettre.telephone }}</div>
+    </div>
+    {% endif %}
+    {% if lettre.adresse or lettre.ville %}
+    <div class="sb-block">
+        <div class="sb-label">{% trans "Adresse" %}</div>
+        <div class="sb-val">{{ lettre.adresse }}{% if lettre.adresse %}<br>{% endif %}{{ lettre.codePostal }} {{ lettre.ville }}</div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="sb-main">
+    <div class="sb-date">{{ lettre.lieu|default:"Abidjan" }}, le {{ lettre.date }}</div>
+
+    <div class="sb-recipient">
+        <div class="sb-rcp-name">{{ lettre.titreDestinataire }} {{ lettre.nomDestinataire }}</div>
+        {% if lettre.posteDestinataire %}<div class="sb-rcp-fn">{{ lettre.posteDestinataire }}</div>{% endif %}
+        {% if lettre.entreprise %}<div style="font-weight:600;">{{ lettre.entreprise }}</div>{% endif %}
+        {% if lettre.villeEntreprise %}<div class="sb-rcp-city">{{ lettre.villeEntreprise }}</div>{% endif %}
+    </div>
+
+    {% if lettre.objet %}
+    <div class="sb-objet">{{ lettre.objet }}</div>
+    {% endif %}
+
+    <p class="sb-salut">
+        {% if lettre.titreDestinataire == "M." or lettre.titreDestinataire == "M" %}Monsieur
+        {% elif lettre.titreDestinataire == "Mme" or lettre.titreDestinataire == "Mme." %}Madame
+        {% elif lettre.titreDestinataire == "Dr." %}Docteur
+        {% elif lettre.titreDestinataire == "Pr." %}Professeur
+        {% else %}{{ lettre.titreDestinataire }}{% endif %},
+    </p>
+    {% if lettre.corps %}<p class="sb-para">{{ lettre.corps }}</p>{% endif %}
+
+    <p class="sb-formule">{{ lettre.formuleFull }}</p>
+    <div class="sb-sig">{{ lettre.prenom }} {{ lettre.nom }}</div>
+</div>
+
+</body>
+</html>

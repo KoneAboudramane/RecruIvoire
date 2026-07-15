@@ -1,0 +1,210 @@
+﻿{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Demandes de vérification | {{ site_title|default:'Django site admin' }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<script>(function(){var t=localStorage.getItem('rp_theme')||'light';if(t==='noir')document.documentElement.classList.add('rp-noir');else if(t==='dark')document.documentElement.classList.add('rp-dark');})();</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+    #content { background:#f8fafc; }
+    #content-main { max-width:1400px; margin:0 auto; }
+    .badge { display:inline-flex; align-items:center; gap:.375rem;
+             padding:.25rem .75rem; border-radius:9999px; font-size:.7rem; font-weight:700; }
+    .badge-pending  { background:#FEF3C7; color:#92400E; }
+    .badge-approved { background:#DCFCE7; color:#166534; }
+    .badge-rejected { background:#FEE2E2; color:#991B1B; }
+    .badge-info     { background:#DBEAFE; color:#1E40AF; }
+    .section-card   { background:#fff; border:1px solid #f0f0f0; border-radius:1.25rem; padding:1.5rem; box-shadow:0 1px 4px rgba(0,0,0,.04); }
+
+    /* ── Dark mode ───────────────────────────────────────────────────── */
+    html.rp-dark #content { background:#0f172a; }
+    html.rp-dark .section-card { background:#1e293b; border-color:#334155; box-shadow:0 1px 4px rgba(0,0,0,.3); }
+    html.rp-dark .badge-pending  { background:rgba(245,158,11,.15); color:#fde68a; }
+    html.rp-dark .badge-approved { background:rgba(34,197,94,.15); color:#86efac; }
+    html.rp-dark .badge-rejected { background:rgba(239,68,68,.15); color:#fca5a5; }
+    html.rp-dark .badge-info     { background:rgba(59,130,246,.15); color:#93c5fd; }
+
+    /* ── Mode NOIR (OLED) ────────────────────────────────────────────── */
+    html.rp-noir #content { background:#000; }
+    html.rp-noir .section-card { background:#000; border-color:#1a1a1a; box-shadow:0 1px 4px rgba(0,0,0,.5); }
+    html.rp-noir .badge-pending  { background:rgba(245,158,11,.10); color:#fde68a; }
+    html.rp-noir .badge-approved { background:rgba(34,197,94,.10); color:#86efac; }
+    html.rp-noir .badge-rejected { background:rgba(239,68,68,.10); color:#fca5a5; }
+    html.rp-noir .badge-info     { background:rgba(59,130,246,.10); color:#93c5fd; }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans "Accueil" %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='entreprise' %}">{% trans "Entreprise" %}</a>
+    &rsaquo; <a href="{% url 'admin:entreprise_demandeverification_dashboard' %}">{% trans "Tableau de bord vérifications" %}</a>
+    &rsaquo; Demandes
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── En-tête ─────────────────────────────────────────────────────────── -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div>
+        <h1 class="text-2xl font-extrabold text-gray-900">{% trans "Vérifications entreprises" %}</h1>
+        <p class="text-sm text-gray-500 mt-1">{% trans "Gérez les demandes de vérification soumises par les entreprises." %}</p>
+    </div>
+    {% if stats.en_attente > 0 %}
+    <div class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm"
+         style="background:#FEF3C7; color:#92400E; border:1px solid #FDE68A;">
+        ⚠️ {{ stats.en_attente }} demande{{ stats.en_attente|pluralize }} en attente
+    </div>
+    {% endif %}
+</div>
+
+<!-- ── Cartes statistiques ──────────────────────────────────────────────── -->
+<div class="grid grid-cols-3 gap-4 mb-8">
+    <div class="stat-card flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+             style="background:#FEF3C7;">⏳</div>
+        <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">{% trans "En attente" %}</p>
+            <p class="text-3xl font-extrabold text-gray-900">{{ stats.en_attente }}</p>
+        </div>
+    </div>
+    <div class="stat-card flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+             style="background:#DCFCE7;">✅</div>
+        <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">{% trans "Approuvées" %}</p>
+            <p class="text-3xl font-extrabold text-gray-900">{{ stats.approuvees }}</p>
+        </div>
+    </div>
+    <div class="stat-card flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+             style="background:#FEE2E2;">❌</div>
+        <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">{% trans "Rejetées" %}</p>
+            <p class="text-3xl font-extrabold text-gray-900">{{ stats.rejetees }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- ── Demandes EN ATTENTE ───────────────────────────────────────────────── -->
+<div class="mb-8">
+    <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse inline-block"></span>
+        Demandes en attente d'examen
+    </h2>
+
+    {% if en_attente %}
+    <div class="space-y-3">
+        {% for demande in en_attente %}
+        <div class="bg-white border border-amber-100 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center gap-4 hover:shadow-md transition"
+             style="border-left: 4px solid #F59E0B;">
+
+            <!-- Logo / initiales -->
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center font-extrabold text-xl flex-shrink-0 shadow-sm"
+                 style="background:#009A44; color:white;">
+                {% if demande.entreprise.logoEntreprise %}
+                <img src="{{ demande.entreprise.logoEntreprise.url }}" alt="" class="w-full h-full object-cover rounded-xl">
+                {% else %}
+                {{ demande.entreprise.raisonSocial|slice:":1"|upper }}
+                {% endif %}
+            </div>
+
+            <!-- Infos principale -->
+            <div class="flex-1 min-w-0">
+                <div class="flex flex-wrap items-center gap-2 mb-1">
+                    <p class="font-bold text-gray-900 text-sm truncate">{{ demande.entreprise.raisonSocial }}</p>
+                    {% if demande.entreprise.secteurActivite %}
+                    <span class="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
+                        {{ demande.entreprise.get_secteurActivite_display }}
+                    </span>
+                    {% endif %}
+                </div>
+                <p class="text-xs text-gray-500">{{ demande.entreprise.emailProfessionnel }}</p>
+                <p class="text-xs text-gray-400 mt-1">
+                    Soumise le <strong class="text-gray-600">{{ demande.date_soumission|date:"d/m/Y à H:i" }}</strong>
+                    · {{ demande.date_soumission|timesince }} ago
+                </p>
+            </div>
+
+            <!-- Documents -->
+            <div class="flex gap-2 flex-shrink-0">
+                <span class="badge {% if demande.document_rccm %}badge-approved{% else %}badge-rejected{% endif %}">
+                    {% if demande.document_rccm %}✓ RCCM{% else %}✗ RCCM{% endif %}
+                </span>
+                <span class="badge {% if demande.document_identite %}badge-approved{% else %}badge-rejected{% endif %}">
+                    {% if demande.document_identite %}✓ Identité{% else %}✗ Identité{% endif %}
+                </span>
+            </div>
+
+            <!-- CTA -->
+            <a href="{% url 'admin:entreprise_demandeverification_reviser' demande.pk %}"
+               class="flex-shrink-0 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90 hover:shadow-md"
+               style="background: linear-gradient(135deg, #c96010, #e06a00);">
+                Examiner →
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white border border-gray-100 rounded-2xl p-12 text-center">
+        <div class="text-5xl mb-4">🎉</div>
+        <p class="font-bold text-gray-700 text-lg mb-1">{% trans "Aucune demande en attente" %}</p>
+        <p class="text-sm text-gray-400">{% trans "Toutes les demandes ont été traitées. Revenez plus tard." %}</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ── Demandes TRAITÉES ─────────────────────────────────────────────────── -->
+{% if traitees %}
+<div>
+    <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wider mb-4">
+        Historique des décisions (30 dernières)
+    </h2>
+
+    <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+        <table class="w-full text-sm">
+            <thead>
+                <tr style="background:#f9fafb;" class="border-b border-gray-100">
+                    <th class="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">{% trans "Entreprise" %}</th>
+                    <th class="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">{% trans "Statut" %}</th>
+                    <th class="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">{% trans "Traité le" %}</th>
+                    <th class="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">{% trans "Par" %}</th>
+                    <th class="px-4 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for demande in traitees %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-5 py-3.5">
+                        <p class="font-semibold text-gray-900 text-xs">{{ demande.entreprise.raisonSocial }}</p>
+                        <p class="text-gray-400 text-xs">{{ demande.entreprise.emailProfessionnel }}</p>
+                    </td>
+                    <td class="px-4 py-3.5">
+                        <span class="badge {% if demande.statut == 'APPROUVEE' %}badge-approved{% else %}badge-rejected{% endif %}">
+                            {% if demande.statut == 'APPROUVEE' %}✅ Approuvée{% else %}❌ Rejetée{% endif %}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3.5 text-xs text-gray-500">
+                        {{ demande.date_traitement|date:"d/m/Y H:i" }}
+                    </td>
+                    <td class="px-4 py-3.5 text-xs text-gray-500">
+                        {{ demande.traite_par.username|default:"—" }}
+                    </td>
+                    <td class="px-4 py-3.5">
+                        <a href="{% url 'admin:entreprise_demandeverification_reviser' demande.pk %}"
+                           class="text-xs font-semibold hover:underline" style="color:#009A44;">{% trans "Voir →" %}</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+

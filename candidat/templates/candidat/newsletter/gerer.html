@@ -1,0 +1,156 @@
+﻿{% extends "candidat/base.html" %}
+{% load i18n %}
+
+{% block titre %}Gérer mon abonnement — {{ logo_site.nom_site }}{% endblock %}
+
+{% block contenu %}
+<div class="max-w-lg mx-auto py-16"
+     x-data="gererNewsletter()">
+
+  <!-- En-tête -->
+  <div class="text-center mb-10">
+    <div class="text-5xl mb-4">📬</div>
+    <h1 class="text-3xl font-extrabold text-gray-800 mb-2">{% trans "Gérer mon abonnement" %}</h1>
+    <p class="text-gray-500">{% trans "Entrez votre adresse e-mail pour vous désabonner ou vous réabonner à la newsletter" %} <strong>{{ logo_site.nom_site }}</strong>.</p>
+  </div>
+
+  <!-- Formulaire -->
+  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+    {% csrf_token %}
+
+    <template x-if="!resultat">
+      <div>
+        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{% trans "Votre adresse e-mail" %}</label>
+        <input type="email" x-model="email" placeholder="{% trans "votre@email.com" %}" required
+               @keydown.enter.prevent="chercher()"
+               class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 mb-4">
+
+        <button @click="chercher()" :disabled="loading || !email"
+                class="w-full text-white font-bold py-3 rounded-xl transition hover:opacity-90 disabled:opacity-50"
+                style="background:#c96010;">
+          <span x-show="!loading">{% trans "Vérifier mon abonnement" %}</span>
+          <span x-show="loading">{% trans "Recherche en cours..." %}</span>
+        </button>
+
+        <template x-if="erreur">
+          <p class="mt-3 text-sm text-red-600 text-center font-medium" x-text="erreur"></p>
+        </template>
+      </div>
+    </template>
+
+    <!-- Résultat trouvé -->
+    <template x-if="resultat">
+      <div class="text-center">
+        <div class="text-4xl mb-4" x-text="actif ? '✅' : '⭕'"></div>
+
+        <p class="text-gray-600 text-sm mb-1">{% trans "Abonnement pour :" %}</p>
+        <p class="font-bold text-gray-800 mb-4" x-text="email"></p>
+
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold mb-6"
+             :class="actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
+             x-text="actif ? '✓ Abonné(e)' : '✗ Désabonné(e)'">
+        </div>
+
+        <template x-if="successMsg">
+          <p class="text-sm font-semibold mb-4"
+             :class="actif ? 'text-green-600' : 'text-red-600'"
+             x-text="successMsg"></p>
+        </template>
+
+        <div class="flex flex-col gap-3">
+          <button @click="toggle()" :disabled="loading"
+                  class="w-full font-bold py-3 rounded-xl transition hover:opacity-90 disabled:opacity-50"
+                  :class="actif ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100' : 'text-white'"
+                  :style="actif ? '' : 'background:#c96010'"
+                  x-text="loading ? '...' : (actif ? 'Me désabonner' : 'Me réabonner')">
+          </button>
+
+          <button @click="reset()"
+                  class="w-full text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+            ← Utiliser une autre adresse
+          </button>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Lien retour accueil -->
+  <p class="text-center mt-6 text-sm text-gray-400">
+    <a href="{% url 'candidat:accueil' %}" class="hover:underline" style="color:#c96010;">← Retour à l'accueil</a>
+  </p>
+
+</div>
+{% endblock %}
+
+
+{% block js_extra %}
+<script>
+function gererNewsletter() {
+    return {
+        email:      '',
+        loading:    false,
+        resultat:   false,
+        actif:      false,
+        erreur:     '',
+        successMsg: '',
+
+        csrfToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        },
+
+        async chercher() {
+            if (!this.email) return;
+            this.loading = true;
+            this.erreur  = '';
+            try {
+                const resp = await fetch('{% url "candidat:api_newsletter_statut" %}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken() },
+                    body: JSON.stringify({ email: this.email }),
+                });
+                const data = await resp.json();
+                if (data.ok) {
+                    this.actif    = data.actif;
+                    this.resultat = true;
+                } else {
+                    this.erreur = data.message;
+                }
+            } catch (e) {
+                this.erreur = 'Erreur réseau. Réessayez.';
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async toggle() {
+            this.loading    = true;
+            this.successMsg = '';
+            try {
+                const resp = await fetch('{% url "candidat:api_newsletter_toggle" %}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken() },
+                    body: JSON.stringify({ email: this.email }),
+                });
+                const data = await resp.json();
+                if (data.ok) {
+                    this.actif      = data.actif;
+                    this.successMsg = data.message;
+                }
+            } catch (e) {
+                this.successMsg = 'Erreur réseau. Réessayez.';
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        reset() {
+            this.email      = '';
+            this.resultat   = false;
+            this.actif      = false;
+            this.erreur     = '';
+            this.successMsg = '';
+        },
+    };
+}
+</script>
+{% endblock %}

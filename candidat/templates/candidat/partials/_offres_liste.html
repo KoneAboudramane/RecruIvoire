@@ -1,0 +1,49 @@
+{% load i18n %}
+{# ── Pagination haut ── #}
+{% include "candidat/partials/_pagination.html" with total_count=total_offres item_label="offre" %}
+
+{# ── Grille des offres ── #}
+<div id="offres-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    {% if offres_avec_score %}
+        {% for item in offres_avec_score %}
+        <div id="offre-{{ item.offre.id }}"
+             x-show="(contrat === 'TOUS' || contrat === '{{ item.offre.typeContrat }}')
+                      && (mode === 'TOUS' || mode === '{{ item.offre.modeTravail }}')
+                      && (q === '' || '{{ item.offre.titre|escapejs }} {{ item.offre.entreprise.raisonSocial|escapejs }} {{ item.offre.ville|default:''|escapejs }} {{ item.offre.pays|default:''|escapejs }} {{ item.offre.entreprise.secteurActiviteRef.nomSecteur|default:''|escapejs }}'.toLowerCase().includes(q.toLowerCase()))">
+            {% include "candidat/partials/offre_card.html" with offre=item.offre seuil_recente=seuil_recente match_score=item.score match_couleur=item.couleur match_libelle=item.libelle %}
+        </div>
+        {% endfor %}
+    {% else %}
+        {% for offre in offres %}
+        <div id="offre-{{ offre.id }}"
+             x-show="(contrat === 'TOUS' || contrat === '{{ offre.typeContrat }}')
+                      && (mode === 'TOUS' || mode === '{{ offre.modeTravail }}')
+                      && (q === '' || '{{ offre.titre|escapejs }} {{ offre.entreprise.raisonSocial|escapejs }} {{ offre.ville|default:''|escapejs }} {{ offre.pays|default:''|escapejs }} {{ offre.entreprise.secteurActiviteRef.nomSecteur|default:''|escapejs }}'.toLowerCase().includes(q.toLowerCase()))">
+            {% include "candidat/partials/offre_card.html" with offre=offre seuil_recente=seuil_recente %}
+        </div>
+        {% endfor %}
+    {% endif %}
+</div>
+
+{# ── Aucun résultat (Alpine) ── #}
+<div x-cloak
+     x-show="nbResultatsVisibles === 0">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl p-12 border border-dashed border-gray-200 dark:border-gray-700 text-center mt-4">
+        <div class="text-5xl mb-3">🔭</div>
+        <h3 class="text-lg font-bold text-gray-700 dark:text-gray-300 mb-1">{% trans "Aucune offre ne correspond" %}</h3>
+        <p class="text-gray-500 dark:text-gray-400 text-sm mb-4">{% trans "Essayez d'élargir vos critères." %}</p>
+        <button @click="reset()"
+                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm hover:opacity-90 transition"
+                style="background:#c96010;">
+            ✕ {% trans "Réinitialiser les filtres" %}
+        </button>
+    </div>
+</div>
+
+{# ── Pagination bas ── #}
+{% include "candidat/partials/_pagination.html" with total_count=total_offres item_label="offre" %}
+
+{# ── Données pour resynchroniser Alpine après un remplacement AJAX (toggle matching) ── #}
+<script type="application/json" id="offres-filtre-data"
+        data-en-calcul="{{ matching_en_calcul|yesno:'1,0' }}"
+        data-a-des-scores="{{ offres_avec_score|yesno:'1,0' }}">{{ offres_filtre_json|safe }}</script>

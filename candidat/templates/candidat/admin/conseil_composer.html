@@ -1,0 +1,306 @@
+﻿{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}{{ titre_page }} | {{ site_title|default:'Django site admin' }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<script>(function(){var t=localStorage.getItem('rp_theme')||'light';if(t==='noir')document.documentElement.classList.add('rp-noir');else if(t==='dark')document.documentElement.classList.add('rp-dark');})();</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    #content { background:#f8fafc; }
+    #content-main { max-width:860px; margin:0 auto; }
+    .nl-card { background:#fff; border:1px solid #e2e8f0; border-radius:1.25rem; padding:1.75rem; margin-bottom:1.5rem; }
+    .form-input, .form-textarea, .form-select {
+        width:100%; border:1px solid #e2e8f0; border-radius:.625rem;
+        padding:.6rem .85rem; font-size:.9rem; color:#0f172a;
+        outline:none; transition:border-color .15s, box-shadow .15s;
+        font-family:inherit;
+    }
+    .form-textarea { min-height:220px; resize:vertical; }
+    .form-input:focus, .form-textarea:focus, .form-select:focus {
+        border-color:#2e7d52; box-shadow:0 0 0 3px rgba(46,125,82,.12);
+    }
+    .nl-btn {
+        display:inline-flex; align-items:center; gap:.5rem;
+        padding:.65rem 1.4rem; border-radius:.75rem;
+        font-size:.875rem; font-weight:700; cursor:pointer;
+        border:none; transition:all .15s; text-decoration:none;
+    }
+    .btn-green  { background:linear-gradient(135deg,#2e7d52,#1e5c3a); color:#fff; }
+    .btn-green:hover  { transform:translateY(-1px); box-shadow:0 6px 16px rgba(46,125,82,.3); }
+    .btn-orange { background:linear-gradient(135deg,#c96010,#e06a00); color:#fff; }
+    .btn-orange:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(201,96,16,.3); }
+    .btn-ghost  { background:#fff; border:1px solid #e2e8f0; color:#475569; }
+    .btn-ghost:hover  { background:#f1f5f9; }
+    .cat-badge {
+        display:inline-flex; align-items:center; gap:5px;
+        padding:.3rem .85rem; border-radius:999px;
+        font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+    }
+    .badge-cv        { background:#dbeafe; color:#1e40af; }
+    .badge-entretien { background:#fce7f3; color:#9d174d; }
+    .badge-carriere  { background:#ede9fe; color:#5b21b6; }
+    .badge-plateforme{ background:#fef9c3; color:#854d0e; }
+
+    /* Dark mode */
+    html.rp-dark #content { background:#0f172a; }
+    html.rp-dark .nl-card { background:#1e293b; border-color:#334155; }
+    html.rp-dark .nl-card h2 { color:#f1f5f9; }
+    html.rp-dark label { color:#cbd5e1; }
+    html.rp-dark .form-input, html.rp-dark .form-textarea, html.rp-dark .form-select {
+        background:#0f172a; border-color:#334155; color:#f1f5f9;
+    }
+    html.rp-dark .form-input:focus, html.rp-dark .form-textarea:focus, html.rp-dark .form-select:focus {
+        border-color:#4ade80; box-shadow:0 0 0 3px rgba(74,222,128,.12);
+    }
+    html.rp-dark .btn-ghost { background:#1e293b; border-color:#334155; color:#cbd5e1; }
+    html.rp-dark .btn-ghost:hover { background:#162032; }
+    html.rp-dark .text-slate-500 { color:#94a3b8 !important; }
+    html.rp-dark .text-slate-400 { color:#64748b !important; }
+    html.rp-dark .text-slate-800 { color:#f1f5f9 !important; }
+    html.rp-dark .border-slate-100 { border-color:#334155 !important; }
+    html.rp-dark .text-red-500   { color:#f87171 !important; }
+    html.rp-dark .text-red-600   { color:#fca5a5 !important; }
+    /* Blocs messages */
+    html.rp-dark .bg-green-50  { background:rgba(34,197,94,.10) !important; }
+    html.rp-dark .text-green-700 { color:#86efac !important; }
+    html.rp-dark .border-green-200 { border-color:rgba(34,197,94,.30) !important; }
+    html.rp-dark .bg-red-50    { background:rgba(239,68,68,.10) !important; }
+    html.rp-dark .text-red-700  { color:#fca5a5 !important; }
+    html.rp-dark .border-red-200 { border-color:rgba(239,68,68,.30) !important; }
+    html.rp-dark .bg-amber-50  { background:rgba(234,179,8,.10) !important; }
+    html.rp-dark .text-amber-700 { color:#fde68a !important; }
+    html.rp-dark .border-amber-200 { border-color:rgba(234,179,8,.30) !important; }
+    /* Titres page */
+    html.rp-dark .text-slate-900 { color:#f1f5f9 !important; }
+    html.rp-dark .text-slate-500.text-sm { color:#94a3b8 !important; }
+
+    /* ── Mode NOIR (OLED) ────────────────────────────────────────────── */
+    html.rp-noir #content { background:#000; }
+    html.rp-noir .nl-card { background:#000; border-color:#1a1a1a; }
+    html.rp-noir .nl-card h2 { color:#f1f5f9; }
+    html.rp-noir label { color:#94a3b8; }
+    html.rp-noir .form-input, html.rp-noir .form-textarea, html.rp-noir .form-select {
+        background:#000; border-color:#1a1a1a; color:#f1f5f9;
+    }
+    html.rp-noir .form-input:focus, html.rp-noir .form-textarea:focus, html.rp-noir .form-select:focus {
+        border-color:#4ade80; box-shadow:0 0 0 3px rgba(74,222,128,.10);
+    }
+    html.rp-noir .btn-ghost { background:#000; border-color:#1a1a1a; color:#94a3b8; }
+    html.rp-noir .btn-ghost:hover { background:#0a0a0a; color:#f1f5f9; }
+    html.rp-noir .text-slate-500 { color:#64748b !important; }
+    html.rp-noir .text-slate-400 { color:#475569 !important; }
+    html.rp-noir .text-slate-800 { color:#f1f5f9 !important; }
+    html.rp-noir .text-slate-900 { color:#f1f5f9 !important; }
+    html.rp-noir .border-slate-100 { border-color:#1a1a1a !important; }
+    html.rp-noir .text-red-500   { color:#f87171 !important; }
+    html.rp-noir .text-red-600   { color:#fca5a5 !important; }
+    html.rp-noir .bg-green-50  { background:rgba(34,197,94,.07) !important; }
+    html.rp-noir .text-green-700 { color:#86efac !important; }
+    html.rp-noir .border-green-200 { border-color:rgba(34,197,94,.25) !important; }
+    html.rp-noir .bg-red-50    { background:rgba(239,68,68,.07) !important; }
+    html.rp-noir .text-red-700  { color:#fca5a5 !important; }
+    html.rp-noir .border-red-200 { border-color:rgba(239,68,68,.25) !important; }
+    html.rp-noir .bg-amber-50  { background:rgba(234,179,8,.07) !important; }
+    html.rp-noir .text-amber-700 { color:#fde68a !important; }
+    html.rp-noir .border-amber-200 { border-color:rgba(234,179,8,.25) !important; }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans "Accueil" %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='candidat' %}">{% trans "Candidat" %}</a>
+    &rsaquo; <a href="{% url 'admin:candidat_conseilnewsletter_changelist' %}">{% trans "Conseils newsletter" %}</a>
+    &rsaquo; {{ titre_page }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div>
+
+<!-- En-tête -->
+<div class="flex items-center gap-3 mb-8">
+    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
+         style="background:linear-gradient(135deg,#2e7d52,#1e5c3a); color:white;">
+        💡
+    </div>
+    <div>
+        <h1 class="text-2xl font-extrabold text-slate-900">{{ titre_page }}</h1>
+        <p class="text-sm text-slate-500">
+            {% if conseil %}Modifier et renvoyer ce conseil.{% else %}Composez un conseil et envoyez-le ou planifiez-le.{% endif %}
+        </p>
+    </div>
+</div>
+
+<!-- Messages -->
+{% if messages %}
+<div class="mb-6 space-y-2">
+    {% for message in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm font-semibold
+        {% if message.level == 40 %}bg-red-50 text-red-700 border border-red-200
+        {% elif message.level == 30 %}bg-amber-50 text-amber-700 border border-amber-200
+        {% else %}bg-green-50 text-green-700 border border-green-200{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Stats destinataires (mis à jour selon la catégorie choisie) -->
+<div class="nl-card" style="padding:1rem 1.5rem;">
+    <p class="text-sm text-slate-500" id="msg-conseils">
+        📬 Sera envoyé à <strong class="text-slate-800">{{ nb_conseils }}</strong>
+        abonné{{ nb_conseils|pluralize }} ayant coché « Conseils & astuces ».
+    </p>
+    <p class="text-sm text-slate-500" id="msg-actualites" style="display:none;">
+        📰 Sera envoyé à <strong class="text-slate-800">{{ nb_actualites }}</strong>
+        abonné{{ nb_actualites|pluralize }} ayant coché « Actualités de la plateforme ».
+    </p>
+</div>
+
+<!-- Formulaire -->
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <div class="nl-card">
+        <h2 class="text-base font-bold text-slate-800 mb-5">✏️ Contenu du conseil</h2>
+
+        <div class="space-y-5">
+
+            <!-- Catégorie -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{% trans "Catégorie" %}</label>
+                <select name="categorie" id="select-categorie" class="form-select">
+                    <optgroup label="── Conseils & astuces">
+                        <option value="CV"
+                            {% if conseil and conseil.categorie == 'CV' %}selected
+                            {% elif not conseil and categorie_preselect == 'CV' %}selected
+                            {% elif not conseil and not categorie_preselect %}selected{% endif %}>📄 CV & candidature</option>
+                        <option value="ENTRETIEN"
+                            {% if conseil and conseil.categorie == 'ENTRETIEN' %}selected
+                            {% elif not conseil and categorie_preselect == 'ENTRETIEN' %}selected{% endif %}>🎤 Entretien</option>
+                        <option value="CARRIERE"
+                            {% if conseil and conseil.categorie == 'CARRIERE' %}selected
+                            {% elif not conseil and categorie_preselect == 'CARRIERE' %}selected{% endif %}>🚀 Évolution de carrière</option>
+                        <option value="PLATEFORME"
+                            {% if conseil and conseil.categorie == 'PLATEFORME' %}selected
+                            {% elif not conseil and categorie_preselect == 'PLATEFORME' %}selected{% endif %}>💡 Utiliser la plateforme</option>
+                    </optgroup>
+                    <optgroup label="── Actualités">
+                        <option value="ACTUALITE"
+                            {% if conseil and conseil.categorie == 'ACTUALITE' %}selected
+                            {% elif not conseil and categorie_preselect == 'ACTUALITE' %}selected{% endif %}>📰 Actualité de la plateforme</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- Titre -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{% trans "Titre" %} <span class="text-red-500">*</span></label>
+                <input type="text" name="titre" required maxlength="200"
+                       value="{{ conseil.titre|default:'' }}"
+                       placeholder="{% trans "Ex: 5 erreurs à éviter sur votre CV" %}"
+                       class="form-input">
+            </div>
+
+            <!-- Contenu -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{% trans "Contenu" %} <span class="text-red-500">*</span></label>
+                <textarea name="contenu" required
+                          placeholder="Rédigez votre conseil ici. Utilisez des sauts de ligne pour aérer le texte."
+                          class="form-textarea">{{ conseil.contenu|default:'' }}</textarea>
+                <p class="text-xs text-slate-400 mt-1">{% trans "Les sauts de ligne seront respectés dans l'email." %}</p>
+            </div>
+
+            <!-- Image (pour les actualités) -->
+            <div id="bloc-image" style="{% if conseil and conseil.categorie != 'ACTUALITE' and not categorie_preselect == 'ACTUALITE' %}display:none;{% endif %}">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    🖼️ Image <span class="text-slate-400 font-normal normal-case">(optionnel — recommandé 600×300 px)</span>
+                </label>
+
+                {% if conseil and conseil.image %}
+                <div class="mb-3 flex items-start gap-4">
+                    <img src="{{ conseil.image.url }}" alt="{% trans "Image actuelle" %}"
+                         class="rounded-lg border border-slate-200 object-cover"
+                         style="max-height:120px; max-width:240px;">
+                    <div>
+                        <p class="text-xs text-slate-500 mb-2">{% trans "Image actuelle" %}</p>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm text-red-600">
+                            <input type="checkbox" name="supprimer_image" class="h-4 w-4">
+                            Supprimer cette image
+                        </label>
+                    </div>
+                </div>
+                {% endif %}
+
+                <input type="file" name="image" accept="image/*" class="form-input" style="padding:.45rem .75rem;">
+                <p class="text-xs text-slate-400 mt-1">{% trans "Formats acceptés : JPG, PNG, WebP. Taille max : 2 Mo." %}</p>
+
+                <div class="mt-3">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{% trans "Légende de l'image" %}</label>
+                    <input type="text" name="legende_image" maxlength="200"
+                           value="{{ conseil.legende_image|default:'' }}"
+                           placeholder="{% trans "Ex: Nouvelle fonctionnalité disponible sur RecrutePro" %}"
+                           class="form-input">
+                </div>
+            </div>
+
+            <!-- Date planifiée (Option B) -->
+            <div class="border-t border-slate-100 pt-5">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    📅 Planifier l'envoi (optionnel)
+                </label>
+                <input type="datetime-local" name="date_envoi_prevu"
+                       value="{{ conseil.date_envoi_prevu|date:'Y-m-d\TH:i'|default:'' }}"
+                       class="form-input" style="max-width:280px;">
+                <p class="text-xs text-slate-400 mt-1">
+                    Laissez vide pour enregistrer en brouillon ou envoyer immédiatement.
+                </p>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="nl-card" style="padding:1.25rem 1.5rem;">
+        <div class="flex flex-wrap gap-3">
+            <button type="submit" name="action" value="envoyer_maintenant" class="nl-btn btn-green"
+                    onclick="return confirm('Envoyer ce conseil maintenant à {{ nb_abonnes }} abonné(s) ?')">
+                🚀 Envoyer maintenant
+            </button>
+            <button type="submit" name="action" value="planifier" class="nl-btn btn-orange">
+                📅 Enregistrer & planifier
+            </button>
+            <button type="submit" name="action" value="brouillon" class="nl-btn btn-ghost">
+                💾 Enregistrer en brouillon
+            </button>
+            <a href="{% url 'admin:candidat_conseilnewsletter_changelist' %}" class="nl-btn btn-ghost">
+                ← Retour
+            </a>
+        </div>
+    </div>
+
+</form>
+
+</div>
+
+<script>
+function majDestinataires(val) {
+    var estActu = val === 'ACTUALITE';
+    document.getElementById('msg-conseils').style.display   = estActu ? 'none' : '';
+    document.getElementById('msg-actualites').style.display = estActu ? '' : 'none';
+    var blocImg = document.getElementById('bloc-image');
+    if (blocImg) blocImg.style.display = estActu ? '' : 'none';
+}
+(function() {
+    var sel = document.getElementById('select-categorie');
+    if (sel) {
+        majDestinataires(sel.value);
+        sel.addEventListener('change', function() { majDestinataires(this.value); });
+    }
+})();
+</script>
+{% endblock %}
+

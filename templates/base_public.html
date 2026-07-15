@@ -1,0 +1,524 @@
+﻿{% load i18n static pages_tags %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}" {% if LANGUAGE_BIDI %}dir="rtl"{% endif %}>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block titre %}{{ logo_site.nom_site }}{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{{ favicon_url }}">
+    <link rel="shortcut icon" type="image/png" href="{{ favicon_url }}">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#009A44">
+    <meta name="description" content="{% block meta_description %}{{ logo_site.nom_site }} — Plateforme de recrutement en ligne en Côte d'Ivoire.{% endblock %}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ logo_site.nom_site }}">
+    <meta property="og:title" content="{% block og_title %}{{ logo_site.nom_site }}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ logo_site.nom_site }} — Plateforme de recrutement en ligne.{% endblock %}">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{% block twitter_title %}{{ logo_site.nom_site }}{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}Plateforme de recrutement en ligne — Côte d'Ivoire.{% endblock %}">
+    <script>
+        (function(){
+            var t = localStorage.getItem('theme');
+            if(t === 'noir') { document.documentElement.classList.add('noir'); }
+            else if(t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)){ document.documentElement.classList.add('dark'); }
+        })();
+    </script>
+    <script src="{% static 'js/tailwind.js' %}"></script>
+    <script defer src="{% static 'js/alpine.js' %}"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { ci: { orange: '#c96010', green: '#009A44' } } } }
+        }
+    </script>
+    {% block css_extra %}{% endblock %}
+    <style>
+        [x-cloak] { display: none !important; }
+
+        html.dark { color-scheme: dark; }
+        html.dark body { background-color: #0f172a !important; color: #cbd5e1; }
+        html.dark .bg-white    { background-color: #1e293b !important; }
+        html.dark .bg-gray-50  { background-color: #162032 !important; }
+        html.dark .bg-gray-100 { background-color: #1e2d42 !important; }
+        html.dark .bg-gray-200 { background-color: #243348 !important; }
+        html.dark .text-white { color: #ffffff !important; }
+        html.dark .text-gray-900, html.dark .text-gray-800 { color: #f1f5f9 !important; }
+        html.dark .text-gray-700 { color: #e2e8f0 !important; }
+        html.dark .text-gray-600 { color: #cbd5e1 !important; }
+        html.dark .text-gray-500 { color: #94a3b8 !important; }
+        html.dark .text-gray-400 { color: #64748b !important; }
+        html.dark .border-gray-100, html.dark .border-gray-200 { border-color: #334155 !important; }
+        html.dark .border-gray-300 { border-color: #475569 !important; }
+        html.dark .border-gray-50  { border-color: #1e293b !important; }
+        html.dark input:not([type=checkbox]):not([type=radio]), html.dark textarea, html.dark select {
+            background-color: #0f172a !important; color: #e2e8f0 !important; border-color: #475569 !important;
+        }
+        html.dark input::placeholder, html.dark textarea::placeholder { color: #475569 !important; }
+        html.dark .shadow-sm { box-shadow: 0 1px 3px rgba(0,0,0,.5) !important; }
+        html.dark .shadow-md { box-shadow: 0 4px 12px rgba(0,0,0,.6) !important; }
+        html.dark .shadow-lg { box-shadow: 0 8px 24px rgba(0,0,0,.6) !important; }
+        html.dark .hover\:bg-gray-50:hover  { background-color: #1e2d42 !important; }
+        html.dark .hover\:bg-gray-100:hover { background-color: #243348 !important; }
+        html.dark .hover\:bg-orange-50:hover { background-color: #2a1f10 !important; }
+        html.dark .hover\:bg-green-50:hover  { background-color: #0f2318 !important; }
+        html.dark .bg-green-100  { background-color: rgba(34,197,94,.12) !important; }
+        html.dark .bg-red-100    { background-color: rgba(239,68,68,.12) !important; }
+        html.dark .bg-yellow-100 { background-color: rgba(234,179,8,.12) !important; }
+        html.dark .bg-orange-100 { background-color: rgba(249,115,22,.12) !important; }
+        html.dark .bg-green-50   { background-color: rgba(34,197,94,.10) !important; }
+        html.dark .bg-orange-50  { background-color: rgba(249,115,22,.10) !important; }
+        html.dark .bg-red-50     { background-color: rgba(239,68,68,.10) !important; }
+        html.dark .bg-blue-50    { background-color: rgba(59,130,246,.12) !important; }
+        html.dark .text-green-800  { color: #86efac !important; }
+        html.dark .text-red-800    { color: #fca5a5 !important; }
+        html.dark .text-yellow-800 { color: #fde68a !important; }
+        html.dark .text-orange-800 { color: #fdba74 !important; }
+        html.dark .text-green-700, html.dark .text-green-600 { color: #4ade80 !important; }
+        html.dark .text-orange-700, html.dark .text-orange-600 { color: #fb923c !important; }
+        html.dark .text-red-700, html.dark .text-red-600 { color: #f87171 !important; }
+        html.dark nav.bg-white { background-color: #1e293b !important; border-color: #334155 !important; }
+        html.dark nav .text-gray-700 { color: #e2e8f0 !important; }
+        html.dark nav .bg-gray-100   { background-color: #243348 !important; }
+        html.dark .hover\:bg-red-50:hover    { background-color: rgba(239,68,68,.10) !important; }
+        html.dark .hover\:bg-orange-50:hover { background-color: rgba(249,115,22,.10) !important; }
+        html.dark footer[style*="background-color:#2e7d52"],
+        html.dark footer[style*="background-color:#c96010"] {
+            background: linear-gradient(135deg,#0f172a 0%,#162032 60%,#1e293b 100%) !important;
+        }
+
+        html.noir { color-scheme: dark; }
+        html.noir body { background-color: #000 !important; color: #d1d5db; }
+        html.noir .bg-white    { background-color: #0d0d0d !important; }
+        html.noir .bg-gray-50  { background-color: #080808 !important; }
+        html.noir .bg-gray-100 { background-color: #111 !important; }
+        html.noir .bg-gray-200 { background-color: #1a1a1a !important; }
+        html.noir .text-white { color: #ffffff !important; }
+        html.noir .text-gray-900, html.noir .text-gray-800 { color: #f1f5f9 !important; }
+        html.noir .text-gray-700 { color: #e2e8f0 !important; }
+        html.noir .text-gray-600 { color: #cbd5e1 !important; }
+        html.noir .text-gray-500 { color: #94a3b8 !important; }
+        html.noir .text-gray-400 { color: #64748b !important; }
+        html.noir .border-gray-100, html.noir .border-gray-200 { border-color: #222 !important; }
+        html.noir .border-gray-300 { border-color: #333 !important; }
+        html.noir .border-gray-50  { border-color: #111 !important; }
+        html.noir input:not([type=checkbox]):not([type=radio]), html.noir textarea, html.noir select {
+            background-color: #000 !important; color: #e2e8f0 !important; border-color: #333 !important;
+        }
+        html.noir .shadow-sm { box-shadow: 0 1px 3px rgba(0,0,0,.9) !important; }
+        html.noir .shadow-md { box-shadow: 0 4px 12px rgba(0,0,0,.95) !important; }
+        html.noir .shadow-lg { box-shadow: 0 8px 24px rgba(0,0,0,.95) !important; }
+        html.noir .hover\:bg-gray-50:hover   { background-color: #111 !important; }
+        html.noir .hover\:bg-gray-100:hover  { background-color: #1a1a1a !important; }
+        html.noir .hover\:bg-orange-50:hover { background-color: #1a0d00 !important; }
+        html.noir .hover\:bg-green-50:hover  { background-color: #001a0a !important; }
+        html.noir .bg-green-50   { background-color: rgba(34,197,94,.08) !important; }
+        html.noir .bg-orange-50  { background-color: rgba(249,115,22,.08) !important; }
+        html.noir .bg-red-50     { background-color: rgba(239,68,68,.08) !important; }
+        html.noir .text-green-700, html.noir .text-green-600 { color: #4ade80 !important; }
+        html.noir .text-orange-700, html.noir .text-orange-600 { color: #fb923c !important; }
+        html.noir .text-red-700, html.noir .text-red-600 { color: #f87171 !important; }
+        html.noir nav.bg-white { background-color: #0d0d0d !important; border-color: #222 !important; }
+        html.noir [style*="background:#c96010"]  { background: #CC6A00 !important; }
+        html.noir [style*="background:#009A44"]  { background: #007A35 !important; }
+        html.noir [style*="color:#c96010"] { color: #FB923C !important; }
+        html.noir [style*="color:#009A44"] { color: #4ade80 !important; }
+        /* Correction : boutons/liens avec fond coloré → texte blanc */
+        html.noir [style*="background-color:#c96010"] { color: #ffffff !important; }
+        html.noir [style*="background-color:#009A44"] { color: #ffffff !important; }
+        html.noir footer[style*="background-color:#2e7d52"],
+        html.noir footer[style*="background-color:#c96010"] {
+            background: linear-gradient(135deg,#000 0%,#080808 60%,#111 100%) !important;
+        }
+
+        .bande-tricolore > div:nth-child(1) { background: #c96010 !important; }
+        .bande-tricolore > div:nth-child(2) { background: #ffffff !important; }
+        .bande-tricolore > div:nth-child(3) { background: #009A44 !important; }
+        html.dark .bande-tricolore > div:nth-child(1),
+        html.noir .bande-tricolore > div:nth-child(1) { background: #c96010 !important; }
+        html.dark .bande-tricolore > div:nth-child(2),
+        html.noir .bande-tricolore > div:nth-child(2) { background: #ffffff !important; }
+        html.dark .bande-tricolore > div:nth-child(3),
+        html.noir .bande-tricolore > div:nth-child(3) { background: #009A44 !important; }
+
+        html:not(.dark):not(.noir) footer {
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+            border-top: 1px solid #e5e7eb;
+        }
+        html:not(.dark):not(.noir) footer [class*="text-white"] { color: #6b7280 !important; }
+        html:not(.dark):not(.noir) footer .text-2xl { color: #111827 !important; }
+        html:not(.dark):not(.noir) footer a { color: #374151 !important; }
+        html:not(.dark):not(.noir) footer a:hover { color: #c96010 !important; }
+        html:not(.dark):not(.noir) footer [class*="border-white"] { border-color: #e5e7eb !important; }
+        .cookie-btn-refuse { background:transparent; border-color:#d1d5db; color:#4b5563; }
+        .cookie-btn-refuse:hover { background:#f3f4f6; }
+        .cookie-btn-accept { background:#374151; color:#fff; }
+        .cookie-btn-accept:hover { background:#1f2937; }
+        html.dark .cookie-btn-refuse { border-color:#4b5563; color:#cbd5e1; }
+        html.dark .cookie-btn-refuse:hover { background:#243348; }
+        html.dark .cookie-btn-accept { background:#4b5563; color:#f1f5f9; }
+        html.dark .cookie-btn-accept:hover { background:#374151; }
+        html.noir .cookie-btn-refuse { border-color:#333; color:#9ca3af; }
+        html.noir .cookie-btn-refuse:hover { background:#1a1a1a; }
+        html.noir .cookie-btn-accept { background:#1f1f1f; color:#e5e7eb; border:1px solid #333; }
+        html.noir .cookie-btn-accept:hover { background:#2a2a2a; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen" style="padding-top:80px">
+
+<!-- ══ NAVBAR FIXE ══════════════════════════════════════════════════════════ -->
+<div class="fixed top-0 left-0 right-0 z-50">
+<nav class="w-full bg-white text-gray-800 shadow-sm border-b border-gray-100" x-data="{ menuOuvert: false }">
+    <div class="w-full px-4 md:px-8 py-3 md:py-4 flex items-center justify-between">
+
+        <!-- Logo -->
+        {% if request.entreprise or request.recruteur %}
+            <a href="{% url 'entreprise:accueil' %}" class="flex items-center gap-2 hover:opacity-85 transition flex-shrink-0">
+        {% else %}
+            <a href="{% url 'candidat:accueil' %}" class="flex items-center gap-2 hover:opacity-85 transition flex-shrink-0">
+        {% endif %}
+            {% if logo_site.afficher_image %}
+                <img src="{{ logo_site.logo_image.url }}" alt="{{ logo_site.nom_site }}" class="h-8 md:h-10 w-auto object-contain" style="max-width:120px;">
+            {% endif %}
+            {% if logo_site.afficher_texte %}
+                <span class="flex flex-col leading-none">
+                    {% if request.entreprise or request.recruteur %}
+                        <span class="text-lg md:text-2xl font-extrabold tracking-tight" style="color:#009A44;">{{ logo_site.nom_site }}</span>
+                        <span class="text-xs font-normal text-gray-500 mt-0.5 hidden sm:block">{% trans "Espace Entreprise" %}</span>
+                    {% else %}
+                        <span class="text-lg md:text-2xl font-extrabold tracking-tight" style="color:#c96010;">{{ logo_site.nom_site }}</span>
+                        <span class="text-xs font-normal text-gray-500 mt-0.5 hidden sm:block">{% if logo_site.slogan %}{{ logo_site.slogan }}{% else %}{% trans "Espace Candidat" %}{% endif %}</span>
+                    {% endif %}
+                </span>
+            {% endif %}
+        </a>
+
+        <!-- Liens desktop -->
+        <div class="hidden md:flex items-center gap-8 text-base font-semibold">
+            {% if request.entreprise or request.recruteur %}
+                {% for groupe in navbar_entreprise %}{% for el in groupe.elements %}
+                {% if el.visibilite == 'TOUJOURS' or el.visibilite == 'ENTREPRISE' and request.entreprise or el.visibilite == 'RECRUTEUR' and request.recruteur or el.visibilite == 'ENTREPRISE_OU_RECRUTEUR' and request.entreprise or el.visibilite == 'ENTREPRISE_OU_RECRUTEUR' and request.recruteur %}
+                {% if el.type == 'MENU' %}
+                {% any_active el.enfants request.path as dropdown_actif %}
+                <div class="relative group">
+                    <button class="pb-1 border-b-2 transition flex items-center gap-1 {% if dropdown_actif %}text-green-600 border-green-500{% else %}text-gray-700 border-transparent hover:text-green-600{% endif %}">
+                        {% if el.icone %}<span>{{ el.icone }}</span> {% endif %}{{ el.label }}
+                        <svg class="w-3.5 h-3.5 opacity-70 group-hover:rotate-180 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div class="absolute top-full left-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible translate-y-1 group-hover:translate-y-0 transition-all duration-200 z-50">
+                        {% for enfant in el.enfants %}
+                        {% if enfant.visibilite == 'TOUJOURS' or enfant.visibilite == 'ENTREPRISE' and request.entreprise or enfant.visibilite == 'RECRUTEUR' and request.recruteur or enfant.visibilite == 'ENTREPRISE_OU_RECRUTEUR' and request.entreprise or enfant.visibilite == 'ENTREPRISE_OU_RECRUTEUR' and request.recruteur %}
+                        {% if not forloop.first %}<div class="border-t border-gray-100"></div>{% endif %}
+                        <a href="{{ enfant.url }}"{% if enfant.nouvel_onglet %} target="_blank" rel="noopener"{% endif %}
+                           class="flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-green-50 transition {% if enfant.correspondance_exacte and request.path == enfant.url or not enfant.correspondance_exacte and enfant.url in request.path %}bg-green-50 text-green-700{% else %}text-gray-700{% endif %}">
+                            {% if enfant.icone %}<span class="text-base">{{ enfant.icone }}</span>{% endif %}{{ enfant.label }}
+                        </a>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                <a href="{{ el.url }}"{% if el.nouvel_onglet %} target="_blank" rel="noopener"{% endif %}
+                   class="pb-1 border-b-2 transition {% if el.correspondance_exacte and request.path == el.url or not el.correspondance_exacte and el.url in request.path %}text-green-600 border-green-500{% else %}text-gray-700 border-transparent hover:text-green-600{% endif %}">
+                    {% if el.icone %}<span>{{ el.icone }}</span> {% endif %}{{ el.label }}
+                </a>
+                {% endif %}
+                {% endif %}
+                {% endfor %}{% endfor %}
+            {% else %}
+                {% for groupe in navbar_candidat %}{% for el in groupe.elements %}
+                {% if el.visibilite == 'TOUJOURS' or el.visibilite == 'CANDIDAT_CONNECTE' and request.candidat or el.visibilite == 'CANDIDAT_NON_CONNECTE' and not request.candidat %}
+                {% if el.type == 'MENU' %}
+                {% any_active el.enfants request.path as dropdown_actif %}
+                <div class="relative group">
+                    <button class="pb-1 border-b-2 transition flex items-center gap-1 {% if dropdown_actif %}text-orange-600 border-orange-500{% else %}text-gray-700 border-transparent hover:text-orange-600{% endif %}">
+                        {% if el.icone %}<span>{{ el.icone }}</span> {% endif %}{{ el.label }}
+                        <svg class="w-3.5 h-3.5 opacity-70 group-hover:rotate-180 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div class="absolute top-full left-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible translate-y-1 group-hover:translate-y-0 transition-all duration-200 z-50">
+                        {% for enfant in el.enfants %}
+                        {% if enfant.visibilite == 'TOUJOURS' or enfant.visibilite == 'CANDIDAT_CONNECTE' and request.candidat or enfant.visibilite == 'CANDIDAT_NON_CONNECTE' and not request.candidat %}
+                        {% if not forloop.first %}<div class="border-t border-gray-100"></div>{% endif %}
+                        <a href="{{ enfant.url }}"{% if enfant.nouvel_onglet %} target="_blank" rel="noopener"{% endif %}
+                           class="flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-orange-50 transition {% if enfant.correspondance_exacte and request.path == enfant.url or not enfant.correspondance_exacte and enfant.url in request.path %}bg-orange-50 text-orange-700{% else %}text-gray-700{% endif %}">
+                            {% if enfant.icone %}<span class="text-base">{{ enfant.icone }}</span>{% endif %}{{ enfant.label }}
+                        </a>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                <a href="{{ el.url }}"{% if el.nouvel_onglet %} target="_blank" rel="noopener"{% endif %}
+                   class="pb-1 border-b-2 transition {% if el.correspondance_exacte and request.path == el.url or not el.correspondance_exacte and el.url in request.path %}text-orange-600 border-orange-500{% else %}text-gray-700 border-transparent hover:text-orange-600{% endif %}">
+                    {% if el.icone %}<span>{{ el.icone }}</span> {% endif %}{{ el.label }}
+                </a>
+                {% endif %}
+                {% endif %}
+                {% endfor %}{% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- Actions desktop -->
+        <div class="flex items-center gap-2 md:gap-3">
+            {% if request.entreprise or request.recruteur %}
+                <form method="post" action="{% if request.recruteur %}{% url 'entreprise:recruteur_deconnexion' %}{% else %}{% url 'entreprise:deconnexion' %}{% endif %}" class="hidden md:block">
+                    {% csrf_token %}
+                    <button type="submit" class="font-semibold px-4 py-1.5 rounded text-white text-sm transition hover:opacity-90" style="background-color:#009A44;">
+                        {% trans "Déconnexion" %}
+                    </button>
+                </form>
+            {% elif request.candidat %}
+                <form method="post" action="{% url 'candidat:deconnexion' %}" class="hidden md:block">
+                    {% csrf_token %}
+                    <button type="submit" class="font-semibold px-4 py-1.5 rounded text-white text-sm transition hover:opacity-90" style="background-color:#c96010;">
+                        {% trans "Déconnexion" %}
+                    </button>
+                </form>
+            {% else %}
+                <a href="{% url 'candidat:connexion' %}" class="font-semibold px-3 py-1.5 text-sm rounded text-white transition hover:opacity-90" style="background-color:#c96010;">
+                    {% trans "Candidat" %}
+                </a>
+                <a href="{% url 'entreprise:connexion' %}" class="hidden sm:inline font-semibold px-3 py-1.5 text-sm rounded border transition hover:bg-green-50" style="border-color:#009A44;color:#009A44;">
+                    {% trans "Entreprise" %}
+                </a>
+            {% endif %}
+
+            <!-- Hamburger mobile -->
+            <button @click="menuOuvert = !menuOuvert"
+                    class="md:hidden flex flex-col justify-center items-center w-9 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 transition ml-1"
+                    :aria-expanded="menuOuvert" aria-label="{% trans "Menu" %}">
+                <span class="block w-5 h-0.5 bg-gray-700 transition-all duration-300" :class="menuOuvert ? 'rotate-45 translate-y-1.5' : ''"></span>
+                <span class="block w-5 h-0.5 bg-gray-700 my-1 transition-all duration-300" :class="menuOuvert ? 'opacity-0' : ''"></span>
+                <span class="block w-5 h-0.5 bg-gray-700 transition-all duration-300" :class="menuOuvert ? '-rotate-45 -translate-y-1.5' : ''"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Menu mobile -->
+    <div x-show="menuOuvert"
+         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2"
+         class="md:hidden bg-white border-t border-gray-100">
+        <div class="px-4 py-3 flex flex-col gap-1">
+            {% if request.entreprise or request.recruteur %}
+                {% for groupe in navbar_entreprise %}{% for el in groupe.elements %}
+                {% if el.visibilite == 'TOUJOURS' or el.visibilite == 'ENTREPRISE' and request.entreprise or el.visibilite == 'RECRUTEUR' and request.recruteur or el.visibilite == 'ENTREPRISE_OU_RECRUTEUR' and request.entreprise or el.visibilite == 'ENTREPRISE_OU_RECRUTEUR' and request.recruteur %}
+                <a href="{{ el.url }}" @click="menuOuvert=false"{% if el.nouvel_onglet %} target="_blank" rel="noopener"{% endif %}
+                   class="px-3 py-2.5 rounded-lg text-sm font-semibold transition {% if el.correspondance_exacte and request.path == el.url or not el.correspondance_exacte and el.url in request.path %}bg-green-50 text-green-700{% else %}text-gray-700 hover:bg-green-50 hover:text-green-700{% endif %}">
+                    {% if el.icone %}<span>{{ el.icone }}</span> {% endif %}{{ el.label }}
+                </a>
+                {% endif %}
+                {% endfor %}{% endfor %}
+                <div class="border-t border-gray-100 my-1"></div>
+                <form method="post" action="{% if request.recruteur %}{% url 'entreprise:recruteur_deconnexion' %}{% else %}{% url 'entreprise:deconnexion' %}{% endif %}">
+                    {% csrf_token %}
+                    <button type="submit" class="w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold text-gray-600 hover:bg-red-50 hover:text-red-600 transition">
+                        🚪 {% trans "Déconnexion" %}
+                    </button>
+                </form>
+            {% else %}
+                {% for groupe in navbar_candidat %}{% for el in groupe.elements %}
+                {% if el.visibilite == 'TOUJOURS' or el.visibilite == 'CANDIDAT_CONNECTE' and request.candidat or el.visibilite == 'CANDIDAT_NON_CONNECTE' and not request.candidat %}
+                <a href="{{ el.url }}" @click="menuOuvert=false"{% if el.nouvel_onglet %} target="_blank" rel="noopener"{% endif %}
+                   class="px-3 py-2.5 rounded-lg text-sm font-semibold transition {% if el.correspondance_exacte and request.path == el.url or not el.correspondance_exacte and el.url in request.path %}bg-orange-50 text-orange-700{% else %}text-gray-700 hover:bg-orange-50 hover:text-orange-700{% endif %}">
+                    {% if el.icone %}<span>{{ el.icone }}</span> {% endif %}{{ el.label }}
+                </a>
+                {% endif %}
+                {% endfor %}{% endfor %}
+                <div class="border-t border-gray-100 my-1"></div>
+                {% if request.candidat %}
+                    <form method="post" action="{% url 'candidat:deconnexion' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold text-gray-600 hover:bg-red-50 hover:text-red-600 transition">
+                            🚪 {% trans "Déconnexion" %}
+                        </button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'candidat:connexion' %}" @click="menuOuvert=false" class="px-3 py-2.5 rounded-lg text-sm font-semibold text-white transition" style="background:#c96010;">
+                        {% trans "Espace Candidat" %}
+                    </a>
+                    <a href="{% url 'entreprise:connexion' %}" @click="menuOuvert=false" class="px-3 py-2.5 rounded-lg text-sm font-semibold border transition" style="border-color:#009A44;color:#009A44;">
+                        {% trans "Espace Entreprise" %}
+                    </a>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<!-- Bande tricolore -->
+<div class="bande-tricolore w-full flex h-1">
+    <div class="flex-1"></div>
+    <div class="flex-1"></div>
+    <div class="flex-1"></div>
+</div>
+</div>
+
+<!-- Bandeau cookies -->
+<div x-data="{ visible: !localStorage.getItem('cookie_consent') }"
+     x-show="visible" x-cloak
+     x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+     x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+     class="fixed left-0 right-0 z-40 bg-gray-100 border-b border-gray-200 shadow-sm" style="top:92px;">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p class="text-sm text-gray-600 text-center sm:text-left">
+            🍪 Ce site utilise des cookies strictement nécessaires à son fonctionnement (sessions, sécurité CSRF).
+            <a href="{% url 'contenu:confidentialite' %}" class="underline text-gray-700 hover:text-gray-900 ml-1">Politique de confidentialité</a>
+        </p>
+        <div class="flex gap-2 shrink-0">
+            <button @click="localStorage.setItem('cookie_consent','refused'); visible=false"
+                    class="text-xs px-3 py-1.5 border rounded-lg transition whitespace-nowrap cookie-btn-refuse">Refuser</button>
+            <button @click="localStorage.setItem('cookie_consent','accepted'); visible=false"
+                    class="text-xs px-3 py-1.5 rounded-lg font-semibold transition whitespace-nowrap cookie-btn-accept">Accepter</button>
+        </div>
+    </div>
+</div>
+
+<!-- Messages flash -->
+{% if messages %}
+<div class="w-full px-6 mt-4 space-y-2">
+    {% for message in messages %}
+    <div class="px-4 py-3 rounded border
+        {% if 'success' in message.tags %}bg-green-100 border-green-400 text-green-800
+        {% elif 'error' in message.tags %}bg-red-100 border-red-400 text-red-800
+        {% elif 'warning' in message.tags %}bg-yellow-100 border-yellow-400 text-yellow-800
+        {% else %}bg-orange-100 border-orange-400 text-orange-800{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<main class="flex-grow w-full px-3 sm:px-6 py-4 sm:py-8">
+    {% block contenu %}{% endblock %}
+</main>
+
+<!-- ══ FOOTER ════════════════════════════════════════════════════════════════ -->
+{% if request.entreprise or request.recruteur %}
+<footer class="w-full text-white mt-auto" style="background-color:#c96010;">
+    <div class="bande-tricolore w-full flex h-1">
+        <div class="flex-1"></div><div class="flex-1"></div><div class="flex-1"></div>
+    </div>
+    <div class="w-full px-8 py-8">
+        <div class="flex flex-col md:flex-row justify-between items-start gap-8">
+            <div class="flex flex-col gap-2">
+                {% if logo_site.afficher_image %}
+                <img src="{{ logo_site.logo_image.url }}" alt="{{ logo_site.nom_site }}"
+                     class="h-20 w-auto object-contain mb-1" style="max-width:260px;">
+                {% endif %}
+                {% if logo_site.afficher_texte %}
+                <span class="text-2xl font-extrabold tracking-tight">{{ logo_site.nom_site }}</span>
+                {% endif %}
+                <span class="text-white/80 text-base">{% trans "Espace Entreprise" %}</span>
+                <p class="text-white/70 text-sm mt-1 max-w-xs">{% trans "Publiez vos offres d'emploi et trouvez les meilleurs talents." %}</p>
+            </div>
+            {% for groupe in footer_entreprise %}
+            <div class="flex flex-col gap-2">
+                <span class="text-sm font-bold uppercase tracking-widest text-white/60 mb-1">{{ groupe.titre }}</span>
+                {% for el in groupe.elements %}
+                {% if el.visibilite == 'TOUJOURS' or el.visibilite == 'ENTREPRISE' and request.entreprise or el.visibilite == 'RECRUTEUR' and request.recruteur or el.visibilite == 'ENTREPRISE_OU_RECRUTEUR' and request.entreprise or el.visibilite == 'ENTREPRISE_OU_RECRUTEUR' and request.recruteur %}
+                <a href="{{ el.url }}"{% if el.nouvel_onglet %} target="_blank" rel="noopener"{% endif %} class="text-base hover:text-white/70 transition">{{ el.label }}</a>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        <div class="border-t border-white/20 mt-8 pt-5 flex flex-col md:flex-row justify-between items-center gap-3 text-sm text-white/70">
+            <p>&copy; {% now "Y" %} {{ logo_site.nom_site }}. {% trans "Tous droits réservés." %}</p>
+            <p>{% trans "Fait avec" %} ❤️ {% trans "en Côte d'Ivoire" %}</p>
+        </div>
+    </div>
+</footer>
+{% else %}
+<footer class="w-full text-white mt-auto" style="background-color:#2e7d52;">
+    <div class="bande-tricolore w-full flex h-1">
+        <div class="flex-1"></div><div class="flex-1"></div><div class="flex-1"></div>
+    </div>
+    <div class="w-full px-8 py-8">
+        <div class="flex flex-col md:flex-row justify-between items-start gap-8">
+            <div class="flex flex-col gap-2">
+                {% if logo_site.afficher_image %}
+                <img src="{{ logo_site.logo_image.url }}" alt="{{ logo_site.nom_site }}"
+                     class="h-20 w-auto object-contain mb-1" style="max-width:260px; margin-left:-70px;">
+                {% endif %}
+                {% if logo_site.afficher_texte %}
+                <span class="text-2xl font-extrabold tracking-tight">{{ logo_site.nom_site }}</span>
+                {% endif %}
+                <span class="text-white/70 text-base">{% trans "Espace Candidat" %}</span>
+                <p class="text-white/60 text-sm mt-1 max-w-xs">{% trans "Créez votre CV et postulez aux meilleures offres d'emploi." %}</p>
+            </div>
+            {% for groupe in footer_candidat %}
+            <div class="flex flex-col gap-2">
+                <span class="text-sm font-bold uppercase tracking-widest text-white/50 mb-1">{{ groupe.titre }}</span>
+                {% for el in groupe.elements %}
+                {% if el.visibilite == 'TOUJOURS' or el.visibilite == 'CANDIDAT_CONNECTE' and request.candidat or el.visibilite == 'CANDIDAT_NON_CONNECTE' and not request.candidat %}
+                <a href="{{ el.url }}"{% if el.nouvel_onglet %} target="_blank" rel="noopener"{% endif %} class="text-base hover:text-white/70 transition">{{ el.label }}</a>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        <div class="border-t border-white/20 mt-8 pt-5 flex flex-col md:flex-row justify-between items-center gap-3 text-sm text-white/50">
+            <p>&copy; {% now "Y" %} {{ logo_site.nom_site }}. {% trans "Tous droits réservés." %}</p>
+            <p>{% trans "Fait avec" %} ❤️ {% trans "en Côte d'Ivoire" %}</p>
+        </div>
+    </div>
+</footer>
+{% endif %}
+
+<!-- Bouton thème -->
+<div id="themeBtn" onclick="toggleTheme()" title="{% trans "Thème : clair / nuit / sombre" %}"
+     style="position:fixed;top:140px;right:24px;z-index:999;width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .2s,box-shadow .2s;box-shadow:0 4px 16px rgba(0,0,0,.18);"
+     onmouseover="this.style.transform='scale(1.12)';this.style.boxShadow='0 6px 24px rgba(0,0,0,.28)'"
+     onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 4px 16px rgba(0,0,0,.18)'">
+    <svg id="iconMoon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+    <svg id="iconCircle" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><circle cx="12" cy="12" r="10"/></svg>
+    <svg id="iconSun" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2zm0 19h2v3h-2zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85 1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></svg>
+</div>
+
+<!-- Retour en haut -->
+<button x-data="{ visible: false }"
+        x-init="window.addEventListener('scroll', () => { visible = window.scrollY > 400 }, { passive: true })"
+        x-show="visible" x-cloak
+        x-transition:enter="transition duration-200" x-transition:enter-start="opacity-0 scale-75" x-transition:enter-end="opacity-100 scale-100"
+        @click="window.scrollTo({ top: 0, behavior: 'smooth' })"
+        class="fixed bottom-20 right-5 z-40 w-11 h-11 rounded-full shadow-lg flex items-center justify-center text-white text-lg font-bold hover:scale-110 focus:outline-none transition-transform"
+        style="background:#2e7d52;" aria-label="Retour en haut de page">↑</button>
+
+
+<script>
+    function toggleTheme() {
+        var html = document.documentElement;
+        var cur = html.classList.contains('noir') ? 'noir' : html.classList.contains('dark') ? 'dark' : 'light';
+        html.classList.remove('dark', 'noir');
+        var next = cur === 'light' ? 'dark' : cur === 'dark' ? 'noir' : 'light';
+        if (next !== 'light') html.classList.add(next);
+        localStorage.setItem('theme', next);
+        _syncThemeIcons(next);
+    }
+    function _syncThemeIcons(mode) {
+        if (typeof mode !== 'string') {
+            mode = document.documentElement.classList.contains('noir') ? 'noir'
+                 : document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+        }
+        var moon = document.getElementById('iconMoon');
+        var circle = document.getElementById('iconCircle');
+        var sun = document.getElementById('iconSun');
+        var btn = document.getElementById('themeBtn');
+        if (!moon) return;
+        moon.style.display   = mode === 'light' ? 'block' : 'none';
+        if (circle) circle.style.display = mode === 'dark'  ? 'block' : 'none';
+        if (sun)    sun.style.display    = mode === 'noir'  ? 'block' : 'none';
+        if (btn) {
+            btn.style.border = mode === 'noir' ? '2px solid #333' : 'none';
+            btn.style.color  = '#fff';
+            btn.style.background = mode === 'light' ? '#1f2937' : mode === 'dark' ? '#009A44' : '#000';
+        }
+    }
+    _syncThemeIcons();
+</script>
+{% block js_extra %}{% endblock %}
+</body>
+</html>

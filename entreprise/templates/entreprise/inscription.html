@@ -1,0 +1,469 @@
+{% extends "entreprise/base_auth.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Inscription Entreprise" %} — {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+<style>
+    .step-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border-radius: 0.75rem;
+        border: 1px solid #e5e7eb;
+        background: #f9fafb;
+        color: #1f2937;
+        font-size: 0.875rem;
+        transition: all .2s;
+    }
+    .step-input:focus { outline: none; ring: 2px; border-color: #009A44; background: white; box-shadow: 0 0 0 3px rgba(0,154,68,.15); }
+    .step-input.error { border-color: #f87171; background: #fff5f5; }
+    .step-label { display: block; font-size: .7rem; font-weight: 700; color: #6b7280; margin-bottom: .4rem; text-transform: uppercase; letter-spacing: .05em; }
+    .field-error { color: #dc2626; font-size: .7rem; margin-top: .25rem; }
+    .strength-bar { height: 4px; border-radius: 9999px; transition: width .3s, background .3s; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="w-full max-w-3xl mx-auto px-4 sm:px-6 py-10"
+     x-data="inscriptionWizard()" x-init="init()">
+
+    <div class="w-full">
+
+        <!-- ── En-tête ────────────────────────────────────────────── -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4 shadow-lg"
+                 style="background: linear-gradient(135deg, #009A44, #007a36);">
+                <span class="text-2xl">🏢</span>
+            </div>
+            <h1 class="text-2xl font-extrabold text-gray-900">{% trans "Créez votre espace entreprise" %}</h1>
+            <p class="text-sm text-gray-500 mt-1">{% trans "Rejoignez des milliers d'entreprises sur" %} {{ logo_site.nom_site }}</p>
+        </div>
+
+        <!-- ── Barre de progression ───────────────────────────────── -->
+        <div class="flex items-center mb-8 px-4">
+            <template x-for="(label, i) in steps" :key="i">
+                <div class="flex items-center" :class="i < steps.length - 1 ? 'flex-1' : ''">
+                    <!-- Cercle étape -->
+                    <div class="flex flex-col items-center">
+                        <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300"
+                             :class="{
+                                'border-green-500 bg-green-500 text-white shadow-md': step > i + 1,
+                                'border-green-500 bg-white text-green-600 shadow-md ring-4 ring-green-100': step === i + 1,
+                                'border-gray-200 bg-gray-50 text-gray-400': step < i + 1
+                             }">
+                            <template x-if="step > i + 1">✓</template>
+                            <template x-if="step <= i + 1"><span x-text="i + 1"></span></template>
+                        </div>
+                        <span class="text-xs mt-1.5 font-medium transition-colors duration-200"
+                              :class="step === i + 1 ? 'text-green-600' : 'text-gray-400'"
+                              x-text="label"></span>
+                    </div>
+                    <!-- Ligne de connexion -->
+                    <template x-if="i < steps.length - 1">
+                        <div class="flex-1 h-0.5 mx-3 rounded transition-all duration-500"
+                             :class="step > i + 1 ? 'bg-green-400' : 'bg-gray-200'">
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+
+        <!-- ── Formulaire ─────────────────────────────────────────── -->
+        <form method="post" id="inscriptionForm" @submit.prevent="submitForm()">
+            {% csrf_token %}
+
+            <!-- Champs cachés alimentés par Alpine -->
+            <input type="hidden" name="raisonSocial"         x-bind:value="form.raisonSocial">
+            <input type="hidden" name="secteurActivite"      x-bind:value="form.secteurActivite">
+            <input type="hidden" name="tailleEntreprise"     x-bind:value="form.tailleEntreprise">
+            <input type="hidden" name="registreCommerce"     x-bind:value="form.registreCommerce">
+            <input type="hidden" name="idu"                  x-bind:value="form.idu">
+            <input type="hidden" name="telephone"            x-bind:value="form.telephone">
+            <input type="hidden" name="emailContact"         x-bind:value="form.emailContact">
+            <input type="hidden" name="siteWeb"              x-bind:value="form.siteWeb">
+            <input type="hidden" name="adresse"              x-bind:value="form.adresse">
+            <input type="hidden" name="ville"                x-bind:value="form.ville">
+            <input type="hidden" name="pays"                 x-bind:value="form.pays">
+            <input type="hidden" name="codePostal"           x-bind:value="form.codePostal">
+            <input type="hidden" name="emailProfessionnel"   x-bind:value="form.emailProfessionnel">
+            <input type="hidden" name="motPasse"             x-bind:value="form.motPasse">
+            <input type="hidden" name="confirmerMotPasse"    x-bind:value="form.confirmerMotPasse">
+
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+
+                <!-- ── ÉTAPE 1 — Identité ──────────────────────── -->
+                <div x-show="step === 1" x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0">
+                    <div class="px-8 pt-8 pb-4">
+                        <h2 class="text-lg font-bold text-gray-800 mb-1">{% trans "Identité de l'entreprise" %}</h2>
+                        <p class="text-xs text-gray-500 mb-6">{% trans "Renseignez les informations légales de votre société." %}</p>
+
+                        {% if errors %}
+                        <div class="mb-5 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                            <p class="font-semibold mb-1">{% trans "Veuillez corriger les erreurs suivantes :" %}</p>
+                            <ul class="list-disc list-inside space-y-0.5 text-xs">
+                            {% for champ, msg in errors.items %}
+                                <li>{{ msg }}</li>
+                            {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        <div class="space-y-4">
+                            <!-- Raison sociale -->
+                            <div>
+                                <label class="step-label">{% trans "Raison sociale" %} <span class="text-red-400">*</span></label>
+                                <input type="text" x-model="form.raisonSocial"
+                                       placeholder="{% trans "Ex : TechCorp Côte d'Ivoire SARL" %}"
+                                       :class="localErrors.raisonSocial ? 'step-input error' : 'step-input'">
+                                <p x-show="localErrors.raisonSocial" x-text="localErrors.raisonSocial" class="field-error"></p>
+                            </div>
+
+                            <!-- Secteur + Taille -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="step-label">{% trans "Secteur d'activité" %}</label>
+                                    <select x-model="form.secteurActivite" class="step-input">
+                                        <option value="">— {% trans "Choisir" %} —</option>
+                                        {% for val, label in secteurs %}
+                                        <option value="{{ val }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="step-label">{% trans "Taille de l'entreprise" %}</label>
+                                    <select x-model="form.tailleEntreprise" class="step-input">
+                                        <option value="">— {% trans "Choisir" %} —</option>
+                                        {% for val, label in tailles %}
+                                        <option value="{{ val }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Registre + IDU -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="step-label">{% trans "Registre du commerce" %}</label>
+                                    <input type="text" x-model="form.registreCommerce"
+                                           placeholder="CI-ABJ-2024-B-12345"
+                                           class="step-input">
+                                </div>
+                                <div>
+                                    <label class="step-label">{% trans "Identifiant fiscal (IDU)" %}</label>
+                                    <input type="text" x-model="form.idu"
+                                           placeholder="1234567A"
+                                           class="step-input">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── ÉTAPE 2 — Coordonnées ───────────────────── -->
+                <div x-show="step === 2" x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0">
+                    <div class="px-8 pt-8 pb-4">
+                        <h2 class="text-lg font-bold text-gray-800 mb-1">{% trans "Coordonnées & contact" %}</h2>
+                        <p class="text-xs text-gray-500 mb-6">{% trans "Comment vous joindre et vous trouver en ligne." %}</p>
+
+                        <div class="space-y-4">
+                            <!-- Tel + email contact -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="step-label">{% trans "Téléphone" %}</label>
+                                    <input type="tel" x-model="form.telephone"
+                                           placeholder="+225 07 00 00 00 00"
+                                           class="step-input">
+                                </div>
+                                <div>
+                                    <label class="step-label">{% trans "Email de contact" %}</label>
+                                    <input type="email" x-model="form.emailContact"
+                                           placeholder="{% trans "contact@société.ci" %}"
+                                           class="step-input">
+                                </div>
+                            </div>
+
+                            <!-- Site web -->
+                            <div>
+                                <label class="step-label">{% trans "Site web" %}</label>
+                                <input type="url" x-model="form.siteWeb"
+                                       placeholder="https://www.monentreprise.ci"
+                                       class="step-input">
+                            </div>
+
+                            <!-- Adresse -->
+                            <div>
+                                <label class="step-label">{% trans "Adresse" %}</label>
+                                <input type="text" x-model="form.adresse"
+                                       placeholder="{% trans "Plateau, Avenue Botreau Roussel" %}"
+                                       class="step-input">
+                            </div>
+
+                            <!-- Ville + Pays + Code postal -->
+                            <div class="grid grid-cols-3 gap-4"
+                                 x-data="{ _pid: null }"
+                                 @cbxpick="if($event.target.closest('[data-cbxi=pays]')) { _pid=$event.detail.id; const villeEl=$el.querySelector('[data-cbxi=ville]'); if(villeEl){ const s=Alpine.$data(villeEl); if(s) s.reload('/referentiel/api/villes/?pays_id='+_pid); } const ind=$event.detail.extra?.indicatifTel; if(ind){ const t=(form.telephone||'').trim(); form.telephone=!t?ind+' ':(/^\+\d+/.test(t)?ind+' '+t.replace(/^\+\d+\s*/,''):t); } }">
+                                <div class="col-span-1">
+                                    <label class="step-label">{% trans "Pays" %}</label>
+                                    <div data-cbxi="pays" class="relative"
+                                         x-data="cbx({ url: '{% url 'referentiel:api_pays' %}', v: form.pays||'', k: 'nomPays' })"
+                                         @cbxpick="form.pays=$event.detail.val" x-init="$watch('q', v => form.pays=v)">
+                                        <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)"
+                                               placeholder="{% trans "Choisir ou saisir un pays…" %}" class="step-input w-full pr-8" autocomplete="off">
+                                        <svg class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                                        <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:220px;overflow-y:auto;">
+                                            <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o)" class="w-full px-3 py-2.5 text-sm text-left transition-colors" :class="i===hi?'bg-green-50 text-green-700 font-medium':'text-gray-700 hover:bg-gray-50'" x-text="o.label"></button></template>
+                                            <div x-show="!sh.length" class="px-3 py-3 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-span-1">
+                                    <label class="step-label">{% trans "Ville" %}</label>
+                                    <div class="relative" data-cbxi="ville"
+                                         x-data="cbx({ url: '{% url 'referentiel:api_villes' %}?pays_nom={{ data.pays|default:"Côte d'Ivoire"|urlencode }}', v: form.ville||'', k: 'nomVille', s: 'region' })"
+                                         @cbxpick="form.ville=$event.detail.val" x-init="$watch('q', v => form.ville=v)">
+                                        <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)"
+                                               placeholder="{% trans "Choisir ou saisir une ville…" %}" class="step-input w-full pr-8" autocomplete="off">
+                                        <svg class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                                        <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:220px;overflow-y:auto;">
+                                            <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o)" class="w-full px-3 py-2.5 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-green-50 text-green-700 font-medium':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span><span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-3"></span></button></template>
+                                            <div x-show="!sh.length" class="px-3 py-3 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-span-1">
+                                    <label class="step-label">{% trans "Code postal" %}</label>
+                                    <input type="text" x-model="form.codePostal"
+                                           placeholder="{% trans "01 BP 1234" %}"
+                                           class="step-input">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── ÉTAPE 3 — Compte ────────────────────────── -->
+                <div x-show="step === 3" x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0"
+                     x-data="{ showPass: false, showConfirm: false }">
+                    <div class="px-8 pt-8 pb-4">
+                        <h2 class="text-lg font-bold text-gray-800 mb-1">{% trans "Accès à votre espace" %}</h2>
+                        <p class="text-xs text-gray-500 mb-6">{% trans "Ces identifiants vous permettront de vous connecter." %}</p>
+
+                        <div class="space-y-4">
+                            <!-- Email -->
+                            <div>
+                                <label class="step-label">{% trans "Email professionnel" %} <span class="text-red-400">*</span></label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">✉️</span>
+                                    <input type="email" x-model="form.emailProfessionnel"
+                                           placeholder="{% trans "direction@monentreprise.ci" %}"
+                                           :class="localErrors.emailProfessionnel ? 'step-input pl-9 error' : 'step-input pl-9'">
+                                </div>
+                                <p x-show="localErrors.emailProfessionnel" x-text="localErrors.emailProfessionnel" class="field-error"></p>
+                            </div>
+
+                            <!-- Mot de passe -->
+                            <div>
+                                <label class="step-label">{% trans "Mot de passe" %} <span class="text-red-400">*</span></label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">🔒</span>
+                                    <input :type="showPass ? 'text' : 'password'"
+                                           x-model="form.motPasse"
+                                           @input="calcStrength()"
+                                           placeholder="{% trans "Au moins 8 caractères" %}"
+                                           :class="localErrors.motPasse ? 'step-input pl-9 pr-10 error' : 'step-input pl-9 pr-10'">
+                                    <button type="button" @click="showPass = !showPass"
+                                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm">
+                                        <span x-text="showPass ? '🙈' : '👁️'"></span>
+                                    </button>
+                                </div>
+                                <p x-show="localErrors.motPasse" x-text="localErrors.motPasse" class="field-error"></p>
+
+                                <!-- Indicateur de force -->
+                                <div class="mt-2 space-y-1" x-show="form.motPasse.length > 0">
+                                    <div class="flex gap-1">
+                                        <template x-for="i in 4" :key="i">
+                                            <div class="strength-bar flex-1"
+                                                 :style="'background:' + (i <= strength.score ? strength.color : '#e5e7eb') + '; width:100%;'"></div>
+                                        </template>
+                                    </div>
+                                    <p class="text-xs" :style="'color:' + strength.color" x-text="strength.label"></p>
+                                </div>
+                            </div>
+
+                            <!-- Confirmation mot de passe -->
+                            <div>
+                                <label class="step-label">{% trans "Confirmer le mot de passe" %} <span class="text-red-400">*</span></label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">🔒</span>
+                                    <input :type="showConfirm ? 'text' : 'password'"
+                                           x-model="form.confirmerMotPasse"
+                                           placeholder="{% trans "Répétez le mot de passe" %}"
+                                           :class="localErrors.confirmerMotPasse ? 'step-input pl-9 pr-10 error' : 'step-input pl-9 pr-10'">
+                                    <button type="button" @click="showConfirm = !showConfirm"
+                                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm">
+                                        <span x-text="showConfirm ? '🙈' : '👁️'"></span>
+                                    </button>
+                                </div>
+                                <p x-show="localErrors.confirmerMotPasse" x-text="localErrors.confirmerMotPasse" class="field-error"></p>
+                                <p x-show="form.confirmerMotPasse && form.motPasse === form.confirmerMotPasse"
+                                   class="text-xs text-green-600 mt-1">{% trans "Les mots de passe correspondent" %}</p>
+                            </div>
+
+                            <!-- CGU -->
+                            <div class="flex items-start gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                <input type="checkbox" id="cgu" x-model="form.cgu" class="mt-0.5 rounded border-gray-300 text-green-600 focus:ring-green-400">
+                                <label for="cgu" class="text-xs text-gray-600 cursor-pointer">
+                                    {% trans "J'accepte les" %} <a href="#" class="text-green-600 font-semibold hover:underline">{% trans "conditions d'utilisation" %}</a>
+                                    {% trans "et la" %} <a href="#" class="text-green-600 font-semibold hover:underline">{% trans "politique de confidentialité" %}</a> {% trans "de" %} RecrutePro.
+                                </label>
+                            </div>
+                            <p x-show="localErrors.cgu" x-text="localErrors.cgu" class="field-error"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Navigation ──────────────────────────────── -->
+                <div class="px-8 py-5 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+                    <!-- Retour -->
+                    <button type="button" @click="prevStep()"
+                            x-show="step > 1"
+                            class="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-100 transition">
+                        {% trans "Retour" %}
+                    </button>
+                    <div x-show="step === 1"></div>
+
+                    <!-- Suivant / Créer -->
+                    <template x-if="step < 3">
+                        <button type="button" @click="nextStep()"
+                                class="flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-bold transition hover:opacity-90 hover:shadow-md"
+                                style="background: linear-gradient(135deg, #009A44, #007a36);">
+                            {% trans "Suivant" %} →
+                        </button>
+                    </template>
+                    <template x-if="step === 3">
+                        <button type="submit" :disabled="submitting"
+                                class="flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-bold transition hover:opacity-90 hover:shadow-md disabled:opacity-60"
+                                style="background: linear-gradient(135deg, #009A44, #007a36);">
+                            <span x-show="!submitting">{% trans "Créer mon espace entreprise" %}</span>
+                            <span x-show="submitting" class="flex items-center gap-2">
+                                <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                </svg>
+                                {% trans "Création en cours..." %}
+                            </span>
+                        </button>
+                    </template>
+                </div>
+
+            </div><!-- /card -->
+        </form>
+
+        <!-- Lien connexion -->
+        <p class="text-center text-sm text-gray-500 mt-5">
+            {% trans "Déjà inscrit ?" %}
+            <a href="{% url 'entreprise:connexion' %}" class="font-bold hover:underline" style="color:#009A44;">
+                {% trans "Se connecter" %} →
+            </a>
+        </p>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block js_extra %}
+<script>
+function inscriptionWizard() {
+    return {
+        step: {% if errors %}3{% else %}1{% endif %},
+        steps: ['Identité', 'Coordonnées', 'Compte'],
+        submitting: false,
+        localErrors: {},
+        strength: { score: 0, color: '#e5e7eb', label: '' },
+
+        form: {
+            raisonSocial:       '{{ data.raisonSocial|default:""  |escapejs }}',
+            secteurActivite:    '{{ data.secteurActivite|default:"" |escapejs }}',
+            tailleEntreprise:   '{{ data.tailleEntreprise|default:"" |escapejs }}',
+            registreCommerce:   '{{ data.registreCommerce|default:"" |escapejs }}',
+            idu:                '{{ data.idu|default:"" |escapejs }}',
+            telephone:          '{{ data.telephone|default:"" |escapejs }}',
+            emailContact:       '{{ data.emailContact|default:"" |escapejs }}',
+            siteWeb:            '{{ data.siteWeb|default:"" |escapejs }}',
+            adresse:            '{{ data.adresse|default:"" |escapejs }}',
+            ville:              '{{ data.ville|default:"" |escapejs }}',
+            pays:               '{{ data.pays|escapejs }}' || "Côte d'Ivoire",
+            codePostal:         '{{ data.codePostal|default:"" |escapejs }}',
+            emailProfessionnel: '{{ data.emailProfessionnel|default:"" |escapejs }}',
+            motPasse:           '',
+            confirmerMotPasse:  '',
+            cgu:                false,
+        },
+
+        init() {},
+
+        nextStep() {
+            if (!this.validateStep(this.step)) return;
+            this.localErrors = {};
+            this.step++;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
+
+        prevStep() {
+            this.localErrors = {};
+            this.step--;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
+
+        validateStep(s) {
+            this.localErrors = {};
+            if (s === 1) {
+                if (!this.form.raisonSocial.trim()) {
+                    this.localErrors.raisonSocial = 'La raison sociale est obligatoire.';
+                }
+            }
+            if (s === 3) {
+                if (!this.form.emailProfessionnel.trim()) {
+                    this.localErrors.emailProfessionnel = "L'email professionnel est obligatoire.";
+                } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.form.emailProfessionnel)) {
+                    this.localErrors.emailProfessionnel = 'Adresse email invalide.';
+                }
+                if (!this.form.motPasse) {
+                    this.localErrors.motPasse = 'Le mot de passe est obligatoire.';
+                } else if (this.form.motPasse.length < 8) {
+                    this.localErrors.motPasse = 'Le mot de passe doit contenir au moins 8 caractères.';
+                }
+                if (this.form.motPasse !== this.form.confirmerMotPasse) {
+                    this.localErrors.confirmerMotPasse = 'Les mots de passe ne correspondent pas.';
+                }
+                if (!this.form.cgu) {
+                    this.localErrors.cgu = 'Vous devez accepter les conditions d\'utilisation.';
+                }
+            }
+            return Object.keys(this.localErrors).length === 0;
+        },
+
+        calcStrength() {
+            const p = this.form.motPasse;
+            let sc = 0;
+            if (p.length >= 8)  sc++;
+            if (/[A-Z]/.test(p))  sc++;
+            if (/[0-9]/.test(p))  sc++;
+            if (/[^A-Za-z0-9]/.test(p)) sc++;
+            const labels = ['', 'Faible', 'Moyen', 'Fort', 'Très fort'];
+            const colors = ['', '#ef4444', '#f59e0b', '#3b82f6', '#009A44'];
+            this.strength = { score: sc, color: colors[sc] || '#e5e7eb', label: labels[sc] || '' };
+        },
+
+        submitForm() {
+            if (!this.validateStep(3)) return;
+            this.submitting = true;
+            document.getElementById('inscriptionForm').submit();
+        },
+    }
+}
+</script>
+{% endblock %}

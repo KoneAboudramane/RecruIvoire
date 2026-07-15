@@ -1,0 +1,368 @@
+﻿{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Planification Newsletter | {{ site_title|default:'Django site admin' }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<script>
+    (function(){
+        var t = localStorage.getItem('rp_theme') || 'light';
+        if(t === 'noir') document.documentElement.classList.add('rp-noir');
+        else if(t === 'dark') document.documentElement.classList.add('rp-dark');
+    })();
+</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    #content { background:#f8fafc; }
+    #content-main { max-width:960px; margin:0 auto; }
+    .nl-card {
+        background:#fff; border:1px solid #e2e8f0; border-radius:1.25rem;
+        padding:1.75rem; margin-bottom:1.5rem;
+    }
+    .nl-badge {
+        display:inline-flex; align-items:center; gap:.375rem;
+        padding:.35rem .85rem; border-radius:9999px;
+        font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+    }
+    .badge-on  { background:#dcfce7; color:#166534; }
+    .badge-off { background:#fee2e2; color:#991b1b; }
+    .metric-card { background:#f8fafc; border-radius:.75rem; padding:.875rem 1rem; }
+    .metric-val  { font-size:1.5rem; font-weight:800; color:#0f172a; line-height:1; }
+    .metric-lbl  { font-size:.7rem; color:#64748b; margin-top:.25rem; text-transform:uppercase; letter-spacing:.04em; font-weight:600; }
+    .nl-btn {
+        display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
+        padding:.65rem 1.25rem; border-radius:.75rem;
+        font-size:.85rem; font-weight:700; cursor:pointer; border:none; transition:all .15s;
+    }
+    .btn-primary { background:linear-gradient(135deg,#c96010,#e06a00); color:#fff; }
+    .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(201,96,16,.3); }
+    .btn-green { background:linear-gradient(135deg,#2e7d52,#1e5c3a); color:#fff; }
+    .btn-green:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(46,125,82,.3); }
+    .btn-danger { background:#fff; border:1px solid #fca5a5; color:#dc2626; }
+    .btn-danger:hover { background:#fef2f2; }
+    .btn-ghost { background:#fff; border:1px solid #e2e8f0; color:#475569; }
+    .btn-ghost:hover { background:#f1f5f9; }
+    .form-input {
+        width:100%; border:1px solid #e2e8f0; border-radius:.625rem;
+        padding:.55rem .85rem; font-size:.875rem; color:#0f172a;
+        outline:none; transition:border-color .15s, box-shadow .15s;
+    }
+    .form-input:focus { border-color:#c96010; box-shadow:0 0 0 3px rgba(201,96,16,.15); }
+
+    /* ── Dark mode ───────────────────────────────────────────────── */
+    html.rp-dark #content { background:#0f172a; }
+    html.rp-dark .nl-card {
+        background:#1e293b;
+        border-color:#334155;
+    }
+    html.rp-dark .nl-card h2 { color:#f1f5f9; }
+    html.rp-dark .metric-card { background:#162032; }
+    html.rp-dark .metric-val  { color:#f1f5f9; }
+    html.rp-dark .metric-lbl  { color:#94a3b8; }
+    html.rp-dark .form-input {
+        background:#0f172a;
+        border-color:#334155;
+        color:#f1f5f9;
+    }
+    html.rp-dark .form-input:focus {
+        border-color:#c96010;
+        box-shadow:0 0 0 3px rgba(201,96,16,.2);
+    }
+    html.rp-dark label { color:#cbd5e1; }
+    html.rp-dark .text-xs.text-slate-400,
+    html.rp-dark .text-slate-400 { color:#64748b !important; }
+    html.rp-dark .text-slate-500 { color:#94a3b8 !important; }
+    html.rp-dark .text-slate-800 { color:#f1f5f9 !important; }
+    html.rp-dark .border-slate-100 { border-color:#334155 !important; }
+    html.rp-dark .btn-ghost {
+        background:#1e293b;
+        border-color:#334155;
+        color:#cbd5e1;
+    }
+    html.rp-dark .btn-ghost:hover { background:#162032; color:#f1f5f9; }
+    html.rp-dark .btn-danger {
+        background:#1e293b;
+        border-color:rgba(252,165,165,.4);
+        color:#f87171;
+    }
+    html.rp-dark .btn-danger:hover { background:rgba(239,68,68,.15); }
+    /* Note orange en bas */
+    html.rp-dark [style*="background:#FFF8F0"] {
+        background:rgba(201,96,16,.1) !important;
+        border-color:rgba(201,96,16,.35) !important;
+    }
+    html.rp-dark [style*="background:#FFF8F0"] p { color:#fdba74 !important; }
+    html.rp-dark [style*="background:#FFF8F0"] code {
+        background:rgba(15,23,42,.6) !important;
+        color:#fde68a !important;
+    }
+    /* Carte statut dernière exécution */
+    html.rp-dark .nl-card p { color:#cbd5e1; }
+    html.rp-dark .nl-card .text-slate-800 { color:#f1f5f9 !important; }
+    html.rp-dark .nl-card .text-slate-500 { color:#94a3b8 !important; }
+    html.rp-dark .badge-on  { background:rgba(34,197,94,.15); color:#86efac; }
+    html.rp-dark .badge-off { background:rgba(239,68,68,.15); color:#fca5a5; }
+    html.rp-dark .text-slate-900 { color:#f1f5f9 !important; }
+    html.rp-dark .text-slate-700 { color:#e2e8f0 !important; }
+    html.rp-dark .text-slate-400 { color:#64748b !important; }
+    /* Blocs messages */
+    html.rp-dark .bg-green-50   { background:rgba(34,197,94,.10) !important; }
+    html.rp-dark .text-green-700 { color:#86efac !important; }
+    html.rp-dark .border-green-200 { border-color:rgba(34,197,94,.30) !important; }
+    html.rp-dark .bg-red-50     { background:rgba(239,68,68,.10) !important; }
+    html.rp-dark .text-red-700  { color:#fca5a5 !important; }
+    html.rp-dark .border-red-200 { border-color:rgba(239,68,68,.30) !important; }
+    html.rp-dark .bg-amber-50   { background:rgba(234,179,8,.10) !important; }
+    html.rp-dark .text-amber-700 { color:#fde68a !important; }
+    html.rp-dark .border-amber-200 { border-color:rgba(234,179,8,.30) !important; }
+    /* Carte statut dernière exécution */
+    html.rp-dark .nl-card .font-semibold { color:#e2e8f0; }
+    html.rp-dark .nl-card .text-xs.text-slate-400 { color:#64748b !important; }
+    /* Titres section dans carte */
+    html.rp-dark .nl-card .text-xs.font-bold.text-slate-400.uppercase { color:#64748b !important; }
+    /* Note orange en bas */
+    html.rp-dark [style*="background:#FFF8F0"] code {
+        background:rgba(15,23,42,.6) !important;
+        color:#fde68a !important;
+        display:inline-block; padding:2px 8px; border-radius:4px;
+    }
+
+    /* ── Mode NOIR (OLED) ────────────────────────────────────────── */
+    html.rp-noir #content { background:#000; }
+    html.rp-noir .nl-card { background:#000; border-color:#1a1a1a; }
+    html.rp-noir .nl-card h2 { color:#f1f5f9; }
+    html.rp-noir .nl-card p { color:#94a3b8; }
+    html.rp-noir .nl-card .font-semibold { color:#f1f5f9; }
+    html.rp-noir .metric-card { background:#000; border:1px solid #1a1a1a; }
+    html.rp-noir .metric-val  { color:#f1f5f9; }
+    html.rp-noir .metric-lbl  { color:#64748b; }
+    html.rp-noir .form-input  { background:#000; border-color:#1a1a1a; color:#f1f5f9; }
+    html.rp-noir .form-input:focus { border-color:#c96010; box-shadow:0 0 0 3px rgba(201,96,16,.2); }
+    html.rp-noir label { color:#94a3b8; }
+    html.rp-noir .text-slate-900 { color:#f1f5f9 !important; }
+    html.rp-noir .text-slate-800 { color:#f1f5f9 !important; }
+    html.rp-noir .text-slate-700 { color:#e2e8f0 !important; }
+    html.rp-noir .text-slate-500 { color:#94a3b8 !important; }
+    html.rp-noir .text-slate-400 { color:#64748b !important; }
+    html.rp-noir .border-slate-100 { border-color:#1a1a1a !important; }
+    html.rp-noir .btn-ghost  { background:#000; border-color:#1a1a1a; color:#94a3b8; }
+    html.rp-noir .btn-ghost:hover { background:#0a0a0a; color:#f1f5f9; }
+    html.rp-noir .btn-danger { background:#000; border-color:rgba(252,165,165,.3); color:#f87171; }
+    html.rp-noir .btn-danger:hover { background:rgba(239,68,68,.10); }
+    html.rp-noir .badge-on  { background:rgba(34,197,94,.10); color:#86efac; }
+    html.rp-noir .badge-off { background:rgba(239,68,68,.10); color:#fca5a5; }
+    html.rp-noir .bg-green-50    { background:rgba(34,197,94,.07) !important; }
+    html.rp-noir .text-green-700 { color:#86efac !important; }
+    html.rp-noir .border-green-200 { border-color:rgba(34,197,94,.22) !important; }
+    html.rp-noir .bg-red-50      { background:rgba(239,68,68,.07) !important; }
+    html.rp-noir .text-red-700   { color:#fca5a5 !important; }
+    html.rp-noir .border-red-200 { border-color:rgba(239,68,68,.22) !important; }
+    html.rp-noir .bg-amber-50    { background:rgba(234,179,8,.07) !important; }
+    html.rp-noir .text-amber-700 { color:#fde68a !important; }
+    html.rp-noir .border-amber-200 { border-color:rgba(234,179,8,.22) !important; }
+    html.rp-noir [style*="background:#FFF8F0"] {
+        background:#000 !important; border-color:rgba(201,96,16,.25) !important;
+    }
+    html.rp-noir [style*="background:#FFF8F0"] p { color:#fdba74 !important; }
+    html.rp-noir [style*="background:#FFF8F0"] code {
+        background:#000 !important; border:1px solid #1a1a1a;
+        color:#fde68a !important; display:inline-block; padding:2px 8px; border-radius:4px;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans "Accueil" %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='candidat' %}">{% trans "Candidat" %}</a>
+    &rsaquo; <a href="{% url 'admin:candidat_abonnenewsletter_changelist' %}">{% trans "Abonnés newsletter" %}</a>
+    &rsaquo; Planification
+</div>
+{% endblock %}
+
+{% block content %}
+<div>
+
+<!-- En-tête -->
+<div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-8">
+    <div>
+        <div class="flex items-center gap-3 mb-1">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
+                 style="background:linear-gradient(135deg,#c96010,#e06a00); color:white;">
+                📬
+            </div>
+            <h1 class="text-2xl font-extrabold text-slate-900">{% trans "Planification — Newsletter Offres" %}</h1>
+        </div>
+        <p class="text-sm text-slate-500" style="margin-left:52px;">
+            Configurez l'envoi automatique des offres de la semaine aux abonnés.
+        </p>
+    </div>
+    <div class="flex items-center gap-2">
+        <span class="nl-badge {% if planif.active %}badge-on{% else %}badge-off{% endif %}">
+            {% if planif.active %}● Activée{% else %}● Désactivée{% endif %}
+        </span>
+    </div>
+</div>
+
+<!-- Messages Django -->
+{% if messages %}
+<div class="mb-6">
+    {% for message in messages %}
+    <div class="rounded-xl px-4 py-3 mb-2 text-sm font-semibold
+        {% if message.level == 40 %}bg-red-50 text-red-700 border border-red-200
+        {% elif message.level == 30 %}bg-amber-50 text-amber-700 border border-amber-200
+        {% else %}bg-green-50 text-green-700 border border-green-200{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Stats abonnés -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+    <div class="metric-card">
+        <div class="metric-val">{{ stats.total }}</div>
+        <div class="metric-lbl">{% trans "Total abonnés" %}</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-val" style="color:#2e7d52;">{{ stats.actifs }}</div>
+        <div class="metric-lbl">{% trans "Actifs" %}</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-val" style="color:#c96010;">{{ stats.offres_semaine }}</div>
+        <div class="metric-lbl">{% trans "Offres semaine" %}</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-val" style="color:#3b82f6;">{{ stats.inscrits }}</div>
+        <div class="metric-lbl">{% trans "Candidats inscrits" %}</div>
+    </div>
+</div>
+
+<!-- Statut dernière exécution -->
+{% if planif.derniere_execution %}
+<div class="nl-card" style="border-left:4px solid {% if planif.derniere_status == 'ok' %}#2e7d52{% elif planif.derniere_status == 'error' %}#dc2626{% else %}#c96010{% endif %};">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{% trans "Dernière exécution" %}</p>
+            <p class="text-slate-800 font-semibold text-sm">{{ planif.derniere_execution|date:"l d F Y à H\hi" }}</p>
+            {% if planif.derniere_message %}
+                <p class="text-xs text-slate-500 mt-1">{{ planif.derniere_message }}</p>
+            {% endif %}
+        </div>
+        <div class="flex flex-col items-end gap-1">
+            <span class="nl-badge {% if planif.derniere_status == 'ok' %}badge-on{% else %}badge-off{% endif %}">
+                {% if planif.derniere_status == 'ok' %}✓ Succès{% elif planif.derniere_status == 'error' %}✗ Erreur{% else %}{{ planif.derniere_status }}{% endif %}
+            </span>
+            {% if planif.prochaine_execution %}
+                <p class="text-xs text-slate-400">{% trans "Prochain envoi :" %} {{ planif.prochaine_execution|date:"l d F Y à H\hi" }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Formulaire de configuration -->
+<div class="nl-card">
+    <h2 class="text-base font-bold text-slate-800 mb-5 flex items-center gap-2">
+        ⚙️ Configuration de la planification
+    </h2>
+
+    <form method="post" action="{% url 'admin:newsletter_planification_enregistrer' %}">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
+
+            <!-- Fréquence -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{% trans "Fréquence" %}</label>
+                <select name="frequence" class="form-input">
+                    {% for val, label in frequences %}
+                    <option value="{{ val }}" {% if planif.frequence == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Heure -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{% trans "Heure d'envoi" %}</label>
+                <input type="time" name="heure" value="{{ planif.heure|time:'H:i' }}" class="form-input">
+            </div>
+
+            <!-- Jour de la semaine -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{% trans "Jour de la semaine" %}</label>
+                <select name="jour_semaine" class="form-input">
+                    {% for num, nom in jours_semaine %}
+                    <option value="{{ num }}" {% if planif.jour_semaine == num %}selected{% endif %}>{{ nom }}</option>
+                    {% endfor %}
+                </select>
+                <p class="text-xs text-slate-400 mt-1">{% trans "Utilisé pour les fréquences hebdomadaire et bimensuelle." %}</p>
+            </div>
+
+            <!-- Jour du mois -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{% trans "Jour du mois" %}</label>
+                <input type="number" name="jour_mois" min="1" max="28"
+                       value="{{ planif.jour_mois }}" class="form-input">
+                <p class="text-xs text-slate-400 mt-1">{% trans "Utilisé pour la fréquence mensuelle (1-28)." %}</p>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-3 pt-4 border-t border-slate-100">
+            <button type="submit" class="nl-btn btn-primary">
+                💾 Enregistrer &amp; activer
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Actions manuelles -->
+<div class="nl-card">
+    <h2 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+        🚀 Actions manuelles
+    </h2>
+    <div class="flex flex-wrap gap-3">
+
+        <!-- Envoyer maintenant -->
+        <form method="post" action="{% url 'admin:newsletter_envoyer_maintenant' %}"
+              onsubmit="return confirm('Envoyer la newsletter offres maintenant à tous les abonnés actifs ?')">
+            {% csrf_token %}
+            <button type="submit" class="nl-btn btn-green">
+                📨 Envoyer maintenant
+            </button>
+        </form>
+
+        <!-- Désactiver -->
+        {% if planif.active %}
+        <form method="post" action="{% url 'admin:newsletter_planification_supprimer' %}"
+              onsubmit="return confirm('Désactiver la planification automatique ?')">
+            {% csrf_token %}
+            <button type="submit" class="nl-btn btn-danger">
+                ⏹ Désactiver la planification
+            </button>
+        </form>
+        {% endif %}
+
+        <a href="{% url 'admin:candidat_abonnenewsletter_changelist' %}" class="nl-btn btn-ghost">
+            ← Retour aux abonnés
+        </a>
+    </div>
+</div>
+
+<!-- Note sur la planification OS -->
+<div class="rounded-xl p-4 text-sm" style="background:#FFF8F0; border:1.5px solid #c96010;">
+    <p class="font-bold text-orange-700 mb-2">ℹ️ Note sur la planification automatique</p>
+    <p class="text-orange-600 leading-relaxed">
+        La configuration ci-dessus définit <strong>{% trans "quand" %}</strong> la newsletter doit être envoyée.
+        Pour que l'envoi soit automatique, la commande doit être planifiée dans le
+        <strong>{% trans "Planificateur de tâches Windows" %}</strong> (ou cron Linux) avec la commande :<br>
+        <code class="inline-block mt-2 bg-orange-100 px-3 py-1 rounded font-mono text-xs">
+            python manage.py envoyer_newsletter_offres
+        </code>
+    </p>
+</div>
+
+</div>
+{% endblock %}
+

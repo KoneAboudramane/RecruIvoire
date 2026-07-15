@@ -1,0 +1,1089 @@
+﻿{% extends "candidat/base.html" %}
+{% load i18n %}
+
+{% block titre %}{{ offre.titre }} — {{ offre.entreprise.raisonSocial }}{% endblock %}
+
+{% block meta_description %}{{ offre.titre }} chez {{ offre.entreprise.raisonSocial }}{% if offre.ville %} · {{ offre.ville }}{% endif %}{% if offre.typeContrat %} · {{ offre.get_typeContrat_display }}{% endif %}. Postulez maintenant sur {{ logo_site.nom_site }}.{% endblock %}
+{% block og_title %}{{ offre.titre }} — {{ offre.entreprise.raisonSocial }}{% endblock %}
+{% block og_description %}{{ offre.titre }} chez {{ offre.entreprise.raisonSocial }}{% if offre.ville %} à {{ offre.ville }}{% endif %}{% if offre.typeContrat %} · {{ offre.get_typeContrat_display }}{% endif %}. Postulez en ligne.{% endblock %}
+{% block twitter_title %}{{ offre.titre }} — {{ offre.entreprise.raisonSocial }}{% endblock %}
+{% block twitter_description %}{{ offre.titre }}{% if offre.ville %} à {{ offre.ville }}{% endif %}{% if offre.typeContrat %} — {{ offre.get_typeContrat_display }}{% endif %}. Postulez sur {{ logo_site.nom_site }}.{% endblock %}
+
+{% block css_extra %}
+<style>
+    .card-hover { transition: transform .2s ease, box-shadow .2s ease; }
+    .card-hover:hover { transform: translateY(-3px); box-shadow: 0 10px 25px -10px rgba(0,0,0,.12); }
+    .line-clamp-2 {
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        overflow: hidden; text-overflow: ellipsis;
+    }
+    .prose-list { white-space: pre-line; line-height: 1.75; }
+
+    /* ── MODE SOMBRE ────────────────────────────────────────────────── */
+    html.dark .prose-list { color: #cbd5e1; }
+
+    html.dark .text-gray-900 { color: #f1f5f9 !important; }
+    html.dark .text-gray-800 { color: #e2e8f0 !important; }
+    html.dark .text-gray-700 { color: #cbd5e1 !important; }
+    html.dark .text-gray-600 { color: #94a3b8 !important; }
+    html.dark .text-gray-500 { color: #64748b !important; }
+    html.dark .text-gray-400 { color: #94a3b8 !important; }
+
+    html.dark .bg-white      { background-color: #1e293b !important; }
+    html.dark .bg-gray-50    { background-color: #0f172a !important; }
+    html.dark .bg-gray-100   { background-color: #243348 !important; }
+
+    html.dark .border-gray-100 { border-color: #334155 !important; }
+    html.dark .border-gray-200 { border-color: #475569 !important; }
+    html.dark .divide-gray-100 > * + * { border-color: #334155 !important; }
+    html.dark .border-dashed.border-gray-200 { border-color: #475569 !important; }
+
+    html.dark .bg-green-100    { background-color: rgba(34,197,94,.15)  !important; }
+    html.dark .text-green-700  { color: #4ade80 !important; }
+    html.dark .bg-blue-100     { background-color: rgba(59,130,246,.15)  !important; }
+    html.dark .text-blue-700   { color: #60a5fa !important; }
+    html.dark .bg-purple-100   { background-color: rgba(168,85,247,.15) !important; }
+    html.dark .text-purple-700 { color: #c084fc !important; }
+    html.dark .bg-orange-50    { background-color: rgba(201,96,16,.08)  !important; }
+    html.dark .bg-orange-100   { background-color: rgba(201,96,16,.15)  !important; }
+    html.dark .border-orange-100 { border-color: rgba(201,96,16,.2) !important; }
+    html.dark .border-orange-200 { border-color: rgba(201,96,16,.3) !important; }
+    html.dark .text-orange-700   { color: #fb923c !important; }
+    html.dark .bg-red-50         { background-color: rgba(239,68,68,.08) !important; }
+    html.dark .border-red-200    { border-color: rgba(239,68,68,.25) !important; }
+    html.dark .text-red-700      { color: #fca5a5 !important; }
+
+    html.dark .hover\:bg-gray-100:hover  { background-color: #243348 !important; }
+    html.dark .hover\:bg-orange-50\/40:hover { background-color: rgba(201,96,16,.08) !important; }
+    html.dark .hover\:border-orange-300:hover { border-color: rgba(201,96,16,.4) !important; }
+    html.dark button.hover\:bg-green-50:hover { background-color: rgba(34,197,94,.1) !important; }
+    html.dark .hover\:bg-green-50\/40:hover { background-color: rgba(34,197,94,.08) !important; }
+    html.dark .hover\:border-green-300:hover { border-color: rgba(34,197,94,.4) !important; }
+    html.dark .group-hover\:text-green-700 { color: #4ade80 !important; }
+    html.dark .bg-green-50\/40 { background-color: rgba(34,197,94,.06) !important; }
+
+    /* ── MODE NOIR (OLED) ────────────────────────────────────────────── */
+    html.noir .prose-list { color: #cbd5e1; }
+
+    html.noir .text-gray-900 { color: #f1f5f9 !important; }
+    html.noir .text-gray-800 { color: #e2e8f0 !important; }
+    html.noir .text-gray-700 { color: #cbd5e1 !important; }
+    html.noir .text-gray-600 { color: #94a3b8 !important; }
+    html.noir .text-gray-500 { color: #64748b !important; }
+    html.noir .text-gray-400 { color: #94a3b8 !important; }
+
+    html.noir .bg-white      { background-color: #0d0d0d !important; }
+    html.noir .bg-gray-50    { background-color: #000 !important; }
+    html.noir .bg-gray-100   { background-color: #1a1a1a !important; }
+
+    html.noir .border-gray-100 { border-color: #222 !important; }
+    html.noir .border-gray-200 { border-color: #333 !important; }
+    html.noir .divide-gray-100 > * + * { border-color: #222 !important; }
+    html.noir .border-dashed.border-gray-200 { border-color: #333 !important; }
+
+    html.noir .bg-green-100    { background-color: rgba(34,197,94,.12)  !important; }
+    html.noir .text-green-700  { color: #4ade80 !important; }
+    html.noir .bg-blue-100     { background-color: rgba(59,130,246,.12)  !important; }
+    html.noir .text-blue-700   { color: #60a5fa !important; }
+    html.noir .bg-purple-100   { background-color: rgba(168,85,247,.12) !important; }
+    html.noir .text-purple-700 { color: #c084fc !important; }
+    html.noir .bg-orange-50    { background-color: rgba(201,96,16,.06)  !important; }
+    html.noir .bg-orange-100   { background-color: rgba(201,96,16,.12)  !important; }
+    html.noir .border-orange-100 { border-color: rgba(201,96,16,.16) !important; }
+    html.noir .border-orange-200 { border-color: rgba(201,96,16,.24) !important; }
+    html.noir .text-orange-700   { color: #fb923c !important; }
+    html.noir .bg-red-50         { background-color: rgba(239,68,68,.06) !important; }
+    html.noir .border-red-200    { border-color: rgba(239,68,68,.20) !important; }
+    html.noir .text-red-700      { color: #fca5a5 !important; }
+
+    html.noir .hover\:bg-gray-100:hover  { background-color: #1a1a1a !important; }
+    html.noir .hover\:bg-orange-50\/40:hover { background-color: rgba(201,96,16,.06) !important; }
+    html.noir .hover\:border-orange-300:hover { border-color: rgba(201,96,16,.32) !important; }
+    html.noir button.hover\:bg-green-50:hover { background-color: rgba(34,197,94,.08) !important; }
+    html.noir .hover\:bg-green-50\/40:hover { background-color: rgba(34,197,94,.06) !important; }
+    html.noir .hover\:border-green-300:hover { border-color: rgba(34,197,94,.32) !important; }
+    html.noir .group-hover\:text-green-700 { color: #4ade80 !important; }
+    html.noir .bg-green-50\/40 { background-color: rgba(34,197,94,.04) !important; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<section class="mb-10">
+
+    {% comment %} ── Fil d'Ariane ───────────────────────────────────────── {% endcomment %}
+    <nav class="text-sm text-gray-500 mb-4 flex items-center gap-2 flex-wrap">
+        <a href="{% url 'candidat:accueil' %}" class="hover:underline">{% trans "Accueil" %}</a>
+        <span>›</span>
+        <a href="{% url 'candidat:offres' %}" class="hover:underline">{% trans "Offres" %}</a>
+        <span>›</span>
+        <span class="text-gray-700 font-semibold truncate max-w-xs">{{ offre.titre }}</span>
+    </nav>
+
+    {# ── Bandeau statut non publié ── #}
+    {% if not est_publiee %}
+    <div class="rounded-2xl px-5 py-4 mb-6 flex items-center gap-4
+                {% if offre.statutOffre == 'EXPIREE' %}bg-amber-50 border-2 border-amber-300 dark:bg-amber-900/15 dark:border-amber-600/50
+                {% elif offre.statutOffre == 'POURVUE' %}bg-purple-50 border-2 border-purple-300 dark:bg-purple-900/15 dark:border-purple-600/50
+                {% else %}bg-red-50 border-2 border-red-300 dark:bg-red-900/15 dark:border-red-600/50{% endif %}">
+        <div class="text-3xl flex-shrink-0">
+            {% if offre.statutOffre == 'EXPIREE' %}⏰
+            {% elif offre.statutOffre == 'POURVUE' %}✅
+            {% else %}🔒{% endif %}
+        </div>
+        <div class="flex-1 min-w-0">
+            <p class="font-extrabold text-base
+                      {% if offre.statutOffre == 'EXPIREE' %}text-amber-800 dark:text-amber-300
+                      {% elif offre.statutOffre == 'POURVUE' %}text-purple-800 dark:text-purple-300
+                      {% else %}text-red-800 dark:text-red-300{% endif %}">
+                {% if offre.statutOffre == 'EXPIREE' %}{% trans "Cette offre a expiré" %}
+                {% elif offre.statutOffre == 'POURVUE' %}{% trans "Ce poste a été pourvu" %}
+                {% else %}{% trans "Cette offre est clôturée" %}{% endif %}
+            </p>
+            <p class="text-sm mt-0.5
+                      {% if offre.statutOffre == 'EXPIREE' %}text-amber-700 dark:text-amber-400
+                      {% elif offre.statutOffre == 'POURVUE' %}text-purple-700 dark:text-purple-400
+                      {% else %}text-red-700 dark:text-red-400{% endif %}">
+                {% if offre.statutOffre == 'EXPIREE' %}
+                    {% if offre.dateExpiration %}{% trans "Expirée le" %} {{ offre.dateExpiration|date:"d M Y" }}.{% endif %}
+                    {% trans "Les candidatures ne sont plus acceptées." %}
+                {% elif offre.statutOffre == 'POURVUE' %}
+                    {% trans "Le recrutement est terminé, le poste a été attribué." %}
+                {% else %}
+                    {% trans "Le recrutement a été interrompu par l'entreprise." %}
+                {% endif %}
+            </p>
+        </div>
+        <a href="{% url 'candidat:offres' %}"
+           class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition
+                  {% if offre.statutOffre == 'EXPIREE' %}bg-amber-100 hover:bg-amber-200 text-amber-800 dark:bg-amber-800/30 dark:text-amber-300
+                  {% elif offre.statutOffre == 'POURVUE' %}bg-purple-100 hover:bg-purple-200 text-purple-800 dark:bg-purple-800/30 dark:text-purple-300
+                  {% else %}bg-red-100 hover:bg-red-200 text-red-800 dark:bg-red-800/30 dark:text-red-300{% endif %}">
+            💼 {% trans "Voir les offres actives" %}
+        </a>
+    </div>
+    {% endif %}
+
+    <div class="grid lg:grid-cols-3 gap-6">
+
+        {% comment %} ─────────── COLONNE PRINCIPALE ─────────── {% endcomment %}
+        <div class="lg:col-span-2 space-y-6">
+
+            {% comment %} En-tête de l'offre {% endcomment %}
+            <div class="bg-white rounded-2xl p-6 sm:p-8 border border-gray-100 shadow-sm">
+                <div class="flex items-start gap-5 mb-5">
+                    {% if offre.entreprise.logoEntreprise %}
+                        <img src="{{ offre.entreprise.logoEntreprise.url }}"
+                             alt="{{ offre.entreprise.raisonSocial }}"
+                             class="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-contain bg-white border-2 border-gray-200 shadow-lg p-2 flex-shrink-0">
+                    {% else %}
+                        <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl flex items-center justify-center text-white font-extrabold text-2xl sm:text-3xl shadow-lg border-4 border-white flex-shrink-0"
+                             style="background:#c96010;">
+                            {{ offre.entreprise.raisonSocial|slice:":3"|upper }}
+                        </div>
+                    {% endif %}
+
+                    <div class="flex-1 min-w-0">
+                        <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-800 mb-2">{{ offre.titre }}</h1>
+                        <a href="{% url 'candidat:entreprise_profil' offre.entreprise.id %}"
+                           class="inline-flex items-center gap-1 text-base font-semibold hover:underline"
+                           style="color:#c96010;">
+                            {{ offre.entreprise.raisonSocial }}
+                            <span class="text-xs">↗</span>
+                        </a>
+                        {% if offre.ville or offre.localisation %}
+                        <p class="text-gray-500 text-sm mt-1">
+                            {% if offre.ville %}📍 {{ offre.ville }}{% if offre.pays %}, {{ offre.pays }}{% endif %}{% endif %}
+                            {% if offre.localisation %}<br><span class="text-xs text-gray-400">{{ offre.localisation }}</span>{% endif %}
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% comment %} Badges synthèse {% endcomment %}
+                <div class="flex flex-wrap gap-2 mb-5">
+                    <span class="text-xs font-semibold bg-green-100 text-green-700 px-3 py-1.5 rounded-full">
+                        {{ offre.get_typeContrat_display }}
+                    </span>
+                    <span class="text-xs font-semibold bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full">
+                        {{ offre.get_modeTravail_display }}
+                    </span>
+                    {% if offre.experienceRequise %}
+                        <span class="text-xs font-semibold bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full">
+                            {{ offre.get_experienceRequise_display }}
+                        </span>
+                    {% endif %}
+                    {% if offre.niveauEtudeRequis %}
+                        <span class="text-xs font-semibold bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full">
+                            🎓 {{ offre.niveauEtudeRequis }}
+                        </span>
+                    {% endif %}
+                    {% if offre.nombrePostes > 1 %}
+                        <span class="text-xs font-semibold bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full">
+                            👥 {{ offre.nombrePostes }} {% trans "postes" %}
+                        </span>
+                    {% endif %}
+                </div>
+
+                {% comment %} Salaire + CTA {% endcomment %}
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-gray-50 rounded-xl">
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-semibold tracking-wide mb-1">{% trans "Rémunération" %}</p>
+                        <p class="text-xl font-extrabold" style="color:#2e7d52;">
+                            {% with sal=offre.salaire_display %}
+                                {% if sal %}{{ sal }}{% else %}<span class="text-gray-400 font-normal">{% trans "À négocier" %}</span>{% endif %}
+                            {% endwith %}
+                        </p>
+                    </div>
+                    {% if request.candidat %}
+                        {# Bouton favori #}
+                        <button type="button"
+                                id="btn-favori-{{ offre.id }}"
+                                onclick="toggleFavoriDetail(this, {{ offre.id }})"
+                                data-favori="{% if est_favori %}1{% else %}0{% endif %}"
+                                class="inline-flex items-center gap-2 font-bold px-4 py-3 rounded-lg text-sm border-2 transition hover:bg-red-50 disabled:opacity-50"
+                                style="border-color:#ef4444; color:#ef4444; {% if est_favori %}background:#fef2f2;{% endif %}">
+                            <span id="btn-favori-icon-{{ offre.id }}" class="text-base leading-none">{% if est_favori %}❤️{% else %}🤍{% endif %}</span>
+                            <span id="btn-favori-label-{{ offre.id }}">{% if est_favori %}{% trans "Sauvegardée" %}{% else %}{% trans "Sauvegarder" %}{% endif %}</span>
+                        </button>
+                        {% if candidature_existante %}
+                            <span class="inline-flex items-center gap-2 font-bold px-6 py-3 rounded-lg text-sm whitespace-nowrap text-white"
+                                  style="background:{{ candidature_existante.statut.couleur|default:'#94A3B8' }};">
+                                {{ candidature_existante.statut.icone|default:'✓' }}
+                                {% trans "Déjà postulé" %} — {{ candidature_existante.statut.libelle }}
+                            </span>
+                        {% else %}
+                            <a href="#postuler"
+                               class="text-white font-bold px-6 py-3 rounded-lg text-sm whitespace-nowrap transition hover:opacity-90 text-center"
+                               style="background:#c96010;">
+                                ✉️ {% trans "Postuler maintenant" %}
+                            </a>
+                        {% endif %}
+                    {% else %}
+                        <a href="{% url 'candidat:connexion' %}?next={{ request.path }}"
+                           class="font-bold px-6 py-3 rounded-lg text-sm whitespace-nowrap transition hover:bg-orange-50 text-center border-2"
+                           style="color:#c96010; border-color:#c96010;">
+                            🔓 {% trans "Connectez-vous pour postuler" %}
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% comment %} Missions & responsabilités {% endcomment %}
+            {% if offre.missions %}
+            <div class="bg-white rounded-2xl p-6 sm:p-8 border border-gray-100 shadow-sm">
+                <h2 class="text-xl font-extrabold text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="w-1.5 h-6 rounded-full" style="background:#c96010;"></span>
+                    {% trans "Missions & responsabilités" %}
+                </h2>
+                <div class="text-gray-700 prose-list">{{ offre.missions }}</div>
+            </div>
+            {% endif %}
+
+            {% comment %} Profil recherché {% endcomment %}
+            {% if offre.profilRecherche %}
+            <div class="bg-white rounded-2xl p-6 sm:p-8 border border-gray-100 shadow-sm">
+                <h2 class="text-xl font-extrabold text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="w-1.5 h-6 rounded-full" style="background:#2e7d52;"></span>
+                    {% trans "Profil recherché" %}
+                </h2>
+                <div class="text-gray-700 prose-list">{{ offre.profilRecherche }}</div>
+            </div>
+            {% endif %}
+
+            {% comment %} Compétences {% endcomment %}
+            {% if offre.competencesRequises %}
+            <div class="bg-white rounded-2xl p-6 sm:p-8 border border-gray-100 shadow-sm">
+                <h2 class="text-xl font-extrabold text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="w-1.5 h-6 rounded-full" style="background:#c96010;"></span>
+                    {% trans "Compétences requises" %}
+                </h2>
+                <div class="flex flex-wrap gap-2">
+                    {% for c in offre.competencesRequises %}
+                        <span class="text-sm bg-orange-50 text-orange-700 border border-orange-200 px-3 py-1.5 rounded-lg font-medium">
+                            {{ c }}
+                        </span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% comment %} Avantages {% endcomment %}
+            {% if offre.avantages %}
+            <div class="bg-white rounded-2xl p-6 sm:p-8 border border-gray-100 shadow-sm">
+                <h2 class="text-xl font-extrabold text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="w-1.5 h-6 rounded-full" style="background:#2e7d52;"></span>
+                    {% trans "Avantages" %}
+                </h2>
+                <div class="text-gray-700 prose-list">{{ offre.avantages }}</div>
+            </div>
+            {% endif %}
+
+            {% comment %} Pièces à fournir / Critères ATS (CV, lettre, test, score) {% endcomment %}
+            {% if offre.criteresATS %}
+            <div class="bg-white rounded-2xl p-6 sm:p-8 border border-gray-100 shadow-sm">
+                <h2 class="text-xl font-extrabold text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="w-1.5 h-6 rounded-full" style="background:#c96010;"></span>
+                    {% trans "Comment postuler" %}
+                </h2>
+                <ul class="space-y-3">
+                    <li class="flex items-start gap-3 p-3 rounded-lg {% if offre.criteresATS.cvObligatoire %}bg-orange-50 border border-orange-100{% else %}bg-gray-50 border border-gray-100{% endif %}">
+                        <div class="w-9 h-9 rounded-xl bg-white shadow-sm flex items-center justify-center text-base flex-shrink-0">📄</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-gray-800">{% trans "CV" %}</p>
+                            <p class="text-xs text-gray-500">
+                                {% if offre.criteresATS.cvObligatoire %}{% trans "Obligatoire — joignez votre CV à jour à votre candidature." %}{% else %}{% trans "Recommandé mais non obligatoire." %}{% endif %}
+                            </p>
+                        </div>
+                        <span class="text-sm font-bold flex-shrink-0 {% if offre.criteresATS.cvObligatoire %}text-orange-600{% else %}text-gray-400{% endif %}">
+                            {% if offre.criteresATS.cvObligatoire %}✓ {% trans "Requis" %}{% else %}— {% trans "Optionnel" %}{% endif %}
+                        </span>
+                    </li>
+
+                    <li class="flex items-start gap-3 p-3 rounded-lg {% if offre.criteresATS.lettreMotivationnObligatoire %}bg-orange-50 border border-orange-100{% else %}bg-gray-50 border border-gray-100{% endif %}">
+                        <div class="w-9 h-9 rounded-xl bg-white shadow-sm flex items-center justify-center text-base flex-shrink-0">✉️</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-gray-800">{% trans "Lettre de motivation" %}</p>
+                            <p class="text-xs text-gray-500">
+                                {% if offre.criteresATS.lettreMotivationnObligatoire %}{% trans "Obligatoire — expliquez pourquoi ce poste vous intéresse." %}{% else %}{% trans "Recommandée mais non obligatoire." %}{% endif %}
+                            </p>
+                        </div>
+                        <span class="text-sm font-bold flex-shrink-0 {% if offre.criteresATS.lettreMotivationnObligatoire %}text-orange-600{% else %}text-gray-400{% endif %}">
+                            {% if offre.criteresATS.lettreMotivationnObligatoire %}✓ {% trans "Requise" %}{% else %}— {% trans "Optionnelle" %}{% endif %}
+                        </span>
+                    </li>
+
+                    <li class="flex items-start gap-3 p-3 rounded-lg {% if offre.criteresATS.testRequis %}bg-orange-50 border border-orange-100{% else %}bg-gray-50 border border-gray-100{% endif %}">
+                        <div class="w-9 h-9 rounded-xl bg-white shadow-sm flex items-center justify-center text-base flex-shrink-0">🧪</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-gray-800">{% trans "Test technique" %}</p>
+                            <p class="text-xs text-gray-500">
+                                {% if offre.criteresATS.testRequis %}{% trans "Un test technique vous sera envoyé après réception de votre candidature." %}{% else %}{% trans "Aucun test technique demandé." %}{% endif %}
+                            </p>
+                        </div>
+                        <span class="text-sm font-bold flex-shrink-0 {% if offre.criteresATS.testRequis %}text-orange-600{% else %}text-gray-400{% endif %}">
+                            {% if offre.criteresATS.testRequis %}✓ {% trans "Oui" %}{% else %}— {% trans "Non" %}{% endif %}
+                        </span>
+                    </li>
+
+                </ul>
+            </div>
+            {% endif %}
+
+            {% comment %} ─── Section Postuler ───────────────────────────── {% endcomment %}
+            <div id="postuler">
+                {% if not est_publiee %}
+                    <div class="rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-8 text-center bg-gray-50 dark:bg-gray-900/50">
+                        <div class="text-4xl mb-3">
+                            {% if offre.statutOffre == 'EXPIREE' %}⏰{% elif offre.statutOffre == 'POURVUE' %}✅{% else %}🔒{% endif %}
+                        </div>
+                        <p class="font-extrabold text-gray-700 dark:text-gray-300 text-lg mb-1">
+                            {% trans "Candidatures fermées" %}
+                        </p>
+                        <p class="text-gray-500 dark:text-gray-400 text-sm mb-5">
+                            {% if offre.statutOffre == 'EXPIREE' %}{% trans "Cette offre a expiré, il n'est plus possible de postuler." %}
+                            {% elif offre.statutOffre == 'POURVUE' %}{% trans "Le poste a été pourvu, il n'est plus possible de postuler." %}
+                            {% else %}{% trans "Cette offre a été clôturée par l'entreprise." %}{% endif %}
+                        </p>
+                        <a href="{% url 'candidat:offres' %}"
+                           class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white hover:opacity-90 transition"
+                           style="background:#c96010;">
+                            💼 {% trans "Voir les offres actives" %}
+                        </a>
+                    </div>
+                {% elif not request.candidat %}
+                    {# Visiteur anonyme — CTA d'inscription / connexion #}
+                    <div class="rounded-2xl p-8 text-white text-center" style="background:#2e7d52;">
+                        <h2 class="text-2xl font-extrabold mb-2">{% trans "Cette offre vous intéresse ?" %}</h2>
+                        <p class="text-white/90 mb-6">{% trans "Connectez-vous ou créez un compte pour postuler en un clic." %}</p>
+                        <div class="flex flex-col sm:flex-row justify-center gap-3">
+                            <a href="{% url 'candidat:connexion' %}?next={{ request.path }}"
+                               class="bg-white font-bold px-6 py-3 rounded-lg text-sm hover:bg-gray-100 transition"
+                               style="color:#2e7d52;">
+                                🔓 {% trans "Me connecter" %}
+                            </a>
+                            <a href="{% url 'candidat:inscription' %}"
+                               class="bg-white/20 border-2 border-white text-white font-bold px-6 py-3 rounded-lg text-sm hover:bg-white/30 transition">
+                                ✨ {% trans "Créer un compte" %}
+                            </a>
+                        </div>
+                    </div>
+
+                {% elif candidature_existante %}
+                    {# Déjà postulé — résumé statut + référence #}
+                    <div class="rounded-2xl border-2 p-6 sm:p-8"
+                         style="border-color:{{ candidature_existante.statut.couleur|default:'#94A3B8' }};
+                                background:{{ candidature_existante.statut.couleur|default:'#94A3B8' }}11;">
+                        <div class="flex items-start gap-4">
+                            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-md flex-shrink-0 text-white"
+                                 style="background:{{ candidature_existante.statut.couleur|default:'#94A3B8' }};">
+                                {{ candidature_existante.statut.icone|default:'✓' }}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h2 class="text-xl font-extrabold text-gray-800">
+                                    {% trans "Votre candidature" %} —
+                                    <span style="color:{{ candidature_existante.statut.couleur|default:'#94A3B8' }};">{{ candidature_existante.statut.libelle }}</span>
+                                </h2>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    {% trans "Référence" %} :
+                                    <span class="font-mono font-bold">{{ candidature_existante.reference }}</span>
+                                    · {% trans "Soumise le" %} {{ candidature_existante.dateCandidature|date:"d M Y, H:i" }}
+                                </p>
+                                {% if candidature_existante.statut.description %}
+                                <p class="text-sm text-gray-500 mt-2">{{ candidature_existante.statut.description }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                {% else %}
+                    {# Formulaire de candidature #}
+                    <div x-data="{ ouvert: {% if ouvrir_formulaire %}true{% else %}false{% endif %}, apercu: false }"
+                         class="rounded-2xl overflow-hidden border-2 shadow-md"
+                         style="border-color:#2e7d52;">
+                        {# Bandeau d'ouverture #}
+                        <button type="button" @click="ouvert = !ouvert"
+                                class="w-full text-left text-white px-6 py-5 flex items-center justify-between transition"
+                                style="background:#2e7d52;">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl">✉️</div>
+                                <div>
+                                    <p class="text-lg font-extrabold">{% trans "Postuler à cette offre" %}</p>
+                                    <p class="text-white/80 text-sm">{% trans "Remplissez le formulaire ci-dessous en quelques secondes." %}</p>
+                                </div>
+                            </div>
+                            <svg class="w-6 h-6 transition-transform" :class="{ 'rotate-180': ouvert }"
+                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+
+                        <form x-show="ouvert" x-transition method="post" enctype="multipart/form-data"
+                              action="{% url 'candidat:postuler' offre.id %}"
+                              class="bg-white p-6 sm:p-8 space-y-6">
+                            {% csrf_token %}
+
+                            {# Erreurs non-field #}
+                            {% if candidature_form.non_field_errors %}
+                                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                    {{ candidature_form.non_field_errors }}
+                                </div>
+                            {% endif %}
+
+                            {# ── CV : réutilisation OU upload ─────────────── #}
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">
+                                    📄 {% trans "Votre CV" %}
+                                    {% if offre.criteresATS.cvObligatoire %}<span class="text-red-500">*</span>{% endif %}
+                                </label>
+
+                                <div class="grid md:grid-cols-2 gap-4">
+                                {% if candidature_form.cvSauvegarde.field.queryset.count %}
+                                <div x-data="{
+                                       ouvert: false,
+                                       rechercheCv: '',
+                                       cvSelectionne: '{{ candidature_form.cvSauvegarde.value|default_if_none:'' }}',
+                                       cvs: [
+                                         {% for cv in candidature_form.cvSauvegarde.field.queryset %}{ id: '{{ cv.pk }}', nom: '{{ cv.nomCv|default_if_none:''|escapejs }}', titre: '{{ cv.titre|default_if_none:''|escapejs }}', date: '{{ cv.dateModification|date:'d/m/Y' }}' }{% if not forloop.last %},{% endif %}{% endfor %}
+                                       ],
+                                       get cvActuel() {
+                                         return this.cvs.find(c => c.id === this.cvSelectionne) || null;
+                                       },
+                                       cvsFiltres() {
+                                         const q = (this.rechercheCv || '').trim().toLowerCase();
+                                         if (!q) return this.cvs;
+                                         return this.cvs.filter(c =>
+                                           (c.nom || '').toLowerCase().includes(q) ||
+                                           (c.titre || '').toLowerCase().includes(q)
+                                         );
+                                       },
+                                       selectionner(id) {
+                                         this.cvSelectionne = id;
+                                         this.ouvert = false;
+                                         this.rechercheCv = '';
+                                       }
+                                     }"
+                                     @keydown.escape.window="ouvert = false">
+                                    <p class="text-xs text-gray-500 mb-1.5">{% trans "Option 1 — Réutiliser un CV créé sur RecrutePro :" %}</p>
+
+                                    {# Hidden input qui porte la valeur soumise sous le nom du form field Django #}
+                                    <input type="hidden" name="cvSauvegarde" :value="cvSelectionne">
+
+                                    <div class="relative" @click.outside="ouvert = false">
+                                        {# Champ déclencheur (style select) #}
+                                        <button type="button" @click="ouvert = !ouvert"
+                                                class="w-full flex items-center justify-between gap-3 px-4 py-2.5 border border-gray-200 rounded-lg bg-white hover:border-green-400 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition text-left"
+                                                :class="ouvert ? 'border-green-500 ring-1 ring-green-500' : ''">
+                                            <div class="flex-1 min-w-0">
+                                                <template x-if="cvActuel">
+                                                    <div>
+                                                        <p class="text-sm font-bold text-gray-800 truncate">
+                                                            <span x-show="cvActuel.nom" x-text="cvActuel.nom"></span>
+                                                            <span x-show="!cvActuel.nom" class="text-amber-600 italic">{% trans "CV sans nom — à compléter" %}</span>
+                                                        </p>
+                                                        <p class="text-xs text-gray-500 truncate">
+                                                            <span x-show="cvActuel.titre" x-text="cvActuel.titre + ' · '"></span><span x-text="cvActuel.date"></span>
+                                                        </p>
+                                                    </div>
+                                                </template>
+                                                <template x-if="!cvActuel">
+                                                    <span class="text-sm text-gray-400 italic">— {% trans "Aucun (j'upload mon CV)" %} —</span>
+                                                </template>
+                                            </div>
+                                            <svg class="w-5 h-5 text-gray-400 flex-shrink-0 transition-transform" :class="{ 'rotate-180': ouvert }"
+                                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                            </svg>
+                                        </button>
+
+                                        {# Panneau déroulant #}
+                                        <div x-show="ouvert" x-cloak x-transition.opacity.duration.150ms
+                                             class="absolute z-30 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden">
+                                            {# Barre de recherche #}
+                                            <div class="p-2 border-b border-gray-100 bg-gray-50/60">
+                                                <div class="relative">
+                                                    <input type="search" x-model="rechercheCv"
+                                                           @click.stop
+                                                           placeholder="{% trans 'Rechercher un CV par nom…' %}"
+                                                           class="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none bg-white">
+                                                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/>
+                                                    </svg>
+                                                </div>
+                                            </div>
+
+                                            {# Liste des options #}
+                                            <div class="max-h-64 overflow-y-auto py-1">
+                                                {# Option "Aucun" — masquée si recherche active #}
+                                                <button type="button" @click="selectionner('')"
+                                                        x-show="!rechercheCv"
+                                                        class="w-full text-left px-4 py-2.5 hover:bg-green-50 transition flex items-center justify-between gap-2"
+                                                        :class="cvSelectionne === '' ? 'bg-green-50' : ''">
+                                                    <span class="text-sm text-gray-600 italic">— {% trans "Aucun (j'upload mon CV)" %} —</span>
+                                                    <span x-show="cvSelectionne === ''" class="text-green-600 font-bold">✓</span>
+                                                </button>
+
+                                                <template x-for="cv in cvsFiltres()" :key="cv.id">
+                                                    <button type="button" @click="selectionner(cv.id)"
+                                                            class="w-full text-left px-4 py-2.5 hover:bg-green-50 transition flex items-start justify-between gap-2 border-t border-gray-50"
+                                                            :class="cvSelectionne === cv.id ? 'bg-green-50' : ''">
+                                                        <div class="flex-1 min-w-0">
+                                                            <p class="text-sm font-bold text-gray-800 truncate">
+                                                                <span x-show="cv.nom" x-text="cv.nom"></span>
+                                                                <span x-show="!cv.nom" class="text-amber-600 italic">{% trans "CV sans nom — à compléter" %}</span>
+                                                            </p>
+                                                            <p class="text-xs text-gray-500 truncate">
+                                                                <span x-show="cv.titre" x-text="cv.titre + ' · '"></span><span x-text="cv.date"></span>
+                                                            </p>
+                                                        </div>
+                                                        <span x-show="cvSelectionne === cv.id" class="text-green-600 font-bold flex-shrink-0 mt-0.5">✓</span>
+                                                    </button>
+                                                </template>
+
+                                                <p x-show="rechercheCv && cvsFiltres().length === 0" x-cloak
+                                                   class="text-center text-xs text-gray-400 italic py-3">
+                                                    {% trans "Aucun CV ne correspond à votre recherche." %}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {% if candidature_form.cvSauvegarde.errors %}
+                                        <p class="text-xs text-red-600 mt-1">{{ candidature_form.cvSauvegarde.errors|join:", " }}</p>
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <div>
+                                    <p class="text-xs text-gray-500 mb-1.5">{% trans "Option 1 — Réutiliser un CV créé sur RecrutePro :" %}</p>
+                                    <div class="text-xs text-gray-400 italic px-4 py-2.5 border border-dashed border-gray-200 rounded-lg bg-gray-50/50">
+                                        {% trans "Vous n'avez pas encore créé de CV sur RecrutePro." %}
+                                        <a href="{% url 'candidat:modeles_cv' %}" class="text-orange-600 font-semibold hover:underline">
+                                            {% trans "En créer un →" %}
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <div>
+                                    <p class="text-xs text-gray-500 mb-1.5">{% trans "Option 2 — Uploader un fichier (PDF, DOC, DOCX — max 5 Mo) :" %}</p>
+                                    {{ candidature_form.cv }}
+                                    {% if candidature_form.cv.errors %}
+                                        <p class="text-xs text-red-600 mt-1">{{ candidature_form.cv.errors|join:", " }}</p>
+                                    {% endif %}
+                                </div>
+                                </div>
+                            </div>
+
+                            {# ── Lettre de motivation : réutilisation OU upload ──── #}
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">
+                                    ✉️ {% trans "Lettre de motivation" %}
+                                    {% if offre.criteresATS.lettreMotivationnObligatoire or offre.criteresATS.lettreMotivationObligatoire %}
+                                        <span class="text-red-500">*</span>
+                                    {% else %}
+                                        <span class="text-gray-400 font-normal text-xs">({% trans "Optionnelle" %})</span>
+                                    {% endif %}
+                                </label>
+
+                                <div class="grid md:grid-cols-2 gap-4">
+                                {% if candidature_form.lettreSauvegardee.field.queryset.count %}
+                                <div x-data="{
+                                       ouvert: false,
+                                       rechercheLettre: '',
+                                       lettreSelectionnee: '{{ candidature_form.lettreSauvegardee.value|default_if_none:'' }}',
+                                       lettres: [
+                                         {% for lettre in candidature_form.lettreSauvegardee.field.queryset %}{ id: '{{ lettre.pk }}', nom: '{{ lettre.nomLettre|default_if_none:''|escapejs }}', date: '{{ lettre.dateModification|date:'d/m/Y' }}' }{% if not forloop.last %},{% endif %}{% endfor %}
+                                       ],
+                                       get lettreActuelle() {
+                                         return this.lettres.find(l => l.id === this.lettreSelectionnee) || null;
+                                       },
+                                       lettresFiltrees() {
+                                         const q = (this.rechercheLettre || '').trim().toLowerCase();
+                                         if (!q) return this.lettres;
+                                         return this.lettres.filter(l => (l.nom || '').toLowerCase().includes(q));
+                                       },
+                                       selectionner(id) {
+                                         this.lettreSelectionnee = id;
+                                         this.ouvert = false;
+                                         this.rechercheLettre = '';
+                                       }
+                                     }"
+                                     @keydown.escape.window="ouvert = false">
+                                    <p class="text-xs text-gray-500 mb-1.5">{% trans "Option 1 — Réutiliser une lettre créée sur RecrutePro :" %}</p>
+
+                                    {# Hidden input qui porte la valeur soumise sous le nom du form field Django #}
+                                    <input type="hidden" name="lettreSauvegardee" :value="lettreSelectionnee">
+
+                                    <div class="relative" @click.outside="ouvert = false">
+                                        {# Champ déclencheur (style select) #}
+                                        <button type="button" @click="ouvert = !ouvert"
+                                                class="w-full flex items-center justify-between gap-3 px-4 py-2.5 border border-gray-200 rounded-lg bg-white hover:border-green-400 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition text-left"
+                                                :class="ouvert ? 'border-green-500 ring-1 ring-green-500' : ''">
+                                            <div class="flex-1 min-w-0">
+                                                <template x-if="lettreActuelle">
+                                                    <div>
+                                                        <p class="text-sm font-bold text-gray-800 truncate">
+                                                            <span x-show="lettreActuelle.nom" x-text="lettreActuelle.nom"></span>
+                                                            <span x-show="!lettreActuelle.nom" class="text-amber-600 italic">{% trans "Lettre sans nom — à compléter" %}</span>
+                                                        </p>
+                                                        <p class="text-xs text-gray-500 truncate" x-text="lettreActuelle.date"></p>
+                                                    </div>
+                                                </template>
+                                                <template x-if="!lettreActuelle">
+                                                    <span class="text-sm text-gray-400 italic">— {% trans "Aucune (j'upload ma lettre)" %} —</span>
+                                                </template>
+                                            </div>
+                                            <svg class="w-5 h-5 text-gray-400 flex-shrink-0 transition-transform" :class="{ 'rotate-180': ouvert }"
+                                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                            </svg>
+                                        </button>
+
+                                        {# Panneau déroulant #}
+                                        <div x-show="ouvert" x-cloak x-transition.opacity.duration.150ms
+                                             class="absolute z-30 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden">
+                                            {# Barre de recherche #}
+                                            <div class="p-2 border-b border-gray-100 bg-gray-50/60">
+                                                <div class="relative">
+                                                    <input type="search" x-model="rechercheLettre"
+                                                           @click.stop
+                                                           placeholder="{% trans 'Rechercher une lettre par nom…' %}"
+                                                           class="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none bg-white">
+                                                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/>
+                                                    </svg>
+                                                </div>
+                                            </div>
+
+                                            {# Liste des options #}
+                                            <div class="max-h-64 overflow-y-auto py-1">
+                                                {# Option "Aucune" — masquée si recherche active #}
+                                                <button type="button" @click="selectionner('')"
+                                                        x-show="!rechercheLettre"
+                                                        class="w-full text-left px-4 py-2.5 hover:bg-green-50 transition flex items-center justify-between gap-2"
+                                                        :class="lettreSelectionnee === '' ? 'bg-green-50' : ''">
+                                                    <span class="text-sm text-gray-600 italic">— {% trans "Aucune (j'upload ma lettre)" %} —</span>
+                                                    <span x-show="lettreSelectionnee === ''" class="text-green-600 font-bold">✓</span>
+                                                </button>
+
+                                                <template x-for="lettre in lettresFiltrees()" :key="lettre.id">
+                                                    <button type="button" @click="selectionner(lettre.id)"
+                                                            class="w-full text-left px-4 py-2.5 hover:bg-green-50 transition flex items-start justify-between gap-2 border-t border-gray-50"
+                                                            :class="lettreSelectionnee === lettre.id ? 'bg-green-50' : ''">
+                                                        <div class="flex-1 min-w-0">
+                                                            <p class="text-sm font-bold text-gray-800 truncate">
+                                                                <span x-show="lettre.nom" x-text="lettre.nom"></span>
+                                                                <span x-show="!lettre.nom" class="text-amber-600 italic">{% trans "Lettre sans nom — à compléter" %}</span>
+                                                            </p>
+                                                            <p class="text-xs text-gray-500 truncate" x-text="lettre.date"></p>
+                                                        </div>
+                                                        <span x-show="lettreSelectionnee === lettre.id" class="text-green-600 font-bold flex-shrink-0 mt-0.5">✓</span>
+                                                    </button>
+                                                </template>
+
+                                                <p x-show="rechercheLettre && lettresFiltrees().length === 0" x-cloak
+                                                   class="text-center text-xs text-gray-400 italic py-3">
+                                                    {% trans "Aucune lettre ne correspond à votre recherche." %}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {% if candidature_form.lettreSauvegardee.errors %}
+                                        <p class="text-xs text-red-600 mt-1">{{ candidature_form.lettreSauvegardee.errors|join:", " }}</p>
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <div>
+                                    <p class="text-xs text-gray-500 mb-1.5">{% trans "Option 1 — Réutiliser une lettre créée sur RecrutePro :" %}</p>
+                                    <div class="text-xs text-gray-400 italic px-4 py-2.5 border border-dashed border-gray-200 rounded-lg bg-gray-50/50">
+                                        {% trans "Vous n'avez pas encore créé de lettre sur RecrutePro." %}
+                                        <a href="{% url 'candidat:modeles_lettre' %}" class="text-orange-600 font-semibold hover:underline">
+                                            {% trans "En créer une →" %}
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <div>
+                                    <p class="text-xs text-gray-500 mb-1.5">{% trans "Option 2 — Uploader un fichier (PDF, DOC, DOCX — max 5 Mo) :" %}</p>
+                                    {{ candidature_form.lettreMotivation }}
+                                    {% if candidature_form.lettreMotivation.errors %}
+                                        <p class="text-xs text-red-600 mt-1">{{ candidature_form.lettreMotivation.errors|join:", " }}</p>
+                                    {% endif %}
+                                </div>
+                                </div>
+                            </div>
+
+                            {# ── Info : le portfolio est joint automatiquement ─────── #}
+                            <div class="rounded-lg bg-orange-50 border border-orange-100 px-4 py-3 flex items-start gap-3">
+                                <span class="text-xl">🔗</span>
+                                <div class="text-sm text-gray-700 flex-1">
+                                    <p class="font-semibold">{% trans "Votre portfolio sera joint à la candidature" %}</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">
+                                        {% trans "L'entreprise pourra consulter votre profil public RecrutePro." %}
+                                        <button type="button" @click="apercu = true"
+                                                class="text-orange-600 font-semibold hover:underline">
+                                            {% trans "Aperçu de mon portfolio" %}
+                                        </button>
+                                    </p>
+                                    {% if not request.candidat.portfolioPublic %}
+                                    <p class="text-xs text-red-600 mt-1.5 font-semibold">
+                                        ⚠ {% trans "Votre portfolio est actuellement privé. Activez-le dans votre profil pour qu'il soit visible par les recruteurs." %}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {# ── Modale aperçu portfolio (iframe, pas de nouvel onglet) ─── #}
+                            <div x-show="apercu" x-cloak
+                                 x-transition.opacity
+                                 @keydown.escape.window="apercu = false"
+                                 class="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+                                 @click.self="apercu = false">
+                                <div class="bg-white w-full max-w-6xl h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+                                    {# Bandeau modale #}
+                                    <div class="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-gray-50">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-xl">🔗</span>
+                                            <div>
+                                                <p class="font-bold text-gray-800 text-sm">{% trans "Aperçu de votre portfolio" %}</p>
+                                                <p class="text-xs text-gray-500">{% trans "Tel que l'entreprise le verra" %}</p>
+                                            </div>
+                                        </div>
+                                        <button type="button" @click="apercu = false"
+                                                class="w-9 h-9 rounded-full hover:bg-gray-200 flex items-center justify-center text-gray-600 transition"
+                                                title="{% trans 'Fermer' %}">
+                                            ✕
+                                        </button>
+                                    </div>
+                                    {# Iframe — chargée à l'ouverture seulement (perf) #}
+                                    <iframe x-bind:src="apercu ? '{% url 'candidat:portfolio_public' candidat_id=request.candidat.id %}' : ''"
+                                            class="flex-1 w-full"
+                                            referrerpolicy="no-referrer"
+                                            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
+                                </div>
+                            </div>
+
+                            {# ── Soumission ──────────────────────────────── #}
+                            <div class="flex flex-col sm:flex-row justify-end gap-3 pt-3 border-t border-gray-100">
+                                <button type="button" @click="ouvert = false"
+                                        class="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100 transition">
+                                    {% trans "Annuler" %}
+                                </button>
+                                <button type="submit"
+                                        class="text-white font-bold px-6 py-2.5 rounded-lg text-sm shadow-sm hover:opacity-90 transition"
+                                        style="background:#2e7d52;">
+                                    ✉️ {% trans "Envoyer ma candidature" %}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+
+        </div>
+
+        {% comment %} ─────────── ASIDE — Récap + Entreprise ─────────── {% endcomment %}
+        <aside class="space-y-6">
+
+            {% if matching %}
+            {% comment %} ─── Panneau Matching (candidat connecté uniquement) ─── {% endcomment %}
+            <div class="rounded-2xl overflow-hidden shadow-lg border-2"
+                 style="border-color:{{ matching.couleur }};">
+                <div class="px-5 py-3 text-white flex items-center gap-2"
+                     style="background:{{ matching.couleur }};">
+                    <span class="text-xl">🎯</span>
+                    <h3 class="text-base font-extrabold uppercase tracking-wide">{% trans "Votre compatibilité" %}</h3>
+                </div>
+                <div class="bg-white p-5">
+                    {# Score en grand + libellé #}
+                    <div class="flex items-center gap-4 mb-5">
+                        <div class="w-20 h-20 rounded-full flex items-center justify-center text-white font-extrabold text-2xl shadow-md"
+                             style="background:{{ matching.couleur }};">
+                            {{ matching.score }}%
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-extrabold text-gray-800 text-lg leading-tight">{{ matching.libelle }}</p>
+                            <p class="text-gray-500 text-xs mt-1">
+                                {% if matching.methode == 'ml' %}
+                                    {% trans "Calculé par notre modèle d'apprentissage." %}
+                                {% else %}
+                                    {% trans "Calculé d'après votre profil et l'offre." %}
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    {# Détail des critères #}
+                    <ul class="space-y-3">
+                        {% for c in matching.criteres %}
+                        <li>
+                            <div class="flex items-center justify-between text-sm mb-1">
+                                <span class="flex items-center gap-2 font-semibold text-gray-700">
+                                    <span>{{ c.icone }}</span>
+                                    <span>{{ c.label }}</span>
+                                    <span class="text-xs text-gray-400 font-normal">({{ c.poids }}%)</span>
+                                </span>
+                                <span class="font-bold
+                                    {% if c.status == 'success' %}text-green-600
+                                    {% elif c.status == 'partial' %}text-orange-500
+                                    {% else %}text-gray-400{% endif %}">
+                                    {{ c.score }}%
+                                </span>
+                            </div>
+                            <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all"
+                                     style="width:{{ c.score }}%;background:
+                                        {% if c.status == 'success' %}#2e7d52
+                                        {% elif c.status == 'partial' %}#c96010
+                                        {% else %}#CBD5E1{% endif %};"></div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">{{ c.note }}</p>
+                        </li>
+                        {% endfor %}
+                    </ul>
+
+                    {% if matching.score < 60 %}
+                    <a href="{% url 'candidat:profil' %}"
+                       class="mt-5 inline-flex items-center justify-center w-full text-white font-bold px-4 py-2.5 rounded-xl text-sm hover:opacity-90 transition"
+                       style="background:#c96010;">
+                        ✏️ {% trans "Améliorer mon profil" %}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% comment %} Récap clés / infos pratiques — design renforcé pour visibilité {% endcomment %}
+            <div class="rounded-2xl overflow-hidden shadow-lg border-2"
+                 style="border-color:#c96010;">
+                <div class="px-5 py-3 text-white flex items-center gap-2"
+                     style="background:#c96010;">
+                    <span class="text-xl">📌</span>
+                    <h3 class="text-base font-extrabold uppercase tracking-wide">{% trans "Informations clés" %}</h3>
+                </div>
+                <div class="bg-white p-5">
+                    <dl class="divide-y divide-gray-100 text-sm">
+                        <div class="flex items-start justify-between gap-3 py-3">
+                            <dt class="text-gray-500 flex items-center gap-2"><span>📋</span> {% trans "Type de contrat" %}</dt>
+                            <dd class="font-bold text-gray-900 text-right">{{ offre.get_typeContrat_display }}</dd>
+                        </div>
+                        <div class="flex items-start justify-between gap-3 py-3">
+                            <dt class="text-gray-500 flex items-center gap-2"><span>💻</span> {% trans "Mode de travail" %}</dt>
+                            <dd class="font-bold text-gray-900 text-right">{{ offre.get_modeTravail_display }}</dd>
+                        </div>
+                        {% if offre.experienceRequise %}
+                        <div class="flex items-start justify-between gap-3 py-3">
+                            <dt class="text-gray-500 flex items-center gap-2"><span>⏳</span> {% trans "Expérience" %}</dt>
+                            <dd class="font-bold text-gray-900 text-right">{{ offre.get_experienceRequise_display }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if offre.niveauEtudeRequis %}
+                        <div class="flex items-start justify-between gap-3 py-3">
+                            <dt class="text-gray-500 flex items-center gap-2"><span>🎓</span> {% trans "Niveau d'études" %}</dt>
+                            <dd class="font-bold text-gray-900 text-right">{{ offre.niveauEtudeRequis }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if offre.ville %}
+                        <div class="flex items-start justify-between gap-3 py-3">
+                            <dt class="text-gray-500 flex items-center gap-2"><span>📍</span> {% trans "Localisation" %}</dt>
+                            <dd class="font-bold text-gray-900 text-right">
+                                {{ offre.ville }}{% if offre.pays %}, {{ offre.pays }}{% endif %}
+                                {% if offre.localisation %}<br><span class="font-normal text-gray-500 text-xs">{{ offre.localisation }}</span>{% endif %}
+                            </dd>
+                        </div>
+                        {% endif %}
+                        {% if offre.dureeContratMois %}
+                        <div class="flex items-start justify-between gap-3 py-3">
+                            <dt class="text-gray-500 flex items-center gap-2"><span>📆</span> {% trans "Durée" %}</dt>
+                            <dd class="font-bold text-gray-900 text-right">{{ offre.dureeContratMois }} {% trans "mois" %}</dd>
+                        </div>
+                        {% endif %}
+                        <div class="flex items-start justify-between gap-3 py-3">
+                            <dt class="text-gray-500 flex items-center gap-2"><span>👥</span> {% trans "Postes ouverts" %}</dt>
+                            <dd class="font-bold text-gray-900 text-right">{{ offre.nombrePostes }}</dd>
+                        </div>
+                        <div class="flex items-start justify-between gap-3 py-3">
+                            <dt class="text-gray-500 flex items-center gap-2"><span>🔖</span> {% trans "Référence" %}</dt>
+                            <dd class="font-mono text-xs text-gray-700 text-right">{{ offre.reference }}</dd>
+                        </div>
+                        {% if offre.datePublication %}
+                        <div class="flex items-start justify-between gap-3 py-3">
+                            <dt class="text-gray-500 flex items-center gap-2"><span>🚀</span> {% trans "Publiée le" %}</dt>
+                            <dd class="font-bold text-gray-900 text-right">{{ offre.datePublication|date:"d M Y" }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if offre.dateExpiration %}
+                        <div class="flex items-start justify-between gap-3 py-3">
+                            <dt class="text-gray-500 flex items-center gap-2"><span>⏰</span> {% trans "Expire le" %}</dt>
+                            <dd class="font-extrabold text-red-600 text-right">{{ offre.dateExpiration|date:"d M Y" }}</dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            {% comment %} Carte Entreprise {% endcomment %}
+            <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                <div class="flex items-center gap-4 mb-4">
+                    {% if offre.entreprise.logoEntreprise %}
+                        <img src="{{ offre.entreprise.logoEntreprise.url }}"
+                             alt="{{ offre.entreprise.raisonSocial }}"
+                             class="w-16 h-16 rounded-xl object-contain bg-white border-2 border-gray-200 shadow-md p-1 flex-shrink-0">
+                    {% else %}
+                        <div class="w-16 h-16 rounded-xl flex items-center justify-center text-white font-extrabold text-base shadow-md border-2 border-white flex-shrink-0" style="background:#2e7d52;">
+                            {{ offre.entreprise.raisonSocial|slice:":3"|upper }}
+                        </div>
+                    {% endif %}
+                    <div class="flex-1 min-w-0">
+                        <h3 class="font-extrabold text-gray-800 truncate">{{ offre.entreprise.raisonSocial }}</h3>
+                        {% if offre.entreprise.secteurActiviteRef %}
+                            <p class="text-xs text-gray-500">{{ offre.entreprise.secteurActiviteRef.nomSecteur }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if offre.entreprise.description %}
+                    <p class="text-sm text-gray-600 mb-4 line-clamp-2">{{ offre.entreprise.description }}</p>
+                {% endif %}
+
+                <a href="{% url 'candidat:entreprise_profil' offre.entreprise.id %}"
+                   class="block w-full text-center py-2.5 rounded-lg font-bold text-sm text-white transition hover:opacity-90"
+                   style="background:#2e7d52;">
+                    🏢 {% trans "Voir le profil de l'entreprise" %}
+                </a>
+            </div>
+
+            {% comment %} Offres similaires (même entreprise) {% endcomment %}
+            {% if offres_similaires %}
+            <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                <h3 class="font-extrabold text-gray-800 mb-4">{% trans "Autres offres de cette entreprise" %}</h3>
+                <div class="space-y-3">
+                    {% for o in offres_similaires %}
+                    <a href="{% url 'candidat:offre_detail' o.id %}"
+                       class="block p-3 rounded-lg border border-gray-100 hover:border-orange-300 hover:bg-orange-50/40 transition">
+                        <p class="font-semibold text-gray-800 text-sm line-clamp-2">{{ o.titre }}</p>
+                        <p class="text-xs text-gray-500 mt-1">
+                            {{ o.get_typeContrat_display }}{% if o.ville %} · {{ o.ville }}{% endif %}
+                        </p>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if offres_suggestions %}
+            <div class="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+                <div class="px-5 py-3 flex items-center gap-2" style="background:linear-gradient(135deg,#2e7d52,#1a5e3a);">
+                    <span class="text-lg">💡</span>
+                    <h3 class="text-white text-sm font-extrabold uppercase tracking-wide">{% trans "Offres similaires" %}</h3>
+                </div>
+                <div class="p-5 space-y-3">
+                    {% for o in offres_suggestions %}
+                    <a href="{% url 'candidat:offre_detail' o.id %}"
+                       class="block p-3 rounded-lg border border-gray-100 hover:border-green-300 hover:bg-green-50/40 transition group">
+                        <div class="flex items-start gap-3">
+                            {% if o.entreprise.logoEntreprise %}
+                                <img src="{{ o.entreprise.logoEntreprise.url }}"
+                                     alt="{{ o.entreprise.raisonSocial }}"
+                                     class="w-10 h-10 rounded-lg object-contain bg-white border border-gray-200 p-0.5 flex-shrink-0">
+                            {% else %}
+                                <div class="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                                     style="background:#2e7d52;">
+                                    {{ o.entreprise.raisonSocial|slice:":2"|upper }}
+                                </div>
+                            {% endif %}
+                            <div class="flex-1 min-w-0">
+                                <p class="font-semibold text-gray-800 text-sm line-clamp-2 group-hover:text-green-700 transition">{{ o.titre }}</p>
+                                <p class="text-xs text-gray-500 mt-0.5">{{ o.entreprise.raisonSocial }}</p>
+                                <div class="flex flex-wrap gap-1.5 mt-2">
+                                    <span class="text-[10px] font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{{ o.get_typeContrat_display }}</span>
+                                    {% if o.ville %}
+                                    <span class="text-[10px] font-semibold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">📍 {{ o.ville }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                <a href="{% url 'candidat:offres' %}"
+                   class="block text-center px-4 py-3 border-t border-gray-100 text-xs font-bold hover:bg-green-50 transition"
+                   style="color:#2e7d52;">
+                    {% trans "Voir toutes les offres" %} →
+                </a>
+            </div>
+            {% endif %}
+        </aside>
+    </div>
+
+</section>
+{% endblock %}
+
+{% block js_extra %}
+<script type="application/ld+json">{{ json_ld|safe }}</script>
+<script>
+async function toggleFavoriDetail(btn, offreId) {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    const icon  = document.getElementById('btn-favori-icon-'  + offreId);
+    const label = document.getElementById('btn-favori-label-' + offreId);
+    const token = document.cookie.split(';').map(c => c.trim())
+        .find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
+    try {
+        const r = await fetch(`/candidat/api/favoris/${offreId}/toggle/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': token },
+        });
+        const d = await r.json();
+        if (d.ok) {
+            btn.dataset.favori    = d.favori ? '1' : '0';
+            icon.textContent      = d.favori ? '❤️' : '🤍';
+            label.textContent     = d.favori ? '{% trans "Sauvegardée" %}' : '{% trans "Sauvegarder" %}';
+            btn.style.background  = d.favori ? '#fef2f2' : '';
+        }
+    } catch (_) {}
+    finally { btn.disabled = false; }
+}
+</script>
+{% endblock %}

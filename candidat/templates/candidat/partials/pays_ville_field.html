@@ -1,0 +1,107 @@
+{% load i18n %}
+{# Composant Alpine.js réutilisable pour sélection Pays + Ville avec fallback texte libre #}
+{# Usage : {% include "candidat/partials/pays_ville_field.html" with pays_model="pays" ville_model="ville" %} #}
+{# Requiert que le parent x-data expose : paysVille (objet géré par initPaysVille()) #}
+<div x-data="paysVilleField()" x-init="init()" class="contents">
+
+  {# ── PAYS ── #}
+  <div>
+    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">🌍 Pays</label>
+    <div class="flex gap-2">
+      <select x-show="!paysLibre"
+              x-model="paysSelectVal"
+              @change="onPaysChange()"
+              class="fi flex-1">
+        <option value="">— Choisir un pays —</option>
+        <template x-for="p in paysList" :key="p.id">
+          <option :value="p.id" x-text="p.nomPays"></option>
+        </template>
+        <option value="__autre__">✏️ Saisir manuellement…</option>
+      </select>
+      <div x-show="paysLibre" class="flex gap-2 flex-1">
+        <input type="text" x-model="paysTexte" @input="$dispatch('pays-change', {val: paysTexte})"
+               placeholder="{% trans "Nom du pays" %}" class="fi flex-1">
+        <button type="button" @click="paysLibre=false; paysSelectVal=''; paysTexte=''; villesOptions=[];"
+                class="px-2 py-1 text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg">✕</button>
+      </div>
+    </div>
+  </div>
+
+  {# ── VILLE ── #}
+  <div>
+    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">📍 Ville</label>
+    <div class="flex gap-2">
+      <select x-show="!villeLibre"
+              x-model="villeSelectVal"
+              @change="onVilleChange()"
+              class="fi flex-1"
+              :disabled="!paysSelectVal && !paysLibre">
+        <option value="">— Choisir une ville —</option>
+        <template x-for="v in villesOptions" :key="v.id">
+          <option :value="v.nomVille" x-text="v.nomVille + (v.region ? ' (' + v.region + ')' : '')"></option>
+        </template>
+        <option value="__autre__">✏️ Saisir manuellement…</option>
+      </select>
+      <div x-show="villeLibre" class="flex gap-2 flex-1">
+        <input type="text" x-model="villeTexte"
+               placeholder="{% trans "Nom de la ville" %}" class="fi flex-1">
+        <button type="button" @click="villeLibre=false; villeSelectVal=''; villeTexte='';"
+                class="px-2 py-1 text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg">✕</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function paysVilleField() {
+  return {
+    paysList:      [],
+    villesOptions: [],
+    paysSelectVal: '',
+    paysTexte:     '',
+    paysLibre:     false,
+    villeSelectVal:'',
+    villeTexte:    '',
+    villeLibre:    false,
+
+    async init() {
+      const resp = await fetch('/referentiel/api/pays/');
+      this.paysList = await resp.json();
+
+      // Pré-remplir si valeurs déjà dans le parent
+      const parentPays = this.$el.closest('[x-data]')?._x_dataStack?.[0];
+      // on écoute les events du parent pour sync
+    },
+
+    async onPaysChange() {
+      if (this.paysSelectVal === '__autre__') {
+        this.paysLibre = true;
+        this.villesOptions = [];
+        return;
+      }
+      this.villesOptions = [];
+      this.villeSelectVal = '';
+      if (this.paysSelectVal) {
+        const resp = await fetch(`/referentiel/api/villes/?pays_id=${this.paysSelectVal}`);
+        this.villesOptions = await resp.json();
+      }
+      // Notifier le parent
+      const p = this.paysList.find(x => x.id == this.paysSelectVal);
+      this.$dispatch('pays-selected', { nomPays: p ? p.nomPays : '' });
+    },
+
+    onVilleChange() {
+      if (this.villeSelectVal === '__autre__') {
+        this.villeLibre = true;
+        this.villeSelectVal = '';
+        return;
+      }
+      this.$dispatch('ville-selected', { nomVille: this.villeSelectVal });
+    },
+
+    getPays()  { return this.paysLibre  ? this.paysTexte  : (this.paysList.find(x=>x.id==this.paysSelectVal)?.nomPays  || ''); },
+    getVille() { return this.villeLibre ? this.villeTexte : this.villeSelectVal; },
+  };
+}
+</script>

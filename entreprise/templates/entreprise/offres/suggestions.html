@@ -1,0 +1,313 @@
+﻿{% extends "entreprise/base.html" %}
+{% load static i18n %}
+
+{% block titre %}Suggestions ATS — {{ offre.titre }}{% endblock %}
+
+{% block css_extra %}
+<style>
+    .sg-card { background:#fff; border:1px solid #e5e7eb; border-radius:1rem; padding:1.25rem; transition:all .2s; }
+    .sg-card:hover { box-shadow:0 8px 24px rgba(0,0,0,.06); transform:translateY(-2px); }
+    .sg-card.highlight { border-color:#c96010; box-shadow:0 0 0 3px rgba(201,96,16,.15); }
+    .sg-niveau { font-size:.65rem; font-weight:900; letter-spacing:.06em; text-transform:uppercase; padding:.18rem .55rem; border-radius:9999px; }
+    .sg-score { font-size:1.5rem; font-weight:900; line-height:1; }
+    .sg-stat-card { background:#fff; border:1px solid #e5e7eb; border-radius:.875rem; padding:.875rem 1rem; }
+    .sg-btn { display:inline-flex; align-items:center; justify-content:center; gap:.4rem; padding:.5rem .9rem; border-radius:.625rem; font-size:.78rem; font-weight:700; transition:all .15s; }
+
+    /* ── Mode sombre ──────────────────────────────────────────────────── */
+    html.dark .sg-card        { background:#1e293b !important; border-color:#334155 !important; }
+    html.dark .sg-card:hover  { box-shadow:0 8px 24px rgba(0,0,0,.4) !important; }
+    html.dark .sg-card.highlight { border-color:#c96010 !important; box-shadow:0 0 0 3px rgba(201,96,16,.25) !important; }
+    html.dark .sg-stat-card   { background:#1e293b !important; border-color:#334155 !important; }
+
+    /* ── MODE NOIR (OLED) ────────────────────────────────────────────── */
+    html.noir .sg-card        { background:#0d0d0d !important; border-color:#222 !important; }
+    html.noir .sg-card:hover  { box-shadow:0 8px 24px rgba(0,0,0,.55) !important; }
+    html.noir .sg-card.highlight { border-color:#c96010 !important; box-shadow:0 0 0 3px rgba(201,96,16,.20) !important; }
+    html.noir .sg-stat-card   { background:#0d0d0d !important; border-color:#222 !important; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-10 py-6"
+     x-data="suggestionsApp()">
+
+    <!-- ── Fil d'Ariane / retour ──────────────────────────────────────── -->
+    <div class="mb-4">
+        <a href="{% url 'entreprise:offre_detail' offre.pk %}"
+           class="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-green-700 transition">
+            ← Retour à l'offre
+        </a>
+    </div>
+
+    <!-- ── En-tête ─────────────────────────────────────────────────────── -->
+    <div class="rounded-2xl p-5 sm:p-6 mb-5 text-white shadow-lg"
+         style="background:#c96010;">
+        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            <div class="flex items-start gap-3 min-w-0">
+                <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl shrink-0">🎯</div>
+                <div class="min-w-0">
+                    <h1 class="text-xl md:text-2xl font-extrabold">{% trans "Profils suggérés par l'ATS" %}</h1>
+                    <p class="text-white/85 text-sm mt-1">
+                        Pour l'offre
+                        <a href="{% url 'entreprise:offre_detail' offre.pk %}"
+                           class="font-bold text-white underline decoration-white/40 underline-offset-4 hover:decoration-white transition">
+                            « {{ offre.titre }} »
+                        </a>
+                    </p>
+                    <p class="text-white/70 text-xs mt-1">
+                        Score minimum requis : <strong>{{ seuil }}%</strong>
+                    </p>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2 shrink-0">
+                <a href="{% url 'entreprise:offre_detail' offre.pk %}"
+                   class="sg-btn bg-white text-orange-700 hover:bg-orange-50 transition font-extrabold">
+                    📄 Voir l'offre
+                </a>
+                <form method="get" action="{% url 'entreprise:suggestions_offre' offre.pk %}">
+                    <button type="submit" name="refresh" value="1"
+                            class="sg-btn bg-white/15 hover:bg-white/25 text-white border border-white/30">
+                        🔄 Actualiser
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% if scan_lance and total == 0 %}
+    <div class="mb-5 p-4 rounded-xl bg-blue-50 border border-blue-200 text-sm text-blue-800">
+        ℹ️ Premier scan terminé — aucun profil ne dépasse encore le seuil de <strong>{{ seuil }}%</strong>.
+        Essayez de baisser le seuil dans les critères de l'offre, ou patientez le temps que des candidats publics
+        complètent leur profil.
+    </div>
+    {% endif %}
+
+    <!-- ── Statistiques cliquables (servent de filtres) ────────────────── -->
+    {% if total > 0 %}
+    <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 px-1">
+        Cliquez sur une catégorie pour filtrer
+    </p>
+    {% endif %}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+
+        <!-- Total (filtre = TOUS) -->
+        <button type="button" @click="filtre = 'TOUS'"
+                class="sg-stat-card flex items-center gap-3 text-left transition cursor-pointer hover:shadow-md"
+                :class="filtre === 'TOUS' ? 'ring-2 ring-offset-1' : 'opacity-90 hover:opacity-100'"
+                :style="filtre === 'TOUS' ? '--tw-ring-color:#475569; background:rgba(148,163,184,.10);' : ''">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-base shrink-0"
+                 style="background:rgba(148,163,184,.18); color:#475569;">📊</div>
+            <div>
+                <p class="text-xl font-extrabold text-gray-900">{{ total }}</p>
+                <p class="text-[11px] uppercase font-bold text-gray-500 tracking-wider">{% trans "Total" %}</p>
+            </div>
+        </button>
+
+        <!-- Excellent (filtre par niveau) -->
+        <button type="button"
+                @click="filtre = (filtre === 'EXCELLENT' ? 'TOUS' : 'EXCELLENT')"
+                :disabled="{{ stats.EXCELLENT|yesno:'false,true' }}"
+                class="sg-stat-card flex items-center gap-3 text-left transition"
+                :class="filtre === 'EXCELLENT' ? 'ring-2 ring-offset-1 cursor-pointer hover:shadow-md' :
+                        ({{ stats.EXCELLENT }} > 0 ? 'cursor-pointer hover:shadow-md opacity-90 hover:opacity-100' : 'opacity-40 cursor-not-allowed')"
+                :style="filtre === 'EXCELLENT' ? '--tw-ring-color:#009A44; background:rgba(0,154,68,.10);' : ''">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-base shrink-0"
+                 style="background:rgba(0,154,68,.15); color:#009A44;">🌟</div>
+            <div>
+                <p class="text-xl font-extrabold text-gray-900">{{ stats.EXCELLENT }}</p>
+                <p class="text-[11px] uppercase font-bold text-gray-500 tracking-wider">{% trans "Excellent" %}</p>
+            </div>
+        </button>
+
+        <!-- Bon (filtre par niveau) -->
+        <button type="button"
+                @click="filtre = (filtre === 'BON' ? 'TOUS' : 'BON')"
+                :disabled="{{ stats.BON|yesno:'false,true' }}"
+                class="sg-stat-card flex items-center gap-3 text-left transition"
+                :class="filtre === 'BON' ? 'ring-2 ring-offset-1 cursor-pointer hover:shadow-md' :
+                        ({{ stats.BON }} > 0 ? 'cursor-pointer hover:shadow-md opacity-90 hover:opacity-100' : 'opacity-40 cursor-not-allowed')"
+                :style="filtre === 'BON' ? '--tw-ring-color:#c96010; background:rgba(201,96,16,.10);' : ''">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-base shrink-0"
+                 style="background:rgba(201,96,16,.15); color:#c96010;">👍</div>
+            <div>
+                <p class="text-xl font-extrabold text-gray-900">{{ stats.BON }}</p>
+                <p class="text-[11px] uppercase font-bold text-gray-500 tracking-wider">{% trans "Bon" %}</p>
+            </div>
+        </button>
+
+        <!-- Moyen (filtre par niveau) -->
+        <button type="button"
+                @click="filtre = (filtre === 'MOYEN' ? 'TOUS' : 'MOYEN')"
+                :disabled="{{ stats.MOYEN|yesno:'false,true' }}"
+                class="sg-stat-card flex items-center gap-3 text-left transition"
+                :class="filtre === 'MOYEN' ? 'ring-2 ring-offset-1 cursor-pointer hover:shadow-md' :
+                        ({{ stats.MOYEN }} > 0 ? 'cursor-pointer hover:shadow-md opacity-90 hover:opacity-100' : 'opacity-40 cursor-not-allowed')"
+                :style="filtre === 'MOYEN' ? '--tw-ring-color:#a16207; background:rgba(234,179,8,.10);' : ''">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-base shrink-0"
+                 style="background:rgba(234,179,8,.15); color:#a16207;">⚖️</div>
+            <div>
+                <p class="text-xl font-extrabold text-gray-900">{{ stats.MOYEN }}</p>
+                <p class="text-[11px] uppercase font-bold text-gray-500 tracking-wider">{% trans "Moyen" %}</p>
+            </div>
+        </button>
+    </div>
+
+    <!-- Indicateur visuel du filtre actif (pour clarté) -->
+    {% if total > 0 %}
+    <div class="flex items-center gap-2 mb-4 text-xs text-gray-500" x-show="filtre !== 'TOUS'">
+        <span>{% trans "Filtre actif :" %}</span>
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold"
+              :style="filtreStyle()" x-text="filtreLabel()"></span>
+        <button @click="filtre = 'TOUS'"
+                class="text-xs underline hover:text-gray-700">
+            réinitialiser
+        </button>
+    </div>
+    {% endif %}
+
+    <!-- ── Grille de cartes ────────────────────────────────────────────── -->
+    {% if propositions %}
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for p in propositions %}
+        <div id="candidat-{{ p.candidat.id }}"
+             x-show="filtre === 'TOUS' || filtre === '{{ p.niveau }}'"
+             class="sg-card"
+             :class="highlight === {{ p.candidat.id }} ? 'highlight' : ''">
+
+            <!-- Header card -->
+            <div class="flex items-start gap-3 mb-3">
+                <div class="w-14 h-14 rounded-full overflow-hidden shrink-0 flex items-center justify-center font-extrabold text-white text-base"
+                     {% if not p.candidat.photoProfil %}style="background:#c96010;"{% endif %}>
+                    {% if p.candidat.photoProfil %}
+                        <img src="{{ p.candidat.photoProfil.url }}" alt="" class="w-full h-full object-cover">
+                    {% else %}
+                        <span>{{ p.candidat.prenom|first|upper }}{{ p.candidat.nom|first|upper }}</span>
+                    {% endif %}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-bold text-sm text-gray-900 truncate">{{ p.candidat.prenom }} {{ p.candidat.nom }}</p>
+                    <p class="text-xs text-gray-500 truncate">{{ p.candidat.titreProfessionnel|default:"—" }}</p>
+                    {% if p.candidat.informationPersonnelle and p.candidat.informationPersonnelle.ville %}
+                    <p class="text-[11px] text-gray-400 mt-0.5">📍 {{ p.candidat.informationPersonnelle.ville }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Score + niveau -->
+            <div class="flex items-center justify-between mb-3 px-3 py-2 rounded-lg"
+                 {% if p.niveau == 'EXCELLENT' %}style="background:rgba(0,154,68,.12); border:1px solid rgba(0,154,68,.3);"
+                 {% elif p.niveau == 'BON' %}style="background:rgba(201,96,16,.12); border:1px solid rgba(201,96,16,.3);"
+                 {% elif p.niveau == 'MOYEN' %}style="background:rgba(234,179,8,.15); border:1px solid rgba(234,179,8,.3);"
+                 {% else %}style="background:rgba(148,163,184,.15); border:1px solid rgba(148,163,184,.3);"{% endif %}>
+                <span class="sg-niveau"
+                      {% if p.niveau == 'EXCELLENT' %}style="color:#166534;"
+                      {% elif p.niveau == 'BON' %}style="color:#c2410c;"
+                      {% elif p.niveau == 'MOYEN' %}style="color:#854d0e;"
+                      {% else %}style="color:#475569;"{% endif %}>
+                    {{ p.niveau }}
+                </span>
+                <span class="sg-score"
+                      {% if p.niveau == 'EXCELLENT' %}style="color:#009A44;"
+                      {% elif p.niveau == 'BON' %}style="color:#c96010;"
+                      {% elif p.niveau == 'MOYEN' %}style="color:#a16207;"
+                      {% else %}style="color:#475569;"{% endif %}>{{ p.scoreATS|floatformat:0 }}%</span>
+            </div>
+
+            <!-- Actions -->
+            <div class="grid grid-cols-2 gap-1.5">
+                <a href="{% url 'entreprise:voir_portfolio' p.candidat.id %}?depuis_suggestions=1&offre={{ offre.pk }}"
+                   @click="marquer({{ p.candidat.id }}, 'vu')"
+                   class="sg-btn text-white"
+                   style="background:#009A44;">
+                    👁️ Portfolio
+                </a>
+                {% if not request.recruteur.est_lecteur %}
+                <button type="button"
+                        @click="marquer({{ p.candidat.id }}, 'ignore'); $el.closest('.sg-card').style.display='none'"
+                        class="sg-btn text-gray-600 bg-white border border-gray-200 hover:bg-gray-50">
+                    🚫 Masquer
+                </button>
+                {% endif %}
+            </div>
+
+            <!-- Statut d'action déjà effectué -->
+            {% if p.action and p.action != 'propose' %}
+            <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mt-2 text-center">
+                {% if p.action == 'vu' %}✓ Portfolio consulté
+                {% elif p.action == 'contacte' %}📧 Candidat contacté
+                {% elif p.action == 'invite' %}🎯 Invité à postuler
+                {% endif %}
+            </p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty state -->
+    <div class="text-center py-16 sg-card">
+        <div class="text-5xl mb-3">🔍</div>
+        <p class="text-base font-bold text-gray-800 mb-1">{% trans "Aucun profil ne correspond actuellement" %}</p>
+        <p class="text-sm text-gray-500 max-w-md mx-auto">
+            Soit aucun candidat avec portfolio public n'atteint le seuil de <strong>{{ seuil }}%</strong>,
+            soit votre offre vient d'être publiée et le scan automatique n'a pas encore trouvé de profil pertinent.
+        </p>
+        <form method="get" action="{% url 'entreprise:suggestions_offre' offre.pk %}" class="mt-4">
+            <button type="submit" name="refresh" value="1"
+                    class="sg-btn text-white" style="background:#c96010;">
+                🔄 Relancer un scan
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+function suggestionsApp() {
+    return {
+        filtre: 'TOUS',
+        highlight: null,
+
+        init() {
+            // Si la notification renvoyait vers #candidat-<id>, on highlight la carte
+            const m = window.location.hash.match(/^#candidat-(\d+)/);
+            if (m) {
+                this.highlight = parseInt(m[1], 10);
+                // Scroll smooth après que Alpine ait monté
+                setTimeout(() => {
+                    const el = document.getElementById('candidat-' + this.highlight);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 200);
+            }
+        },
+
+        async marquer(candidatId, action) {
+            try {
+                await fetch(`/entreprise/offres/{{ offre.pk }}/profils-recommandes/${candidatId}/${action}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+            } catch (e) { /* best-effort */ }
+        },
+
+        filtreLabel() {
+            return ({
+                'EXCELLENT': '🌟 Excellent',
+                'BON':       '👍 Bon',
+                'MOYEN':     '⚖️ Moyen',
+            })[this.filtre] || '';
+        },
+        filtreStyle() {
+            return ({
+                'EXCELLENT': 'background:rgba(0,154,68,.15); color:#166534; border:1px solid rgba(0,154,68,.3);',
+                'BON':       'background:rgba(201,96,16,.12); color:#c2410c; border:1px solid rgba(201,96,16,.3);',
+                'MOYEN':     'background:rgba(234,179,8,.15); color:#854d0e; border:1px solid rgba(234,179,8,.3);',
+            })[this.filtre] || '';
+        },
+    };
+}
+</script>
+{% endblock %}

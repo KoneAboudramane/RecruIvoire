@@ -1,0 +1,456 @@
+{% extends "entreprise/base.html" %}
+{% load static i18n %}
+
+{% block titre %}Mon profil — {{ request.recruteur.nomComplet }}{% endblock %}
+
+{% block css_extra %}
+<style>
+    .prof-input { width:100%; padding:.75rem 1rem; border-radius:.75rem; border:1px solid #e5e7eb; background:#f9fafb; font-size:.95rem; color:#1f2937; transition:all .2s; }
+    .prof-input:focus { outline:none; border-color:#009A44; background:#fff; box-shadow:0 0 0 3px rgba(0,154,68,.12); }
+    .prof-input:disabled { opacity:.8; cursor:not-allowed; background:#f3f4f6; color:#374151; }
+    .f-label { display:block; font-size:.8rem; font-weight:700; color:#6b7280; margin-bottom:.4rem; text-transform:uppercase; letter-spacing:.05em; }
+    .section-card { background:white; border:1px solid #f0f0f0; border-radius:1rem; padding:1.5rem; }
+
+    /* ── Mode sombre : harmonisation des cartes et inputs ─────────────── */
+    html.dark .section-card        { background:#1e293b !important; border-color:#334155 !important; color:#e2e8f0 !important; }
+    html.dark .prof-input          { background:#0f172a !important; border-color:#475569 !important; color:#e2e8f0 !important; }
+    html.dark .prof-input:focus    { background:#0f172a !important; border-color:#009A44 !important; }
+    html.dark .prof-input:disabled { background:#162032 !important; color:#94a3b8 !important; }
+    html.dark .f-label             { color:#94a3b8 !important; }
+
+    /* ── MODE NOIR (OLED) ─────────────────────────────────────────── */
+    html.noir .section-card        { background:#0d0d0d !important; border-color:#222 !important; color:#e2e8f0 !important; }
+    html.noir .prof-input          { background:#000 !important; border-color:#333 !important; color:#e2e8f0 !important; }
+    html.noir .prof-input:focus    { background:#000 !important; border-color:#009A44 !important; }
+    html.noir .prof-input:disabled { background:#080808 !important; color:#94a3b8 !important; }
+    html.noir .f-label             { color:#94a3b8 !important; }
+
+    /* ── En-tête profil recruteur — suppression dégradé ──────────── */
+    .profil-rec-header { background:#fff; color:#1f2937; border:1px solid #e5e7eb; }
+    .profil-rec-header .logo-wrap-box { background:rgba(0,154,68,.10); border-color:rgba(0,0,0,.15); color:#009A44; }
+    .profil-rec-header .badge-role-admin   { background:rgba(251,191,36,.15) !important; color:#92400e !important; }
+    .profil-rec-header .badge-role-rh      { background:rgba(0,154,68,.12) !important;   color:#166534 !important; }
+    .profil-rec-header .badge-role-manager { background:rgba(59,130,246,.12) !important; color:#1d4ed8 !important; }
+    .profil-rec-header .badge-role-lecteur { background:rgba(107,114,128,.10) !important;color:#374151 !important; }
+    .profil-rec-header .entreprise-nom { color:#4b5563; }
+    .profil-rec-header .email-rec { color:#6b7280; }
+    .profil-rec-header .tab-bar-rec { border-color:rgba(0,0,0,.10); }
+    .profil-rec-header .bg-white\/20 { background:rgba(0,154,68,.12) !important; }
+    .profil-rec-header .text-white { color:#166534 !important; }
+    .profil-rec-header .text-white\/55 { color:#6b7280 !important; }
+    .profil-rec-header .hover\:text-white:hover { color:#166534 !important; }
+    .profil-rec-header .hover\:bg-white\/10:hover { background:rgba(0,0,0,.05) !important; }
+
+    html.dark .profil-rec-header { background:#1e293b; color:#f1f5f9; border-color:#334155; }
+    html.dark .profil-rec-header .logo-wrap-box { background:rgba(0,154,68,.18); border-color:#334155; color:#4ade80; }
+    html.dark .profil-rec-header .badge-role-admin   { background:rgba(251,191,36,.20) !important; color:#fcd34d !important; }
+    html.dark .profil-rec-header .badge-role-rh      { background:rgba(0,154,68,.20) !important;   color:#4ade80 !important; }
+    html.dark .profil-rec-header .badge-role-manager { background:rgba(59,130,246,.20) !important; color:#93c5fd !important; }
+    html.dark .profil-rec-header .badge-role-lecteur { background:rgba(255,255,255,.10) !important;color:#e2e8f0 !important; }
+    html.dark .profil-rec-header .entreprise-nom { color:#94a3b8; }
+    html.dark .profil-rec-header .email-rec { color:#94a3b8; }
+    html.dark .profil-rec-header .tab-bar-rec { border-color:rgba(255,255,255,.10); }
+    html.dark .profil-rec-header .text-white { color:#f1f5f9 !important; }
+    html.dark .profil-rec-header .text-white\/55 { color:rgba(241,245,249,.65) !important; }
+
+    html.noir .profil-rec-header { background:linear-gradient(135deg,#000 0%,#080808 60%,#111 100%); color:#f1f5f9; border-color:#222; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="w-full px-2 sm:px-6 lg:px-10" x-data="recruteurProfil()" x-init="init()">
+
+    <!-- ── En-tête ────────────────────────────────────────────────────────── -->
+    <div class="profil-rec-header rounded-2xl overflow-hidden mb-6 shadow-sm">
+        <div class="px-8 pt-8 pb-6">
+            <div class="flex items-center gap-5">
+                <!-- Avatar -->
+                <div class="relative group flex-shrink-0">
+                    <div class="logo-wrap-box w-20 h-20 rounded-2xl border-2 overflow-hidden flex items-center justify-center cursor-pointer shadow-lg"
+                         @click="$refs.photoInput.click()">
+                        <img id="photoImg"
+                             {% if request.recruteur.photoProfil %}
+                             src="{{ request.recruteur.photoProfil.url }}"
+                             {% else %}src=""{% endif %}
+                             alt="" class="w-full h-full object-cover {% if not request.recruteur.photoProfil %}hidden{% endif %}">
+                        <span id="photoPlaceholder"
+                              class="text-3xl font-extrabold {% if request.recruteur.photoProfil %}hidden{% endif %}">
+                            {{ request.recruteur.nomComplet|slice:":1"|upper }}
+                        </span>
+                    </div>
+                    <div class="absolute inset-0 rounded-2xl bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                         @click="$refs.photoInput.click()">
+                        <span class="text-white text-xs font-bold">📷</span>
+                    </div>
+                </div>
+
+                <!-- Info -->
+                <div class="flex-1">
+                    <div class="flex flex-wrap items-center gap-2 mb-1">
+                        <h1 class="text-xl font-extrabold">{{ request.recruteur.nomComplet }}</h1>
+                        <span class="text-xs px-2.5 py-0.5 rounded-full font-bold
+                            {% if request.recruteur.roleMembre == 'ADMIN' %}badge-role-admin
+                            {% elif request.recruteur.roleMembre == 'RH' %}badge-role-rh
+                            {% elif request.recruteur.roleMembre == 'MANAGER' %}badge-role-manager
+                            {% else %}badge-role-lecteur{% endif %}">
+                            {{ request.recruteur.get_roleMembre_display }}
+                        </span>
+                    </div>
+                    <p class="entreprise-nom text-sm">{{ request.recruteur.entreprise.raisonSocial }}</p>
+                    <p class="email-rec text-xs mt-0.5">{{ request.recruteur.emailProfessionnel }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglets -->
+        <div class="tab-bar-rec px-8 flex gap-1 border-t pt-2">
+            <button @click="tab='infos'" :class="tab==='infos' ? 'bg-white/20 text-white' : 'text-white/55 hover:text-white hover:bg-white/10'"
+                    class="px-4 py-2 rounded-t-xl text-sm font-semibold transition">📋 Informations</button>
+            <button @click="tab='securite'" :class="tab==='securite' ? 'bg-white/20 text-white' : 'text-white/55 hover:text-white hover:bg-white/10'"
+                    class="px-4 py-2 rounded-t-xl text-sm font-semibold transition">🔒 Sécurité</button>
+            <button @click="tab='confidentialite'" :class="tab==='confidentialite' ? 'bg-white/20 text-white' : 'text-white/55 hover:text-white hover:bg-white/10'"
+                    class="px-4 py-2 rounded-t-xl text-sm font-semibold transition">🛡️ Confidentialité</button>
+        </div>
+    </div>
+
+    <!-- ═══════════════ ONGLET INFOS ═══════════════ -->
+    <div x-show="tab==='infos'" x-transition>
+        <form method="post" action="{% url 'entreprise:recruteur_modifier_profil' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="file" x-ref="photoInput" name="photoProfil" accept="image/*" class="hidden"
+                   @change="previewPhoto($event)">
+
+            <div class="space-y-4">
+                <div class="section-card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-bold text-gray-800 dark:text-gray-100">👤 Informations personnelles</h2>
+                        <div x-show="!editMode">
+                            <button type="button" @click="editMode=true"
+                                    class="px-4 py-2 rounded-xl text-xs font-bold text-white"
+                                    style="background:#009A44;">✏️ Modifier</button>
+                        </div>
+                        <div class="flex gap-2" x-show="editMode">
+                            <button type="button" @click="editMode=false"
+                                    class="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition">{% trans "Annuler" %}</button>
+                            <button type="submit"
+                                    class="px-4 py-2 rounded-xl text-xs font-bold text-white"
+                                    style="background:#009A44;">💾 Enregistrer</button>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="f-label">{% trans "Nom complet" %} <span class="text-red-400">*</span></label>
+                            <input type="text" name="nomComplet"
+                                   value="{{ request.recruteur.nomComplet }}"
+                                   :disabled="!editMode" class="prof-input">
+                        </div>
+                        <div>
+                            <label class="f-label">{% trans "Téléphone" %}</label>
+                            <input type="tel" name="telephone"
+                                   value="{{ request.recruteur.telephone }}"
+                                   :disabled="!editMode" class="prof-input">
+                        </div>
+                        <div>
+                            <label class="f-label">{% trans "Date d'embauche" %}</label>
+                            <input type="date" name="dateEmbauche"
+                                   value="{{ request.recruteur.dateEmbauche|date:'Y-m-d'|default:'' }}"
+                                   disabled class="prof-input">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Infos lecture seule -->
+                <div class="section-card">
+                    <h2 class="font-bold text-gray-800 dark:text-gray-100 mb-4">🏢 Mon entreprise</h2>
+                    <dl class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{% trans "Entreprise" %}</dt>
+                            <dd class="font-semibold text-gray-800 dark:text-gray-100">{{ request.recruteur.entreprise.raisonSocial }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{% trans "Rôle" %}</dt>
+                            <dd class="font-semibold text-gray-800 dark:text-gray-100">{{ request.recruteur.get_roleMembre_display }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{% trans "Email professionnel" %}</dt>
+                            <dd class="font-semibold text-gray-800 dark:text-gray-100">{{ request.recruteur.emailProfessionnel }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{% trans "Date d'embauche" %}</dt>
+                            <dd class="font-semibold text-gray-800 dark:text-gray-100">
+                                {{ request.recruteur.dateEmbauche|date:"d/m/Y"|default:"—" }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{% trans "Statut" %}</dt>
+                            <dd>
+                                <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-bold
+                                    {% if request.recruteur.estActif %}bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400{% else %}bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400{% endif %}">
+                                    {% if request.recruteur.estActif %}✅ Actif{% else %}⏸️ Inactif{% endif %}
+                                </span>
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <div x-show="editMode" class="flex justify-end">
+                    <button type="submit"
+                            class="px-6 py-2.5 rounded-xl text-sm font-bold text-white hover:opacity-90 transition"
+                            style="background: #009A44;">
+                        💾 Enregistrer les modifications
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- ═══════════════ ONGLET SÉCURITÉ ═══════════════ -->
+    <div x-show="tab==='securite'" x-transition>
+        <div class="section-card max-w-md"
+             x-data="{
+                editMode:false,
+                showOld:false, showNew:false, showConf:false,
+                strength:{score:0,color:'#e5e7eb',label:''},
+                calcStr(p){ let s=0; if(p.length>=8)s++; if(/[A-Z]/.test(p))s++; if(/[0-9]/.test(p))s++; if(/[^A-Za-z0-9]/.test(p))s++; const c=['','#ef4444','#f59e0b','#3b82f6','#009A44']; const l=['','Faible','Moyen','Fort','Très fort']; this.strength={score:s,color:c[s]||'#e5e7eb',label:l[s]||''}; },
+                annuler(){ this.editMode=false; this.showOld=false; this.showNew=false; this.showConf=false; this.strength={score:0,color:'#e5e7eb',label:''}; document.querySelectorAll('#formMDP input[type=password],#formMDP input[type=text]').forEach(i=>i.value=''); }
+             }">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="font-bold text-gray-800 dark:text-gray-100">🔑 Mot de passe</h2>
+                <button type="button" x-show="!editMode" @click="editMode=true"
+                        class="px-4 py-2 rounded-xl text-xs font-bold text-white"
+                        style="background:#009A44;">✏️ Modifier</button>
+                <button type="button" x-show="editMode" @click="annuler()"
+                        class="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    Annuler
+                </button>
+            </div>
+
+            <!-- État verrouillé (par défaut) -->
+            <div x-show="!editMode" class="space-y-3">
+                <div class="flex items-center gap-3 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
+                    <div class="w-10 h-10 rounded-xl bg-white dark:bg-gray-700 shadow-sm flex items-center justify-center text-base border border-gray-100 dark:border-gray-600 shrink-0">🔒</div>
+                    <div class="flex-1">
+                        <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">{% trans "Mot de passe sécurisé" %}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{% trans "Cliquez sur \"Modifier\" pour changer votre mot de passe." %}</p>
+                    </div>
+                </div>
+                <p class="text-[11px] text-gray-400 dark:text-gray-500 px-1">
+                    💡 Conseil : utilisez au moins 8 caractères avec majuscules, chiffres et symboles.
+                </p>
+            </div>
+
+            <!-- Formulaire (visible uniquement en mode édition) -->
+            <form x-show="editMode" x-transition
+                  id="formMDP" method="post"
+                  action="{% url 'entreprise:recruteur_changer_mdp' %}"
+                  class="space-y-4">
+                {% csrf_token %}
+                <div>
+                    <label class="f-label">{% trans "Mot de passe actuel" %}</label>
+                    <div class="relative">
+                        <input :type="showOld?'text':'password'" name="ancienMotPasse"
+                               placeholder="••••••••" class="prof-input pr-10" required>
+                        <button type="button" @click="showOld=!showOld"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-sm">
+                            <span x-text="showOld?'🙈':'👁️'"></span>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="f-label">{% trans "Nouveau mot de passe" %}</label>
+                    <div class="relative">
+                        <input :type="showNew?'text':'password'" name="nouveauMotPasse"
+                               @input="calcStr($event.target.value)"
+                               placeholder="{% trans "Min. 8 caractères" %}" class="prof-input pr-10" required>
+                        <button type="button" @click="showNew=!showNew"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-sm">
+                            <span x-text="showNew?'🙈':'👁️'"></span>
+                        </button>
+                    </div>
+                    <div class="flex gap-1 mt-1.5" x-show="strength.score>0">
+                        <template x-for="i in 4" :key="i">
+                            <div class="h-1 flex-1 rounded-full" :style="'background:'+(i<=strength.score?strength.color:'#e5e7eb')+';'"></div>
+                        </template>
+                    </div>
+                    <p class="text-xs mt-1" x-show="strength.score>0" :style="'color:'+strength.color" x-text="strength.label"></p>
+                </div>
+                <div>
+                    <label class="f-label">{% trans "Confirmer" %}</label>
+                    <div class="relative">
+                        <input :type="showConf?'text':'password'" name="confirmerMotPasse"
+                               placeholder="{% trans "Répéter" %}" class="prof-input pr-10" required>
+                        <button type="button" @click="showConf=!showConf"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-sm">
+                            <span x-text="showConf?'🙈':'👁️'"></span>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit"
+                        class="w-full py-2.5 rounded-xl text-sm font-bold text-white hover:opacity-90 transition"
+                        style="background: #009A44;">
+                    🔐 Mettre à jour le mot de passe
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ═══════════════ ONGLET CONFIDENTIALITÉ ═══════════════ -->
+    <div x-show="tab==='confidentialite'" x-transition>
+        <div class="section-card max-w-2xl">
+            <div class="flex items-start gap-3 mb-5">
+                <div class="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-lg shrink-0">🛡️</div>
+                <div>
+                    <h2 class="font-bold text-gray-800 dark:text-gray-100 text-base">{% trans "Confidentialité & Notifications ATS" %}</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Choisissez comment vous souhaitez être informé(e) lorsque l'ATS détecte
+                        un profil candidat correspondant à l'une de vos offres.
+                    </p>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+
+                <!-- Toggle 1 : Notifs in-app ATS -->
+                <div class="flex items-start gap-3 p-4 rounded-xl border border-gray-100 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50">
+                    <div class="w-9 h-9 rounded-xl bg-white dark:bg-gray-700 shadow-sm flex items-center justify-center text-base border border-gray-100 dark:border-gray-600 shrink-0">🎯</div>
+                    <div class="flex-1">
+                        <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">{% trans "Alertes ATS dans la cloche" %}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Recevoir une notification dans la cloche du navbar dès qu'un profil
+                            candidat correspond à une offre que vous avez publiée.
+                        </p>
+                    </div>
+                    <button type="button" @click="prefs.notifsATS = !prefs.notifsATS; sauvegarder()"
+                            class="relative inline-flex h-6 w-11 items-center rounded-full transition shrink-0 mt-1"
+                            :class="prefs.notifsATS ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'"
+                            :aria-pressed="prefs.notifsATS">
+                        <span class="inline-block w-4 h-4 bg-white rounded-full shadow transition"
+                              :class="prefs.notifsATS ? 'translate-x-6' : 'translate-x-1'"></span>
+                    </button>
+                </div>
+
+                <!-- Toggle 2 : Notifs par email (uniquement si toggle 1 ON) -->
+                <div class="flex items-start gap-3 p-4 rounded-xl border border-gray-100 dark:border-gray-600 transition"
+                     :class="prefs.notifsATS ? 'bg-gray-50 dark:bg-gray-700/50' : 'bg-gray-100 dark:bg-gray-800 opacity-50'">
+                    <div class="w-9 h-9 rounded-xl bg-white dark:bg-gray-700 shadow-sm flex items-center justify-center text-base border border-gray-100 dark:border-gray-600 shrink-0">📧</div>
+                    <div class="flex-1">
+                        <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">{% trans "Recevoir aussi par email" %}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Un email vous sera envoyé en plus de l'alerte in-app pour chaque
+                            nouveau profil détecté.
+                        </p>
+                    </div>
+                    <button type="button"
+                            @click="if (prefs.notifsATS) { prefs.notifsATSEmail = !prefs.notifsATSEmail; sauvegarder(); }"
+                            class="relative inline-flex h-6 w-11 items-center rounded-full transition shrink-0 mt-1"
+                            :class="(prefs.notifsATS && prefs.notifsATSEmail) ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'"
+                            :disabled="!prefs.notifsATS"
+                            :aria-pressed="prefs.notifsATSEmail">
+                        <span class="inline-block w-4 h-4 bg-white rounded-full shadow transition"
+                              :class="(prefs.notifsATS && prefs.notifsATSEmail) ? 'translate-x-6' : 'translate-x-1'"></span>
+                    </button>
+                </div>
+
+                <!-- Confirmation de sauvegarde -->
+                <p x-show="message" x-transition x-text="message"
+                   class="text-xs font-semibold text-center py-2 rounded-lg"
+                   :class="messageOk ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20' : 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20'"></p>
+            </div>
+
+            <!-- Note explicative -->
+            <div class="mt-5 p-3 rounded-xl border border-blue-100 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/20">
+                <p class="text-xs text-blue-800 dark:text-blue-300">
+                    <strong>💡 Bon à savoir :</strong> {% trans "ces préférences ne concernent que" %} <em>{% trans "vous" %}</em>.
+                    Les autres membres de votre équipe gèrent leurs propres notifications dans leur profil.
+                </p>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block js_extra %}
+<script>
+function recruteurProfil() {
+    return {
+        tab: 'infos',
+        editMode: false,
+        prefs: {
+            notifsATS:      {{ request.recruteur.recevoirNotifsATS|yesno:"true,false" }},
+            notifsATSEmail: {{ request.recruteur.recevoirNotifsATSEmail|yesno:"true,false" }},
+        },
+        message: '',
+        messageOk: true,
+        _saveTimer: null,
+        init() {},
+
+        async sauvegarder() {
+            // Debounce 400ms pour éviter de spammer le serveur si l'utilisateur
+            // bascule plusieurs toggles rapidement.
+            clearTimeout(this._saveTimer);
+            this._saveTimer = setTimeout(async () => {
+                try {
+                    const fd = new FormData();
+                    fd.append('recevoirNotifsATS',      this.prefs.notifsATS ? '1' : '0');
+                    fd.append('recevoirNotifsATSEmail', this.prefs.notifsATSEmail ? '1' : '0');
+                    const r = await fetch("{% url 'entreprise:recruteur_preferences' %}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': this.csrf(),
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: fd,
+                    });
+                    if (!r.ok) {
+                        if (r.status === 403) {
+                            throw new Error('Permission refusée (CSRF ou session expirée)');
+                        }
+                        if (r.status === 401) {
+                            throw new Error('Session expirée — reconnectez-vous');
+                        }
+                        if (r.status === 500) {
+                            throw new Error('Erreur serveur');
+                        }
+                        throw new Error('HTTP ' + r.status);
+                    }
+                    const d = await r.json();
+                    if (d.ok) {
+                        this.messageOk = true;
+                        this.message   = '✓ Préférences enregistrées';
+                    } else {
+                        this.messageOk = false;
+                        this.message   = '✗ ' + (d.erreur || 'Erreur inconnue');
+                    }
+                } catch (e) {
+                    this.messageOk = false;
+                    this.message   = '✗ ' + (e.message || 'Erreur réseau');
+                }
+                setTimeout(() => { this.message = ''; }, 3500);
+            }, 400);
+        },
+
+        csrf() {
+            return '{{ csrf_token }}';
+        },
+
+        previewPhoto(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) { alert('La photo ne doit pas dépasser 2 Mo.'); event.target.value=''; return; }
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = document.getElementById('photoImg');
+                const ph  = document.getElementById('photoPlaceholder');
+                img.src = e.target.result;
+                img.classList.remove('hidden');
+                if (ph) ph.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+            this.editMode = true;
+        },
+    };
+}
+</script>
+{% endblock %}

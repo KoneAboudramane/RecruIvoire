@@ -1,0 +1,966 @@
+﻿{% extends "candidat/base.html" %}
+{% load i18n static %}
+
+{% block titre %}{% trans "Mon Portfolio" %} — {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+<style>
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes shimmer {
+        0%   { background-position: -200% 0; }
+        100% { background-position:  200% 0; }
+    }
+    .fade-up  { animation: fadeUp 0.5s ease both; }
+    .delay-1  { animation-delay: 0.1s; }
+    .delay-2  { animation-delay: 0.2s; }
+    .delay-3  { animation-delay: 0.3s; }
+
+    /* Onglet actif */
+    .tab-active {
+        border-bottom: 2px solid #c96010;
+        color: #c96010 !important;
+        font-weight: 600;
+    }
+
+    /* Card projet */
+    .projet-card { transition: transform .2s, box-shadow .2s; }
+    .projet-card:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(0,0,0,.1); }
+
+    /* Overlay modal */
+    [x-cloak] { display: none !important; }
+
+    /* Drag handle */
+    .drag-handle { cursor: grab; }
+    .drag-handle:active { cursor: grabbing; }
+
+    /* Image upload zone */
+    .upload-zone {
+        border: 2px dashed #d1d5db;
+        transition: border-color .2s, background .2s;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+        border-color: #c96010;
+        background: #fff7f0;
+    }
+
+    /* Skill pill */
+    .skill-pill { transition: all .15s; }
+    .skill-pill:hover { transform: scale(1.05); }
+
+    /* Toast */
+    .toast {
+        position: fixed;
+        bottom: 24px; right: 24px;
+        z-index: 9999;
+        animation: fadeUp .3s ease;
+    }
+
+    /* Couleur accent variable */
+    .accent-bg   { background-color: var(--accent, #c96010); }
+    .accent-text { color: var(--accent, #c96010); }
+    .accent-border { border-color: var(--accent, #c96010); }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div x-data="portfolioBuilder()"
+     x-init="init()"
+     x-cloak
+     :style="`--accent: ${portfolio.couleurAccent}`"
+     class="max-w-none">
+
+    <!-- ─── HEADER ─────────────────────────────────────────────────── -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 fade-up">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                🌐 {% trans "Mon Portfolio" %}
+            </h1>
+            <p class="text-gray-500 text-sm mt-1">
+                {% trans "Construisez votre vitrine professionnelle et présentez vos projets." %}
+            </p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'candidat:portfolio_public' candidat_id=request.candidat.id %}"
+               target="_blank"
+               class="flex items-center gap-1.5 px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition text-sm font-medium">
+                👁️ {% trans "Aperçu public" %}
+            </a>
+            <button @click="sauvegarder()"
+                    :disabled="sauvegarde_en_cours"
+                    class="flex items-center gap-1.5 px-4 py-2 text-white rounded-lg transition text-sm font-semibold disabled:opacity-60"
+                    style="background-color:#c96010;">
+                <svg x-show="!sauvegarde_en_cours" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+                <svg x-show="sauvegarde_en_cours" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+                <span x-text="sauvegarde_en_cours ? '{% trans "Enregistrement..." %}' : '{% trans "Enregistrer" %}'"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ─── STATISTIQUES RAPIDES ─────────────────────────────────────── -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8 fade-up delay-1">
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
+            <p class="text-2xl font-bold accent-text" x-text="portfolio.projets.length"></p>
+            <p class="text-xs text-gray-500 mt-0.5">{% trans "Projets" %}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
+            <p class="text-2xl font-bold text-green-600" x-text="portfolio.projets.filter(p => p.visible).length"></p>
+            <p class="text-xs text-gray-500 mt-0.5">{% trans "Visibles" %}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
+            <p class="text-2xl font-bold text-blue-600" x-text="competences.length"></p>
+            <p class="text-xs text-gray-500 mt-0.5">{% trans "Compétences" %}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
+            <p class="text-2xl font-bold text-purple-600" x-text="portfolio.projets.filter(p => p.featured).length"></p>
+            <p class="text-xs text-gray-500 mt-0.5">{% trans "En vedette" %}</p>
+        </div>
+    </div>
+
+    <!-- ─── ONGLETS ────────────────────────────────────────────────────── -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm fade-up delay-2">
+
+        <!-- Tabs bar -->
+        <div class="flex border-b border-gray-100 px-4">
+            <button @click="onglet='projets'"
+                    :class="onglet==='projets' ? 'tab-active' : 'text-gray-500 hover:text-gray-700'"
+                    class="px-4 py-3.5 text-sm transition border-b-2 border-transparent flex items-center gap-2">
+                🗂️ {% trans "Projets" %}
+                <span class="bg-orange-100 text-orange-700 text-xs px-1.5 py-0.5 rounded-full font-bold"
+                      x-text="portfolio.projets.length"></span>
+            </button>
+            <button @click="onglet='competences'"
+                    :class="onglet==='competences' ? 'tab-active' : 'text-gray-500 hover:text-gray-700'"
+                    class="px-4 py-3.5 text-sm transition border-b-2 border-transparent flex items-center gap-2">
+                ⚡ {% trans "Compétences" %}
+            </button>
+            <button @click="onglet='parametres'"
+                    :class="onglet==='parametres' ? 'tab-active' : 'text-gray-500 hover:text-gray-700'"
+                    class="px-4 py-3.5 text-sm transition border-b-2 border-transparent flex items-center gap-2">
+                ⚙️ {% trans "Paramètres" %}
+            </button>
+        </div>
+
+        <!-- ══ ONGLET PROJETS ══════════════════════════════════════════════ -->
+        <div x-show="onglet==='projets'" class="p-6">
+
+            <!-- Toolbar -->
+            <div class="flex flex-col sm:flex-row gap-3 mb-6">
+                <!-- Recherche -->
+                <div class="relative flex-1">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+                    </svg>
+                    <input x-model="recherche"
+                           type="text"
+                           placeholder="{% trans "Rechercher un projet..." %}"
+                           class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+                </div>
+                <!-- Filtre catégorie -->
+                <select x-model="filtre_categorie"
+                        class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+                    <option value="">{% trans "Toutes catégories" %}</option>
+                    <option value="web">🌐 Web</option>
+                    <option value="mobile">📱 Mobile</option>
+                    <option value="data">📊 Data / IA</option>
+                    <option value="design">🎨 Design</option>
+                    <option value="systeme">🖥️ Système</option>
+                    <option value="autre">📦 {% trans "Autre" %}</option>
+                </select>
+                <!-- Vue grid/liste -->
+                <div class="flex border border-gray-200 rounded-lg overflow-hidden">
+                    <button @click="vue='grid'"
+                            :class="vue==='grid' ? 'bg-orange-50 text-orange-600' : 'text-gray-400'"
+                            class="px-3 py-2 transition">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm11 0h7v7h-7z"/>
+                        </svg>
+                    </button>
+                    <button @click="vue='liste'"
+                            :class="vue==='liste' ? 'bg-orange-50 text-orange-600' : 'text-gray-400'"
+                            class="px-3 py-2 border-l border-gray-200 transition">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                        </svg>
+                    </button>
+                </div>
+                <!-- Bouton ajouter -->
+                <button @click="ouvrirModalProjet()"
+                        class="flex items-center gap-2 px-4 py-2 text-white rounded-lg text-sm font-semibold transition hover:opacity-90 accent-bg">
+                    + {% trans "Ajouter un projet" %}
+                </button>
+            </div>
+
+            <!-- Grille projets -->
+            <div x-show="vue==='grid'"
+                 class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                <template x-for="projet in projetsFiltres()" :key="projet.id">
+                    <div class="projet-card bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+                        <!-- Image -->
+                        <div class="relative h-44 overflow-hidden"
+                             :style="projet.image ? '' : `background: linear-gradient(135deg, ${portfolio.couleurAccent}22, ${portfolio.couleurAccent}44)`">
+                            <img x-show="projet.image"
+                                 :src="projet.image"
+                                 class="w-full h-full object-cover">
+                            <div x-show="!projet.image"
+                                 class="w-full h-full flex items-center justify-center text-5xl opacity-40">
+                                <span x-text="iconeCategorie(projet.categorie)"></span>
+                            </div>
+                            <!-- Badges -->
+                            <div class="absolute top-2 left-2 flex gap-1.5">
+                                <span x-show="projet.featured"
+                                      class="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded-full">
+                                    ⭐ {% trans "Vedette" %}
+                                </span>
+                                <span x-show="!projet.visible"
+                                      class="bg-gray-700 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                                    🔒 {% trans "Masqué" %}
+                                </span>
+                            </div>
+                            <!-- Actions hover -->
+                            <div class="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition flex items-center justify-center gap-3">
+                                <button @click="ouvrirModalProjet(projet)"
+                                        class="bg-white text-gray-800 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-gray-100 transition">
+                                    ✏️ {% trans "Modifier" %}
+                                </button>
+                                <button @click="supprimerProjet(projet.id)"
+                                        class="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-red-600 transition">
+                                    🗑️ {% trans "Supprimer" %}
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Contenu -->
+                        <div class="p-4">
+                            <div class="flex items-start justify-between gap-2 mb-2">
+                                <h3 class="font-semibold text-gray-900 text-sm leading-tight"
+                                    x-text="projet.titre || '{% trans "Projet sans titre" %}'"></h3>
+                                <span class="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
+                                      :class="badgeCategorie(projet.categorie)">
+                                    <span x-text="labelCategorie(projet.categorie)"></span>
+                                </span>
+                            </div>
+                            <p class="text-gray-500 text-xs line-clamp-2 mb-3"
+                               x-text="projet.description || '{% trans "Aucune description." %}'"></p>
+                            <!-- Technologies -->
+                            <div class="flex flex-wrap gap-1 mb-3">
+                                <template x-for="tech in (projet.technologies || []).slice(0,4)" :key="tech">
+                                    <span class="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full"
+                                          x-text="tech"></span>
+                                </template>
+                                <span x-show="(projet.technologies || []).length > 4"
+                                      class="bg-gray-100 text-gray-400 text-xs px-2 py-0.5 rounded-full"
+                                      x-text="'+' + ((projet.technologies||[]).length - 4)"></span>
+                            </div>
+                            <!-- Liens -->
+                            <div class="flex gap-2">
+                                <a x-show="projet.urlGithub"
+                                   :href="projet.urlGithub" target="_blank"
+                                   class="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900 transition">
+                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+                                    </svg>
+                                    GitHub
+                                </a>
+                                <a x-show="projet.urlDemo"
+                                   :href="projet.urlDemo" target="_blank"
+                                   class="flex items-center gap-1 text-xs accent-text hover:opacity-80 transition">
+                                    🔗 Demo
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Carte "Ajouter" -->
+                <button @click="ouvrirModalProjet()"
+                        class="border-2 border-dashed border-gray-200 rounded-xl h-64 flex flex-col items-center justify-center gap-3 text-gray-400 hover:border-orange-300 hover:text-orange-400 hover:bg-orange-50 transition">
+                    <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    <span class="text-sm font-medium">{% trans "Ajouter un projet" %}</span>
+                </button>
+            </div>
+
+            <!-- Vue liste -->
+            <div x-show="vue==='liste'" class="space-y-3">
+                <template x-for="projet in projetsFiltres()" :key="projet.id">
+                    <div class="flex items-center gap-4 bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition">
+                        <!-- Thumbnail -->
+                        <div class="w-16 h-16 rounded-lg overflow-hidden shrink-0"
+                             :style="projet.image ? '' : `background: linear-gradient(135deg, ${portfolio.couleurAccent}22, ${portfolio.couleurAccent}44)`">
+                            <img x-show="projet.image" :src="projet.image" class="w-full h-full object-cover">
+                            <div x-show="!projet.image" class="w-full h-full flex items-center justify-center text-2xl opacity-50">
+                                <span x-text="iconeCategorie(projet.categorie)"></span>
+                            </div>
+                        </div>
+                        <!-- Info -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-0.5">
+                                <h3 class="font-semibold text-gray-900 text-sm truncate"
+                                    x-text="projet.titre || '{% trans "Sans titre" %}'"></h3>
+                                <span x-show="projet.featured" class="text-xs">⭐</span>
+                                <span x-show="!projet.visible" class="text-gray-400 text-xs">🔒</span>
+                            </div>
+                            <p class="text-gray-500 text-xs truncate" x-text="projet.description"></p>
+                            <div class="flex gap-1 mt-1.5">
+                                <template x-for="tech in (projet.technologies||[]).slice(0,3)" :key="tech">
+                                    <span class="bg-gray-100 text-gray-500 text-xs px-1.5 py-0.5 rounded" x-text="tech"></span>
+                                </template>
+                            </div>
+                        </div>
+                        <!-- Actions -->
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button @click="projet.visible = !projet.visible"
+                                    class="text-gray-400 hover:text-gray-700 transition text-sm">
+                                <span x-text="projet.visible ? '👁️' : '🙈'"></span>
+                            </button>
+                            <button @click="ouvrirModalProjet(projet)"
+                                    class="px-3 py-1 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 transition font-medium">
+                                ✏️ {% trans "Modifier" %}
+                            </button>
+                            <button @click="supprimerProjet(projet.id)"
+                                    class="px-3 py-1 text-xs border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition font-medium">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- État vide liste -->
+                <div x-show="projetsFiltres().length === 0 && portfolio.projets.length > 0"
+                     class="text-center py-8 text-gray-400">
+                    <p class="text-sm">{% trans "Aucun projet ne correspond à votre recherche." %}</p>
+                </div>
+            </div>
+
+            <!-- État vide global -->
+            <div x-show="portfolio.projets.length === 0"
+                 class="text-center py-16">
+                <div class="text-6xl mb-4">🗂️</div>
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">{% trans "Aucun projet pour l'instant" %}</h3>
+                <p class="text-gray-500 text-sm mb-6">{% trans "Ajoutez vos projets pour construire votre portfolio professionnel." %}</p>
+                <button @click="ouvrirModalProjet()"
+                        class="px-6 py-2.5 text-white rounded-lg font-semibold text-sm accent-bg hover:opacity-90 transition">
+                    + {% trans "Ajouter mon premier projet" %}
+                </button>
+            </div>
+        </div>
+
+        <!-- ══ ONGLET COMPÉTENCES ══════════════════════════════════════════ -->
+        <div x-show="onglet==='competences'" class="p-6">
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+                <!-- Ajout compétence -->
+                <div>
+                    <h3 class="font-semibold text-gray-800 mb-4">{% trans "Ajouter une compétence" %}</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">{% trans "Nom de la compétence" %}</label>
+                            <input x-model="nouvelleCompetence.nom"
+                                   @keydown.enter.prevent="ajouterCompetence()"
+                                   type="text"
+                                   placeholder="{% trans "Ex : React, Django, Figma…" %}"
+                                   class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-2">
+                                {% trans "Niveau" %} : <span class="font-semibold accent-text" x-text="labelNiveau(nouvelleCompetence.niveau)"></span>
+                            </label>
+                            <input x-model.number="nouvelleCompetence.niveau"
+                                   type="range" min="1" max="5" step="1"
+                                   class="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                                   :style="`accent-color: ${portfolio.couleurAccent}`">
+                            <div class="flex justify-between text-xs text-gray-400 mt-1">
+                                <span>{% trans "Débutant" %}</span>
+                                <span>{% trans "Intermédiaire" %}</span>
+                                <span>{% trans "Expert" %}</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">{% trans "Catégorie" %}</label>
+                            <select x-model="nouvelleCompetence.categorie"
+                                    class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+                                <option value="Langages">{% trans "Langages de programmation" %}</option>
+                                <option value="Frameworks">{% trans "Frameworks & Librairies" %}</option>
+                                <option value="Outils">{% trans "Outils & DevOps" %}</option>
+                                <option value="Design">{% trans "Design & UX" %}</option>
+                                <option value="Soft skills">{% trans "Soft skills" %}</option>
+                                <option value="Autres">{% trans "Autres" %}</option>
+                            </select>
+                        </div>
+                        <button @click="ajouterCompetence()"
+                                :disabled="!nouvelleCompetence.nom.trim()"
+                                class="w-full py-2 text-white rounded-lg font-semibold text-sm accent-bg hover:opacity-90 disabled:opacity-40 transition">
+                            + {% trans "Ajouter" %}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Liste compétences -->
+                <div>
+                    <h3 class="font-semibold text-gray-800 mb-4">
+                        {% trans "Mes compétences" %}
+                        <span class="text-sm text-gray-400 font-normal ml-1">(<span x-text="competences.length"></span>)</span>
+                    </h3>
+
+                    <!-- Groupées par catégorie -->
+                    <template x-for="cat in categoriesCompetences()" :key="cat">
+                        <div class="mb-5">
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2" x-text="cat"></p>
+                            <div class="flex flex-wrap gap-2">
+                                <template x-for="comp in competences.filter(c => c.categorie === cat)" :key="comp.id">
+                                    <div class="skill-pill flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-full text-sm font-medium border"
+                                         :style="`background: ${portfolio.couleurAccent}18; border-color: ${portfolio.couleurAccent}44; color: #374151`">
+                                        <span x-text="comp.nom"></span>
+                                        <!-- Barre niveau -->
+                                        <div class="flex gap-0.5">
+                                            <template x-for="i in 5" :key="i">
+                                                <div class="w-1.5 h-1.5 rounded-full transition"
+                                                     :style="i <= comp.niveau ? `background:${portfolio.couleurAccent}` : 'background:#d1d5db'"></div>
+                                            </template>
+                                        </div>
+                                        <button @click="supprimerCompetence(comp.id)"
+                                                class="ml-1 text-gray-400 hover:text-red-500 transition text-xs leading-none">×</button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+
+                    <div x-show="competences.length === 0"
+                         class="text-center py-8 text-gray-400">
+                        <p class="text-4xl mb-2">⚡</p>
+                        <p class="text-sm">{% trans "Aucune compétence ajoutée." %}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ ONGLET PARAMÈTRES ═══════════════════════════════════════════ -->
+        <div x-show="onglet==='parametres'" class="p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+                <!-- Infos portfolio -->
+                <div class="space-y-4">
+                    <h3 class="font-semibold text-gray-800 mb-4">{% trans "Informations du portfolio" %}</h3>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">{% trans "Titre du portfolio" %}</label>
+                        <input x-model="portfolio.titre"
+                               type="text"
+                               placeholder="{% trans "Ex : Portfolio de Kouassi Aimé – Développeur Full Stack" %}"
+                               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">{% trans "Slogan / accroche" %}</label>
+                        <input x-model="portfolio.slogan"
+                               type="text"
+                               placeholder="{% trans "Ex : Je transforme des idées en produits numériques." %}"
+                               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">{% trans "Bio courte" %}</label>
+                        <textarea x-model="portfolio.bio"
+                                  rows="3"
+                                  placeholder="{% trans "Présentez-vous en quelques lignes..." %}"
+                                  class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none"></textarea>
+                        <p class="text-xs text-gray-400 mt-1"><span x-text="(portfolio.bio||'').length"></span>/300</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-2">{% trans "Couleur d'accent" %}</label>
+                        <div class="flex items-center gap-3">
+                            <input type="color"
+                                   x-model="portfolio.couleurAccent"
+                                   class="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5">
+                            <div class="flex gap-2">
+                                <template x-for="couleur in couleursPreset" :key="couleur">
+                                    <button @click="portfolio.couleurAccent = couleur"
+                                            class="w-7 h-7 rounded-full border-2 transition"
+                                            :style="`background:${couleur}; border-color: ${portfolio.couleurAccent===couleur ? couleur : 'transparent'}`">
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Liens sociaux -->
+                <div>
+                    <h3 class="font-semibold text-gray-800 mb-4">{% trans "Liens sociaux" %}</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-3">
+                            <span class="w-8 text-center text-lg">🐙</span>
+                            <input x-model="portfolio.liens.github"
+                                   type="url" placeholder="https://github.com/username"
+                                   class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="w-8 text-center text-lg">💼</span>
+                            <input x-model="portfolio.liens.linkedin"
+                                   type="url" placeholder="https://linkedin.com/in/username"
+                                   class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="w-8 text-center text-lg">🌐</span>
+                            <input x-model="portfolio.liens.siteWeb"
+                                   type="url" placeholder="https://monsite.com"
+                                   class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="w-8 text-center text-lg">🐦</span>
+                            <input x-model="portfolio.liens.twitter"
+                                   type="url" placeholder="https://twitter.com/username"
+                                   class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="w-8 text-center text-lg">📺</span>
+                            <input x-model="portfolio.liens.youtube"
+                                   type="url" placeholder="https://youtube.com/@channel"
+                                   class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+                        </div>
+                    </div>
+
+                    <!-- Visibilité portfolio -->
+                    <div class="mt-6 p-4 bg-gray-50 rounded-xl">
+                        <h4 class="font-medium text-gray-700 text-sm mb-3">{% trans "Visibilité du portfolio" %}</h4>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input type="radio" x-model="portfolio.visibilite" value="public"
+                                       class="accent-orange-500">
+                                <div>
+                                    <p class="text-sm font-medium">🌐 {% trans "Public" %}</p>
+                                    <p class="text-xs text-gray-400">{% trans "Visible par tous, partageable" %}</p>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input type="radio" x-model="portfolio.visibilite" value="recruteurs"
+                                       class="accent-orange-500">
+                                <div>
+                                    <p class="text-sm font-medium">👔 {% trans "Recruteurs seulement" %}</p>
+                                    <p class="text-xs text-gray-400">{% trans "Visible uniquement par les entreprises inscrites" %}</p>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input type="radio" x-model="portfolio.visibilite" value="prive"
+                                       class="accent-orange-500">
+                                <div>
+                                    <p class="text-sm font-medium">🔒 {% trans "Privé" %}</p>
+                                    <p class="text-xs text-gray-400">{% trans "Visible uniquement par vous" %}</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div><!-- fin card principale -->
+
+
+    <!-- ─── MODAL PROJET ───────────────────────────────────────────────── -->
+    <div x-show="modal_projet_ouvert"
+         x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+         @keydown.escape.window="fermerModal()">
+        <!-- Overlay -->
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+             @click="fermerModal()"></div>
+
+        <!-- Contenu modal -->
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+             @click.stop>
+            <!-- Header modal -->
+            <div class="flex items-center justify-between p-6 border-b border-gray-100 sticky top-0 bg-white z-10 rounded-t-2xl">
+                <h2 class="font-bold text-gray-900 text-lg"
+                    x-text="projet_en_cours.id ? '✏️ {% trans "Modifier le projet" %}' : '➕ {% trans "Nouveau projet" %}'"></h2>
+                <button @click="fermerModal()" class="text-gray-400 hover:text-gray-700 transition">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Corps modal -->
+            <div class="p-6 space-y-5">
+
+                <!-- Image projet -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-2">{% trans "Image du projet" %}</label>
+                    <div class="upload-zone rounded-xl p-4 text-center cursor-pointer"
+                         :class="projet_en_cours.image ? '' : ''"
+                         @click="$refs.imageInput.click()"
+                         @dragover.prevent="$event.target.closest('.upload-zone').classList.add('drag-over')"
+                         @dragleave="$event.target.closest('.upload-zone').classList.remove('drag-over')"
+                         @drop.prevent="handleImageDrop($event)">
+                        <div x-show="!projet_en_cours.image" class="py-6">
+                            <p class="text-3xl mb-2">🖼️</p>
+                            <p class="text-sm text-gray-500">{% trans "Cliquez ou glissez une image" %}</p>
+                            <p class="text-xs text-gray-400 mt-1">{% trans "PNG, JPG, WebP — max 2 Mo" %}</p>
+                        </div>
+                        <div x-show="projet_en_cours.image" class="relative">
+                            <img :src="projet_en_cours.image"
+                                 class="w-full h-40 object-cover rounded-lg">
+                            <button @click.stop="projet_en_cours.image = null"
+                                    class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition">
+                                ×
+                            </button>
+                        </div>
+                    </div>
+                    <input type="file" x-ref="imageInput"
+                           accept="image/*" class="hidden"
+                           @change="handleImageFile($event)">
+                </div>
+
+                <!-- Titre + Catégorie -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">{% trans "Titre du projet" %} *</label>
+                        <input x-model="projet_en_cours.titre"
+                               type="text"
+                               placeholder="{% trans "Ex : Application de gestion RH" %}"
+                               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">{% trans "Catégorie" %}</label>
+                        <select x-model="projet_en_cours.categorie"
+                                class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+                            <option value="web">🌐 Web</option>
+                            <option value="mobile">📱 Mobile</option>
+                            <option value="data">📊 Data / IA</option>
+                            <option value="design">🎨 Design</option>
+                            <option value="systeme">🖥️ Système</option>
+                            <option value="autre">📦 {% trans "Autre" %}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">{% trans "Description" %}</label>
+                    <textarea x-model="projet_en_cours.description"
+                              rows="3"
+                              placeholder="{% trans "Décrivez ce projet, les problèmes résolus, votre rôle..." %}"
+                              class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none"></textarea>
+                </div>
+
+                <!-- Technologies -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">{% trans "Technologies utilisées" %}</label>
+                    <div class="flex flex-wrap gap-1.5 p-2 border border-gray-200 rounded-lg min-h-10"
+                         :class="projet_en_cours.technologies?.length > 0 ? '' : ''">
+                        <template x-for="(tech, i) in (projet_en_cours.technologies || [])" :key="i">
+                            <span class="flex items-center gap-1 bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">
+                                <span x-text="tech"></span>
+                                <button @click="supprimerTech(i)" class="hover:text-red-500 transition font-bold">×</button>
+                            </span>
+                        </template>
+                        <input x-model="nouvelle_tech"
+                               @keydown.enter.prevent="ajouterTech()"
+                               @keydown.comma.prevent="ajouterTech()"
+                               type="text"
+                               placeholder="{% trans "Tapez et appuyez Entrée..." %}"
+                               class="flex-1 min-w-24 outline-none text-xs px-1 py-0.5">
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">{% trans "Appuyez sur Entrée ou virgule pour ajouter" %}</p>
+                </div>
+
+                <!-- Dates -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">{% trans "Date de début" %}</label>
+                        <input x-model="projet_en_cours.dateDebut"
+                               type="month"
+                               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">{% trans "Date de fin" %}</label>
+                        <input x-model="projet_en_cours.dateFin"
+                               :disabled="projet_en_cours.enCours"
+                               type="month"
+                               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 disabled:opacity-40 disabled:bg-gray-50">
+                        <label class="flex items-center gap-2 mt-1.5 cursor-pointer">
+                            <input type="checkbox" x-model="projet_en_cours.enCours"
+                                   class="rounded">
+                            <span class="text-xs text-gray-600">{% trans "En cours" %}</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Liens -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">🐙 GitHub</label>
+                        <input x-model="projet_en_cours.urlGithub"
+                               type="url" placeholder="https://github.com/..."
+                               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">🔗 {% trans "Démo / Site" %}</label>
+                        <input x-model="projet_en_cours.urlDemo"
+                               type="url" placeholder="https://..."
+                               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+                    </div>
+                </div>
+
+                <!-- Options -->
+                <div class="flex flex-wrap gap-4 p-3 bg-gray-50 rounded-xl">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" x-model="projet_en_cours.featured"
+                               class="rounded accent-yellow-400">
+                        <span class="text-sm">⭐ {% trans "Mettre en vedette" %}</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" x-model="projet_en_cours.visible"
+                               class="rounded">
+                        <span class="text-sm">👁️ {% trans "Visible sur le portfolio" %}</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Footer modal -->
+            <div class="flex justify-between items-center p-6 border-t border-gray-100 sticky bottom-0 bg-white rounded-b-2xl">
+                <button x-show="projet_en_cours.id"
+                        @click="supprimerProjet(projet_en_cours.id); fermerModal()"
+                        class="text-red-500 hover:text-red-700 text-sm font-medium transition">
+                    🗑️ {% trans "Supprimer ce projet" %}
+                </button>
+                <div class="flex gap-3 ml-auto">
+                    <button @click="fermerModal()"
+                            class="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition">
+                        {% trans "Annuler" %}
+                    </button>
+                    <button @click="sauvegarderProjet()"
+                            :disabled="!projet_en_cours.titre?.trim()"
+                            class="px-5 py-2 text-white rounded-lg text-sm font-semibold accent-bg hover:opacity-90 disabled:opacity-40 transition">
+                        <span x-text="projet_en_cours.id ? '{% trans "Mettre à jour" %}' : '{% trans "Ajouter" %}'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── TOAST ─────────────────────────────────────────────────────── -->
+    <div x-show="toast.visible"
+         x-cloak
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 translate-y-4"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 translate-y-4"
+         class="toast flex items-center gap-3 px-4 py-3 rounded-xl text-white text-sm font-medium shadow-lg"
+         :class="toast.type === 'success' ? 'bg-green-600' : 'bg-red-500'">
+        <span x-text="toast.type === 'success' ? '✓' : '✕'" class="font-bold"></span>
+        <span x-text="toast.message"></span>
+    </div>
+
+</div><!-- fin portfolioBuilder -->
+{% endblock %}
+
+
+{% block js_extra %}
+<script>
+function portfolioBuilder() {
+    return {
+        onglet: 'projets',
+        vue: 'grid',
+        recherche: '',
+        filtre_categorie: '',
+        sauvegarde_en_cours: false,
+        modal_projet_ouvert: false,
+        nouvelle_tech: '',
+        toast: { visible: false, type: 'success', message: '' },
+
+        portfolio: {
+            titre: '',
+            slogan: '',
+            bio: '',
+            couleurAccent: '#c96010',
+            visibilite: 'public',
+            projets: [],
+            liens: { github: '', linkedin: '', siteWeb: '', twitter: '', youtube: '' },
+        },
+
+        competences: [],
+        nouvelleCompetence: { nom: '', niveau: 3, categorie: 'Langages' },
+
+        projet_en_cours: {},
+
+        couleursPreset: ['#c96010', '#009A44', '#2563EB', '#7C3AED', '#DC2626', '#0D9488', '#1a1a2e', '#374151'],
+
+        // ── Init ──────────────────────────────────────────────────────
+        init() {
+            const saved = localStorage.getItem('portfolio_data_{{ request.candidat.id }}');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    this.portfolio   = { ...this.portfolio,    ...data.portfolio };
+                    this.competences = data.competences || [];
+                } catch(e) {}
+            }
+        },
+
+        // ── Projets ───────────────────────────────────────────────────
+        projetsFiltres() {
+            return this.portfolio.projets.filter(p => {
+                const matchRecherche = !this.recherche ||
+                    p.titre?.toLowerCase().includes(this.recherche.toLowerCase()) ||
+                    p.description?.toLowerCase().includes(this.recherche.toLowerCase()) ||
+                    (p.technologies||[]).some(t => t.toLowerCase().includes(this.recherche.toLowerCase()));
+                const matchCategorie = !this.filtre_categorie || p.categorie === this.filtre_categorie;
+                return matchRecherche && matchCategorie;
+            });
+        },
+
+        ouvrirModalProjet(projet = null) {
+            this.projet_en_cours = projet
+                ? JSON.parse(JSON.stringify(projet))
+                : { id: null, titre: '', description: '', categorie: 'web',
+                    technologies: [], urlGithub: '', urlDemo: '', image: null,
+                    dateDebut: '', dateFin: '', enCours: false,
+                    featured: false, visible: true };
+            this.nouvelle_tech = '';
+            this.modal_projet_ouvert = true;
+            document.body.style.overflow = 'hidden';
+        },
+
+        fermerModal() {
+            this.modal_projet_ouvert = false;
+            document.body.style.overflow = '';
+        },
+
+        sauvegarderProjet() {
+            if (!this.projet_en_cours.titre?.trim()) return;
+            if (this.projet_en_cours.id) {
+                const idx = this.portfolio.projets.findIndex(p => p.id === this.projet_en_cours.id);
+                if (idx !== -1) this.portfolio.projets[idx] = { ...this.projet_en_cours };
+            } else {
+                this.projet_en_cours.id = Date.now();
+                this.portfolio.projets.push({ ...this.projet_en_cours });
+            }
+            this.fermerModal();
+            this.afficherToast('success', '{% trans "Projet enregistré !" %}');
+        },
+
+        supprimerProjet(id) {
+            if (!confirm('{% trans "Supprimer ce projet ?" %}')) return;
+            this.portfolio.projets = this.portfolio.projets.filter(p => p.id !== id);
+            this.afficherToast('success', '{% trans "Projet supprimé." %}');
+        },
+
+        // ── Technologies ──────────────────────────────────────────────
+        ajouterTech() {
+            const v = this.nouvelle_tech.trim().replace(/,$/, '');
+            if (!v) return;
+            if (!this.projet_en_cours.technologies) this.projet_en_cours.technologies = [];
+            if (!this.projet_en_cours.technologies.includes(v))
+                this.projet_en_cours.technologies.push(v);
+            this.nouvelle_tech = '';
+        },
+
+        supprimerTech(i) {
+            this.projet_en_cours.technologies.splice(i, 1);
+        },
+
+        // ── Compétences ───────────────────────────────────────────────
+        ajouterCompetence() {
+            const nom = this.nouvelleCompetence.nom.trim();
+            if (!nom) return;
+            this.competences.push({
+                id: Date.now(),
+                nom,
+                niveau: this.nouvelleCompetence.niveau,
+                categorie: this.nouvelleCompetence.categorie,
+            });
+            this.nouvelleCompetence.nom = '';
+            this.nouvelleCompetence.niveau = 3;
+        },
+
+        supprimerCompetence(id) {
+            this.competences = this.competences.filter(c => c.id !== id);
+        },
+
+        categoriesCompetences() {
+            return [...new Set(this.competences.map(c => c.categorie))];
+        },
+
+        // ── Image ─────────────────────────────────────────────────────
+        handleImageFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) {
+                this.afficherToast('error', '{% trans "Image trop lourde (max 2 Mo)." %}');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = e => { this.projet_en_cours.image = e.target.result; };
+            reader.readAsDataURL(file);
+        },
+
+        handleImageDrop(event) {
+            event.target.closest('.upload-zone').classList.remove('drag-over');
+            const file = event.dataTransfer.files[0];
+            if (!file?.type.startsWith('image/')) return;
+            const fakeEvent = { target: { files: [file] } };
+            this.handleImageFile(fakeEvent);
+        },
+
+        // ── Sauvegarde ────────────────────────────────────────────────
+        async sauvegarder() {
+            this.sauvegarde_en_cours = true;
+            // Stockage localStorage (temporaire, avant backend)
+            localStorage.setItem('portfolio_data_{{ request.candidat.id }}', JSON.stringify({
+                portfolio: this.portfolio,
+                competences: this.competences,
+            }));
+            await new Promise(r => setTimeout(r, 600)); // simule latence réseau
+            this.sauvegarde_en_cours = false;
+            this.afficherToast('success', '{% trans "Portfolio sauvegardé !" %}');
+        },
+
+        // ── UI helpers ────────────────────────────────────────────────
+        afficherToast(type, message) {
+            this.toast = { visible: true, type, message };
+            setTimeout(() => { this.toast.visible = false; }, 3000);
+        },
+
+        iconeCategorie(cat) {
+            const icons = { web:'🌐', mobile:'📱', data:'📊', design:'🎨', systeme:'🖥️', autre:'📦' };
+            return icons[cat] || '📦';
+        },
+
+        labelCategorie(cat) {
+            const labels = { web:'Web', mobile:'Mobile', data:'Data / IA', design:'Design', systeme:'Système', autre:'Autre' };
+            return labels[cat] || cat;
+        },
+
+        badgeCategorie(cat) {
+            const badges = {
+                web:     'bg-blue-100 text-blue-700',
+                mobile:  'bg-purple-100 text-purple-700',
+                data:    'bg-green-100 text-green-700',
+                design:  'bg-pink-100 text-pink-700',
+                systeme: 'bg-gray-100 text-gray-700',
+                autre:   'bg-orange-100 text-orange-700',
+            };
+            return badges[cat] || 'bg-gray-100 text-gray-700';
+        },
+
+        labelNiveau(n) {
+            const labels = { 1:'Débutant', 2:'Novice', 3:'Intermédiaire', 4:'Avancé', 5:'Expert' };
+            return labels[n] || n;
+        },
+    };
+}
+</script>
+{% endblock %}

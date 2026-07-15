@@ -1,0 +1,614 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion — {{ logo_site.nom_site }} Administration</title>
+    <link rel="icon" type="image/png" href="{{ favicon_url }}">
+    <link rel="shortcut icon" type="image/png" href="{{ favicon_url }}">
+    <!-- Anti-flash : applique le thème avant tout rendu (sync clé "theme" de Django) -->
+    <script>
+        (function(){
+            var t = localStorage.getItem('rp_theme') || 'light';
+            if (t === 'noir') { document.documentElement.classList.add('rp-noir'); }
+            else if (t === 'dark') { document.documentElement.classList.add('rp-dark'); }
+            /* Sync Django natif pour ses propres widgets */
+            document.documentElement.dataset.theme = (t === 'light') ? 'light' : 'dark';
+            localStorage.setItem('theme', (t === 'light') ? 'light' : 'dark');
+        })();
+    </script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            background: #f8fafc;
+            color: #1e293b;
+            display: flex;
+            flex-direction: column;
+            transition: background-color .2s, color .2s;
+        }
+
+        /* ── Bandeau supérieur (logo + toggle thème) ─────────────────── */
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 28px;
+            background: #fff;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .topbar-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+        .topbar-logo img { height: 32px; object-fit: contain; }
+        .topbar-logo-name {
+            font-size: 18px;
+            font-weight: 900;
+            letter-spacing: -.3px;
+            color: #F77F00;
+            line-height: 1;
+        }
+        .topbar-logo-sub {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .12em;
+            color: #94a3b8;
+            margin-top: 3px;
+        }
+        .rp-theme-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: 1.5px solid #e5e7eb;
+            background: #fff;
+            color: #374151;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all .15s;
+        }
+        .rp-theme-toggle:hover { border-color: #F77F00; color: #F77F00; }
+        .rp-theme-toggle svg { width: 14px; height: 14px; }
+
+        /* ── Bande tricolore ─────────────────────────────────────────── */
+        .tricolor {
+            height: 4px;
+            background: linear-gradient(90deg, #F77F00 33.33%, #fff 33.33% 66.66%, #009A44 66.66%);
+            flex-shrink: 0;
+        }
+
+        /* ── Conteneur principal ─────────────────────────────────────── */
+        .page {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 16px;
+        }
+
+        /* ── Carte ───────────────────────────────────────────────────── */
+        .card {
+            width: 100%;
+            max-width: 900px;
+            background: #fff;
+            border-radius: 28px;
+            box-shadow: 0 8px 40px rgba(0,0,0,.12);
+            overflow: hidden;
+            display: flex;
+            min-height: 580px;
+            border: 1px solid #f1f5f9;
+        }
+
+        /* ── Colonne gauche ──────────────────────────────────────────── */
+        .left {
+            width: 42%;
+            background: linear-gradient(145deg, #006d30 0%, #009A44 55%, #00b84f 100%);
+            padding: 44px 36px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+            color: #fff;
+        }
+
+        /* Cercles décoratifs */
+        .left::before {
+            content: '';
+            position: absolute;
+            top: -60px; right: -60px;
+            width: 220px; height: 220px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.07);
+        }
+        .left::after {
+            content: '';
+            position: absolute;
+            bottom: -80px; left: -60px;
+            width: 280px; height: 280px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.06);
+        }
+
+        /* Logo */
+        .left-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            z-index: 1;
+        }
+        .left-logo img {
+            height: 36px;
+            object-fit: contain;
+            filter: brightness(0) invert(1);
+        }
+        .left-logo-text { font-size: 20px; font-weight: 900; letter-spacing: -.3px; }
+        .left-logo-sub  { font-size: 10px; opacity: .65; font-weight: 600; letter-spacing: .5px; }
+
+        /* Titre */
+        .left-title {
+            position: relative;
+            z-index: 1;
+        }
+        .left-title h2 {
+            font-size: 28px;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 10px;
+        }
+        .left-title p {
+            font-size: 13px;
+            opacity: .8;
+            line-height: 1.6;
+        }
+
+        /* Illustration SVG */
+        .left-svg {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Stats */
+        .left-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            position: relative;
+            z-index: 1;
+        }
+        .stat-box {
+            background: rgba(255,255,255,.15);
+            border-radius: 14px;
+            padding: 14px;
+            backdrop-filter: blur(4px);
+        }
+        .stat-box strong { display: block; font-size: 22px; font-weight: 900; }
+        .stat-box span   { font-size: 11px; opacity: .75; margin-top: 2px; display: block; }
+
+        /* ── Colonne droite ──────────────────────────────────────────── */
+        .right {
+            width: 58%;
+            padding: 50px 48px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .right h1 {
+            font-size: 26px;
+            font-weight: 900;
+            color: #1e293b;
+            margin-bottom: 6px;
+        }
+        .right .subtitle {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 32px;
+        }
+
+        /* Badge admin */
+        .admin-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0,154,68,.1);
+            color: #009A44;
+            border: 1px solid rgba(0,154,68,.2);
+            border-radius: 20px;
+            padding: 4px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 28px;
+        }
+        .admin-badge span { font-size: 14px; }
+
+        /* Erreur */
+        .error-box {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 13px;
+            color: #991b1b;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Champs */
+        .field { margin-bottom: 20px; }
+        .field label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 7px;
+        }
+        .field input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 14px;
+            color: #1e293b;
+            background: #fff;
+            transition: border-color .2s, box-shadow .2s;
+            outline: none;
+        }
+        .field input:focus {
+            border-color: #009A44;
+            box-shadow: 0 0 0 3px rgba(0,154,68,.12);
+        }
+        .field input::placeholder { color: #94a3b8; }
+
+        /* Bouton connexion */
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: #009A44;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: background .2s, transform .15s, box-shadow .2s;
+            box-shadow: 0 4px 14px rgba(0,154,68,.3);
+            letter-spacing: .2px;
+            margin-top: 8px;
+        }
+        .btn-login:hover {
+            background: #007a36;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(0,154,68,.35);
+        }
+        .btn-login:active { transform: translateY(0); }
+
+        /* Retour au site */
+        .back-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 28px;
+            font-size: 13px;
+            color: #94a3b8;
+        }
+        .back-link a {
+            color: #F77F00;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color .15s;
+        }
+        .back-link a:hover { color: #e06a00; }
+
+        /* ── Footer ──────────────────────────────────────────────────── */
+        footer {
+            text-align: center;
+            padding: 16px;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        /* ── Responsive ──────────────────────────────────────────────── */
+        @media (max-width: 768px) {
+            .card { flex-direction: column; border-radius: 20px; }
+            .left { width: 100%; padding: 32px 28px; }
+            .left-svg, .left-stats { display: none; }
+            .right { width: 100%; padding: 32px 28px; }
+            .right h1 { font-size: 22px; }
+            .topbar { padding: 12px 16px; }
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           DARK MODE
+           ══════════════════════════════════════════════════════════════ */
+        html.rp-dark body { background: #1e293b; color: #cbd5e1; }
+        html.rp-dark .topbar { background: #131c2b; border-bottom-color: #1e293b; }
+        html.rp-dark .topbar-logo-name { color: #F77F00; }
+        html.rp-dark .topbar-logo-sub { color: #64748b; }
+        html.rp-dark .rp-theme-toggle {
+            background: #1e293b;
+            border-color: #334155;
+            color: #cbd5e1;
+        }
+        html.rp-dark .rp-theme-toggle:hover { border-color: #F77F00; color: #F77F00; }
+
+        html.rp-dark .card {
+            background: #1e293b;
+            border-color: #334155;
+            box-shadow: 0 8px 40px rgba(0,0,0,.5);
+        }
+
+        /* Colonne gauche : assombrir légèrement le dégradé */
+        html.rp-dark .left {
+            background: linear-gradient(145deg, #003d1a 0%, #005c28 55%, #007a36 100%) !important;
+        }
+
+        /* Colonne droite : fond et textes */
+        html.rp-dark .right h1 { color: #f1f5f9; }
+        html.rp-dark .right .subtitle { color: #94a3b8; }
+        html.rp-dark .admin-badge {
+            background: rgba(0,154,68,.15);
+            color: #4ade80;
+            border-color: rgba(0,154,68,.35);
+        }
+        html.rp-dark .error-box {
+            background: rgba(239,68,68,.12);
+            border-color: rgba(239,68,68,.35);
+            color: #fca5a5;
+        }
+        html.rp-dark .field label { color: #cbd5e1; }
+        html.rp-dark .field input {
+            background: #1e293b;
+            border-color: #334155;
+            color: #e2e8f0;
+        }
+        html.rp-dark .field input::placeholder { color: #475569; }
+        html.rp-dark .field input:focus {
+            border-color: #009A44;
+            box-shadow: 0 0 0 3px rgba(0,154,68,.2);
+        }
+        html.rp-dark .btn-login {
+            background: #009A44;
+            box-shadow: 0 4px 14px rgba(0,154,68,.4);
+        }
+        html.rp-dark .btn-login:hover { background: #00b84f; }
+        html.rp-dark .back-link { color: #64748b; }
+        html.rp-dark footer { color: #64748b; }
+
+        /* ── Mode noir ── */
+        html.rp-noir body { background: #000; color: #cbd5e1; }
+        html.rp-noir .topbar { background: #000; border-bottom-color: #111; }
+        html.rp-noir .topbar-logo-name { color: #F77F00; }
+        html.rp-noir .topbar-logo-sub { color: #4b5563; }
+        html.rp-noir .rp-theme-toggle { background: #000; border-color: #333; color: #cbd5e1; }
+        html.rp-noir .rp-theme-toggle:hover { border-color: #fb923c; color: #fb923c; }
+        html.rp-noir .card { background: #0d0d0d; border-color: #222; box-shadow: 0 8px 32px rgba(0,0,0,.8); }
+        html.rp-noir .left { background: linear-gradient(145deg, #000 0%, #002b15 55%, #005228 100%) !important; }
+        html.rp-noir .right h1 { color: #f1f5f9; }
+        html.rp-noir .right .subtitle { color: #94a3b8; }
+        html.rp-noir .admin-badge { background: rgba(0,122,53,.12); color: #4ade80; border-color: rgba(0,122,53,.28); }
+        html.rp-noir .error-box { background: rgba(239,68,68,.10); border-color: rgba(239,68,68,.28); color: #fca5a5; }
+        html.rp-noir .field label { color: #cbd5e1; }
+        html.rp-noir .field input { background: #000; border-color: #333; color: #e2e8f0; }
+        html.rp-noir .field input::placeholder { color: #4b5563; }
+        html.rp-noir .field input:focus { border-color: #007A35; box-shadow: 0 0 0 3px rgba(0,122,53,.2); }
+        html.rp-noir .btn-login { background: #007A35; box-shadow: 0 4px 14px rgba(0,122,53,.4); }
+        html.rp-noir .btn-login:hover { background: #005F29; }
+        html.rp-noir .back-link { color: #4b5563; }
+        html.rp-noir footer { color: #4b5563; }
+    </style>
+</head>
+<body>
+
+<!-- ── Bandeau supérieur (logo + toggle thème) ────────────────────── -->
+<div class="topbar">
+    <a href="/" class="topbar-logo">
+        {% if logo_site.afficher_image and logo_site.logo_image %}
+            <img src="{{ logo_site.logo_image.url }}" alt="{{ logo_site.nom_site }}">
+        {% endif %}
+        {% if logo_site.afficher_texte %}
+        <div>
+            <div class="topbar-logo-name">{{ logo_site.nom_site }}</div>
+            <div class="topbar-logo-sub">ADMINISTRATION</div>
+        </div>
+        {% endif %}
+    </a>
+    <button type="button" class="rp-theme-toggle" onclick="rpToggleTheme()" title="Thème : clair / nuit / sombre">
+        <svg id="iconMoon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
+        </svg>
+        <svg id="iconCircle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="display:none;">
+            <circle cx="12" cy="12" r="10"/>
+        </svg>
+        <svg id="iconSun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="display:none;">
+            <path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2zm0 19h2v3h-2zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85 1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/>
+        </svg>
+        <span id="themeLabel">Sombre</span>
+    </button>
+</div>
+
+<div class="tricolor"></div>
+
+<div class="page">
+    <div class="card">
+
+        <!-- ── Colonne gauche ──────────────────────────────────────── -->
+        <div class="left">
+
+            <!-- Logo -->
+            <div class="left-logo">
+                {% if logo_site.afficher_image and logo_site.logo_image %}
+                    <img src="{{ logo_site.logo_image.url }}" alt="{{ logo_site.nom_site }}">
+                {% endif %}
+                {% if logo_site.afficher_texte %}
+                <div>
+                    <div class="left-logo-text">{{ logo_site.nom_site }}</div>
+                    <div class="left-logo-sub">ADMINISTRATION</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Titre -->
+            <div class="left-title">
+                <h2>Espace<br>Administrateur</h2>
+                <p>Gérez les candidats, les entreprises, les offres et les contenus de la plateforme.</p>
+            </div>
+
+            <!-- Illustration -->
+            <div class="left-svg">
+                <svg viewBox="0 0 200 160" width="200" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Écran principal -->
+                    <rect x="30" y="20" width="140" height="100" rx="10" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.4)" stroke-width="1.5"/>
+                    <!-- Barre du haut -->
+                    <rect x="30" y="20" width="140" height="18" rx="10" fill="rgba(255,255,255,.2)"/>
+                    <circle cx="44" cy="29" r="3.5" fill="rgba(255,255,255,.5)"/>
+                    <circle cx="55" cy="29" r="3.5" fill="rgba(255,255,255,.35)"/>
+                    <circle cx="66" cy="29" r="3.5" fill="rgba(255,255,255,.25)"/>
+                    <!-- Lignes de contenu -->
+                    <rect x="42" y="50" width="55" height="6" rx="3" fill="rgba(255,255,255,.6)"/>
+                    <rect x="42" y="62" width="80" height="4" rx="2" fill="rgba(255,255,255,.3)"/>
+                    <rect x="42" y="72" width="70" height="4" rx="2" fill="rgba(255,255,255,.3)"/>
+                    <rect x="42" y="82" width="60" height="4" rx="2" fill="rgba(255,255,255,.25)"/>
+                    <!-- Graphe à droite -->
+                    <rect x="128" y="50" width="28" height="46" rx="4" fill="rgba(255,255,255,.08)"/>
+                    <rect x="133" y="72" width="6" height="24" rx="2" fill="rgba(255,255,255,.5)"/>
+                    <rect x="142" y="63" width="6" height="33" rx="2" fill="#F77F00" opacity=".8"/>
+                    <rect x="151" y="67" width="6" height="29" rx="2" fill="rgba(255,255,255,.4)"/>
+                    <!-- Pied -->
+                    <rect x="85" y="120" width="30" height="6" rx="3" fill="rgba(255,255,255,.25)"/>
+                    <rect x="72" y="126" width="56" height="4" rx="2" fill="rgba(255,255,255,.2)"/>
+                    <!-- Badge check -->
+                    <circle cx="162" cy="32" r="11" fill="#F77F00"/>
+                    <path d="M156 32l4 4L168 26" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    <!-- Points déco -->
+                    <circle cx="22" cy="50" r="3" fill="rgba(255,255,255,.3)"/>
+                    <circle cx="18" cy="70" r="2" fill="rgba(255,255,255,.2)"/>
+                    <circle cx="178" cy="80" r="2.5" fill="rgba(255,255,255,.25)"/>
+                </svg>
+            </div>
+
+            <!-- Stats -->
+            <div class="left-stats">
+                <div class="stat-box">
+                    <strong>100%</strong>
+                    <span>Contrôle total</span>
+                </div>
+                <div class="stat-box">
+                    <strong>Sécurisé</strong>
+                    <span>Accès restreint</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ── Colonne droite ──────────────────────────────────────── -->
+        <div class="right">
+
+            <div class="admin-badge"><span>🛡️</span> Accès Administrateur</div>
+
+            <h1>Connexion</h1>
+            <p class="subtitle">Bienvenue. Veuillez vous identifier pour accéder au panneau d'administration.</p>
+
+            <!-- Erreur de connexion -->
+            {% if form.errors %}
+            <div class="error-box">
+                ⚠️ Identifiants incorrects. Veuillez réessayer.
+            </div>
+            {% endif %}
+
+            <!-- Formulaire -->
+            <form method="post" action="{{ request.path }}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}">
+
+                <div class="field">
+                    <label for="id_username">Nom d'utilisateur</label>
+                    <input type="text"
+                           id="id_username"
+                           name="username"
+                           value="{{ form.username.value|default:'' }}"
+                           placeholder="Votre nom d'utilisateur"
+                           autocomplete="username"
+                           autofocus
+                           required>
+                </div>
+
+                <div class="field">
+                    <label for="id_password">Mot de passe</label>
+                    <input type="password"
+                           id="id_password"
+                           name="password"
+                           placeholder="••••••••"
+                           autocomplete="current-password"
+                           required>
+                </div>
+
+                <button type="submit" class="btn-login">
+                    Se connecter →
+                </button>
+            </form>
+
+            <div class="back-link">
+                <span>Retour au site →</span>
+                <a href="/candidat/">Espace Candidat</a>
+                <span>·</span>
+                <a href="/entreprise/">Espace Entreprise</a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<footer>
+    © {% now "Y" %} {{ logo_site.nom_site }} — Administration sécurisée
+</footer>
+
+<script>
+function rpToggleTheme() {
+    var html = document.documentElement;
+    var cur = html.classList.contains('rp-noir') ? 'noir'
+            : html.classList.contains('rp-dark') ? 'dark' : 'light';
+    html.classList.remove('rp-dark', 'rp-noir');
+    var next = cur === 'light' ? 'dark' : cur === 'dark' ? 'noir' : 'light';
+    if (next !== 'light') html.classList.add('rp-' + next);
+    localStorage.setItem('rp_theme', next);
+    /* Sync Django natif pour ses widgets */
+    var djangoEquiv = (next === 'light') ? 'light' : 'dark';
+    localStorage.setItem('theme', djangoEquiv);
+    document.documentElement.dataset.theme = djangoEquiv;
+    rpSyncThemeIcons(next);
+}
+function rpSyncThemeIcons(mode) {
+    if (typeof mode !== 'string') {
+        mode = document.documentElement.classList.contains('rp-noir') ? 'noir'
+             : document.documentElement.classList.contains('rp-dark') ? 'dark' : 'light';
+    }
+    var moon   = document.getElementById('iconMoon');
+    var circle = document.getElementById('iconCircle');
+    var sun    = document.getElementById('iconSun');
+    var label  = document.getElementById('themeLabel');
+    if (!moon) return;
+    moon.style.display   = mode === 'light' ? 'block' : 'none';
+    if (circle) circle.style.display = mode === 'dark'  ? 'block' : 'none';
+    if (sun)    sun.style.display    = mode === 'noir'  ? 'block' : 'none';
+    if (label) label.textContent = mode === 'light' ? 'Nuit' : mode === 'dark' ? 'Sombre' : 'Clair';
+}
+rpSyncThemeIcons();
+</script>
+</body>
+</html>

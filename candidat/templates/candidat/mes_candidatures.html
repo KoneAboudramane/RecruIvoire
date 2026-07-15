@@ -1,0 +1,668 @@
+﻿{% extends "candidat/base.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Mes candidatures" %}{% endblock %}
+
+{% block css_extra %}
+<style>
+    .line-clamp-2 {
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        overflow: hidden; text-overflow: ellipsis;
+    }
+    /* Timeline verticale */
+    .timeline-step::before {
+        content: ''; position: absolute; left: 11px; top: 24px; bottom: -12px;
+        width: 2px; background: #E5E7EB;
+    }
+    .timeline-step:last-child::before { display: none; }
+
+    /* ── Mode sombre : ajustements spécifiques à la page Mes candidatures ── */
+    html.dark .timeline-step::before { background: #334155; }
+
+    /* Barre actions (bg-gray-50/60 → variante claire non remappée) */
+    html.dark .bg-gray-50\/60 { background-color: rgba(30, 41, 59, .6) !important; }
+
+    /* Boutons actions : hover:bg-white doit virer au sombre */
+    html.dark .cand-actions .hover\:bg-white:hover,
+    html.dark .hover\:bg-white:hover { background-color: #243348 !important; }
+
+    /* Cercles décoratifs des états vides (fond orange pastel inline) */
+    html.dark [style*="background:#FFF4E6"],
+    html.dark [style*="background: #FFF4E6"] { background: rgba(249,115,22,.15) !important; }
+
+    /* Bandeau filtre par offre (bg-orange-50 déjà remappé, on renforce le texte) */
+    html.dark .text-orange-700 { color: #fdba74 !important; }
+
+    /* Onglet "Toutes" actif (bg-gray-800 → un peu plus clair en sombre pour ressortir) */
+    html.dark .bg-gray-800 { background-color: #475569 !important; border-color: #475569 !important; }
+
+    /* Bouton "Retirer la candidature" en rouge plein (modale) */
+    html.dark .bg-red-600  { background-color: #b91c1c !important; }
+    html.dark .hover\:bg-red-700:hover { background-color: #991b1b !important; }
+
+    /* Bordure rouge de la stat "Non retenues" → atténuer en sombre */
+    html.dark .border-l-red-500 { border-left-color: #ef4444 !important; }
+
+    /* Messages reçus du recruteur (bg-orange-50/40 + bordure + badges) */
+    html.dark .bg-orange-50\/40,
+    html.dark [class*="bg-orange-50/40"] { background-color: rgba(249,115,22,.08) !important; }
+    html.dark .border-orange-100 { border-color: rgba(249,115,22,.6) !important; }
+    html.dark .bg-orange-500 { background-color: #c96200 !important; }
+    html.dark .retrait-dialog { border: 2px solid rgba(201,96,16,.55) !important; }
+
+    /* Modale : icône cercle rouge clair */
+    html.dark .bg-red-100 { background-color: rgba(239,68,68,.18) !important; }
+
+    /* Bandeau filtre offre (bg-orange-50) */
+    html.dark .bg-orange-50 { background-color: rgba(249,115,22,.08) !important; }
+    html.dark .border-orange-200 { border-color: rgba(249,115,22,.25) !important; }
+
+    /* Bordures gauches des cartes stats */
+    html.dark [style*="border-left-color:#c96010"] { border-left-color: rgba(201,96,16,.55) !important; }
+    html.dark [style*="border-left-color:#009A44"] { border-left-color: rgba(0,154,68,.55) !important; }
+    html.dark [style*="border-left-color:#2563EB"] { border-left-color: rgba(37,99,235,.55) !important; }
+    html.dark [style*="border-left-color:#2e7d52"] { border-left-color: rgba(46,125,82,.55) !important; }
+
+    /* Cartes stats cliquables — mode sombre */
+    html.dark .stat-card { background-color: #1e293b !important; border-color: #334155 !important; }
+    html.dark .stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.3) !important; }
+    html.dark .stat-card.stat-active { background-color: #243348 !important; }
+    html.dark .stat-card .stat-label { color: #94a3b8 !important; }
+    html.dark .stat-card .stat-value { color: #f1f5f9 !important; }
+
+    /* ── En-tête hero ── */
+    .cand-hero { background:#fff; color:#1f2937; border:1px solid #e5e7eb; }
+    .cand-hero .deco-cercle { display:none; }
+    .cand-hero .text-white { color:#1f2937 !important; }
+    .cand-hero .text-white\/80 { color:#4b5563 !important; }
+    .cand-hero .bg-white\/10,.cand-hero .bg-white\/15 { background:rgba(0,0,0,.04) !important; }
+    .cand-hero .bg-white\/20 { background:rgba(0,0,0,.06) !important; }
+    .cand-hero .bg-white\/25,.cand-hero .bg-white\/30 { background:rgba(0,0,0,.07) !important; }
+    .cand-hero .hover\:bg-white\/25:hover,.cand-hero .hover\:bg-white\/30:hover { background:rgba(0,0,0,.07) !important; }
+    .cand-hero .border-white\/30 { border-color:rgba(0,0,0,.12) !important; }
+    html.dark .cand-hero { background:#1e293b; color:#f1f5f9; border-color:#334155; }
+    html.dark .cand-hero .deco-cercle { display:block; opacity:.25; }
+    html.dark .cand-hero .text-white { color:#f1f5f9 !important; }
+    html.dark .cand-hero .text-white\/80 { color:rgba(241,245,249,.8) !important; }
+    html.noir .cand-hero { background:linear-gradient(135deg,#000 0%,#080808 60%,#111 100%); color:#f1f5f9; border-color:#222; }
+    html.noir .cand-hero .deco-cercle { display:block; opacity:.12; }
+    html.noir .cand-hero .text-white { color:#f1f5f9 !important; }
+    html.noir .cand-hero .text-white\/80 { color:rgba(241,245,249,.8) !important; }
+
+    /* ── Mode NOIR (OLED) : ajustements spécifiques à la page Mes candidatures ── */
+    html.noir .timeline-step::before { background: #222; }
+
+    html.noir .bg-gray-50\/60 { background-color: rgba(13, 13, 13, .6) !important; }
+
+    html.noir .cand-actions .hover\:bg-white:hover,
+    html.noir .hover\:bg-white:hover { background-color: #1a1a1a !important; }
+
+    html.noir [style*="background:#FFF4E6"],
+    html.noir [style*="background: #FFF4E6"] { background: rgba(249,115,22,.12) !important; }
+
+    html.noir .text-orange-700 { color: #fdba74 !important; }
+
+    html.noir .bg-gray-800 { background-color: #333 !important; border-color: #333 !important; }
+
+    html.noir .bg-red-600  { background-color: #b91c1c !important; }
+    html.noir .hover\:bg-red-700:hover { background-color: #991b1b !important; }
+
+    html.noir .border-l-red-500 { border-left-color: #ef4444 !important; }
+
+    html.noir .bg-orange-50\/40,
+    html.noir [class*="bg-orange-50/40"] { background-color: rgba(249,115,22,.06) !important; }
+    html.noir .border-orange-100 { border-color: rgba(249,115,22,.55) !important; }
+    html.noir .bg-orange-500 { background-color: rgba(201,98,0,.8) !important; }
+    html.noir .retrait-dialog { border: 2px solid rgba(201,96,16,.7) !important; }
+
+    html.noir .bg-red-100 { background-color: rgba(239,68,68,.14) !important; }
+
+    html.noir .bg-orange-50 { background-color: rgba(249,115,22,.05) !important; }
+    html.noir .border-orange-200 { border-color: rgba(249,115,22,.15) !important; }
+
+    html.noir [style*="border-left-color:#c96010"] { border-left-color: rgba(201,96,16,.4) !important; }
+    html.noir [style*="border-left-color:#009A44"] { border-left-color: rgba(0,154,68,.4) !important; }
+    html.noir [style*="border-left-color:#2563EB"] { border-left-color: rgba(37,99,235,.4) !important; }
+    html.noir [style*="border-left-color:#2e7d52"] { border-left-color: rgba(46,125,82,.4) !important; }
+
+    /* Cartes stats cliquables — mode noir OLED */
+    html.noir .stat-card { background-color: #0a0a0a !important; border-color: #1a1a1a !important; }
+    html.noir .stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.5) !important; }
+    html.noir .stat-card.stat-active { background-color: #151515 !important; }
+    html.noir .stat-card .stat-label { color: #777 !important; }
+    html.noir .stat-card .stat-value { color: #e5e5e5 !important; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<section class="mb-10"
+         x-data="{
+           q: '',
+           cands: [
+             {% for c in candidatures %}{ id: {{ c.id }}, s: '{{ c.offre.titre|lower|escapejs }} {{ c.offre.entreprise.raisonSocial|lower|escapejs }} {{ c.reference|lower|escapejs }}' }{% if not forloop.last %},{% endif %}{% endfor %}
+           ],
+           visible(id) {
+             const q = this.q.toLowerCase().trim();
+             if (!q) return true;
+             const c = this.cands.find(c => c.id === id);
+             return c && c.s.includes(q);
+           },
+           get nbVisibles() {
+             const q = this.q.toLowerCase().trim();
+             return q ? this.cands.filter(c => c.s.includes(q)).length : this.cands.length;
+           }
+         }">
+
+    {# ── Fil d'Ariane ───────────────────────────────────────── #}
+    <nav class="text-sm text-gray-500 mb-4 flex items-center gap-2 flex-wrap">
+        <a href="{% url 'candidat:accueil' %}" class="hover:underline">{% trans "Accueil" %}</a>
+        <span>›</span>
+        <span class="text-gray-700 font-semibold">{% trans "Mes candidatures" %}</span>
+    </nav>
+
+    {# ── Hero ── #}
+    <div class="cand-hero rounded-3xl px-6 sm:px-10 py-8 mb-6 relative overflow-hidden shadow-sm">
+        <div class="deco-cercle absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
+        <div class="deco-cercle absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full -translate-x-1/2 translate-y-1/2 pointer-events-none"></div>
+        <div class="relative flex flex-wrap items-start justify-between gap-4">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold mb-1">📁 {% trans "Mes candidatures" %}</h1>
+                <p class="text-white/80 text-sm">
+                    {% blocktrans count nb=stats.total %}
+                        {{ nb }} candidature soumise au total.
+                    {% plural %}
+                        {{ nb }} candidatures soumises au total.
+                    {% endblocktrans %}
+                </p>
+            </div>
+            <div class="flex gap-2 flex-wrap">
+                <a href="{% url 'candidat:historique_candidatures' %}"
+                   class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-white/20 hover:bg-white/30 border border-white/30 transition">
+                    📚 {% trans "Historique" %}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {# ── Statistiques ─────────────────────────────────────────────────────── #}
+    {% if stats.total %}
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <a href="?etat=total"
+           class="stat-card rounded-2xl p-5 border shadow-sm transition hover:shadow-md cursor-pointer block
+                  {% if etat_actif == 'total' %}stat-active ring-2 ring-gray-800 bg-gray-50{% else %}bg-white border-gray-100{% endif %}">
+            <p class="stat-label text-xs text-gray-500 uppercase font-semibold tracking-wide mb-1">{% trans "Total" %}</p>
+            <p class="stat-value text-3xl font-extrabold text-gray-800">{{ stats.total }}</p>
+        </a>
+        <a href="?etat=en_cours"
+           class="stat-card rounded-2xl p-5 border-l-4 border shadow-sm transition hover:shadow-md cursor-pointer block
+                  {% if etat_actif == 'en_cours' %}stat-active ring-2 bg-orange-50/50{% else %}bg-white{% endif %} border-gray-100"
+           style="border-left-color:#c96010;{% if etat_actif == 'en_cours' %} --tw-ring-color:#c96010;{% endif %}">
+            <p class="stat-label text-xs text-gray-500 uppercase font-semibold tracking-wide mb-1">⏳ {% trans "En cours" %}</p>
+            <p class="stat-value text-3xl font-extrabold" style="color:#c96010;">{{ stats.en_cours }}</p>
+        </a>
+        <a href="?etat=entretiens"
+           class="stat-card rounded-2xl p-5 border-l-4 border shadow-sm transition hover:shadow-md cursor-pointer block
+                  {% if etat_actif == 'entretiens' %}stat-active ring-2 ring-blue-500 bg-blue-50/50{% else %}bg-white{% endif %} border-gray-100"
+           style="border-left-color:#2563EB;">
+            <p class="stat-label text-xs text-gray-500 uppercase font-semibold tracking-wide mb-1">📅 {% trans "Entretiens" %}</p>
+            <p class="stat-value text-3xl font-extrabold" style="color:#2563EB;">{{ stats.entretiens }}</p>
+        </a>
+        <a href="?etat=positives"
+           class="stat-card rounded-2xl p-5 border-l-4 border shadow-sm transition hover:shadow-md cursor-pointer block
+                  {% if etat_actif == 'positives' %}stat-active ring-2 ring-green-500 bg-green-50/50{% else %}bg-white{% endif %} border-gray-100"
+           style="border-left-color:#2e7d52;">
+            <p class="stat-label text-xs text-gray-500 uppercase font-semibold tracking-wide mb-1">✅ {% trans "Positives" %}</p>
+            <p class="stat-value text-3xl font-extrabold" style="color:#2e7d52;">{{ stats.positives }}</p>
+        </a>
+        <a href="?etat=negatives"
+           class="stat-card rounded-2xl p-5 border-l-4 border shadow-sm transition hover:shadow-md cursor-pointer block
+                  {% if etat_actif == 'negatives' %}stat-active ring-2 ring-red-500 bg-red-50/50{% else %}bg-white{% endif %} border-gray-100 border-l-red-500">
+            <p class="stat-label text-xs text-gray-500 uppercase font-semibold tracking-wide mb-1">❌ {% trans "Non retenues" %}</p>
+            <p class="stat-value text-3xl font-extrabold text-red-600">{{ stats.negatives }}</p>
+        </a>
+    </div>
+    {% endif %}
+
+    {# ── Bandeau filtre par offre (depuis notification cloche) ──────────── #}
+    {% if offre_filtre %}
+    <div class="bg-orange-50 border-2 border-orange-200 rounded-2xl p-4 sm:p-5 mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-lg shadow-sm flex-shrink-0"
+                 style="background:#c96010;">
+                🔍
+            </div>
+            <div class="min-w-0">
+                <p class="text-xs font-bold text-orange-700 uppercase tracking-wider">
+                    {% trans "Filtré par offre" %}
+                </p>
+                <p class="font-bold text-gray-800 truncate">{{ offre_filtre.titre }}</p>
+                <p class="text-xs text-gray-500 truncate">
+                    {{ offre_filtre.entreprise.raisonSocial|default:offre_filtre.entreprise }}
+                </p>
+            </div>
+        </div>
+        <a href="{% url 'candidat:mes_candidatures' %}"
+           class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-orange-700 bg-white hover:bg-orange-100 border border-orange-300 transition flex-shrink-0">
+            ✕ {% trans "Retirer le filtre" %}
+        </a>
+    </div>
+    {% endif %}
+
+    {# ── Recherche ─────────────────────────────────────────────────────────── #}
+    {% if stats.total %}
+    <div class="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-sm mb-6">
+        <div class="flex items-center justify-center">
+            <div class="relative w-full md:w-96">
+                <input type="search" x-model="q"
+                       placeholder="{% trans 'Rechercher une candidature…' %}"
+                       class="w-full pl-9 pr-9 py-2 text-sm border border-gray-200 rounded-lg focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/>
+                </svg>
+                <button type="button" x-show="q" x-cloak @click="q = ''"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition"
+                        title="{% trans 'Effacer' %}">
+                    ✕
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Liste des candidatures ─────────────────────────────────────────── #}
+    {% if candidatures %}
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {% for c in candidatures %}
+        <article x-data="{ historique: false, retrait: false }"
+                 x-show="visible({{ c.id }})"
+                 class="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col relative">
+
+            {# ── En-tête : ligne 1 (logo + statut) puis ligne 2 (infos offre) ── #}
+            <div class="p-5 sm:p-6">
+
+                {# Ligne 1 : Logo + Statut alignés #}
+                <div class="flex items-start justify-between gap-4 mb-4">
+                    {# Logo entreprise #}
+                    <div class="flex-shrink-0">
+                        {% if c.offre.entreprise.logoEntreprise %}
+                            <img src="{{ c.offre.entreprise.logoEntreprise.url }}"
+                                 alt="{{ c.offre.entreprise.raisonSocial }}"
+                                 class="w-20 h-20 rounded-2xl object-contain bg-white border-2 border-gray-200 shadow-sm p-2">
+                        {% else %}
+                            <div class="w-20 h-20 rounded-2xl flex items-center justify-center text-white font-extrabold text-xl shadow-sm border-2 border-white"
+                                 style="background:#c96010;">
+                                {{ c.offre.entreprise.raisonSocial|slice:":3"|upper }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {# Statut courant — entretien futur prioritaire #}
+                    <div class="flex-1 min-w-0 text-right">
+                        {% with prochain_ent=c.entretiens.all|first %}
+                        {% if prochain_ent and prochain_ent.statut == 'PLANIFIE' %}
+                        <div class="inline-flex flex-col items-end gap-1.5 max-w-full">
+                            <span class="inline-flex items-center gap-2 font-bold px-4 py-2 rounded-full text-sm text-white shadow-sm"
+                                  style="background:#2563EB;">
+                                <span>📅</span>
+                                <span>{% trans "Entretien planifié" %}</span>
+                            </span>
+                            <p class="text-xs text-gray-500 text-right">
+                                {{ prochain_ent.dateEntretien|date:"d M Y à H:i" }}
+                            </p>
+                        </div>
+                        {% elif c.statut %}
+                        <div class="inline-flex flex-col items-end gap-1.5 max-w-full">
+                            <span class="inline-flex items-center gap-2 font-bold px-4 py-2 rounded-full text-sm text-white shadow-sm"
+                                  style="background:{{ c.statut.couleur }};">
+                                <span>{{ c.statut.icone|default:'•' }}</span>
+                                <span>{{ c.statut.libelle }}</span>
+                            </span>
+                            {% if c.statut.description %}
+                            <p class="text-xs text-gray-500 text-right">{{ c.statut.description }}</p>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                            <span class="inline-flex items-center gap-2 font-bold px-4 py-2 rounded-full text-sm bg-gray-100 text-gray-600">
+                                {% trans "En attente" %}
+                            </span>
+                        {% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+
+                {# ── Alertes visibles sans clic : entretien + messages ── #}
+                {% for ent in c.entretiens.all %}
+                <div x-data="{ detailEntretien: false }" class="mb-3 rounded-xl border overflow-hidden
+                    {% if ent.statut == 'PLANIFIE' %}border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700/50
+                    {% elif ent.statut == 'REPORTE' %}border-yellow-200 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-700/50
+                    {% elif ent.statut == 'REALISE' %}border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-700/50
+                    {% elif ent.statut == 'ANNULE' %}border-gray-200 bg-gray-50 dark:bg-gray-800/40 dark:border-gray-600
+                    {% endif %}">
+
+                    {# Ligne résumé (toujours visible) #}
+                    <button type="button" @click="detailEntretien = !detailEntretien"
+                            class="w-full flex items-center gap-3 px-3 py-2.5 text-left">
+                        <span class="text-lg flex-shrink-0">
+                            {% if ent.statut == 'PLANIFIE' %}📅{% elif ent.statut == 'REPORTE' %}🔄{% elif ent.statut == 'REALISE' %}✅{% elif ent.statut == 'ANNULE' %}❌{% endif %}
+                        </span>
+                        <div class="flex-1 min-w-0">
+                            <span class="text-sm font-semibold
+                                {% if ent.statut == 'PLANIFIE' %}text-blue-700 dark:text-blue-300
+                                {% elif ent.statut == 'REPORTE' %}text-yellow-700 dark:text-yellow-300
+                                {% elif ent.statut == 'REALISE' %}text-green-700 dark:text-green-300
+                                {% elif ent.statut == 'ANNULE' %}text-gray-500 line-through
+                                {% endif %}">
+                                {% if ent.typeEntretienRef %}{{ ent.typeEntretienRef.libelle }}{% else %}{{ ent.get_typeEntretien_display }}{% endif %}
+                                — {{ ent.dateEntretien|date:"d M Y à H:i" }}
+                            </span>
+                        </div>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold text-white
+                            {% if ent.statut == 'PLANIFIE' %}bg-blue-500
+                            {% elif ent.statut == 'REPORTE' %}bg-yellow-500
+                            {% elif ent.statut == 'REALISE' %}bg-green-500
+                            {% elif ent.statut == 'ANNULE' %}bg-gray-400
+                            {% endif %}">
+                            {{ ent.get_statut_display }}
+                        </span>
+                        <svg class="w-4 h-4 flex-shrink-0 transition-transform text-gray-400" :class="{ 'rotate-180': detailEntretien }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+
+                    {# Détails (dépliable) #}
+                    <div x-show="detailEntretien" x-collapse x-cloak class="px-3 pb-3 border-t
+                        {% if ent.statut == 'PLANIFIE' %}border-blue-200 dark:border-blue-700/50
+                        {% elif ent.statut == 'REPORTE' %}border-yellow-200 dark:border-yellow-700/50
+                        {% elif ent.statut == 'REALISE' %}border-green-200 dark:border-green-700/50
+                        {% elif ent.statut == 'ANNULE' %}border-gray-200 dark:border-gray-600
+                        {% endif %}">
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-2 mt-3 text-sm">
+                            <div>
+                                <p class="text-xs text-gray-500 font-semibold uppercase">{% trans "Date & heure" %}</p>
+                                <p class="font-bold text-gray-800">{{ ent.dateEntretien|date:"l d F Y" }}</p>
+                                <p class="text-gray-600">{{ ent.dateEntretien|date:"H:i" }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 font-semibold uppercase">{% trans "Durée" %}</p>
+                                <p class="font-bold text-gray-800">{{ ent.duree }} {% trans "min" %}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 font-semibold uppercase">{% trans "Mode" %}</p>
+                                <p class="font-bold text-gray-800">
+                                    {% if ent.modeRef %}{{ ent.modeRef.libelle }}{% else %}{{ ent.get_mode_display }}{% endif %}
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 font-semibold uppercase">{% trans "Type" %}</p>
+                                <p class="font-bold text-gray-800">
+                                    {% if ent.typeEntretienRef %}{{ ent.typeEntretienRef.libelle }}{% else %}{{ ent.get_typeEntretien_display }}{% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        {% if ent.lieu %}
+                        <div class="mt-3">
+                            <p class="text-xs text-gray-500 font-semibold uppercase">{% trans "Lieu / Lien" %}</p>
+                            {% if "http" in ent.lieu %}
+                                <a href="{{ ent.lieu }}" target="_blank" rel="noopener"
+                                   class="text-sm font-semibold text-blue-600 hover:underline break-all">🔗 {{ ent.lieu }}</a>
+                            {% else %}
+                                <p class="text-sm font-semibold text-gray-800">📍 {{ ent.lieu }}</p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        {% if ent.notes %}
+                        <div class="mt-3">
+                            <p class="text-xs text-gray-500 font-semibold uppercase">{% trans "Consignes du recruteur" %}</p>
+                            <p class="text-sm text-gray-700 mt-1 whitespace-pre-wrap leading-relaxed">{{ ent.notes }}</p>
+                        </div>
+                        {% endif %}
+                        {% if ent.statut == 'PLANIFIE' %}
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <a href="{% url 'candidat:entretien_ics' ent.pk %}"
+                               class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-white bg-blue-500 hover:bg-blue-600 shadow-sm transition">
+                                📅 {% trans "Ajouter au calendrier" %}
+                            </a>
+                            <a href="{% url 'candidat:entretien_contacter' ent.pk %}"
+                               class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 shadow-sm transition">
+                                ✉️ {% trans "Contacter le recruteur" %}
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                {% with nb_msgs=c.messages.count %}
+                {% if nb_msgs %}
+                <div class="mb-3 flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700/50">
+                    <span class="text-base flex-shrink-0">✉️</span>
+                    <span>
+                        {% blocktrans count n=nb_msgs %}{{ n }} message reçu du recruteur{% plural %}{{ n }} messages reçus du recruteur{% endblocktrans %}
+                    </span>
+                    <button type="button" @click="historique = true"
+                            class="ml-auto text-xs font-bold underline hover:no-underline flex-shrink-0">
+                        {% trans "Voir" %}
+                    </button>
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                {# Ligne 2 : Infos offre (titre, entreprise, méta) #}
+                <div class="min-w-0">
+                    <a href="{% url 'candidat:offre_detail' c.offre.id %}"
+                       class="text-lg sm:text-xl font-extrabold text-gray-800 hover:underline block">
+                        {{ c.offre.titre }}
+                    </a>
+                    <a href="{% url 'candidat:entreprise_profil' c.offre.entreprise.id %}"
+                       class="text-sm font-semibold hover:underline mt-1 inline-block" style="color:#c96010;">
+                        {{ c.offre.entreprise.raisonSocial }} ↗
+                    </a>
+
+                    <div class="flex flex-wrap gap-3 text-xs text-gray-500 mt-2">
+                        <span>🔖 <span class="font-mono">{{ c.reference }}</span></span>
+                        <span>📅 {% trans "Soumise le" %} {{ c.dateCandidature|date:"d M Y" }} {% trans "à" %} {{ c.dateCandidature|date:"H:i" }}</span>
+                        {% if c.offre.ville %}<span>📍 {{ c.offre.ville }}</span>{% endif %}
+                        <span>📋 {{ c.offre.get_typeContrat_display }}</span>
+                    </div>
+                </div>
+            </div>
+
+            {# ── Actions ─────────────────────────────────────────────── #}
+            <div class="px-5 sm:px-6 py-3 bg-gray-50/60 border-t border-gray-100 flex flex-wrap items-center gap-2 text-sm">
+                <button type="button" @click="historique = !historique"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-gray-700 hover:bg-white border border-gray-200 transition">
+                    <span>🕘</span>
+                    <span x-show="!historique">{% trans "Voir l'évolution" %}</span>
+                    <span x-show="historique" x-cloak>{% trans "Masquer l'évolution" %}</span>
+                    <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': historique }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+
+                <a href="{% url 'candidat:offre_detail' c.offre.id %}"
+                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-gray-700 hover:bg-white border border-gray-200 transition">
+                    👁️ {% trans "Voir l'offre" %}
+                </a>
+
+                {% if c.cv_url %}
+                <a href="{{ c.cv_url }}" target="_blank" rel="noopener"
+                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-gray-700 hover:bg-white border border-gray-200 transition">
+                    📄 {% trans "CV envoyé" %}
+                </a>
+                {% endif %}
+
+                {% if c.lettreMotivation %}
+                <a href="{{ c.lettreMotivation.url }}" target="_blank" rel="noopener"
+                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-gray-700 hover:bg-white border border-gray-200 transition">
+                    ✉️ {% trans "Lettre" %}
+                </a>
+                {% endif %}
+
+                {# Bouton retirer — uniquement si statut non final #}
+                {% if c.statut and not c.statut.estFinal %}
+                <button type="button" @click="retrait = true"
+                        class="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-red-600 hover:bg-red-50 border border-red-200 transition">
+                    🚫 {% trans "Retirer ma candidature" %}
+                </button>
+                {% endif %}
+            </div>
+
+            {# ── Dropdown Timeline (flotte au-dessus, carte garde sa taille) #}
+            <div x-show="historique" x-cloak x-transition
+                 @click.outside="historique = false"
+                 class="absolute left-3 right-3 bottom-14 bg-white border border-gray-200 rounded-xl shadow-2xl z-20 max-h-64 overflow-y-auto">
+                <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 sticky top-0 bg-white rounded-t-xl">
+                    <span class="text-xs font-extrabold text-gray-700 uppercase tracking-wide flex items-center gap-1.5">
+                        🕘 {% trans "Évolution" %}
+                    </span>
+                    <button type="button" @click="historique = false"
+                            class="w-6 h-6 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 text-xs transition">
+                        ✕
+                    </button>
+                </div>
+                <ol class="px-4 py-3 space-y-0">
+                    {% for h in c.timeline %}
+                    <li class="relative timeline-step pl-8 pb-4">
+                        <span class="absolute left-0 top-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white shadow-sm"
+                              style="background:{{ h.nouveauStatut.couleur }};">
+                            {{ h.nouveauStatut.icone|default:'•' }}
+                        </span>
+                        <div>
+                            <p class="font-bold text-gray-800 text-xs">{{ h.nouveauStatut.libelle }}</p>
+                            <p class="text-[11px] text-gray-500">{{ h.dateChangement|date:"d M Y, H:i" }}</p>
+                            {% if h.commentaire %}
+                            <p class="text-xs text-gray-600 mt-1 italic">{{ h.commentaire }}</p>
+                            {% endif %}
+                        </div>
+                    </li>
+                    {% empty %}
+                    <li class="text-xs text-gray-400 italic">{% trans "Aucun événement enregistré." %}</li>
+                    {% endfor %}
+
+                    {# ── Entretiens dans la timeline ── #}
+                    {% for ent in c.entretiens.all %}
+                    <li class="relative timeline-step pl-8 pb-4">
+                        <span class="absolute left-0 top-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white shadow-sm
+                            {% if ent.statut == 'PLANIFIE' %}bg-blue-500
+                            {% elif ent.statut == 'REALISE' %}bg-green-500
+                            {% elif ent.statut == 'REPORTE' %}bg-yellow-500
+                            {% elif ent.statut == 'ANNULE' %}bg-gray-400
+                            {% endif %}">
+                            📅
+                        </span>
+                        <div>
+                            <p class="font-bold text-gray-800 text-xs">
+                                {% if ent.typeEntretienRef %}{{ ent.typeEntretienRef.libelle }}{% else %}{{ ent.get_typeEntretien_display }}{% endif %}
+                                <span class="font-normal text-gray-500">— {{ ent.get_statut_display }}</span>
+                            </p>
+                            <p class="text-[11px] text-gray-500">{{ ent.dateEntretien|date:"d M Y, H:i" }} · {{ ent.duree }} min</p>
+                            {% if ent.lieu %}
+                            <p class="text-xs text-gray-600 mt-0.5">📍 {{ ent.lieu }}</p>
+                            {% endif %}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ol>
+            </div>
+
+            {# ── Modale confirmation retrait ───────────────────────────── #}
+            <div x-show="retrait" x-cloak x-transition.opacity
+                 @keydown.escape.window="retrait = false"
+                 class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+                 @click.self="retrait = false">
+                <div class="retrait-dialog bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+                    <div class="p-6">
+                        <div class="flex items-start gap-4 mb-4">
+                            <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-2xl flex-shrink-0">🚫</div>
+                            <div class="flex-1">
+                                <h3 class="font-extrabold text-gray-800 text-lg">{% trans "Retirer ma candidature ?" %}</h3>
+                                <p class="text-sm text-gray-500 mt-1">
+                                    {% blocktrans with titre=c.offre.titre %}
+                                        Vous êtes sur le point de retirer votre candidature pour « {{ titre }} ». Cette action est définitive.
+                                    {% endblocktrans %}
+                                </p>
+                            </div>
+                        </div>
+                        <form method="post" action="{% url 'candidat:retirer_candidature' c.id %}" class="space-y-4">
+                            {% csrf_token %}
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-1.5">
+                                    {% trans "Motif (optionnel)" %}
+                                </label>
+                                <textarea name="motif" rows="3"
+                                          placeholder="{% trans 'Ex. : J ai trouvé un autre poste…' %}"
+                                          class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-red-400 focus:ring-1 focus:ring-red-400 outline-none"></textarea>
+                            </div>
+                            <div class="flex justify-end gap-2">
+                                <button type="button" @click="retrait = false"
+                                        class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100 transition">
+                                    {% trans "Annuler" %}
+                                </button>
+                                <button type="submit"
+                                        class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition">
+                                    🚫 {% trans "Confirmer le retrait" %}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+
+    {# ── Aucun résultat (client-side, recherche dynamique) ──────────────── #}
+    <div x-show="q.trim() && nbVisibles === 0" x-cloak
+         class="bg-white rounded-2xl p-10 border border-gray-100 shadow-sm text-center mt-4">
+        <div class="w-16 h-16 mx-auto rounded-full flex items-center justify-center text-3xl mb-3"
+             style="background:#FFF4E6;">🔍</div>
+        <h2 class="text-lg font-extrabold text-gray-800 mb-1">
+            {% trans "Aucune candidature ne correspond à votre recherche" %}
+        </h2>
+        <p class="text-sm text-gray-500">
+            <span x-text="'« ' + q + ' »'"></span> — {% trans "essayez un autre mot-clé." %}
+        </p>
+        <button type="button" @click="q = ''"
+                class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition">
+            ✕ {% trans "Effacer la recherche" %}
+        </button>
+    </div>
+
+    {% else %}
+    {# ── État vide ──────────────────────────────────────────────────────── #}
+    <div class="bg-white rounded-2xl p-10 sm:p-14 border border-gray-100 shadow-sm text-center">
+        <div class="w-20 h-20 mx-auto rounded-full flex items-center justify-center text-4xl mb-4"
+             style="background:#FFF4E6;">
+            📭
+        </div>
+        <h2 class="text-xl font-extrabold text-gray-800 mb-2">
+            {% if etat_actif %}
+                {% trans "Aucune candidature ne correspond à votre filtre" %}
+            {% else %}
+                {% trans "Vous n'avez postulé à aucune offre" %}
+            {% endif %}
+        </h2>
+        <p class="text-gray-500 text-sm mb-6 max-w-md mx-auto">
+            {% if etat_actif %}
+                {% trans "Essayez d'élargir votre recherche ou réinitialisez les filtres pour voir toutes vos candidatures." %}
+            {% else %}
+                {% trans "Explorez les offres d'emploi disponibles et postulez en un clic — vos candidatures apparaîtront ici avec leur évolution." %}
+            {% endif %}
+        </p>
+        {% if etat_actif %}
+        <a href="{% url 'candidat:mes_candidatures' %}"
+           class="inline-block text-white font-bold px-6 py-3 rounded-lg text-sm hover:opacity-90 transition"
+           style="background:#c96010;">
+            {% trans "Réinitialiser les filtres" %}
+        </a>
+        {% else %}
+        <a href="{% url 'candidat:offres' %}"
+           class="inline-block text-white font-bold px-6 py-3 rounded-lg text-sm hover:opacity-90 transition"
+           style="background:#2e7d52;">
+            💼 {% trans "Découvrir les offres" %}
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</section>
+{% endblock %}

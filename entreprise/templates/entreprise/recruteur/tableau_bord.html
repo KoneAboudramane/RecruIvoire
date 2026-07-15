@@ -1,0 +1,363 @@
+﻿{% extends "entreprise/base.html" %}
+{% load i18n %}
+
+{% block titre %}Tableau de bord — {{ request.recruteur.nomComplet }}{% endblock %}
+
+{% block css_extra %}
+<style>
+  .tdb-rec-header { background:#fff; color:#1f2937; border:1px solid #e5e7eb; }
+  .tdb-rec-header .sous-titre { color:#6b7280; }
+  .tdb-rec-header .logo-placeholder { background:rgba(0,154,68,.10); color:#009A44; }
+  .tdb-rec-header .logo-border { border-color:#e5e7eb; }
+  .tdb-rec-header .entreprise-nom { color:#6b7280; }
+  .tdb-rec-header .separateur { color:#9ca3af; }
+  .tdb-rec-header .btn-profil { background:rgba(0,0,0,.06); border:1px solid rgba(0,0,0,.12); color:#374151; }
+  .tdb-rec-header .btn-profil:hover { background:rgba(0,0,0,.10); }
+  .badge-role-admin  { background:rgba(251,191,36,.15); color:#92400e; }
+  .badge-role-rh     { background:rgba(0,154,68,.12);  color:#166534; }
+  .badge-role-manager{ background:rgba(59,130,246,.12); color:#1d4ed8; }
+  .badge-role-lecteur{ background:rgba(107,114,128,.10);color:#374151; }
+
+  html.dark .tdb-rec-header { background:#1e293b; color:#f1f5f9; border-color:#334155; }
+  html.dark .tdb-rec-header .sous-titre { color:#94a3b8; }
+  html.dark .tdb-rec-header .logo-placeholder { background:rgba(0,154,68,.18); color:#4ade80; }
+  html.dark .tdb-rec-header .logo-border { border-color:#334155; }
+  html.dark .tdb-rec-header .entreprise-nom { color:#94a3b8; }
+  html.dark .tdb-rec-header .separateur { color:#4b5563; }
+  html.dark .tdb-rec-header .btn-profil { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.15); color:#e2e8f0; }
+  html.dark .tdb-rec-header .btn-profil:hover { background:rgba(255,255,255,.14); }
+  html.dark .badge-role-admin  { background:rgba(251,191,36,.20); color:#fcd34d; }
+  html.dark .badge-role-rh     { background:rgba(0,154,68,.20);   color:#4ade80; }
+  html.dark .badge-role-manager{ background:rgba(59,130,246,.20);  color:#93c5fd; }
+  html.dark .badge-role-lecteur{ background:rgba(255,255,255,.10); color:#e2e8f0; }
+
+  html.noir .tdb-rec-header { background:linear-gradient(135deg,#000 0%,#080808 60%,#111 100%); color:#f1f5f9; border-color:#222; }
+  html.noir .tdb-rec-header .sous-titre { color:#94a3b8; }
+  html.noir .tdb-rec-header .logo-placeholder { background:rgba(0,154,68,.15); color:#4ade80; }
+  html.noir .tdb-rec-header .logo-border { border-color:#222; }
+  html.noir .tdb-rec-header .entreprise-nom { color:#94a3b8; }
+  html.noir .tdb-rec-header .separateur { color:#4b5563; }
+  html.noir .tdb-rec-header .btn-profil { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.12); color:#e2e8f0; }
+  html.noir .tdb-rec-header .btn-profil:hover { background:rgba(255,255,255,.10); }
+  html.noir .badge-role-admin  { background:rgba(251,191,36,.18); color:#fcd34d; }
+  html.noir .badge-role-rh     { background:rgba(0,154,68,.18);   color:#4ade80; }
+  html.noir .badge-role-manager{ background:rgba(59,130,246,.18);  color:#93c5fd; }
+  html.noir .badge-role-lecteur{ background:rgba(255,255,255,.08); color:#e2e8f0; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="w-full space-y-6">
+
+    <!-- ── En-tête ────────────────────────────────────────────────────────── -->
+    <div class="tdb-rec-header rounded-2xl p-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+        <div class="flex items-center gap-4">
+            {% if request.recruteur.photoProfil %}
+                <img src="{{ request.recruteur.photoProfil.url }}" alt=""
+                     class="logo-border w-14 h-14 rounded-2xl object-cover border-2 shadow">
+            {% else %}
+                <div class="logo-placeholder w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-extrabold shadow-sm">
+                    {{ request.recruteur.nomComplet|slice:":1"|upper }}
+                </div>
+            {% endif %}
+            <div>
+                <p class="sous-titre text-xs">{% trans "Bonjour," %}</p>
+                <h1 class="text-xl font-extrabold">{{ request.recruteur.nomComplet }}</h1>
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                    <span class="text-xs px-2 py-0.5 rounded-full font-bold
+                        {% if request.recruteur.roleMembre == 'ADMIN' %}badge-role-admin
+                        {% elif request.recruteur.roleMembre == 'RH' %}badge-role-rh
+                        {% elif request.recruteur.roleMembre == 'MANAGER' %}badge-role-manager
+                        {% else %}badge-role-lecteur{% endif %}">
+                        {% if request.recruteur.roleMembre == 'ADMIN' %}👑{% elif request.recruteur.roleMembre == 'RH' %}👤{% elif request.recruteur.roleMembre == 'MANAGER' %}📋{% else %}👁️{% endif %}
+                        {{ request.recruteur.get_roleMembre_display }}
+                    </span>
+                    <span class="separateur text-xs">·</span>
+                    <span class="entreprise-nom text-xs">🏢 {{ request.recruteur.entreprise.raisonSocial }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="flex gap-3 flex-shrink-0">
+            <a href="{% url 'entreprise:recruteur_profil' %}"
+               class="btn-profil px-4 py-2 text-xs font-bold rounded-xl transition">
+                ✏️ {% trans "Mon profil" %}
+            </a>
+            {% if request.recruteur.roleMembre == 'ADMIN' or request.recruteur.roleMembre == 'RH' %}
+            <a href="{% url 'entreprise:offre_creer' %}"
+               class="px-4 py-2 bg-white border border-gray-200 text-xs font-bold rounded-xl transition hover:shadow-md"
+               style="color:#009A44;">
+                + {% trans "Nouvelle offre" %}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ── Stats cards ───────────────────────────────────────────────────── -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+        <a href="{% url 'entreprise:offres_liste' %}"
+           class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition block">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{% trans "Offres actives" %}</p>
+                <span class="w-9 h-9 rounded-xl flex items-center justify-center text-lg" style="background:#009A4415;">📋</span>
+            </div>
+            <p class="text-3xl font-extrabold text-gray-900 dark:text-white">{{ stats.mes_offres }}</p>
+            <p class="text-xs text-gray-400 mt-1">{% trans "publiées" %}</p>
+        </a>
+
+        <a href="{% url 'entreprise:candidatures' %}"
+           class="bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition block
+           {% if stats.candidatures %}border-orange-200 dark:border-orange-800{% else %}border-gray-100 dark:border-gray-700{% endif %}">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-xs font-semibold uppercase tracking-wider {% if stats.candidatures %}text-orange-600 dark:text-orange-400{% else %}text-gray-500 dark:text-gray-400{% endif %}">{% trans "En attente" %}</p>
+                <span class="w-9 h-9 rounded-xl flex items-center justify-center text-lg {% if stats.candidatures %}bg-orange-50 dark:bg-orange-900/20{% else %}bg-orange-50{% endif %}">📨</span>
+            </div>
+            {% if stats.candidatures_perso is not None %}
+                {# ADMIN : mes offres + total entreprise #}
+                <p class="text-3xl font-extrabold {% if stats.candidatures_perso %}text-orange-600 dark:text-orange-400{% else %}text-gray-900 dark:text-white{% endif %}">
+                    {{ stats.candidatures_perso }}
+                </p>
+                <p class="text-xs text-gray-400 mt-1">{% trans "sur mes offres" %}</p>
+                <p class="text-xs font-semibold mt-2 {% if stats.candidatures_total %}text-orange-500 dark:text-orange-400{% else %}text-gray-400{% endif %}">
+                    {% trans "Total entreprise" %} : {{ stats.candidatures_total }}
+                </p>
+            {% else %}
+                <p class="text-3xl font-extrabold {% if stats.candidatures %}text-orange-600 dark:text-orange-400{% else %}text-gray-900 dark:text-white{% endif %}">{{ stats.candidatures }}</p>
+                <p class="text-xs text-gray-400 mt-1">{% trans "candidatures à traiter" %}</p>
+            {% endif %}
+        </a>
+
+        <a href="{% url 'entreprise:entretiens' %}"
+           class="bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition block
+           {% if stats.entretiens_jour %}border-blue-200 dark:border-blue-800{% else %}border-gray-100 dark:border-gray-700{% endif %}">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-xs font-semibold uppercase tracking-wider {% if stats.entretiens_jour %}text-blue-600 dark:text-blue-400{% else %}text-gray-500 dark:text-gray-400{% endif %}">{% trans "Aujourd'hui" %}</p>
+                <span class="w-9 h-9 rounded-xl flex items-center justify-center text-lg bg-blue-50 dark:bg-blue-900/20">📅</span>
+            </div>
+            <p class="text-3xl font-extrabold {% if stats.entretiens_jour %}text-blue-600 dark:text-blue-400{% else %}text-gray-900 dark:text-white{% endif %}">{{ stats.entretiens_jour }}</p>
+            <p class="text-xs text-gray-400 mt-1">{% trans "entretien(s) planifié(s)" %}</p>
+        </a>
+
+        <a href="{% url 'entreprise:entretiens' %}"
+           class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition block">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{% trans "Cette semaine" %}</p>
+                <span class="w-9 h-9 rounded-xl flex items-center justify-center text-lg bg-purple-50 dark:bg-purple-900/20">🗓️</span>
+            </div>
+            <p class="text-3xl font-extrabold text-gray-900 dark:text-white">{{ stats.entretiens_semaine }}</p>
+            <p class="text-xs text-gray-400 mt-1">{% trans "entretien(s) à venir" %}</p>
+        </a>
+
+    </div>
+
+    <!-- ── Contenu principal + Actions rapides ────────────────────────────── -->
+    <div class="grid lg:grid-cols-3 gap-6 items-start">
+
+        <!-- Colonne gauche : tâches du jour (2/3) -->
+        <div class="lg:col-span-2 space-y-4">
+
+            <!-- Entretiens du jour -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-sm font-bold text-gray-700 dark:text-gray-200">📅 {% trans "Entretiens du jour" %}</h2>
+                    <a href="{% url 'entreprise:entretiens' %}" class="text-xs text-green-600 hover:underline font-semibold">
+                        {% if entretiens_aujourd_hui_plus %}+{{ entretiens_aujourd_hui_plus }} {% trans "de plus" %} · {% endif %}{% trans "Voir tous" %} →
+                    </a>
+                </div>
+                {% if entretiens_aujourd_hui %}
+                <div class="space-y-2">
+                    {% for e in entretiens_aujourd_hui %}
+                    <div class="flex items-center gap-4 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/15 border border-blue-100 dark:border-blue-800">
+                        <div class="w-12 text-center flex-shrink-0">
+                            <p class="text-sm font-extrabold text-blue-700 dark:text-blue-300">{{ e.dateEntretien|time:"H:i" }}</p>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">
+                                {{ e.candidature.candidat.prenom }} {{ e.candidature.candidat.nom }}
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ e.candidature.offre.titre }}</p>
+                        </div>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 font-semibold flex-shrink-0">
+                            {{ e.get_type_display }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <p class="text-4xl mb-2">☀️</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{% trans "Aucun entretien prévu aujourd'hui." %}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Candidatures urgentes -->
+            {% if candidatures_urgentes %}
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-orange-200 dark:border-orange-800 shadow-sm p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-sm font-bold text-orange-700 dark:text-orange-400">⚠️ {% trans "En attente depuis +5 jours" %}</h2>
+                    <a href="{% url 'entreprise:candidatures' %}" class="text-xs text-orange-600 hover:underline font-semibold">
+                        {% if candidatures_urgentes_plus %}+{{ candidatures_urgentes_plus }} {% trans "de plus" %} · {% endif %}{% trans "Traiter" %} →
+                    </a>
+                </div>
+                <div class="space-y-2">
+                    {% for c in candidatures_urgentes %}
+                    <a href="{% url 'entreprise:candidatures_offre' c.offre.pk %}"
+                       class="flex items-center gap-3 p-3 rounded-xl hover:bg-orange-50 dark:hover:bg-orange-900/15 transition group">
+                        <div class="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-xs font-bold text-orange-700 dark:text-orange-300 flex-shrink-0">
+                            {{ c.candidat.prenom|slice:":1"|upper }}{{ c.candidat.nom|slice:":1"|upper }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate group-hover:text-orange-700 dark:group-hover:text-orange-400">
+                                {{ c.candidat.prenom }} {{ c.candidat.nom }}
+                            </p>
+                            <p class="text-xs text-gray-400 truncate">{{ c.offre.titre }}</p>
+                        </div>
+                        <span class="text-xs text-orange-500 dark:text-orange-400 flex-shrink-0 font-semibold">
+                            {{ c.dateCandidature|timesince }} {% trans "ago" %}
+                        </span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Candidatures récentes -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-sm font-bold text-gray-700 dark:text-gray-200">🆕 {% trans "Nouvelles candidatures (48h)" %}</h2>
+                    <a href="{% url 'entreprise:candidatures' %}" class="text-xs text-green-600 hover:underline font-semibold">
+                        {% if candidatures_recentes_plus %}+{{ candidatures_recentes_plus }} {% trans "de plus" %} · {% endif %}{% trans "Voir toutes" %} →
+                    </a>
+                </div>
+                {% if candidatures_recentes %}
+                <div class="space-y-2">
+                    {% for c in candidatures_recentes %}
+                    <a href="{% url 'entreprise:candidatures_offre' c.offre.pk %}"
+                       class="flex items-center gap-3 p-3 rounded-xl hover:bg-green-50 dark:hover:bg-green-900/15 transition group">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                             style="background:#009A44;">
+                            {{ c.candidat.prenom|slice:":1"|upper }}{{ c.candidat.nom|slice:":1"|upper }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate group-hover:text-green-700 dark:group-hover:text-green-400">
+                                {{ c.candidat.prenom }} {{ c.candidat.nom }}
+                            </p>
+                            <p class="text-xs text-gray-400 truncate">{{ c.offre.titre }}</p>
+                        </div>
+                        <span class="text-xs text-gray-400 flex-shrink-0">{{ c.dateCandidature|timesince }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-400 dark:text-gray-500 text-center py-6">{% trans "Aucune nouvelle candidature dans les dernières 48h." %}</p>
+                {% endif %}
+            </div>
+
+            <!-- Prochains entretiens cette semaine -->
+            {% if prochains_entretiens %}
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-sm font-bold text-gray-700 dark:text-gray-200">🗓️ {% trans "Prochains entretiens (7 jours)" %}</h2>
+                    <a href="{% url 'entreprise:entretiens' %}" class="text-xs text-green-600 hover:underline font-semibold">
+                        {% if prochains_entretiens_plus %}+{{ prochains_entretiens_plus }} {% trans "de plus" %} · {% endif %}{% trans "Voir tous" %} →
+                    </a>
+                </div>
+                <div class="space-y-2">
+                    {% for e in prochains_entretiens %}
+                    <div class="flex items-center gap-4 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/40 border border-gray-100 dark:border-gray-600">
+                        <div class="w-14 text-center flex-shrink-0">
+                            <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">{{ e.dateEntretien|date:"D" }}</p>
+                            <p class="text-sm font-extrabold text-gray-800 dark:text-gray-100">{{ e.dateEntretien|date:"d/m" }}</p>
+                            <p class="text-xs text-gray-400">{{ e.dateEntretien|time:"H:i" }}</p>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">
+                                {{ e.candidature.candidat.prenom }} {{ e.candidature.candidat.nom }}
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ e.candidature.offre.titre }}</p>
+                        </div>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 font-semibold flex-shrink-0">
+                            {{ e.get_type_display }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+
+        <!-- Colonne droite : actions rapides (1/3) -->
+        <div class="space-y-4">
+
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+                <h2 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">{% trans "Actions rapides" %}</h2>
+                <div class="flex flex-col gap-2">
+
+                    {% if request.recruteur.roleMembre == 'ADMIN' or request.recruteur.roleMembre == 'RH' %}
+                    <a href="{% url 'entreprise:offre_creer' %}" class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 transition group">
+                        <span class="text-xl">📝</span>
+                        <span class="text-sm font-semibold text-gray-600 dark:text-gray-300 group-hover:text-green-700 dark:group-hover:text-green-400">{% trans "Publier une offre" %}</span>
+                    </a>
+                    {% endif %}
+
+                    <a href="{% url 'entreprise:candidatures' %}" class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition group">
+                        <span class="text-xl">📨</span>
+                        <span class="text-sm font-semibold text-gray-600 dark:text-gray-300 group-hover:text-orange-700 dark:group-hover:text-orange-400">{% trans "Candidatures" %}</span>
+                        {% if stats.candidatures %}
+                        <span class="ml-auto text-xs font-bold text-white px-2 py-0.5 rounded-full" style="background:#c96010;">{{ stats.candidatures }}</span>
+                        {% endif %}
+                    </a>
+
+                    <a href="{% url 'entreprise:entretiens' %}" class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition group">
+                        <span class="text-xl">📅</span>
+                        <span class="text-sm font-semibold text-gray-600 dark:text-gray-300 group-hover:text-blue-700 dark:group-hover:text-blue-400">{% trans "Entretiens" %}</span>
+                    </a>
+
+                    <a href="{% url 'entreprise:candidats' %}" class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition group">
+                        <span class="text-xl">🔍</span>
+                        <span class="text-sm font-semibold text-gray-600 dark:text-gray-300 group-hover:text-purple-700 dark:group-hover:text-purple-400">{% trans "Chercher candidats" %}</span>
+                    </a>
+
+                    <a href="{% url 'entreprise:suggestions_recues' %}" class="flex items-center gap-3 p-3 rounded-xl border transition group
+                        {% if suggestions_non_lues %}border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20{% else %}border-gray-100 dark:border-gray-700 hover:border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20{% endif %}">
+                        <span class="text-xl">👥</span>
+                        <span class="text-sm font-semibold {% if suggestions_non_lues %}text-orange-700 dark:text-orange-300{% else %}text-gray-600 dark:text-gray-300 group-hover:text-green-700 dark:group-hover:text-green-400{% endif %}">{% trans "Suggestions" %}</span>
+                        {% if suggestions_non_lues %}
+                        <span class="ml-auto text-xs font-bold text-white px-2 py-0.5 rounded-full" style="background:#c96010;">{{ suggestions_non_lues }}</span>
+                        {% endif %}
+                    </a>
+
+                    {% if request.recruteur.roleMembre != 'LECTEUR' %}
+                    <a href="{% url 'entreprise:partages_liste' %}" class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-cyan-300 dark:hover:border-cyan-700 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 transition group">
+                        <span class="text-xl">🔗</span>
+                        <span class="text-sm font-semibold text-gray-600 dark:text-gray-300 group-hover:text-cyan-700 dark:group-hover:text-cyan-400">{% trans "Liens de partage" %}</span>
+                    </a>
+                    {% endif %}
+
+                    {% if request.recruteur.roleMembre == 'ADMIN' %}
+                    <a href="{% url 'entreprise:modeles_messages' %}" class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition group">
+                        <span class="text-xl">✉️</span>
+                        <span class="text-sm font-semibold text-gray-600 dark:text-gray-300 group-hover:text-amber-700 dark:group-hover:text-amber-400">{% trans "Modèles de message" %}</span>
+                    </a>
+                    <a href="{% url 'entreprise:membres_liste' %}" class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition group">
+                        <span class="text-xl">👥</span>
+                        <span class="text-sm font-semibold text-gray-600 dark:text-gray-300 group-hover:text-amber-700 dark:group-hover:text-amber-400">{% trans "Gérer les membres" %}</span>
+                    </a>
+                    {% endif %}
+
+                    <a href="{% url 'entreprise:recruteur_profil' %}" class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition group">
+                        <span class="text-xl">👤</span>
+                        <span class="text-sm font-semibold text-gray-600 dark:text-gray-300 group-hover:text-gray-700 dark:group-hover:text-gray-200">{% trans "Mon profil" %}</span>
+                    </a>
+
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

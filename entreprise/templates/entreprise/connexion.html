@@ -1,0 +1,221 @@
+﻿{% extends "entreprise/base_auth.html" %}
+{% load static i18n %}
+
+{% block titre %}{% trans "Connexion Entreprise" %} — {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+<style>
+    .pass-toggle:hover { opacity: .7; }
+    .input-field {
+        @apply w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition text-sm;
+    }
+
+    /* ── Mode sombre — focus champs : éclat vert lisible ─────────── */
+    html.dark input:focus { box-shadow: 0 0 0 2px rgba(34,197,94,.45) !important; }
+
+    /* ── Mode NOIR (OLED) ─────────────────────────────────────────── */
+    html.noir input:focus { box-shadow: 0 0 0 2px rgba(34,197,94,.36) !important; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="w-full py-8" x-data="{ showPass: false }">
+
+    <div class="w-full max-w-5xl mx-auto flex rounded-2xl shadow-2xl overflow-hidden min-h-[560px]">
+
+        <!-- ── Panneau gauche (vert) ───────────────────────────────── -->
+        <div class="hidden lg:flex flex-col justify-between w-5/12 p-10 text-white relative overflow-hidden"
+             style="background: linear-gradient(145deg, #1e5c3a 0%, #2e7d52 50%, #3d9463 100%);">
+
+            <!-- Motif décoratif -->
+            <div class="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10 -translate-y-1/2 translate-x-1/2"
+                 style="background:white;"></div>
+            <div class="absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-10 translate-y-1/2 -translate-x-1/2"
+                 style="background:#c96010;"></div>
+
+            <!-- Logo & titre -->
+            <div class="relative z-10">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-2xl backdrop-blur-sm">
+                        🏢
+                    </div>
+                    <div>
+                        <p class="text-xs text-white/70 uppercase tracking-widest">{{ logo_site.nom_site }}</p>
+                        <p class="text-lg font-bold">{% trans "Espace Entreprise" %}</p>
+                    </div>
+                </div>
+
+                <h1 class="text-3xl font-extrabold leading-tight mb-4">
+                    {% trans "Trouvez les" %}<br>{% trans "meilleurs talents" %}<br>{% trans "d'Afrique de l'Ouest" %}
+                </h1>
+                <p class="text-white/80 text-sm leading-relaxed">
+                    {% trans "Connectez-vous à votre espace entreprise et gérez vos recrutements efficacement." %}
+                </p>
+            </div>
+
+            <!-- Avantages -->
+            <div class="relative z-10 space-y-4">
+                {% for ico, label in avantages %}
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-sm flex-shrink-0">
+                        {{ ico }}
+                    </div>
+                    <span class="text-sm text-white/90">{{ label }}</span>
+                </div>
+                {% empty %}
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-sm flex-shrink-0">📋</div>
+                    <span class="text-sm text-white/90">{% trans "Publiez des offres d'emploi illimitées" %}</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-sm flex-shrink-0">🎯</div>
+                    <span class="text-sm text-white/90">{% trans "Accédez à des milliers de candidats qualifiés" %}</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-sm flex-shrink-0">📊</div>
+                    <span class="text-sm text-white/90">{% trans "Tableau de bord et statistiques en temps réel" %}</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-sm flex-shrink-0">🤝</div>
+                    <span class="text-sm text-white/90">{% trans "Support dédié et accompagnement personnalisé" %}</span>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Liens annexes -->
+            <div class="relative z-10 mt-6 pt-6 border-t border-white/20 space-y-3">
+                <a href="{% url 'entreprise:recruteur_connexion' %}"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/30 transition-all duration-200 group">
+                    <span class="text-lg">🎯</span>
+                    <div class="flex-1">
+                        <p class="text-xs text-white/60 leading-none mb-0.5">{% trans "Vous êtes recruteur ?" %}</p>
+                        <p class="text-sm font-bold text-white group-hover:text-white/90">{% trans "Espace recruteur →" %}</p>
+                    </div>
+                </a>
+                <div>
+                    <p class="text-xs text-white/60">{% trans "Vous êtes candidat ?" %}</p>
+                    <a href="{% url 'candidat:connexion' %}" class="text-sm text-white font-semibold hover:text-white/80 transition inline-flex items-center gap-1 mt-1">
+                        {% trans "Accéder à l'espace candidat" %} →
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Panneau droit (formulaire) ─────────────────────────── -->
+        <div class="flex-1 bg-white flex flex-col justify-center px-8 md:px-12 py-10">
+
+            <div class="max-w-sm mx-auto w-full">
+                <h2 class="text-2xl font-extrabold text-gray-900 mb-1">{% trans "Bienvenue 👋" %}</h2>
+                <p class="text-sm text-gray-500 mb-8">
+                    {% trans "Espace réservé aux" %} <strong>{% trans "administrateurs" %}</strong> : {% trans "propriétaires d'entreprise et recruteurs ayant le rôle Administrateur." %}
+                </p>
+
+                {% if error %}
+                <div class="mb-5 px-4 py-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2 text-sm text-red-700">
+                    <span class="mt-0.5">⚠️</span>
+                    <div class="flex-1">
+                        <p>{{ error }}</p>
+                        {% if redirect_recruteur %}
+                        <a href="{% url 'entreprise:recruteur_connexion' %}"
+                           class="inline-flex items-center gap-1 mt-2 font-bold text-red-800 hover:underline">
+                            {% trans "Aller à l'espace recruteur" %} →
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <form method="post" class="space-y-5">
+                    {% csrf_token %}
+
+                    <!-- Email -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">
+                            {% trans "Email professionnel" %}
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">✉️</span>
+                            <input type="email" name="email" value="{{ email|default:'' }}"
+                                   placeholder="{% trans "contact@monentreprise.ci" %}"
+                                   class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition text-sm"
+                                   required autofocus>
+                        </div>
+                    </div>
+
+                    <!-- Mot de passe -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">
+                            {% trans "Mot de passe" %}
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔒</span>
+                            <input :type="showPass ? 'text' : 'password'" name="motPasse"
+                                   placeholder="••••••••"
+                                   class="w-full pl-10 pr-10 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition text-sm"
+                                   required>
+                            <button type="button" @click="showPass = !showPass"
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm pass-toggle">
+                                <span x-text="showPass ? '🙈' : '👁️'"></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Options -->
+                    <div class="flex items-center justify-between text-sm">
+                        <label class="flex items-center gap-2 text-gray-600 cursor-pointer">
+                            <input type="checkbox" class="rounded border-gray-300 text-green-600 focus:ring-green-400">
+                            <span>{% trans "Se souvenir de moi" %}</span>
+                        </label>
+                        <a href="{% url 'entreprise:mot_de_passe_oublie' %}" class="text-green-600 hover:text-green-700 font-medium transition">
+                            {% trans "Mot de passe oublié ?" %}
+                        </a>
+                    </div>
+
+                    <!-- Bouton -->
+                    <button type="submit"
+                            class="w-full py-3 rounded-xl font-bold text-white text-sm transition-all duration-200 hover:opacity-90 hover:shadow-lg active:scale-95"
+                            style="background: linear-gradient(135deg, #009A44, #007a36);">
+                        {% trans "Se connecter" %} →
+                    </button>
+
+                    <!-- Séparateur -->
+                    <div class="relative flex items-center gap-3 py-2">
+                        <div class="flex-1 h-px bg-gray-200"></div>
+                        <span class="text-xs text-gray-400">{% trans "ou" %}</span>
+                        <div class="flex-1 h-px bg-gray-200"></div>
+                    </div>
+
+                    <!-- Lien inscription -->
+                    <p class="text-center text-sm text-gray-600">
+                        {% trans "Pas encore de compte ?" %}
+                        <a href="{% url 'entreprise:inscription' %}" class="font-bold hover:underline" style="color:#009A44;">
+                            {% trans "Créer mon espace entreprise" %}
+                        </a>
+                    </p>
+
+                    <!-- Bloc recruteur visible -->
+                    <a href="{% url 'entreprise:recruteur_connexion' %}"
+                       class="flex items-center gap-3 w-full px-4 py-3 rounded-xl border-2 border-green-200 bg-green-50 hover:bg-green-100 hover:border-green-400 transition-all duration-200 group">
+                        <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0"
+                             style="background: linear-gradient(135deg, #009A44, #007a36);">
+                            🎯
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs text-gray-500 leading-none mb-0.5">{% trans "Recruteur RH, Manager ou Lecteur ?" %}</p>
+                            <p class="text-sm font-bold text-green-700 group-hover:text-green-800">{% trans "Accéder à l'espace recruteur" %}</p>
+                        </div>
+                        <span class="text-green-500 group-hover:translate-x-1 transition-transform">→</span>
+                    </a>
+
+                    <!-- Lien candidat mobile -->
+                    <p class="text-center text-xs text-gray-400 lg:hidden">
+                        {% trans "Vous êtes candidat ?" %}
+                        <a href="{% url 'candidat:connexion' %}" class="text-gray-500 hover:underline">{% trans "Espace candidat" %}</a>
+                    </p>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

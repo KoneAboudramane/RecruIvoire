@@ -1,0 +1,364 @@
+﻿{% extends "candidat/base_auth.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Inscription" %} — {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+<style>
+    .strength-bar { height: 4px; border-radius: 9999px; transition: width .3s, background .3s; }
+    [x-cloak] { display: none !important; }
+
+    /* ── Mode sombre ─────────────────────────────────────────────── */
+
+    /* Carte principale */
+    html.dark .inscription-card {
+        background: #1e293b !important;
+        border-color: #334155 !important;
+    }
+
+    /* Bloc newsletter */
+    html.dark .newsletter-block {
+        background: rgba(201,96,16,.08) !important;
+        border-color: rgba(201,96,16,.3) !important;
+    }
+    html.dark .newsletter-block .text-gray-700 { color: #e2e8f0 !important; }
+    html.dark .newsletter-block .text-gray-500 { color: #94a3b8 !important; }
+    html.dark .newsletter-block .text-gray-400 { color: #64748b !important; }
+    html.dark .newsletter-block .text-gray-500.uppercase { color: #64748b !important; }
+    html.dark .newsletter-block svg  { color: #94a3b8 !important; }
+
+    /* Séparateur "Déjà inscrit ?" */
+    html.dark .separator-text {
+        background: #1e293b !important;
+        color: #64748b !important;
+    }
+    html.dark .separator-line { border-color: #334155 !important; }
+
+    /* Barres de force mot de passe (inactive) */
+    html.dark .strength-bar-inactive { background: #334155 !important; }
+
+    /* Bloc erreurs */
+    html.dark .error-block {
+        background: rgba(239,68,68,.1) !important;
+        border-color: rgba(239,68,68,.3) !important;
+    }
+    html.dark .error-block p { color: #fca5a5 !important; }
+
+    /* Bouton "Se connecter" */
+    html.dark .btn-connexion {
+        border-color: rgba(0,154,68,.5) !important;
+        color: #4ade80 !important;
+    }
+    html.dark .btn-connexion:hover { background: rgba(0,154,68,.1) !important; }
+
+    /* ── Mode NOIR (OLED) ─────────────────────────────────────── */
+    html.noir .inscription-card {
+        background: #0d0d0d !important;
+        border-color: #222 !important;
+    }
+
+    html.noir .newsletter-block {
+        background: rgba(201,96,16,.06) !important;
+        border-color: rgba(201,96,16,.24) !important;
+    }
+    html.noir .newsletter-block .text-gray-700 { color: #e2e8f0 !important; }
+    html.noir .newsletter-block .text-gray-500 { color: #94a3b8 !important; }
+    html.noir .newsletter-block .text-gray-400 { color: #64748b !important; }
+    html.noir .newsletter-block .text-gray-500.uppercase { color: #64748b !important; }
+    html.noir .newsletter-block svg  { color: #94a3b8 !important; }
+
+    html.noir .separator-text {
+        background: #0d0d0d !important;
+        color: #64748b !important;
+    }
+    html.noir .separator-line { border-color: #222 !important; }
+
+    html.noir .strength-bar-inactive { background: #222 !important; }
+
+    html.noir .error-block {
+        background: rgba(239,68,68,.08) !important;
+        border-color: rgba(239,68,68,.24) !important;
+    }
+    html.noir .error-block p { color: #fca5a5 !important; }
+
+    html.noir .btn-connexion {
+        border-color: rgba(0,154,68,.4) !important;
+        color: #4ade80 !important;
+    }
+    html.noir .btn-connexion:hover { background: rgba(0,154,68,.08) !important; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="w-full max-w-4xl mx-auto py-10">
+
+  <!-- Carte 2 colonnes -->
+  <div class="inscription-card bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden flex flex-col lg:flex-row">
+
+    <!-- ── Colonne gauche : visuel ─────────────────────────────────── -->
+    <div class="lg:w-5/12 flex flex-col justify-between p-6 lg:p-10 text-white relative overflow-hidden"
+         style="background: linear-gradient(145deg, #2e7d52 0%, #1e5c3a 50%, #005a28 100%);">
+
+      <!-- Formes décoratives -->
+      <div class="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10" style="background:#fff; transform:translate(30%,-30%);"></div>
+      <div class="absolute bottom-0 left-0 w-64 h-64 rounded-full opacity-10" style="background:#fff; transform:translate(-30%,30%);"></div>
+      <div class="absolute top-1/2 right-4 w-24 h-24 rounded-full opacity-5" style="background:#fff;"></div>
+
+      <!-- Haut -->
+      <div class="relative">
+        <div class="flex items-center gap-2 mb-8">
+          {% if logo_site.afficher_image %}
+            <img src="{{ logo_site.logo_image.url }}" alt="{{ logo_site.nom_site }}" class="h-8 object-contain brightness-0 invert">
+          {% endif %}
+          {% if logo_site.afficher_texte %}
+            <span class="text-xl font-extrabold tracking-tight">{{ logo_site.nom_site }}</span>
+          {% endif %}
+        </div>
+        <h2 class="text-3xl font-extrabold leading-tight mb-3">
+          {% trans "Démarrez votre" %}<br>{% trans "carrière ici" %}
+        </h2>
+        <p class="text-white/80 text-sm leading-relaxed">
+          {% trans "Créez votre profil en quelques minutes et accédez à tous nos outils de recherche d'emploi." %}
+        </p>
+      </div>
+
+      <!-- Illustration centrale SVG -->
+      <div class="relative flex justify-center py-6">
+        <svg viewBox="0 0 200 180" class="w-52 opacity-90" xmlns="http://www.w3.org/2000/svg">
+          <!-- Feuille de CV principale -->
+          <rect x="50" y="30" width="100" height="130" rx="8" fill="rgba(255,255,255,.2)" stroke="rgba(255,255,255,.5)" stroke-width="2"/>
+          <!-- En-tête CV -->
+          <rect x="50" y="30" width="100" height="35" rx="8" fill="rgba(255,255,255,.3)"/>
+          <circle cx="72" cy="47" r="10" fill="rgba(255,255,255,.4)"/>
+          <rect x="87" y="40" width="40" height="5" rx="2.5" fill="rgba(255,255,255,.7)"/>
+          <rect x="87" y="49" width="28" height="3.5" rx="1.75" fill="rgba(255,255,255,.4)"/>
+          <!-- Lignes contenu -->
+          <rect x="62" y="76" width="20" height="3" rx="1.5" fill="rgba(255,255,255,.6)"/>
+          <rect x="62" y="83" width="76" height="3" rx="1.5" fill="rgba(255,255,255,.35)"/>
+          <rect x="62" y="89" width="60" height="3" rx="1.5" fill="rgba(255,255,255,.35)"/>
+          <rect x="62" y="95" width="68" height="3" rx="1.5" fill="rgba(255,255,255,.35)"/>
+          <rect x="62" y="108" width="20" height="3" rx="1.5" fill="rgba(255,255,255,.6)"/>
+          <rect x="62" y="115" width="76" height="3" rx="1.5" fill="rgba(255,255,255,.35)"/>
+          <rect x="62" y="121" width="50" height="3" rx="1.5" fill="rgba(255,255,255,.35)"/>
+          <rect x="62" y="134" width="20" height="3" rx="1.5" fill="rgba(255,255,255,.6)"/>
+          <rect x="62" y="141" width="64" height="3" rx="1.5" fill="rgba(255,255,255,.35)"/>
+          <!-- Badge envoi -->
+          <circle cx="152" cy="40" r="12" fill="#c96010"/>
+          <path d="M146 40l4 4 8-8" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <!-- Étoiles déco -->
+          <circle cx="35" cy="60" r="3" fill="rgba(255,255,255,.5)"/>
+          <circle cx="30" cy="85" r="2" fill="rgba(255,255,255,.3)"/>
+          <circle cx="170" cy="90" r="2.5" fill="rgba(255,255,255,.4)"/>
+          <circle cx="168" cy="115" r="1.5" fill="rgba(255,255,255,.3)"/>
+          <!-- Flèche envoi -->
+          <path d="M160 60 Q175 75 165 95" stroke="rgba(255,255,255,.4)" stroke-width="1.5" stroke-dasharray="4 3" fill="none"/>
+          <polygon points="163,95 168,100 170,93" fill="rgba(255,255,255,.4)"/>
+        </svg>
+      </div>
+
+      <!-- Bas : avantages -->
+      <div class="relative flex flex-col gap-3">
+        <div class="flex items-center gap-3 bg-white/15 rounded-xl px-4 py-3 backdrop-blur-sm">
+          <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style="background:rgba(255,255,255,.25);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M20 6L9 17l-5-5"/></svg>
+          </div>
+          <span class="text-sm font-medium">{% trans "16 modèles de CV professionnels" %}</span>
+        </div>
+        <div class="flex items-center gap-3 bg-white/15 rounded-xl px-4 py-3 backdrop-blur-sm">
+          <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style="background:rgba(255,255,255,.25);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M20 6L9 17l-5-5"/></svg>
+          </div>
+          <span class="text-sm font-medium">{% trans "Lettres de motivation en un clic" %}</span>
+        </div>
+        <div class="flex items-center gap-3 bg-white/15 rounded-xl px-4 py-3 backdrop-blur-sm">
+          <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style="background:rgba(255,255,255,.25);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M20 6L9 17l-5-5"/></svg>
+          </div>
+          <span class="text-sm font-medium">{% trans "Portfolio en ligne partageable" %}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Colonne droite : formulaire ────────────────────────────── -->
+    <div class="lg:w-7/12 flex flex-col justify-center p-6 lg:p-10">
+
+      <h1 class="text-2xl font-extrabold text-gray-800 mb-1">{% trans "Créer un compte" %}</h1>
+      <p class="text-gray-500 text-sm mb-7">{% trans "Rejoignez" %} {{ logo_site.nom_site }} — {% trans "c'est gratuit" %}</p>
+
+      <form method="post" novalidate x-data="pwdEval()" @input="onInput($event)">
+        {% csrf_token %}
+
+        <!-- Prénom + Nom -->
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label for="id_prenom" class="block text-sm font-medium text-gray-700 mb-1">{% trans "Prénom" %} <span class="text-red-500">*</span></label>
+            {{ form.prenom }}
+            {% if form.prenom.errors %}<p class="mt-1 text-xs text-red-600">{{ form.prenom.errors.0 }}</p>{% endif %}
+          </div>
+          <div>
+            <label for="id_nom" class="block text-sm font-medium text-gray-700 mb-1">{% trans "Nom" %} <span class="text-red-500">*</span></label>
+            {{ form.nom }}
+            {% if form.nom.errors %}<p class="mt-1 text-xs text-red-600">{{ form.nom.errors.0 }}</p>{% endif %}
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div class="mb-4">
+          <label for="id_email" class="block text-sm font-medium text-gray-700 mb-1">{% trans "Adresse email" %} <span class="text-red-500">*</span></label>
+          {{ form.email }}
+          {% if form.email.errors %}<p class="mt-1 text-xs text-red-600">{{ form.email.errors.0 }}</p>{% endif %}
+        </div>
+
+        <!-- Mot de passe -->
+        <div class="mb-4">
+          <label for="id_password1" class="block text-sm font-medium text-gray-700 mb-1">{% trans "Mot de passe" %} <span class="text-red-500">*</span></label>
+          {{ form.password1 }}
+          {% if form.password1.errors %}<p class="mt-1 text-xs text-red-600">{{ form.password1.errors.0 }}</p>{% endif %}
+          <p class="mt-1 text-xs text-gray-400">{% trans "Minimum 8 caractères." %}</p>
+
+          <!-- Indicateur de force -->
+          <div class="mt-2 space-y-1" x-show="pwd.length > 0" x-cloak>
+              <div class="flex gap-1">
+                  <template x-for="i in 4" :key="i">
+                      <div class="strength-bar flex-1"
+                           :style="'background:' + (i <= strength.score ? strength.color : (document.documentElement.classList.contains('dark') ? '#334155' : '#e5e7eb')) + '; width:100%;'"></div>
+                  </template>
+              </div>
+              <p class="text-xs font-semibold" :style="'color:' + strength.color" x-text="strength.label"></p>
+          </div>
+        </div>
+
+        <!-- Confirmation -->
+        <div class="mb-5">
+          <label for="id_password2" class="block text-sm font-medium text-gray-700 mb-1">{% trans "Confirmer le mot de passe" %} <span class="text-red-500">*</span></label>
+          {{ form.password2 }}
+          {% if form.password2.errors %}<p class="mt-1 text-xs text-red-600">{{ form.password2.errors.0 }}</p>{% endif %}
+          <p x-show="confirm && pwd === confirm" x-cloak class="mt-1 text-xs font-semibold text-green-600">
+              {% trans "Les mots de passe correspondent" %}
+          </p>
+          <p x-show="confirm && pwd !== confirm" x-cloak class="mt-1 text-xs font-semibold text-red-600">
+              {% trans "Les mots de passe ne correspondent pas" %}
+          </p>
+        </div>
+
+        <!-- RGPD -->
+        <div class="flex items-start gap-3 mb-5 p-3 bg-gray-50 rounded-xl border border-gray-200">
+          {{ form.consentementRGPD }}
+          <label for="id_consentementRGPD" class="text-xs text-gray-600 cursor-pointer leading-relaxed">
+            {% trans "J'accepte les" %} <a href="{% url 'contenu:confidentialite' %}" target="_blank" class="underline font-medium" style="color:#c96010;">{% trans "conditions d'utilisation et la politique de confidentialité" %}</a>
+          </label>
+          {% if form.consentementRGPD.errors %}<p class="mt-1 text-xs text-red-600">{{ form.consentementRGPD.errors.0 }}</p>{% endif %}
+        </div>
+
+        <!-- Newsletter -->
+        <div class="newsletter-block mb-5 rounded-xl border border-orange-200 bg-orange-50 p-4" x-data="{ouvert: false}">
+          <button type="button" @click="ouvert = !ouvert"
+                  class="flex w-full items-center justify-between text-left">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">📬</span>
+              <div>
+                <p class="text-sm font-semibold text-gray-700">{% trans "Newsletter" %} <span class="text-xs font-normal text-gray-400 ml-1">({% trans "optionnel" %})</span></p>
+                <p class="text-xs text-gray-500">{% trans "Choisissez les emails que vous souhaitez recevoir" %}</p>
+              </div>
+            </div>
+            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="ouvert ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+
+          <div x-show="ouvert" x-cloak x-transition class="mt-4 space-y-3">
+            <!-- Options générales -->
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">{% trans "Général" %}</p>
+            <label class="flex items-start gap-3 cursor-pointer">
+              {{ form.nl_offres_semaine }}
+              <span class="text-sm text-gray-700">{% trans "Les meilleures offres d'emploi chaque semaine" %}</span>
+            </label>
+            <label class="flex items-start gap-3 cursor-pointer">
+              {{ form.nl_conseils }}
+              <span class="text-sm text-gray-700">{% trans "Conseils pour votre CV et vos entretiens" %}</span>
+            </label>
+            <label class="flex items-start gap-3 cursor-pointer">
+              {{ form.nl_actualites }}
+              <span class="text-sm text-gray-700">{% trans "Actualités de la plateforme" %}</span>
+            </label>
+
+            <!-- Options individuelles -->
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-wider pt-2">{% trans "Personnalisé selon mon profil" %}</p>
+            <label class="flex items-start gap-3 cursor-pointer">
+              {{ form.nl_offres_perso }}
+              <span class="text-sm text-gray-700">{% trans "Offres correspondant à mes compétences et secteur" %}</span>
+            </label>
+            <label class="flex items-start gap-3 cursor-pointer">
+              {{ form.nl_profil_consulte }}
+              <span class="text-sm text-gray-700">{% trans "Quand un recruteur consulte mon profil" %}</span>
+            </label>
+            <label class="flex items-start gap-3 cursor-pointer">
+              {{ form.nl_resume_candidatures }}
+              <span class="text-sm text-gray-700">{% trans "Résumé hebdomadaire de mes candidatures" %}</span>
+            </label>
+          </div>
+        </div>
+
+        {% if form.non_field_errors %}
+          <div class="error-block mb-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+            {% for error in form.non_field_errors %}<p class="text-sm text-red-700">{{ error }}</p>{% endfor %}
+          </div>
+        {% endif %}
+
+        <button type="submit"
+          class="w-full py-3 rounded-xl text-white font-bold text-sm transition hover:opacity-90 active:scale-95"
+          style="background-color:#2e7d52;">
+          {% trans "Créer mon compte" %}
+        </button>
+      </form>
+
+      <div class="relative my-5">
+        <div class="absolute inset-0 flex items-center"><div class="separator-line w-full border-t border-gray-200"></div></div>
+        <div class="relative flex justify-center text-xs text-gray-400"><span class="separator-text bg-white px-3">{% trans "Déjà inscrit ?" %}</span></div>
+      </div>
+
+      <a href="{% url 'candidat:connexion' %}"
+        class="btn-connexion block w-full text-center py-3 rounded-xl border text-sm font-semibold transition hover:bg-green-50"
+        style="border-color:#2e7d52; color:#2e7d52;">
+        {% trans "Se connecter" %}
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block js_extra %}
+<script>
+function pwdEval() {
+    return {
+        pwd: '',
+        confirm: '',
+        strength: { score: 0, color: '#e5e7eb', label: '' },
+
+        onInput(e) {
+            if (!e.target || !e.target.name) return;
+            if (e.target.name === 'password1') {
+                this.pwd = e.target.value;
+                this.calcStrength();
+            } else if (e.target.name === 'password2') {
+                this.confirm = e.target.value;
+            }
+        },
+
+        calcStrength() {
+            const p = this.pwd;
+            let sc = 0;
+            if (p.length >= 8)           sc++;
+            if (/[A-Z]/.test(p))         sc++;
+            if (/[0-9]/.test(p))         sc++;
+            if (/[^A-Za-z0-9]/.test(p))  sc++;
+            const labels = ['', 'Faible', 'Moyen', 'Fort', 'Très fort'];
+            const colors = ['', '#ef4444', '#f59e0b', '#3b82f6', '#2e7d52'];
+            this.strength = {
+                score: sc,
+                color: colors[sc] || '#e5e7eb',
+                label: labels[sc] || '',
+            };
+        },
+    };
+}
+</script>
+{% endblock %}

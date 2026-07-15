@@ -1,0 +1,20 @@
+{{ logo_site.nom_site }} — Newsletter
+======================================
+
+Bonjour,
+
+Vous êtes bien inscrit(e) à la newsletter de {{ logo_site.nom_site }} !
+
+Chaque semaine, recevez dans votre boîte mail :
+- Les meilleures offres d'emploi sélectionnées pour vous
+- Des conseils pour améliorer votre CV et votre lettre de motivation
+- Des astuces pour réussir vos entretiens
+- Les actualités du marché de l'emploi ivoirien
+
+---
+
+Pour vous désabonner à tout moment, cliquez sur le lien suivant :
+{{ desabo_url }}
+
+---
+© {{ logo_site.nom_site }} · Abidjan, Côte d'Ivoire

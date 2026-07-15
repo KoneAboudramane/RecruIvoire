@@ -1,0 +1,911 @@
+{% extends base_template|default:"candidat/base.html" %}
+{% load i18n static %}
+
+{% block titre %}{{ candidat.prenom }} {{ candidat.nom }} — Portfolio{% endblock %}
+
+{% block css_extra %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════════════════════════════════════
+   ProMan Glass — Moderne Clair Premium
+   Prefix : .mc-
+═══════════════════════════════════════════════════════════ */
+.mc {
+  --mc-accent:  {{ couleur_accent|default:'#6366f1' }};
+  --mc-accent2: color-mix(in srgb, var(--mc-accent) 12%, transparent);
+  --mc-accent3: color-mix(in srgb, var(--mc-accent) 6%,  #fff);
+  --mc-dark:    #0f172a;
+  --mc-text:    #475569;
+  --mc-mute:    #94a3b8;
+  --mc-border:  #e2e8f0;
+  --mc-bg:      #ffffff;
+  --mc-alt:     #f8f8ff;
+  --mc-font:    'Inter',   system-ui, sans-serif;
+  --mc-fhead:   'Poppins', system-ui, sans-serif;
+  --mc-shadow:  0 4px 24px rgba(0,0,0,.07);
+  --mc-shadow-lg: 0 16px 48px rgba(0,0,0,.11);
+
+  font-family: var(--mc-font);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--mc-text);
+  background: var(--mc-bg);
+  min-height: 100vh;
+}
+.mc *, .mc *::before, .mc *::after { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+.mc a  { text-decoration: none; transition: .3s; }
+.mc h1,.mc h2,.mc h3,.mc h4,.mc h5 { font-family: var(--mc-fhead); color: var(--mc-dark); margin: 0; line-height: 1.2; }
+.mc ul { margin: 0; padding: 0; list-style: none; }
+.mc img { max-width: 100%; display: block; }
+
+/* ── Owner banner ── */
+.mc-owner {
+  background: var(--mc-accent); color: #fff;
+  padding: 9px 24px; font-size: 13px; font-weight: 600;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  position: relative; z-index: 46;
+}
+.mc-owner a {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 14px; border-radius: 50px;
+  background: #fff; color: var(--mc-accent);
+  font-size: 12px; font-weight: 700; transition: opacity .2s;
+}
+.mc-owner a:hover { opacity: .85; }
+
+/* ══ NAVBAR INTERNE ══ */
+.mc-navbar {
+  position: sticky; top: 60px; z-index: 44;
+  background: rgba(255,255,255,.95);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--mc-border);
+  box-shadow: 0 2px 16px rgba(0,0,0,.05);
+  transition: top .1s linear;
+}
+@media (min-width: 768px) { .mc-navbar { top: 76px; } }
+
+.mc-nav-inner {
+  max-width: 1200px; margin: 0 auto; padding: 0 32px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: relative;
+}
+.mc-nav-logo {
+  font-family: var(--mc-fhead); font-size: 20px; font-weight: 900;
+  color: var(--mc-dark); padding: 14px 0; letter-spacing: -.5px;
+}
+.mc-nav-logo span { color: var(--mc-accent); }
+
+.mc-navlinks { display: flex; align-items: center; gap: 0; }
+.mc-navlinks a {
+  padding: 18px 16px; font-size: 14px; font-weight: 600;
+  color: var(--mc-text); position: relative; white-space: nowrap;
+}
+.mc-navlinks a::after {
+  content: ''; position: absolute; bottom: 0; left: 16px; right: 16px;
+  height: 2px; background: var(--mc-accent); transform: scaleX(0); transition: transform .3s;
+}
+.mc-navlinks a:hover, .mc-navlinks a.active { color: var(--mc-accent); }
+.mc-navlinks a:hover::after, .mc-navlinks a.active::after { transform: scaleX(1); }
+
+.mc-nav-toggle {
+  display: none; padding: 8px 0;
+  background: none; border: none; cursor: pointer;
+  font-size: 24px; color: var(--mc-dark);
+}
+@media (max-width: 900px) {
+  .mc-nav-toggle { display: block; }
+  .mc-navlinks {
+    display: none; flex-direction: column; align-items: stretch;
+    position: absolute; top: 100%; left: 0; right: 0;
+    background: #fff; border-top: 1px solid var(--mc-border);
+    padding: 8px 24px 16px; gap: 0; z-index: 100;
+    box-shadow: 0 8px 24px rgba(0,0,0,.08);
+  }
+  .mc-navlinks.open { display: flex; }
+  .mc-navlinks a { padding: 11px 0; border-bottom: 1px solid var(--mc-border); }
+  .mc-navlinks a::after { display: none; }
+  .mc-navlinks a:last-child { border-bottom: none; }
+}
+
+/* ── Layout général ── */
+.mc-container { max-width: 1200px; margin: 0 auto; padding: 0 32px; }
+.mc-section { padding: 96px 0; scroll-margin-top: 140px; }
+.mc-section-alt { background: var(--mc-alt); }
+
+.mc-section-head { margin-bottom: 64px; }
+.mc-section-head.center { text-align: center; }
+.mc-section-head .mc-eyebrow {
+  font-size: 12px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--mc-accent); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 10px;
+}
+.mc-section-head.center .mc-eyebrow { justify-content: center; }
+.mc-section-head .mc-eyebrow::before {
+  content: ''; width: 28px; height: 2px; background: var(--mc-accent); display: block;
+}
+.mc-section-head h2 { font-size: clamp(34px,4vw,50px); font-weight: 800; color: var(--mc-dark); }
+.mc-section-head p  { color: var(--mc-mute); margin-top: 12px; font-size: 16px; max-width: 560px; }
+.mc-section-head.center p { margin-left: auto; margin-right: auto; }
+
+/* ── Boutons ── */
+.mc-btn {
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 13px 30px; border-radius: 10px;
+  font-family: var(--mc-fhead); font-size: 14px; font-weight: 700;
+  cursor: pointer; border: 2px solid transparent; transition: .3s;
+}
+.mc-btn-primary { background: var(--mc-accent); color: #fff; border-color: var(--mc-accent); box-shadow: 0 6px 20px var(--mc-accent2); }
+.mc-btn-primary:hover { background: transparent; color: var(--mc-accent); box-shadow: none; }
+.mc-btn-outline { background: transparent; color: var(--mc-dark); border-color: var(--mc-border); }
+.mc-btn-outline:hover { border-color: var(--mc-accent); color: var(--mc-accent); }
+
+/* ══ HERO ══ */
+#mc-home {
+  min-height: calc(100vh - 160px);
+  display: flex; align-items: center;
+  padding: 80px 0; background: var(--mc-bg);
+  position: relative; overflow: hidden;
+}
+/* Décoration fond hero */
+#mc-home::before {
+  content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 42%;
+  background: var(--mc-alt);
+  clip-path: polygon(10% 0, 100% 0, 100% 100%, 0% 100%);
+}
+#mc-home::after {
+  content: '';
+  position: absolute; right: 10%; top: 20%; width: 320px; height: 320px;
+  background: var(--mc-accent2); border-radius: 50%; filter: blur(64px);
+}
+.mc-hero-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 64px; align-items: center; position: relative; z-index: 1;
+}
+@media (max-width: 900px) {
+  .mc-hero-grid { grid-template-columns: 1fr; text-align: center; gap: 48px; }
+  #mc-home { min-height: auto; padding: 56px 0; }
+  #mc-home::before, #mc-home::after { display: none; }
+}
+.mc-hero-eyebrow {
+  font-size: 13px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--mc-accent); margin-bottom: 18px;
+  display: flex; align-items: center; gap: 10px;
+}
+@media (max-width: 900px) { .mc-hero-eyebrow { justify-content: center; } }
+.mc-hero-eyebrow::before { content: ''; width: 30px; height: 2px; background: var(--mc-accent); }
+.mc-hero-name {
+  font-size: clamp(48px, 6.5vw, 88px); font-weight: 900; color: var(--mc-dark);
+  line-height: 1.05; margin-bottom: 20px; letter-spacing: -.03em;
+}
+.mc-hero-name .accent { color: var(--mc-accent); }
+.mc-typed-line { font-size: 20px; font-weight: 500; color: var(--mc-mute); margin-bottom: 24px; min-height: 32px; }
+.mc-typed-word { color: var(--mc-accent); font-weight: 700; }
+.mc-cursor { animation: mc-blink .7s infinite; }
+@keyframes mc-blink { 50% { opacity: 0; } }
+.mc-hero-desc { font-size: 16px; line-height: 1.8; color: var(--mc-text); max-width: 480px; margin-bottom: 38px; }
+@media (max-width: 900px) { .mc-hero-desc { margin: 0 auto 36px; } }
+.mc-hero-btns { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 40px; }
+@media (max-width: 900px) { .mc-hero-btns { justify-content: center; } }
+.mc-social-row { display: flex; gap: 10px; flex-wrap: wrap; }
+@media (max-width: 900px) { .mc-social-row { justify-content: center; } }
+.mc-social-row a {
+  width: 42px; height: 42px; border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--mc-alt); border: 1px solid var(--mc-border);
+  color: var(--mc-text); font-size: 17px; transition: .3s;
+}
+.mc-social-row a:hover { background: var(--mc-accent); border-color: var(--mc-accent); color: #fff; }
+
+/* Photo hero */
+.mc-hero-photo-wrap { position: relative; display: flex; justify-content: center; }
+.mc-hero-photo-bg {
+  position: absolute; inset: 16px; border-radius: 24px;
+  background: var(--mc-accent2);
+  transform: translate(14px, 14px);
+}
+.mc-hero-photo {
+  position: relative; width: 420px; height: 480px; border-radius: 24px; overflow: hidden;
+  border: 1px solid var(--mc-border);
+  box-shadow: var(--mc-shadow-lg);
+  background: var(--mc-accent3);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mc-fhead); font-size: 120px; font-weight: 900; color: var(--mc-accent);
+}
+.mc-hero-photo img { width: 100%; height: 100%; object-fit: cover; }
+@media (max-width: 900px) { .mc-hero-photo { width: 280px; height: 320px; font-size: 80px; } }
+
+/* Badges flottants sur la photo */
+.mc-badge-float {
+  position: absolute; display: flex; align-items: center; gap: 8px;
+  background: #fff; border-radius: 14px; padding: 10px 16px;
+  box-shadow: var(--mc-shadow); font-family: var(--mc-fhead);
+}
+.mc-badge-float.top-left { top: -18px; left: -24px; }
+.mc-badge-float.bot-right { bottom: -18px; right: -24px; }
+.mc-badge-float .val { font-size: 22px; font-weight: 800; color: var(--mc-dark); }
+.mc-badge-float .lbl { font-size: 11px; color: var(--mc-mute); font-weight: 500; }
+.mc-badge-float .icon { font-size: 24px; color: var(--mc-accent); }
+
+/* ══ ABOUT ══ */
+.mc-about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center; }
+@media (max-width: 900px) { .mc-about-grid { grid-template-columns: 1fr; gap: 40px; } }
+
+.mc-about-img-wrap { position: relative; }
+.mc-about-img-bg {
+  position: absolute; inset: 0; border-radius: 20px;
+  background: var(--mc-accent2);
+  transform: translate(12px, 12px);
+}
+.mc-about-img {
+  position: relative; border-radius: 20px; overflow: hidden;
+  box-shadow: var(--mc-shadow-lg); background: var(--mc-alt);
+}
+.mc-about-img img { width: 100%; height: 440px; object-fit: cover; }
+.mc-about-img .fallback {
+  width: 100%; height: 440px; display: flex; align-items: center; justify-content: center;
+  font-size: 80px; color: var(--mc-accent); opacity: .18;
+}
+.mc-exp-badge {
+  position: absolute; bottom: -20px; right: -20px;
+  background: var(--mc-accent); color: #fff; border-radius: 16px;
+  padding: 16px 20px; text-align: center;
+  box-shadow: 0 8px 24px var(--mc-accent2); font-family: var(--mc-fhead);
+}
+.mc-exp-badge .num { font-size: 36px; font-weight: 900; line-height: 1; }
+.mc-exp-badge .txt { font-size: 12px; font-weight: 600; opacity: .85; }
+
+.mc-about-text .mc-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--mc-accent); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.mc-about-text .mc-eyebrow::before { content: ''; width: 24px; height: 2px; background: var(--mc-accent); }
+.mc-about-text h2 { font-size: clamp(28px,3.5vw,40px); font-weight: 800; margin-bottom: 20px; }
+.mc-about-text p { font-size: 15px; line-height: 1.85; color: var(--mc-text); margin-bottom: 14px; }
+.mc-about-feats { margin: 28px 0; display: flex; flex-direction: column; gap: 12px; }
+.mc-feat { display: flex; align-items: flex-start; gap: 12px; }
+.mc-feat-icon {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  background: var(--mc-accent2); display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: var(--mc-accent); margin-top: 2px;
+}
+.mc-feat span { font-size: 14px; color: var(--mc-text); }
+
+.mc-about-stats { display: flex; gap: 28px; flex-wrap: wrap; margin: 32px 0; padding: 24px 0; border-top: 1px solid var(--mc-border); border-bottom: 1px solid var(--mc-border); }
+.mc-about-stat { text-align: center; }
+.mc-about-stat .num { font-family: var(--mc-fhead); font-size: 40px; font-weight: 900; color: var(--mc-accent); line-height: 1; }
+.mc-about-stat .lbl { font-size: 12px; color: var(--mc-mute); text-transform: uppercase; letter-spacing: .07em; margin-top: 4px; font-weight: 600; }
+
+/* ══ COMPTEURS ══ */
+.mc-counters { display: grid; grid-template-columns: repeat(4,1fr); gap: 24px; }
+@media (max-width: 900px) { .mc-counters { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 500px) { .mc-counters { grid-template-columns: 1fr; } }
+.mc-counter-card {
+  padding: 36px 24px; text-align: center; border-radius: 20px;
+  background: #fff; border: 1px solid var(--mc-border);
+  box-shadow: var(--mc-shadow); transition: .3s;
+}
+.mc-counter-card:hover { transform: translateY(-6px); box-shadow: var(--mc-shadow-lg); border-color: var(--mc-accent); }
+.mc-counter-card .icon {
+  width: 58px; height: 58px; border-radius: 16px; margin: 0 auto 16px;
+  background: var(--mc-accent2); display: flex; align-items: center; justify-content: center;
+  font-size: 24px; color: var(--mc-accent);
+}
+.mc-counter-card .count { font-family: var(--mc-fhead); font-size: 44px; font-weight: 900; color: var(--mc-dark); line-height: 1; }
+.mc-counter-card p { font-size: 13px; color: var(--mc-mute); margin-top: 6px; text-transform: uppercase; letter-spacing: .07em; font-weight: 600; }
+
+/* ══ COMPÉTENCES ══ */
+.mc-skills-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; }
+@media (max-width: 768px) { .mc-skills-grid { grid-template-columns: 1fr; gap: 40px; } }
+.mc-skills-col h3 { font-size: 20px; font-weight: 700; margin-bottom: 28px; }
+.mc-skill { margin-bottom: 24px; }
+.mc-skill-hdr { display: flex; justify-content: space-between; margin-bottom: 9px; }
+.mc-skill-hdr span { font-size: 14px; font-weight: 600; color: var(--mc-dark); }
+.mc-skill-hdr .pct { font-size: 13px; font-weight: 700; color: var(--mc-accent); }
+.mc-track { height: 8px; background: var(--mc-border); border-radius: 50px; overflow: hidden; }
+.mc-bar {
+  height: 100%; width: 0; border-radius: 50px;
+  background: linear-gradient(90deg, var(--mc-accent), color-mix(in srgb, var(--mc-accent) 60%, #818cf8));
+  transition: width 1.4s cubic-bezier(.16,.84,.44,1);
+}
+
+/* Tabs parcours */
+.mc-tab-nav { display: flex; gap: 0; border-bottom: 2px solid var(--mc-border); margin-bottom: 28px; }
+.mc-tab-btn {
+  padding: 11px 24px; font-size: 14px; font-weight: 700;
+  color: var(--mc-mute); background: none; border: none;
+  border-bottom: 3px solid transparent; margin-bottom: -2px;
+  cursor: pointer; transition: .2s; font-family: var(--mc-fhead);
+}
+.mc-tab-btn.active { color: var(--mc-accent); border-bottom-color: var(--mc-accent); }
+.mc-tab-btn:hover { color: var(--mc-accent); }
+
+.mc-tl { position: relative; padding-left: 28px; }
+.mc-tl::before { content: ''; position: absolute; left: 7px; top: 4px; bottom: 4px; width: 2px; background: linear-gradient(to bottom, var(--mc-accent), var(--mc-border)); }
+.mc-tl-item {
+  position: relative; margin-bottom: 20px; padding: 22px 24px;
+  border-radius: 14px; background: #fff;
+  border: 1px solid var(--mc-border); box-shadow: var(--mc-shadow); transition: .25s;
+}
+.mc-tl-item:hover { border-color: var(--mc-accent); box-shadow: var(--mc-shadow-lg); transform: translateX(4px); }
+.mc-tl-item::before {
+  content: ''; position: absolute; left: -22px; top: 26px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--mc-accent); box-shadow: 0 0 0 4px var(--mc-accent2);
+}
+.mc-tl-item h4 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.mc-tl-meta { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 12px; border-radius: 50px; background: var(--mc-accent2); color: var(--mc-accent); margin-bottom: 6px; }
+.mc-tl-place { font-size: 13px; color: var(--mc-mute); }
+
+/* ══ PORTFOLIO ══ */
+.mc-filters { display: flex; gap: 0; justify-content: center; flex-wrap: wrap; margin-bottom: 36px; }
+.mc-filter-btn {
+  padding: 9px 22px; font-size: 13px; font-weight: 700;
+  color: var(--mc-text); background: none; border: none; cursor: pointer;
+  border-bottom: 2px solid transparent; transition: .25s;
+  font-family: var(--mc-fhead);
+}
+.mc-filter-btn.active, .mc-filter-btn:hover { color: var(--mc-accent); border-bottom-color: var(--mc-accent); }
+
+.mc-proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px,1fr)); gap: 28px; }
+.mc-proj-card {
+  border-radius: 20px; overflow: hidden; background: #fff;
+  border: 1px solid var(--mc-border); box-shadow: var(--mc-shadow); transition: .35s;
+}
+.mc-proj-card:hover { transform: translateY(-8px); box-shadow: var(--mc-shadow-lg); border-color: transparent; }
+.mc-proj-thumb { position: relative; height: 220px; overflow: hidden; background: var(--mc-alt); }
+.mc-proj-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s; }
+.mc-proj-card:hover .mc-proj-thumb img { transform: scale(1.07); }
+.mc-proj-thumb .mc-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 56px; color: var(--mc-accent); opacity: .18; }
+.mc-proj-overlay {
+  position: absolute; inset: 0;
+  background: rgba(99,102,241,.9);
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  opacity: 0; transition: .35s;
+}
+.mc-proj-card:hover .mc-proj-overlay { opacity: 1; }
+.mc-proj-overlay a {
+  width: 44px; height: 44px; border-radius: 12px; background: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--mc-accent); font-size: 18px; transition: .2s;
+}
+.mc-proj-overlay a:hover { background: var(--mc-dark); color: #fff; }
+.mc-proj-body { padding: 20px 22px; }
+.mc-proj-cat { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: var(--mc-accent); margin-bottom: 6px; }
+.mc-proj-body h4 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+.mc-proj-body p { font-size: 13px; color: var(--mc-mute); }
+
+/* ══ SERVICES ══ */
+.mc-services-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 26px; }
+.mc-service-card {
+  padding: 36px 30px; border-radius: 20px; background: #fff;
+  border: 1px solid var(--mc-border); box-shadow: var(--mc-shadow); transition: .35s;
+}
+.mc-service-card:hover { transform: translateY(-6px); box-shadow: var(--mc-shadow-lg); border-color: var(--mc-accent); }
+.mc-svc-icon {
+  width: 64px; height: 64px; border-radius: 18px; margin-bottom: 22px;
+  background: var(--mc-accent2); display: flex; align-items: center; justify-content: center;
+  font-size: 28px; color: var(--mc-accent); transition: transform .3s;
+}
+.mc-service-card:hover .mc-svc-icon { transform: scale(1.1); }
+.mc-service-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+.mc-service-card p { font-size: 14px; color: var(--mc-mute); line-height: 1.75; }
+.mc-svc-dots { display: flex; gap: 5px; margin-top: 18px; }
+.mc-svc-dot { width: 9px; height: 9px; border-radius: 50%; }
+
+/* ══ CONTACT ══ */
+.mc-contact-wrap {
+  max-width: 660px; margin: 0 auto; border-radius: 24px; overflow: hidden;
+  box-shadow: var(--mc-shadow-lg); border: 1px solid var(--mc-border);
+}
+.mc-contact-head {
+  background: var(--mc-accent); padding: 40px 40px 32px;
+}
+.mc-contact-head h3 { font-size: 26px; font-weight: 800; color: #fff; margin-bottom: 8px; }
+.mc-contact-head p  { color: rgba(255,255,255,.72); font-size: 15px; }
+.mc-contact-body { background: #fff; padding: 36px 40px; }
+.mc-info-row { display: flex; gap: 14px; margin-bottom: 20px; align-items: flex-start; }
+.mc-info-icon {
+  width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+  background: var(--mc-accent2); display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: var(--mc-accent);
+}
+.mc-info-row h5 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--mc-mute); margin-bottom: 2px; }
+.mc-info-row p  { font-size: 14px; color: var(--mc-dark); font-weight: 500; }
+.mc-info-row a  { color: var(--mc-dark); }
+.mc-info-row a:hover { color: var(--mc-accent); }
+.mc-cnt-socials { display: flex; gap: 10px; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--mc-border); flex-wrap: wrap; }
+.mc-cnt-socials a {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--mc-alt); border: 1px solid var(--mc-border);
+  font-size: 17px; color: var(--mc-text); transition: .2s;
+}
+.mc-cnt-socials a:hover { background: var(--mc-accent); border-color: var(--mc-accent); color: #fff; }
+
+/* ── Scroll top ── */
+.mc-scroll-top {
+  position: fixed; right: 22px; bottom: 22px;
+  width: 46px; height: 46px; border-radius: 12px;
+  background: var(--mc-accent); color: #fff;
+  display: none; align-items: center; justify-content: center;
+  border: none; cursor: pointer; font-size: 22px; z-index: 990;
+  box-shadow: 0 6px 20px var(--mc-accent2); transition: .3s;
+}
+.mc-scroll-top.show { display: flex; }
+.mc-scroll-top:hover { transform: translateY(-3px); box-shadow: 0 10px 28px var(--mc-accent2); }
+
+@media (max-width: 768px) {
+  .mc-section { padding: 64px 0; scroll-margin-top: 70px; }
+  .mc-section-head { margin-bottom: 44px; }
+  .mc-section-head h2 { font-size: 28px; }
+}
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="mc -mx-3 sm:-mx-6 -my-4 sm:-my-8"
+     x-data="moderneClair()"
+     x-init="init()">
+
+  {% if est_proprio %}
+  <div class="mc-owner">
+    <span><i class="bi bi-eye-fill" style="margin-right:6px;"></i>{% trans "Aperçu privé — visible uniquement par vous." %}</span>
+    <a href="{% url 'candidat:profil' %}?onglet=portfolio">{% trans "Modifier mon profil →" %}</a>
+  </div>
+  {% endif %}
+
+  <!-- ══ NAVBAR INTERNE ══ -->
+  <div class="mc-navbar" id="mc-nav">
+    <div class="mc-nav-inner">
+      <span class="mc-nav-logo">{{ candidat.prenom|slice:":1" }}<span>.</span></span>
+
+      <button class="mc-nav-toggle" @click="navOpen=!navOpen">
+        <i class="bi" :class="navOpen ? 'bi-x-lg' : 'bi-list'"></i>
+      </button>
+
+      <nav class="mc-navlinks" :class="{ open: navOpen }" @click.away="navOpen=false">
+        <a href="#mc-home"      :class="{ active: active==='home' }"      @click="navOpen=false">{% trans "Accueil" %}</a>
+        {% if params.showAbout %}
+        <a href="#mc-about"     :class="{ active: active==='about' }"     @click="navOpen=false">{% trans "À propos" %}</a>
+        {% endif %}
+        {% if params.showCompetences and rubriques.competences %}
+        <a href="#mc-skills"    :class="{ active: active==='skills' }"    @click="navOpen=false">{% trans "Compétences" %}</a>
+        <a href="#mc-services"  :class="{ active: active==='services' }"  @click="navOpen=false">{% trans "Services" %}</a>
+        {% endif %}
+        {% if params.showProjets and rubriques.projets %}
+        <a href="#mc-portfolio" :class="{ active: active==='portfolio' }" @click="navOpen=false">{% trans "Portfolio" %}</a>
+        {% endif %}
+        {% if params.showContact and candidat.email %}
+        <a href="#mc-contact"   :class="{ active: active==='contact' }"   @click="navOpen=false">{% trans "Contact" %}</a>
+        {% endif %}
+      </nav>
+    </div>
+  </div>
+
+  <!-- ═══ HERO ═══ -->
+  <section id="mc-home" class="mc-section" style="padding:80px 0;">
+    <div class="mc-container">
+      <div class="mc-hero-grid">
+
+        <div data-aos="fade-right">
+          <p class="mc-hero-eyebrow">{% if candidat.titreProfessionnel %}{{ candidat.titreProfessionnel }}{% else %}Portfolio{% endif %}</p>
+          <h1 class="mc-hero-name">
+            Bonjour, je suis<br><span class="accent">{{ candidat.prenom }} {{ candidat.nom }}</span>
+          </h1>
+          <div class="mc-typed-line">
+            Je suis&nbsp;<span class="mc-typed-word" x-text="typedWord"></span><span class="mc-cursor">|</span>
+          </div>
+          {% if candidat.biographie %}
+          <p class="mc-hero-desc">{{ candidat.biographie|truncatewords:30 }}</p>
+          {% elif candidat.sloganPortfolio %}
+          <p class="mc-hero-desc">« {{ candidat.sloganPortfolio }} »</p>
+          {% endif %}
+          <div class="mc-hero-btns">
+            {% if params.showProjets and rubriques.projets %}
+            <a href="#mc-portfolio" class="mc-btn mc-btn-primary"><i class="bi bi-grid"></i>{% trans "Voir mes projets" %}</a>
+            {% endif %}
+            {% if params.showContact and candidat.email %}
+            <a href="#mc-contact" class="mc-btn mc-btn-outline">{% trans "Me contacter" %}</a>
+            {% endif %}
+          </div>
+          {% if liens_sociaux %}
+          <div class="mc-social-row">
+            {% for lien in liens_sociaux|slice:":5" %}
+            <a href="{{ lien.url }}" target="_blank" rel="noopener" title="{{ lien.reseau.libelle }}">
+              <i class="bi {{ lien.reseau.bi_class }}"></i>
+            </a>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="mc-hero-photo-wrap" data-aos="fade-left" data-aos-delay="150">
+          <div class="mc-hero-photo-bg"></div>
+          <div class="mc-hero-photo">
+            {% if candidat.photoProfil %}
+              <img src="{{ candidat.photoProfil.url }}" alt="{{ candidat.prenom }} {{ candidat.nom }}">
+            {% else %}
+              {{ candidat.prenom|slice:":1"|upper }}{{ candidat.nom|slice:":1"|upper }}
+            {% endif %}
+          </div>
+          {% if rubriques.projets %}
+          <div class="mc-badge-float top-left">
+            <i class="bi bi-grid icon"></i>
+            <div><div class="val">{{ rubriques.projets|length }}+</div><div class="lbl">{% trans "Projets" %}</div></div>
+          </div>
+          {% endif %}
+          {% if annees_xp is not None %}
+          <div class="mc-badge-float bot-right">
+            <i class="bi bi-award icon"></i>
+            <div><div class="val">{{ annees_xp }}+</div><div class="lbl">{% trans "Ans d'exp." %}</div></div>
+          </div>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ ABOUT ═══ -->
+  {% if params.showAbout %}
+  <section id="mc-about" class="mc-section mc-section-alt">
+    <div class="mc-container">
+      <div class="mc-about-grid">
+
+        <div class="mc-about-img-wrap" data-aos="fade-right">
+          <div class="mc-about-img-bg"></div>
+          <div class="mc-about-img">
+            {% if candidat.photoProfil %}
+              <img src="{{ candidat.photoProfil.url }}" alt="{{ candidat.prenom }}">
+            {% else %}
+              <div class="fallback"><i class="bi bi-person-fill"></i></div>
+            {% endif %}
+          </div>
+          {% if annees_xp is not None %}
+          <div class="mc-exp-badge">
+            <div class="num">{{ annees_xp }}</div>
+            <div class="txt">{% trans "Ans d'expérience" %}</div>
+          </div>
+          {% endif %}
+        </div>
+
+        <div data-aos="fade-left" data-aos-delay="100">
+          <div class="mc-about-text">
+            <p class="mc-eyebrow">{% trans "Faire connaissance" %}</p>
+            <h2>{% if candidat.titreProfessionnel %}{{ candidat.titreProfessionnel }}{% else %}Passionné par mon métier{% endif %}</h2>
+            {% if candidat.biographie %}
+              {{ candidat.biographie|linebreaks }}
+            {% else %}
+              <p>{% trans "Bienvenue sur mon portfolio. Découvrez mon parcours, mes compétences et mes réalisations professionnelles." %}</p>
+              {% if candidat.sloganPortfolio %}<p>« {{ candidat.sloganPortfolio }} »</p>{% endif %}
+            {% endif %}
+          </div>
+          <div class="mc-about-feats">
+            <div class="mc-feat"><div class="mc-feat-icon"><i class="bi bi-check2"></i></div><span>{% trans "Disponible pour des missions freelance et des postes à temps plein." %}</span></div>
+            <div class="mc-feat"><div class="mc-feat-icon"><i class="bi bi-check2"></i></div><span>{% trans "Livraison de projets de qualité dans les délais et budgets convenus." %}</span></div>
+            <div class="mc-feat"><div class="mc-feat-icon"><i class="bi bi-check2"></i></div><span>{% trans "Communication transparente et réactive tout au long du projet." %}</span></div>
+          </div>
+          <div class="mc-about-stats">
+            {% if rubriques.projets %}<div class="mc-about-stat"><div class="num">{{ rubriques.projets|length }}+</div><div class="lbl">Projets</div></div>{% endif %}
+            {% if annees_xp is not None %}<div class="mc-about-stat"><div class="num">{{ annees_xp }}+</div><div class="lbl">Ans d'exp.</div></div>{% endif %}
+            {% if rubriques.competences %}<div class="mc-about-stat"><div class="num">{{ rubriques.competences|length }}</div><div class="lbl">Compétences</div></div>{% endif %}
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            {% if candidat.email %}<a href="mailto:{{ candidat.email }}" class="mc-btn mc-btn-primary"><i class="bi bi-chat-dots"></i>Discutons</a>{% endif %}
+            {% if params.showProjets and rubriques.projets %}<a href="#mc-portfolio" class="mc-btn mc-btn-outline"><i class="bi bi-grid"></i>Mes projets</a>{% endif %}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ═══ COMPTEURS ═══ -->
+  {% if rubriques.projets or rubriques.experiences or rubriques.formations or rubriques.competences %}
+  <section class="mc-section" style="padding:60px 0;">
+    <div class="mc-container">
+      <div class="mc-counters" data-aos="fade-up">
+        <div class="mc-counter-card" data-aos="fade-up" data-aos-delay="80">
+          <div class="icon"><i class="bi bi-emoji-smile"></i></div>
+          <span class="count" data-count="{{ rubriques.projets|length }}">0</span><p>{% trans "Réalisations" %}</p>
+        </div>
+        <div class="mc-counter-card" data-aos="fade-up" data-aos-delay="160">
+          <div class="icon"><i class="bi bi-briefcase"></i></div>
+          <span class="count" data-count="{{ rubriques.experiences|length }}">0</span><p>{% trans "Expériences" %}</p>
+        </div>
+        <div class="mc-counter-card" data-aos="fade-up" data-aos-delay="240">
+          <div class="icon"><i class="bi bi-mortarboard"></i></div>
+          <span class="count" data-count="{{ rubriques.formations|length }}">0</span><p>{% trans "Formations" %}</p>
+        </div>
+        <div class="mc-counter-card" data-aos="fade-up" data-aos-delay="320">
+          <div class="icon"><i class="bi bi-stars"></i></div>
+          <span class="count" data-count="{{ rubriques.competences|length }}">0</span><p>{% trans "Compétences" %}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ═══ COMPÉTENCES & PARCOURS ═══ -->
+  {% if params.showCompetences and rubriques.competences or params.showExperiences and rubriques.experiences or params.showFormations and formations_groupees.diplome %}
+  <section id="mc-skills" class="mc-section mc-section-alt">
+    <div class="mc-container">
+      <div class="mc-section-head" data-aos="fade-up">
+        <p class="mc-eyebrow">{% trans "Compétences & Parcours" %}</p>
+        <h2>{% trans "Mon Expertise" %}</h2>
+      </div>
+      <div class="mc-skills-grid">
+
+        {% if params.showCompetences and rubriques.competences %}
+        <div data-aos="fade-right">
+          <h3>{% trans "Niveaux de compétences" %}</h3>
+          {% for c in rubriques.competences %}
+          <div class="mc-skill">
+            <div class="mc-skill-hdr"><span>{{ c.nom }}</span><span class="pct">{% widthratio c.niveau 5 100 %}%</span></div>
+            <div class="mc-track"><div class="mc-bar" data-width="{% widthratio c.niveau 5 100 %}"></div></div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if params.showExperiences and rubriques.experiences or params.showFormations and formations_groupees.diplome %}
+        <div data-aos="fade-left" data-aos-delay="100">
+          <div class="mc-tab-nav">
+            {% if params.showExperiences and rubriques.experiences %}<button class="mc-tab-btn" :class="{ active: tab==='exp' }" @click="tab='exp'">Expérience</button>{% endif %}
+            {% if params.showFormations and formations_groupees.diplome %}<button class="mc-tab-btn" :class="{ active: tab==='edu' }" @click="tab='edu'">Formation</button>{% endif %}
+            {% if params.showFormations and formations_groupees.certification %}<button class="mc-tab-btn" :class="{ active: tab==='cert' }" @click="tab='cert'">Certifications</button>{% endif %}
+          </div>
+
+          {% if params.showExperiences and rubriques.experiences %}
+          <div x-show="tab==='exp'" x-transition>
+            <div class="mc-tl">
+              {% for exp in rubriques.experiences %}
+              <div class="mc-tl-item">
+                <h4>{% for p in exp.postes %}{{ p.titre }}{% if not forloop.last %} / {% endif %}{% endfor %}{% if not exp.postes %}{{ exp.entreprise }}{% endif %}</h4>
+                {% if exp.periodeFR %}<span class="mc-tl-meta">{{ exp.periodeFR }}</span>{% endif %}
+                {% if exp.entreprise %}<p class="mc-tl-place">{{ exp.entreprise }}{% if exp.lieu %} — {{ exp.lieu }}{% endif %}</p>{% endif %}
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if params.showFormations and formations_groupees.diplome %}
+          <div x-show="tab==='edu'" x-transition>
+            <div class="mc-tl">
+              {% for f in formations_groupees.diplome %}
+              <div class="mc-tl-item">
+                <h4>{{ f.diplome|default:f.domaine|default:"Diplôme" }}</h4>
+                {% if f.debut or f.fin %}<span class="mc-tl-meta">{{ f.debut|slice:":4" }}{% if f.fin %} — {{ f.fin|slice:":4" }}{% else %} — En cours{% endif %}</span>{% endif %}
+                {% if f.ecole %}<p class="mc-tl-place">{{ f.ecole }}{% if f.lieu %} — {{ f.lieu }}{% endif %}</p>{% endif %}
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if params.showFormations and formations_groupees.certification %}
+          <div x-show="tab==='cert'" x-transition>
+            <div class="mc-tl">
+              {% for f in formations_groupees.certification %}
+              <div class="mc-tl-item">
+                <h4>{{ f.diplome|default:f.domaine|default:"Certification" }}</h4>
+                {% if f.fin %}<span class="mc-tl-meta">{{ f.fin|slice:":4" }}</span>{% endif %}
+                {% if f.ecole %}<p class="mc-tl-place">{{ f.ecole }}</p>{% endif %}
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ═══ SERVICES ═══ -->
+  {% if params.showCompetences and rubriques.competences %}
+  <section id="mc-services" class="mc-section">
+    <div class="mc-container">
+      <div class="mc-section-head center" data-aos="fade-up">
+        <p class="mc-eyebrow">{% trans "Services" %}</p>
+        <h2>{% trans "Ce que je propose" %}</h2>
+      </div>
+      <div class="mc-services-grid">
+        {% for c in rubriques.competences|slice:":6" %}
+        <div data-aos="fade-up" data-aos-delay="{{ forloop.counter0 }}00">
+          <div class="mc-service-card">
+            <div class="mc-svc-icon"><i class="bi bi-{% cycle 'code-slash' 'palette' 'graph-up' 'gear' 'shield-check' 'megaphone' %}"></i></div>
+            <h3>{{ c.nom }}</h3>
+            <p>{% if c.niveau >= 4 %}Expertise avancée ({{ c.niveau }}/5). Disponible pour vos projets nécessitant cette spécialité.{% else %}Maîtrise solide ({{ c.niveau }}/5). Prêt à intervenir sur vos besoins.{% endif %}</p>
+            <div class="mc-svc-dots">
+              {% for i in "12345" %}<div class="mc-svc-dot" style="background:{% if forloop.counter <= c.niveau %}var(--mc-accent){% else %}var(--mc-border){% endif %};"></div>{% endfor %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ═══ PORTFOLIO ═══ -->
+  {% if params.showProjets and rubriques.projets %}
+  <section id="mc-portfolio" class="mc-section mc-section-alt">
+    <div class="mc-container">
+      <div class="mc-section-head center" data-aos="fade-up">
+        <p class="mc-eyebrow">{% trans "Portfolio" %}</p>
+        <h2>{% trans "Mes Réalisations" %}</h2>
+      </div>
+      <div class="mc-filters" data-aos="fade-up">
+        <button class="mc-filter-btn" :class="{ active: filter==='*' }" @click="filter='*'">{% trans "Tous les projets" %}</button>
+        <template x-for="cat in projCategories" :key="cat">
+          <button class="mc-filter-btn" :class="{ active: filter===cat }" @click="filter=cat" x-text="cat"></button>
+        </template>
+      </div>
+      <div class="mc-proj-grid" data-aos="fade-up" data-aos-delay="80">
+        {% for projet in rubriques.projets %}{% if projet.nom %}{% with cover=projet.images.0 %}
+        <div class="mc-proj-card"
+             x-show="filter==='*' || filter==='{{ projet.dateDebut|slice:":4"|default:"Projets" }}'"
+             x-transition>
+          <div class="mc-proj-thumb">
+            {% if cover.url %}<img src="{{ cover.url }}" alt="{{ projet.nom }}" loading="lazy">
+            {% else %}<div class="mc-fallback"><i class="bi bi-image"></i></div>{% endif %}
+            <div class="mc-proj-overlay">
+              {% if cover.url %}<a href="{{ cover.url }}" target="_blank" title="Aperçu"><i class="bi bi-zoom-in"></i></a>{% endif %}
+              {% if projet.db_id %}<a href="{% url 'candidat:portfolio_projet_detail' candidat.id projet.db_id %}" title="Détails"><i class="bi bi-arrow-right"></i></a>{% endif %}
+              {% if projet.has_demo %}<a href="{{ projet.lien }}" target="_blank" rel="noopener" title="Démo"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+            </div>
+          </div>
+          <div class="mc-proj-body">
+            <p class="mc-proj-cat">{{ projet.dateDebut|slice:":4"|default:"Projet" }}</p>
+            <h4>{{ projet.nom }}</h4>
+            {% if projet.description %}<p>{{ projet.description|truncatewords:14 }}</p>{% endif %}
+          </div>
+        </div>
+        {% endwith %}{% endif %}{% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ═══ CONTACT ═══ -->
+  {% if params.showContact and candidat.email %}
+  <section id="mc-contact" class="mc-section">
+    <div class="mc-container">
+      <div class="mc-section-head center" data-aos="fade-up">
+        <p class="mc-eyebrow">{% trans "Contact" %}</p>
+        <h2>{% trans "Travaillons ensemble" %}</h2>
+        <p>{% trans "Une opportunité, une mission, une question ? Contactez-moi." %}</p>
+      </div>
+      <div class="mc-contact-wrap" data-aos="zoom-in" data-aos-delay="80">
+        <div class="mc-contact-head">
+          <h3>{% trans "Mes coordonnées" %}</h3>
+          <p>{% trans "Je réponds en général sous 48h ouvrées." %}</p>
+        </div>
+        <div class="mc-contact-body">
+          {% if candidat.ville or candidat.adresse %}<div class="mc-info-row"><div class="mc-info-icon"><i class="bi bi-geo-alt"></i></div><div><h5>{% trans "Localisation" %}</h5><p>{{ candidat.ville|default:candidat.adresse }}</p></div></div>{% endif %}
+          {% if candidat.telephone %}<div class="mc-info-row"><div class="mc-info-icon"><i class="bi bi-telephone"></i></div><div><h5>Téléphone</h5><p><a href="tel:{{ candidat.telephone }}">{{ candidat.telephone }}</a></p></div></div>{% endif %}
+          <div class="mc-info-row"><div class="mc-info-icon"><i class="bi bi-envelope"></i></div><div><h5>{% trans "Email" %}</h5><p><a href="mailto:{{ candidat.email }}">{{ candidat.email }}</a></p></div></div>
+          {% if liens_sociaux %}
+          <div class="mc-cnt-socials">
+            {% for lien in liens_sociaux|slice:":5" %}
+            <a href="{{ lien.url }}" target="_blank" rel="noopener" title="{{ lien.reseau.libelle }}">
+              <i class="bi {{ lien.reseau.bi_class }}"></i>
+            </a>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <button class="mc-scroll-top" :class="{ show: scrollTop }"
+          @click="window.scrollTo({top:0,behavior:'smooth'})" aria-label="{% trans "Haut de page" %}">
+    <i class="bi bi-arrow-up-short"></i>
+  </button>
+
+</div><!-- .mc -->
+
+<script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+<script>
+window.addEventListener('load', function() {
+  if (window.AOS) AOS.init({ duration: 700, once: true, offset: 50, easing: 'ease-out-cubic' });
+});
+</script>
+<script>
+function moderneClair() {
+  return {
+    navOpen:   false,
+    scrollTop: false,
+    active:    'home',
+    tab: '{% if params.showExperiences and rubriques.experiences %}exp{% elif params.showFormations and formations_groupees.diplome %}edu{% else %}cert{% endif %}',
+    filter:    '*',
+    typedWord: '',
+    typedItems: [
+      {% for c in rubriques.competences|slice:":6" %}'{{ c.nom|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}
+      {% if not rubriques.competences %}'{{ candidat.titreProfessionnel|default:"Professionnel"|escapejs }}'{% endif %}
+    ],
+    projCategories: (() => {
+      const s = new Set();
+      {% for p in rubriques.projets %}{% if p.dateDebut %}s.add('{{ p.dateDebut|slice:":4" }}');{% endif %}{% endfor %}
+      return Array.from(s);
+    })(),
+
+    init() {
+      // Ajuste top de la navbar interne
+      const mcNav = document.getElementById('mc-nav');
+      const syncTop = () => {
+        const main = document.querySelector('.fixed.top-0');
+        if (mcNav && main) mcNav.style.top = main.getBoundingClientRect().height + 'px';
+      };
+      window.addEventListener('resize', syncTop); syncTop();
+
+      // Scrollspy
+      const sections = document.querySelectorAll('section[id]');
+      const onScroll = () => {
+        this.scrollTop = window.scrollY > 300;
+        let cur = 'home';
+        sections.forEach(s => { if (s.getBoundingClientRect().top < 130) cur = s.id.replace('mc-',''); });
+        this.active = cur;
+      };
+      window.addEventListener('scroll', onScroll, { passive:true }); onScroll();
+
+      // Barres de compétences
+      document.querySelectorAll('.mc-bar').forEach(bar => {
+        const io = new IntersectionObserver(([e]) => {
+          if (e.isIntersecting) { bar.style.width = (bar.dataset.width||'0')+'%'; io.disconnect(); }
+        }, { threshold:.3 });
+        io.observe(bar);
+      });
+
+      // Compteurs
+      document.querySelectorAll('.mc-counter-card .count').forEach(el => {
+        const io2 = new IntersectionObserver(([e]) => {
+          if (e.isIntersecting) {
+            const target = parseInt(el.dataset.count||'0', 10);
+            const dur = 1400; const t0 = performance.now();
+            const tick = t => {
+              const p = Math.min(1, (t-t0)/dur);
+              el.textContent = Math.round(target*(1-Math.pow(1-p,3)));
+              if (p < 1) requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick); io2.unobserve(el);
+          }
+        }, { threshold:.5 });
+        io2.observe(el);
+      });
+
+      // Smooth scroll
+      document.querySelectorAll('a[href^="#mc-"]').forEach(a => {
+        a.addEventListener('click', e => {
+          const el = document.getElementById(a.getAttribute('href').slice(1));
+          if (el) { e.preventDefault(); el.scrollIntoView({ behavior:'smooth' }); this.navOpen = false; }
+        });
+      });
+
+      if (this.typedItems.length) this.startTyped();
+    },
+
+    startTyped() {
+      let i=0, j=0, del=false;
+      const sp=80, pause=1800, dsp=40;
+      const tick = () => {
+        const w = this.typedItems[i];
+        if (!del) { this.typedWord = w.slice(0,j++); if(j>w.length){ del=true; setTimeout(tick,pause); return; } }
+        else { this.typedWord = w.slice(0,j--); if(j<0){ del=false; j=0; i=(i+1)%this.typedItems.length; } }
+        setTimeout(tick, del?dsp:sp);
+      };
+      tick();
+    }
+  };
+}
+</script>
+{% endblock %}

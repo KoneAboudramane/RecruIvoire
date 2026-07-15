@@ -1,0 +1,540 @@
+﻿{% extends "entreprise/base.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Planification d'entretiens" %} — {{ offre.titre }} — {{ logo_site.nom_site|default:"RecrutePro" }}{% endblock %}
+
+{% block css_extra %}<style>[x-cloak]{display:none!important}</style>{% endblock %}
+
+{% block contenu %}
+<section class="mb-10"
+         x-data="{
+           bulkOpen: false,
+           selected_cands: [],
+           selected_invs: [],
+           filtre: 'tous',
+           get totalSelected() { return this.selected_cands.length + this.selected_invs.length; },
+           toggleAll(cand_ids, inv_ids) {
+             const allSelected = this.selected_cands.length === cand_ids.length && this.selected_invs.length === inv_ids.length;
+             this.selected_cands = allSelected ? [] : [...cand_ids];
+             this.selected_invs  = allSelected ? [] : [...inv_ids];
+           },
+           isAllSelected(cand_ids, inv_ids) {
+             return (cand_ids.length + inv_ids.length) > 0
+               && this.selected_cands.length === cand_ids.length
+               && this.selected_invs.length  === inv_ids.length;
+           }
+         }">
+
+  {# ── Fil d'Ariane ── #}
+  <nav class="text-sm text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2 flex-wrap">
+    <a href="{% url 'entreprise:recruteur_tableau_bord' %}" class="hover:underline">{% trans "Tableau de bord" %}</a>
+    <span>›</span>
+    <a href="{% url 'entreprise:entretiens' %}" class="hover:underline">{% trans "Planification d'entretiens" %}</a>
+    <span>›</span>
+    <span class="text-gray-700 dark:text-gray-200 font-semibold truncate">{{ offre.titre }}</span>
+  </nav>
+
+  {# ── En-tête de l'offre ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
+    <div class="flex items-start gap-4 flex-wrap">
+      <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl shadow-md flex-shrink-0"
+           style="background:#c96010;">
+        📋
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-xs uppercase font-semibold tracking-wider text-gray-400 dark:text-gray-500">{% trans "Offre" %}</p>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-800 dark:text-gray-100">{{ offre.titre }}</h1>
+        {% if offre.reference %}
+          <p class="text-sm text-gray-500 dark:text-gray-400 font-mono mt-1">🔖 {{ offre.reference }}</p>
+        {% endif %}
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        {% if nb_programmes %}
+        <a href="{% url 'entreprise:entretiens_offre_programmes' offre.pk %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white shadow-sm hover:shadow transition"
+           style="background:#009A44;">
+          ✅ {% blocktrans count count=nb_programmes %}{{ count }} déjà programmé{% plural %}{{ count }} déjà programmés{% endblocktrans %}
+        </a>
+        {% endif %}
+        <a href="{% url 'entreprise:entretiens' %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+          ← {% trans "Toutes les offres" %}
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {# ── Stats / Filtres ── #}
+  <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+
+    <button type="button" @click="filtre = filtre === 'a_planifier' ? 'tous' : 'a_planifier'"
+            :class="filtre === 'a_planifier' ? 'ring-2 ring-orange-400 border-orange-300' : 'border-gray-100 dark:border-gray-700 hover:border-orange-200'"
+            class="bg-white dark:bg-gray-800 rounded-2xl p-5 border shadow-sm text-left transition cursor-pointer w-full">
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wide mb-1">⏳ {% trans "À planifier" %}</p>
+      <p class="text-3xl font-extrabold text-gray-800 dark:text-gray-100">{{ sans_entretien }}</p>
+      <p class="text-[10px] text-orange-500 mt-1" x-show="filtre === 'a_planifier'" x-cloak>▶ {% trans "actif" %}</p>
+    </button>
+
+    <a href="{% url 'entreprise:entretiens_offre_programmes' offre.pk %}"
+       class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm text-left transition hover:border-green-200 hover:shadow-md block">
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wide mb-1">📅 {% trans "Déjà programmés" %}</p>
+      <p class="text-3xl font-extrabold" style="color:#009A44;">{{ nb_programmes }}</p>
+      <p class="text-[10px] text-gray-400 mt-1">→ {% trans "voir la page" %}</p>
+    </a>
+
+    <button type="button" @click="filtre = filtre === 'reporte' ? 'tous' : 'reporte'"
+            :class="filtre === 'reporte' ? 'ring-2 ring-orange-400 border-orange-300' : 'border-gray-100 dark:border-gray-700 hover:border-orange-200'"
+            class="bg-white dark:bg-gray-800 rounded-2xl p-5 border shadow-sm text-left transition cursor-pointer w-full">
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wide mb-1">↩ {% trans "Reportés" %}</p>
+      <p class="text-3xl font-extrabold" style="color:#c96010;">{{ nb_reportes }}</p>
+      <p class="text-[10px] text-orange-500 mt-1" x-show="filtre === 'reporte'" x-cloak>▶ {% trans "actif" %}</p>
+    </button>
+
+  </div>
+
+  {# ── Liste candidats + profils retenus ── #}
+  {% if candidatures or profils_retenus %}
+
+  <div class="flex flex-col lg:flex-row-reverse gap-5 items-start">
+
+  {# ─── Barre planification globale — masquée pour LECTEUR ─── #}
+  {% if not request.recruteur.est_lecteur %}
+  <div id="bulk-panel"
+       class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-orange-200 dark:border-orange-900/40 shadow-sm w-full lg:w-[34rem] xl:w-[40rem] lg:flex-shrink-0 lg:sticky lg:top-4 overflow-hidden">
+    <div class="flex flex-wrap items-center justify-between gap-3 p-4 bg-orange-50/60 dark:bg-orange-900/20">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-lg shadow-sm"
+             style="background:#c96010;">📋</div>
+        <div>
+          <p class="font-bold text-gray-800 dark:text-gray-100 text-sm"
+             x-text="totalSelected > 1 ? 'Planifier en masse' : 'Planification d\'entretien'"></p>
+          <p class="text-xs text-gray-500 dark:text-gray-400" x-show="totalSelected === 0">{% trans "Cochez un ou plusieurs candidats, ou cliquez sur « Planifier » dans une carte." %}</p>
+          <p class="text-xs font-semibold" style="color:#c96010;" x-show="totalSelected > 0"
+             x-text="totalSelected + ' candidat' + (totalSelected > 1 ? 's' : '') + ' sélectionné' + (totalSelected > 1 ? 's' : '')"></p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button"
+                @click="toggleAll([{% for c in candidatures %}{{ c.id }}{% if not forloop.last %},{% endif %}{% endfor %}],[{% for inv in profils_retenus %}{{ inv.id }}{% if not forloop.last %},{% endif %}{% endfor %}])"
+                class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+          <span x-show="!isAllSelected([{% for c in candidatures %}{{ c.id }}{% if not forloop.last %},{% endif %}{% endfor %}],[{% for inv in profils_retenus %}{{ inv.id }}{% if not forloop.last %},{% endif %}{% endfor %}])">☑️ {% trans "Tout sélectionner" %}</span>
+          <span x-show="isAllSelected([{% for c in candidatures %}{{ c.id }}{% if not forloop.last %},{% endif %}{% endfor %}],[{% for inv in profils_retenus %}{{ inv.id }}{% if not forloop.last %},{% endif %}{% endfor %}])">◻️ {% trans "Tout désélectionner" %}</span>
+        </button>
+        <button type="button" @click="bulkOpen = !bulkOpen"
+                :disabled="totalSelected === 0"
+                :class="totalSelected === 0 ? 'opacity-50 cursor-not-allowed' : ''"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white shadow-sm transition"
+                style="background:#c96010;">
+          <span x-text="bulkOpen ? '✕ Fermer' : '➕ Planifier en masse'"></span>
+        </button>
+      </div>
+    </div>
+
+    {# ─── Formulaire bulk ─── #}
+    <form x-show="bulkOpen" x-cloak x-transition method="post"
+          x-data="entretienForm()"
+          action="{% url 'entreprise:entretiens_planifier_bulk' offre.id %}"
+          class="p-4 border-t border-orange-100 dark:border-orange-900/40 grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {% csrf_token %}
+
+      <template x-for="cid in selected_cands" :key="'c'+cid">
+        <input type="hidden" name="candidatures" :value="cid">
+      </template>
+      <template x-for="iid in selected_invs" :key="'i'+iid">
+        <input type="hidden" name="invitations" :value="iid">
+      </template>
+
+      <div>
+        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">📅 {% trans "Date" %}</label>
+        <input type="date" name="dateEntretien" required :min="todayISO"
+               class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">🕐 {% trans "Heure de début" %}</label>
+        <input type="time" name="heure" required value="09:00"
+               class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">⏱️ {% trans "Durée (min)" %}</label>
+        <input type="number" name="duree" min="15" max="480" step="15" value="60"
+               class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">🎯 {% trans "Type d'entretien" %}</label>
+        <select name="typeEntretienRef"
+                @change="typeEntretienCode = $event.target.options[$event.target.selectedIndex]?.dataset.code || ''; onTypeEntretienChange()"
+                class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none">
+          {% for t in types_entretien %}
+            <option value="{{ t.id }}" data-code="{{ t.code }}" {% if t.code == 'RH' %}selected{% endif %}>{{ t.icone }} {{ t.libelle }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">💼 {% trans "Mode" %}</label>
+        <select name="modeRef"
+                @change="mode = $event.target.options[$event.target.selectedIndex]?.dataset.code || mode"
+                class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none">
+          {% for m in modes_entretien %}
+            <option value="{{ m.id }}" data-code="{{ m.code }}" {% if m.code == 'PRESENTIEL' %}selected{% endif %}>{{ m.icone }} {{ m.libelle }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {# ─── Modèle de message ─── #}
+      <div>
+        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">
+          📨 {% trans "Modèle → message" %}
+        </label>
+        <select x-model="modeleId" @change="onModeleChange()"
+                class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none">
+          <option value="">— {% trans "Message générique" %} —</option>
+          <template x-for="m in modelesFiltres" :key="m.id">
+            <option :value="m.id" x-text="m.sujet"></option>
+          </template>
+        </select>
+        <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1"
+           x-show="!modelesFiltres.length" x-cloak
+           x-text="'Aucun modèle pour ce type. L\'admin peut en créer un dans Modèles de message.'"></p>
+        <input type="hidden" name="modele_id" :value="modeleChoisi ? modeleChoisi.id : ''">
+        <button type="button" x-show="modeleChoisi" x-cloak
+                @click="apercuOuvert = !apercuOuvert"
+                class="mt-1 inline-flex items-center gap-1 text-xs font-semibold underline transition"
+                style="color:#c96010;">
+          <span x-show="!apercuOuvert">👁 {% trans "Voir l'aperçu du message" %}</span>
+          <span x-show="apercuOuvert">✕ {% trans "Masquer l'aperçu" %}</span>
+        </button>
+      </div>
+
+      <div class="sm:col-span-2">
+        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1"
+               x-text="lieuLabel"></label>
+        <input type="text" name="lieu" :placeholder="{% trans "lieuPlaceholder" %}"
+               class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">📝 {% trans "Notes communes" %}</label>
+        <textarea name="notes" rows="2"
+                  class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none"
+                  placeholder="Documents à apporter, pièces à préparer, etc."></textarea>
+      </div>
+
+      {# Aperçu modèle #}
+      <div class="sm:col-span-2 border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden"
+           x-show="modeleChoisi && apercuOuvert" x-cloak x-transition>
+        <div class="px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800/30 flex items-center gap-2">
+          <span class="text-[10px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
+            💡 {% trans "Aperçu — variables personnalisées par candidat à l'envoi" %}
+          </span>
+        </div>
+        <div class="p-3 bg-gray-50 dark:bg-gray-700/50">
+          <p class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">{% trans "Sujet" %}</p>
+          <p class="text-sm font-bold text-gray-800 dark:text-gray-100" x-text="modeleChoisi?.sujet"></p>
+        </div>
+        <div class="p-3 bg-white dark:bg-gray-800 max-h-48 overflow-y-auto border-t border-gray-100 dark:border-gray-700">
+          <pre class="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-sans leading-relaxed" x-text="modeleChoisi?.corps"></pre>
+        </div>
+      </div>
+
+      <div class="sm:col-span-2 flex flex-wrap justify-between items-center gap-3 pt-2 border-t border-orange-100 dark:border-orange-900/40">
+        <p class="text-xs text-gray-500 dark:text-gray-400" x-show="totalSelected > 1">
+          ℹ️ {% trans "L'heure du 1ᵉʳ candidat = heure de début. Les suivants sont décalés de la durée." %}
+        </p>
+        <p class="text-xs text-gray-500 dark:text-gray-400" x-show="totalSelected === 1">
+          ℹ️ {% trans "Un seul entretien sera planifié à la date et l'heure indiquées." %}
+        </p>
+        <button type="submit"
+                :disabled="totalSelected === 0"
+                :class="totalSelected === 0 ? 'opacity-50 cursor-not-allowed' : ''"
+                class="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold text-white shadow-sm hover:shadow transition"
+                style="background:#009A44;">
+          ✅ <span x-text="'Planifier ' + totalSelected + ' entretien' + (totalSelected > 1 ? 's' : '')"></span>
+        </button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  {# ─── Grille candidats + profils retenus ─── #}
+  <div class="flex-1 grid grid-cols-1 xl:grid-cols-2 gap-5">
+
+    {# ── Candidats acceptés ── #}
+    {% for c in candidatures %}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border-2 shadow-sm p-5 flex flex-col transition"
+         x-show="filtre === 'tous' || filtre === '{% if c.id in ids_reportees %}reporte{% else %}a_planifier{% endif %}'"
+         :class="selected_cands.includes({{ c.id }})
+           ? 'border-orange-400 dark:border-orange-500 ring-2 ring-orange-100 dark:ring-orange-900/30'
+           : 'border-gray-100 dark:border-gray-700'">
+
+      <label class="flex items-center gap-2 mb-3 cursor-pointer select-none">
+        <input type="checkbox" :value="{{ c.id }}" x-model="selected_cands"
+               class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-orange-500 focus:ring-orange-500 cursor-pointer">
+        <span class="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+          {% trans "Inclure dans la planification globale" %}
+        </span>
+      </label>
+
+      <div class="flex flex-col gap-3">
+        <div class="flex items-start gap-3 min-w-0">
+          {% if c.candidat.photoProfil %}
+            <img src="{{ c.candidat.photoProfil.url }}"
+                 alt="{{ c.candidat.prenom }} {{ c.candidat.nom }}"
+                 class="w-12 h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 flex-shrink-0">
+          {% else %}
+            <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm flex-shrink-0"
+                 style="background:#009A44;">
+              {{ c.candidat.prenom|slice:":1"|upper }}{{ c.candidat.nom|slice:":1"|upper }}
+            </div>
+          {% endif %}
+          <div class="flex-1 min-w-0">
+            <p class="font-bold text-gray-800 dark:text-gray-100 truncate text-lg">
+              {{ c.candidat.prenom }} {{ c.candidat.nom }}
+            </p>
+            {% if c.candidat.titreProfessionnel %}
+              <p class="text-sm font-medium truncate" style="color:#c96010;">
+                {{ c.candidat.titreProfessionnel }}
+              </p>
+            {% endif %}
+            <div class="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <span>🔖 <span class="font-mono">{{ c.reference }}</span></span>
+              {% if c.candidat.email %}<span>📧 {{ c.candidat.email }}</span>{% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <a href="{% url 'entreprise:voir_portfolio' c.candidat.id %}"
+             class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 transition">
+            🌐 {% trans "Portfolio" %}
+          </a>
+          {% if c.cv_url %}
+          <a href="{{ c.cv_url }}" target="_blank" rel="noopener"
+             class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 transition">
+            📄 {% trans "CV" %}
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+      {# ─── Entretiens existants ─── #}
+      {% with entretiens=c.entretiens.all %}
+      {% if entretiens %}
+      <div class="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
+        <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+          📋 {% trans "Entretiens précédents" %}
+        </h3>
+        <div class="space-y-2">
+          {% for e in entretiens %}
+          <div class="flex flex-wrap items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-base flex-shrink-0"
+                 style="background:#c96010;">
+              {% if e.mode == 'VISIO' %}💻{% elif e.mode == 'TELEPHONIQUE' %}📞{% else %}🏢{% endif %}
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="font-bold text-gray-800 dark:text-gray-100 text-sm">
+                {{ e.dateEntretien|date:"l d F Y" }} {% trans "à" %} {{ e.dateEntretien|date:"H:i" }}
+                <span class="text-xs font-normal text-gray-500 dark:text-gray-400">· {{ e.duree }} min</span>
+              </p>
+              <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white"
+                      style="background:#c96010;">
+                  {% if e.typeEntretienRef %}{{ e.typeEntretienRef.icone }} {{ e.typeEntretienRef.libelle }}{% else %}{{ e.get_typeEntretien_display }}{% endif %}
+                </span>
+                {% if e.statut == 'REPORTE' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400">↩ Reporté</span>
+                {% elif e.statut == 'ANNULE' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400">✕ Annulé</span>
+                {% endif %}
+                <span class="text-xs text-gray-500 dark:text-gray-400">
+                  · {% if e.modeRef %}{{ e.modeRef.icone }} {{ e.modeRef.libelle }}{% else %}{{ e.get_mode_display }}{% endif %}{% if e.lieu %} · {{ e.lieu }}{% endif %}
+                </span>
+              </div>
+              {% if e.notes %}
+              <p class="text-xs text-gray-600 dark:text-gray-400 mt-1 italic">{{ e.notes|truncatechars:120 }}</p>
+              {% endif %}
+            </div>
+            {% if e.statut == 'PLANIFIE' %}
+            <form method="post" action="{% url 'entreprise:entretien_annuler' e.id %}"
+                  onsubmit="return confirm('Annuler définitivement cet entretien ? L\'historique est conservé.')">
+              {% csrf_token %}
+              <button type="submit"
+                      class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-700/40 transition">
+                ✕ {% trans "Annuler" %}
+              </button>
+            </form>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      {% endwith %}
+
+      {% if not request.recruteur.est_lecteur %}
+      <div class="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
+        <button type="button"
+                @click="
+                  if (selected_cands.includes({{ c.id }})) {
+                    selected_cands = selected_cands.filter(id => {% trans "id !==" %} {{ c.id }});
+                  } else {
+                    selected_cands.push({{ c.id }});
+                    bulkOpen = true;
+                  }
+                "
+                :class="selected_cands.includes({{ c.id }})
+                  ? 'bg-white dark:bg-gray-700 text-orange-700 dark:text-orange-400 border-2 border-orange-400 dark:border-orange-500'
+                  : 'text-white shadow-sm hover:shadow border-2 border-transparent'"
+                :style="selected_cands.includes({{ c.id }}) ? '' : 'background:#009A44;'"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition">
+          <span x-show="!selected_cands.includes({{ c.id }})">➕ {% trans "Planifier un entretien" %}</span>
+          <span x-show="selected_cands.includes({{ c.id }})">✓ {% trans "Retirer de la sélection" %}</span>
+        </button>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    {# ── Profils retenus depuis portfolio ── #}
+    {% for inv in profils_retenus %}
+    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-2xl border-2 shadow-sm p-5 flex flex-col transition"
+         :class="selected_invs.includes({{ inv.id }})
+           ? 'border-blue-400 dark:border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30'
+           : 'border-blue-100 dark:border-blue-800/40'">
+
+      <div class="flex items-center justify-between mb-3">
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+          <input type="checkbox" :value="{{ inv.id }}" x-model="selected_invs"
+                 class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 cursor-pointer">
+          <span class="text-xs font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wider">
+            {% trans "Inclure dans la planification globale" %}
+          </span>
+        </label>
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
+              style="background:#1d4ed8;">🤝 Portfolio</span>
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <div class="flex items-start gap-3 min-w-0">
+          {% if inv.candidat.photoProfil %}
+            <img src="{{ inv.candidat.photoProfil.url }}"
+                 alt="{{ inv.candidat.prenom }} {{ inv.candidat.nom }}"
+                 class="w-12 h-12 rounded-full object-cover border-2 border-blue-200 dark:border-blue-700 flex-shrink-0">
+          {% else %}
+            <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm flex-shrink-0"
+                 style="background:#1d4ed8;">
+              {{ inv.candidat.prenom|slice:":1"|upper }}{{ inv.candidat.nom|slice:":1"|upper }}
+            </div>
+          {% endif %}
+          <div class="flex-1 min-w-0">
+            <p class="font-bold text-gray-800 dark:text-gray-100 truncate text-lg">
+              {{ inv.candidat.prenom }} {{ inv.candidat.nom }}
+            </p>
+            {% if inv.candidat.titreProfessionnel %}
+              <p class="text-sm font-medium truncate" style="color:#1d4ed8;">
+                {{ inv.candidat.titreProfessionnel }}
+              </p>
+            {% endif %}
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">🕒 {% trans "Retenu le" %} {{ inv.dateCreation|date:"d/m/Y" }}</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <a href="{% url 'entreprise:voir_portfolio' inv.candidat.id %}?offre={{ offre.pk }}"
+             class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-blue-700 dark:text-blue-300 bg-white dark:bg-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 border border-blue-200 dark:border-blue-700 transition">
+            🌐 {% trans "Portfolio" %}
+          </a>
+        </div>
+      </div>
+
+      <div class="mt-5 pt-5 border-t border-blue-100 dark:border-blue-800/40">
+        {% if not request.recruteur.est_lecteur %}
+        <button type="button"
+                @click="
+                  if (selected_invs.includes({{ inv.id }})) {
+                    selected_invs = selected_invs.filter(id => {% trans "id !==" %} {{ inv.id }});
+                  } else {
+                    selected_invs.push({{ inv.id }});
+                    bulkOpen = true;
+                  }
+                "
+                :class="selected_invs.includes({{ inv.id }})
+                  ? 'bg-white dark:bg-gray-700 text-blue-700 dark:text-blue-300 border-2 border-blue-400 dark:border-blue-500'
+                  : 'text-white shadow-sm hover:shadow border-2 border-transparent'"
+                :style="selected_invs.includes({{ inv.id }}) ? '' : 'background:#1d4ed8;'"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition">
+          <span x-show="!selected_invs.includes({{ inv.id }})">➕ {% trans "Planifier un entretien" %}</span>
+          <span x-show="selected_invs.includes({{ inv.id }})">✓ {% trans "Retirer de la sélection" %}</span>
+        </button>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+
+  </div>
+
+  </div>{# /flex wrapper #}
+  {% else %}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-10 sm:p-14 border border-gray-100 dark:border-gray-700 shadow-sm text-center">
+    <div class="w-20 h-20 mx-auto rounded-full flex items-center justify-center text-4xl mb-4 bg-green-50 dark:bg-green-900/20">
+      🤝
+    </div>
+    <h2 class="text-xl font-extrabold text-gray-800 dark:text-gray-100 mb-2">{% trans "Aucun candidat à recevoir pour cette offre" %}</h2>
+    <p class="text-gray-500 dark:text-gray-400 text-sm max-w-md mx-auto">
+      {% trans "Dès qu'une candidature sera acceptée, elle apparaîtra ici pour planifier son entretien." %}
+    </p>
+  </div>
+  {% endif %}
+
+</section>
+{% endblock %}
+
+{% block js_extra %}
+<script>
+window.MODELES_MESSAGES_ENTRETIEN = [
+  {% for m in modeles_messages %}
+  {
+    id: {{ m.id }},
+    type_code: "{{ m.typeEntretien.code }}",
+    type_libelle: "{{ m.typeEntretien.libelle|escapejs }}",
+    sujet: `{{ m.sujet_modele|escapejs }}`,
+    corps: `{{ m.corps_message|escapejs }}`
+  }{% if not forloop.last %},{% endif %}
+  {% endfor %}
+];
+
+function entretienForm() {
+  return {
+    mode: 'PRESENTIEL',
+    todayISO: new Date().toISOString().slice(0, 10),
+    typeEntretienCode: 'RH',
+    modeleId: '',
+    modeleChoisi: null,
+    apercuOuvert: false,
+    get lieuLabel() {
+      if (this.mode === 'VISIO')        return "🔗 Lien de la réunion";
+      if (this.mode === 'TELEPHONIQUE') return "📞 Numéro à appeler";
+      return "📍 Adresse";
+    },
+    get lieuPlaceholder() {
+      if (this.mode === 'VISIO')        return "https://meet.google.com/… ou https://zoom.us/…";
+      if (this.mode === 'TELEPHONIQUE') return "+225 07 00 00 00 00";
+      return "Adresse complète, étage, salle…";
+    },
+    get modelesFiltres() {
+      return (window.MODELES_MESSAGES_ENTRETIEN || [])
+        .filter(m => m.type_code === this.typeEntretienCode);
+    },
+    onTypeEntretienChange() {
+      this.modeleId = '';
+      this.modeleChoisi = null;
+      this.apercuOuvert = false;
+    },
+    onModeleChange() {
+      this.apercuOuvert = false;
+      if (!this.modeleId) { this.modeleChoisi = null; return; }
+      this.modeleChoisi = this.modelesFiltres
+        .find(m => String(m.id) === String(this.modeleId)) || null;
+    },
+  };
+}
+</script>
+{% endblock %}

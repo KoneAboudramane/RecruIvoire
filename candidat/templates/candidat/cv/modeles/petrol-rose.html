@@ -1,0 +1,416 @@
+{% extends "candidat/base.html" %}
+{% load i18n %}
+{% block titre %}Créer mon CV — {{ modele.nom }} · {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+{% include "candidat/cv/_form_styles.html" %}
+<style>
+/* ── Petrol & Rose — Sidebar gauche pétrol · Photo hexagonale · Accents rose-gold ── */
+#cv-sheet {
+  width: 794px; min-height: 1123px; background: #fff;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 11px; color: #1C2B3A; line-height: 1.5;
+  box-shadow: 0 8px 48px rgba(0,0,0,.18);
+  display: flex; flex-direction: column;
+}
+
+/* Bande supérieure */
+.pr-topbar { height: 4px; background: linear-gradient(to right, #1B3A4B, #C9748A, #F0B8C8, #C9748A, #1B3A4B); }
+
+/* ── Body ── */
+.pr-body { display: flex; flex: 1; }
+
+/* ── Sidebar gauche pétrol ── */
+.pr-sidebar {
+  width: 38%; background: #1B3A4B;
+  padding: 28px 22px 26px;
+  box-sizing: border-box;
+  box-shadow: 3px 0 16px rgba(0,0,0,.18);
+  position: relative; z-index: 1;
+}
+
+/* ── Photo hexagonale — cadre double couche rose-gold ── */
+.pr-photo-wrap { display: flex; justify-content: center; margin-bottom: 16px; }
+.pr-photo-hex-outer {
+  width: 112px; height: 112px;
+  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+  background: linear-gradient(135deg, #C9748A 0%, #F0B8C8 50%, #C9748A 100%);
+  display: flex; align-items: center; justify-content: center;
+}
+.pr-photo-hex-inner {
+  width: 100px; height: 100px;
+  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+  background: #243E4F;
+  display: flex; align-items: center; justify-content: center; font-size: 32px;
+  overflow: hidden;
+}
+.pr-photo-hex-inner img { width: 130%; height: 130%; object-fit: cover; }
+
+/* Identité sidebar */
+.pr-name {
+  font-size: 14.5pt; font-weight: 800; color: #fff;
+  text-align: center; line-height: 1.2; letter-spacing: .3px;
+  margin-bottom: 4px; word-break: break-word;
+}
+.pr-title {
+  font-size: 11pt; color: #C9748A; text-align: center; font-style: italic;
+  margin-bottom: 16px; padding-bottom: 14px;
+  border-bottom: 1px solid rgba(201,116,138,.25);
+}
+
+/* Contacts */
+.pr-contact {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 7.5pt; color: rgba(255,255,255,.75);
+  margin-bottom: 7px; line-height: 1.4;
+  word-break: break-all;
+}
+.pr-contact-hex {
+  width: 7px; height: 7px; flex-shrink: 0; margin-top: 2px;
+  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+  background: #C9748A;
+}
+.pr-contacts-block { margin-bottom: 4px; }
+
+/* Titres section sidebar */
+.pr-aside-sec {
+  font-size: 7pt; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
+  color: #C9748A; padding-bottom: 5px;
+  border-bottom: 1px solid rgba(201,116,138,.28);
+  margin-bottom: 11px; margin-top: 20px;
+}
+
+/* Profil */
+.pr-profil { font-size: 8.5pt; color: rgba(255,255,255,.72); line-height: 1.75; }
+
+/* Compétences — hexagones indicateurs */
+.pr-skill { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.pr-skill-name { font-size: 8.5pt; color: rgba(255,255,255,.85); flex: 1; min-width: 0; }
+.pr-skill-hexes { display: flex; gap: 4px; flex-shrink: 0; }
+.pr-skill-hex {
+  width: 11px; height: 11px;
+  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+  background: rgba(255,255,255,.1);
+}
+.pr-skill-hex.on { background: #C9748A; }
+.pr-skill-hex.half { background: linear-gradient(135deg, #C9748A 50%, rgba(255,255,255,.1) 50%); }
+
+/* Langues — 2 colonnes */
+.pr-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 7px; }
+.pr-lang {
+  background: rgba(255,255,255,.07); border-radius: 6px; padding: 5px 8px;
+  display: flex; flex-direction: column; gap: 2px;
+  border: 1px solid rgba(201,116,138,.2);
+}
+.pr-lang-name { font-size: 7.5pt; font-weight: 700; color: rgba(255,255,255,.9); }
+.pr-lang-badge { font-size: 6.5pt; color: #C9748A; font-weight: 600; }
+
+/* Intérêts — 2 colonnes */
+.pr-interest { display: flex; align-items: center; gap: 6px; font-size: 8pt; color: rgba(255,255,255,.68); }
+.pr-interest-dot {
+  width: 5px; height: 5px; flex-shrink: 0;
+  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+  background: #C9748A;
+}
+
+/* Références */
+.pr-ref-side { font-size: 7.5pt; color: rgba(201,116,138,.7); text-align: center; font-style: italic; margin-top: 18px; }
+
+/* ── Main droite ── */
+.pr-main { flex: 1; padding: 28px 36px 26px 26px; background: #fff; }
+
+/* Titres section main */
+.pr-sec { display: flex; align-items: center; gap: 9px; margin-bottom: 13px; margin-top: 24px; }
+.pr-sec:first-child { margin-top: 0; }
+.pr-sec-hex {
+  width: 9px; height: 9px; flex-shrink: 0;
+  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+  background: #C9748A;
+}
+.pr-sec-label { font-size: 7.5pt; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #1B3A4B; white-space: nowrap; }
+.pr-sec-line { flex: 1; height: 1px; background: #F0D4DB; }
+
+/* Entrées — style ligne de temps avec bullet rose-gold */
+.pr-entry { margin-bottom: 15px; padding-left: 16px; border-left: 2px solid #F0D4DB; position: relative; }
+.pr-entry::before {
+  content: ''; position: absolute; left: -5px; top: 7px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #C9748A; border: 2px solid #fff;
+  box-shadow: 0 0 0 1px #C9748A;
+}
+.pr-entry-hdr { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.pr-entry-title { font-size: 10pt; font-weight: 700; color: #1B3A4B; }
+.pr-entry-badge {
+  font-size: 7.5pt; color: #C9748A; background: #FAF0F3;
+  border: 1px solid #F0D4DB; padding: 2px 9px; border-radius: 10px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.pr-entry-sub { font-size: 9pt; color: #C9748A; font-weight: 600; margin-top: 2px; }
+.pr-entry-place { font-size: 8pt; color: #9ca3af; }
+.pr-entry-desc { font-size: 8.5pt; color: #4b5563; margin-top: 4px; line-height: 1.65; }
+
+/* Listes (certifs, projets, bénévolat) */
+.pr-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 7px 0; border-bottom: 1px solid #F5E8EC; gap: 12px; }
+.pr-item:last-child { border-bottom: none; }
+.pr-item-title { font-weight: 600; font-size: 9pt; color: #1B3A4B; }
+.pr-item-sub { font-size: 8pt; color: #6b7280; margin-top: 1px; }
+.pr-item-year { font-size: 8pt; color: #C9748A; font-weight: 700; white-space: nowrap; }
+
+/* Missions clients */
+.cv-mc-section { margin-top: 8px; padding: 7px 10px 7px 12px; background: rgba(201,116,138,.06); border-left: 3px solid #C9748A; border-radius: 0 6px 6px 0; }
+.cv-mc-label { font-size: 6.5pt; font-weight: 700; color: #C9748A; text-transform: uppercase; letter-spacing: .7px; margin-bottom: 6px; }
+.cv-mc-item { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed rgba(201,116,138,.2); }
+.cv-mc-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.cv-mc-hdr { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+.cv-mc-title { font-size: 9pt; font-weight: 600; }
+.cv-mc-badge { font-size: 6.5pt; color: #fff; background: #C9748A; padding: 1px 7px; border-radius: 8px; white-space: nowrap; flex-shrink: 0; }
+.cv-mc-client { font-size: 8pt; color: #6b7280; margin-top: 1px; }
+.cv-mc-desc { font-size: 7.5pt; color: #4b5563; margin-top: 2px; line-height: 1.5; }
+
+/* Footer */
+.pr-footer { height: 4px; background: linear-gradient(to right, #1B3A4B, #C9748A, #F0B8C8, #C9748A, #1B3A4B); }
+</style>
+{% endblock %}
+
+{% block contenu %}<div class="-mx-6 -my-8" x-data="cvBuilder()"><div class="cv-builder">
+  {% include "candidat/cv/_form_panel.html" %}
+  <div class="preview-panel">
+  <div id="cv-sheet">
+
+    <div class="pr-topbar"></div>
+
+    <div class="pr-body">
+
+      <!-- ── SIDEBAR gauche pétrol ── -->
+      <div class="pr-sidebar">
+
+        <!-- Photo hexagonale -->
+        <div class="pr-photo-wrap">
+          <div class="pr-photo-hex-outer">
+            <template x-if="cv.photo">
+              <div class="pr-photo-hex-inner"><img :src="cv.photo" alt="{% trans "Photo" %}"></div>
+            </template>
+            <template x-if="!cv.photo">
+              <div class="pr-photo-hex-inner">👤</div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Nom & titre -->
+        <div class="pr-name">
+          <span x-text="cv.prenom||'Prénom'"></span>
+          <span x-text="cv.nom?cv.nom.toUpperCase():'NOM'"></span>
+        </div>
+        <div class="pr-title" x-text="cv.titre||'Titre professionnel'"></div>
+
+        <!-- Contacts -->
+        <div class="pr-contacts-block">
+          <template x-if="cv.email">
+            <div class="pr-contact"><span class="pr-contact-hex"></span><span x-text="cv.email"></span></div>
+          </template>
+          <template x-if="cv.telephone">
+            <div class="pr-contact"><span class="pr-contact-hex"></span><span x-text="cv.telephone"></span></div>
+          </template>
+          <template x-if="cvLoc()">
+            <div class="pr-contact"><span class="pr-contact-hex"></span><span x-text="cvLoc()"></span></div>
+          </template>
+          <template x-if="cv.age">
+            <div class="pr-contact"><span class="pr-contact-hex"></span><span x-text="cv.age+' ans'"></span></div>
+          </template>
+          <template x-if="cv.linkedin">
+            <div class="pr-contact"><span class="pr-contact-hex"></span><span x-text="cv.linkedin"></span></div>
+          </template>
+          <template x-if="cv.permis">
+            <div class="pr-contact"><span class="pr-contact-hex"></span><span x-text="'Permis '+cv.permis"></span></div>
+          </template>
+        </div>
+
+        <!-- Profil -->
+        <template x-if="cv.profil">
+          <div>
+            <div class="pr-aside-sec">{% trans "Profil" %}</div>
+            <p class="pr-profil" x-text="cv.profil"></p>
+          </div>
+        </template>
+
+        <!-- Compétences -->
+        <template x-if="vis(cv.competences).filter(c=>c.nom).length > 0">
+          <div>
+            <div class="pr-aside-sec">{% trans "Compétences" %}</div>
+            <template x-for="c in vis(cv.competences)" :key="c.id">
+              <div x-show="c.nom" class="pr-skill">
+                <div class="pr-skill-name" x-text="c.nom"></div>
+                <div class="pr-skill-hexes">
+                  <template x-for="h in [1,2,3,4,5]" :key="h">
+                    <div class="pr-skill-hex" :class="h <= niveauDots(c.niveau) ? 'on' : ''"></div>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Langues -->
+        <template x-if="vis(cv.langues).filter(l=>l.nom).length > 0">
+          <div>
+            <div class="pr-aside-sec">{% trans "Langues" %}</div>
+            <div class="pr-two-col">
+              <template x-for="l in vis(cv.langues)" :key="l.id">
+                <div x-show="l.nom" class="pr-lang">
+                  <span class="pr-lang-name" x-text="l.nom"></span>
+                  <span class="pr-lang-badge" x-text="niveauCode(l.niveau,'langue')"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- Intérêts -->
+        <template x-if="cv.interets.filter((i,ii)=>i && !isInteretMasque(ii)).length > 0">
+          <div>
+            <div class="pr-aside-sec">{% trans "Centres d'intérêt" %}</div>
+            <div class="pr-two-col">
+              <template x-for="(ci,idx) in cv.interets" :key="idx">
+                <div x-show="ci && !isInteretMasque(idx)" class="pr-interest">
+                  <div class="pr-interest-dot"></div>
+                  <span x-text="ci"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- Références -->
+        <template x-if="cv.showRef">
+          <p class="pr-ref-side">{% trans "Références disponibles sur demande" %}</p>
+        </template>
+
+      </div>
+
+      <!-- ── MAIN droite ── -->
+      <div class="pr-main">
+
+        <!-- Expériences -->
+        <template x-if="cv.experiences.some(e=>expVisible(e))">
+          <div>
+            <div class="pr-sec"><div class="pr-sec-hex"></div><div class="pr-sec-label">{% trans "Expériences professionnelles" %}</div><div class="pr-sec-line"></div></div>
+            <template x-for="e in cv.experiences" :key="e.id">
+              <div x-show="expVisible(e)" class="pr-entry">
+                <div class="pr-entry-hdr">
+                  <div class="pr-entry-title" x-text="expTitre(e)"></div>
+                  <div x-show="expTitrePeriodeShow(e)" class="pr-entry-badge" x-text="expTitrePeriodeStr(e)"></div>
+                </div>
+                <template x-if="!e.postes||e.postes.length<=1">
+                  <div x-show="e.entreprise||e.lieu">
+                    <span class="pr-entry-sub" x-text="e.entreprise"></span>
+                    <span x-show="e.lieu" class="pr-entry-place" x-text="e.lieu?' · '+e.lieu:''"></span>
+                    <span x-show="expPeriodeShow(e)" style="font-size:7.5pt;color:#94a3b8;margin-left:4px;white-space:nowrap" x-text="expPeriodeStr(e)"></span>
+                  </div>
+                </template>
+                <template x-if="e.postes&&e.postes.length>1">
+                  <div><div x-show="e.lieu" class="pr-entry-place" x-text="'· '+e.lieu" style="margin-bottom:3px"></div><div class="cv-postes-list"><template x-for="p in e.postes" :key="p.id"><div x-show="p.titre" class="cv-postes-row"><span class="cv-postes-titre" x-text="p.titre"></span><span x-show="p.debut||p.enCours" class="cv-postes-date" x-text="formatPeriode(p.debut,p.fin,p.enCours)"></span></div></template></div></div>
+                </template>
+                <div x-show="e.desc" class="pr-entry-desc" x-text="e.desc"></div>
+                <template x-if="e.hasMissionsClient && e.missionsClient && e.missionsClient.filter(mc=>mc.client).length>0">
+                  <div class="cv-mc-section">
+                    <div class="cv-mc-label">🏢 Missions clients</div>
+                    <template x-for="mc in e.missionsClient.filter(mc=>mc.client)" :key="mc.id">
+                      <div class="cv-mc-item">
+                        <div class="cv-mc-hdr">
+                          <div class="cv-mc-title" x-text="mc.client||'—'"></div>
+                          <div x-show="mc.debut||mc.enCours" class="cv-mc-badge" x-text="formatPeriode(mc.debut,mc.fin,mc.enCours)"></div>
+                        </div>
+                        <div x-show="mc.pays||mc.ville" class="cv-mc-client">
+                          <span x-show="mc.pays" x-text="mc.pays"></span>
+                          <span x-show="mc.ville" x-text="mc.pays&&mc.ville?' · '+mc.ville:mc.ville||''"></span>
+                        </div>
+                        <div x-show="mc.desc" class="cv-mc-desc" x-text="mc.desc"></div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Formations -->
+        <template x-if="vis(cv.formations).filter(f=>f.diplome||f.ecole).length > 0">
+          <div>
+            <div class="pr-sec"><div class="pr-sec-hex"></div><div class="pr-sec-label">{% trans "Formations" %}</div><div class="pr-sec-line"></div></div>
+            <template x-for="f in vis(cv.formations)" :key="f.id">
+              <div x-show="f.diplome||f.ecole" class="pr-entry">
+                <div class="pr-entry-hdr">
+                  <div class="pr-entry-title" x-text="(f.typeSortie==='certification'?'🏅 ':f.typeSortie==='attestation'?'📄 ':'')+(f.diplome||'—')"></div>
+                  <div x-show="f.typeSortie==='certification'?(f.fin||f.expiration):(f.debut||f.enCours)" class="pr-entry-badge" x-text="f.typeSortie==='certification'?(f.expiration?'Exp. '+formatMonth(f.expiration):(f.fin?formatMonth(f.fin):'')):(formatPeriode(f.debut,f.fin,f.enCours))"></div>
+                </div>
+                <div x-show="f.ecole||f.lieu">
+                  <span class="pr-entry-sub" x-text="f.ecole"></span>
+                  <span x-show="f.lieu&&f.typeSortie!=='certification'" class="pr-entry-place" x-text="f.lieu?' · '+f.lieu:''"></span>
+                </div>
+                <div x-show="f.domaine" class="pr-entry-desc" x-text="f.domaine" style="font-style:italic;opacity:.8"></div>
+                <div x-show="f.typeSortie==='certification'&&f.numero" class="pr-entry-desc" x-text="'N° '+f.numero"></div>
+                <div x-show="f.desc" class="pr-entry-desc" x-text="f.desc"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Certifications -->
+        <template x-if="cv.showCertif && cv.certifs.filter(c=>c.nom).length > 0">
+          <div>
+            <div class="pr-sec"><div class="pr-sec-hex"></div><div class="pr-sec-label">{% trans "Certifications" %}</div><div class="pr-sec-line"></div></div>
+            <template x-for="c in cv.certifs" :key="c.id">
+              <div x-show="c.nom" class="pr-item pr-certif">
+                <div>
+                  <div class="pr-item-title" x-text="c.nom"></div>
+                  <div class="pr-item-sub" x-text="c.organisme"></div>
+                </div>
+                <div class="pr-item-year" x-text="c.annee"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Projets -->
+        <template x-if="cv.showProjets && vis(cv.projets).filter(p=>p.nom).length > 0">
+          <div>
+            <div class="pr-sec"><div class="pr-sec-hex"></div><div class="pr-sec-label">{% trans "Projets personnels" %}</div><div class="pr-sec-line"></div></div>
+            <template x-for="p in vis(cv.projets)" :key="p.id">
+              <div x-show="p.nom" class="pr-item pr-certif">
+                <div>
+                  <div class="pr-item-title" x-text="p.nom"></div>
+                  <div class="pr-item-sub" x-text="p.desc"></div>
+                </div>
+                <div class="pr-item-year" x-text="p.annee"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Bénévolat -->
+        <template x-if="cv.showBenev && cv.benevs && vis(cv.benevs).filter(b=>b.role||b.orga).length > 0">
+          <div>
+            <div class="pr-sec"><div class="pr-sec-hex"></div><div class="pr-sec-label">{% trans "Engagement &amp; Bénévolat" %}</div><div class="pr-sec-line"></div></div>
+            <template x-for="b in vis(cv.benevs)" :key="b.id">
+              <div x-show="b.role||b.orga" class="pr-item pr-certif">
+                <div>
+                  <div class="pr-item-title" x-text="b.role"></div>
+                  <div class="pr-item-sub" x-text="b.orga"></div>
+                </div>
+                <div class="pr-item-year" x-text="formatPeriode(b.debut,b.fin,b.enCours)"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+      </div>
+    </div>
+
+    <div class="pr-footer"></div>
+  </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+{% block js_extra %}{% include "candidat/cv/_cvbuilder_js.html" %}{% endblock %}

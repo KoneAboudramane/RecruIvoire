@@ -1,0 +1,616 @@
+﻿{% extends "entreprise/base.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Tableau de bord" %} — {{ request.entreprise.raisonSocial }}{% endblock %}
+
+{% block css_extra %}
+<style>
+  .tdb-header { background:#fff; color:#1f2937; border:1px solid #e5e7eb; }
+  .tdb-header .sous-titre { color:#6b7280; }
+  .tdb-header .logo-placeholder { background:rgba(0,154,68,.10); color:#009A44; }
+  .tdb-header .logo-border { border-color:#e5e7eb; }
+  .tdb-header .badge { background:rgba(0,0,0,.07); color:#374151; }
+  .tdb-header .badge-verifie { background:rgba(59,130,246,.10); color:#1d4ed8; }
+  .tdb-header .badge-attente { background:rgba(234,179,8,.12); color:#92400e; }
+  .tdb-header .btn-profil { background:rgba(0,0,0,.06); border:1px solid rgba(0,0,0,.12); color:#374151; }
+  .tdb-header .btn-profil:hover { background:rgba(0,0,0,.10); }
+  html.dark .tdb-header { background:#1e293b; color:#f1f5f9; border-color:#334155; }
+  html.dark .tdb-header .sous-titre { color:#94a3b8; }
+  html.dark .tdb-header .logo-placeholder { background:rgba(0,154,68,.18); color:#4ade80; }
+  html.dark .tdb-header .logo-border { border-color:#334155; }
+  html.dark .tdb-header .badge { background:rgba(255,255,255,.10); color:#e2e8f0; }
+  html.dark .tdb-header .badge-verifie { background:rgba(59,130,246,.18); color:#93c5fd; }
+  html.dark .tdb-header .badge-attente { background:rgba(234,179,8,.18); color:#fcd34d; }
+  html.dark .tdb-header .btn-profil { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.15); color:#e2e8f0; }
+  html.dark .tdb-header .btn-profil:hover { background:rgba(255,255,255,.14); }
+  html.noir .tdb-header { background:linear-gradient(135deg,#000 0%,#080808 60%,#111 100%); color:#f1f5f9; border-color:#222; }
+  html.noir .tdb-header .sous-titre { color:#94a3b8; }
+  html.noir .tdb-header .logo-placeholder { background:rgba(0,154,68,.15); color:#4ade80; }
+  html.noir .tdb-header .logo-border { border-color:#222; }
+  html.noir .tdb-header .badge { background:rgba(255,255,255,.08); color:#e2e8f0; }
+  html.noir .tdb-header .badge-verifie { background:rgba(59,130,246,.15); color:#93c5fd; }
+  html.noir .tdb-header .badge-attente { background:rgba(234,179,8,.15); color:#fcd34d; }
+  html.noir .tdb-header .btn-profil { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.12); color:#e2e8f0; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="w-full space-y-8">
+
+    <!-- ── En-tête greeting ─────────────────────────────────────────────── -->
+    <div class="tdb-header rounded-2xl p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+        <div class="flex items-center gap-4">
+            {% if request.entreprise.logoEntreprise %}
+                <img src="{{ request.entreprise.logoEntreprise.url }}" alt="{% trans "Logo" %}"
+                     class="logo-border w-16 h-16 rounded-2xl object-cover border-2 shadow-lg">
+            {% else %}
+                <div class="logo-placeholder w-16 h-16 rounded-2xl flex items-center justify-center text-3xl font-bold shadow-sm">
+                    {{ request.entreprise.raisonSocial|slice:":1"|upper }}
+                </div>
+            {% endif %}
+            <div>
+                <p class="sous-titre text-sm">{% trans "Bonjour," %}</p>
+                <h1 class="text-2xl font-extrabold">{{ request.entreprise.raisonSocial }}</h1>
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="badge text-xs px-2 py-0.5 rounded-full">
+                        {{ request.entreprise.get_planAbonnement_display }}
+                    </span>
+                    <span class="text-xs px-2 py-0.5 rounded-full {% if request.entreprise.statutVerification == 'VERIFIE' %}badge-verifie{% else %}badge-attente{% endif %}">
+                        {% if request.entreprise.statutVerification == 'VERIFIE' %}✅ {% trans "Vérifié" %}
+                        {% else %}⏳ {% trans "En attente de vérification" %}{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="flex gap-3">
+            <a href="{% url 'entreprise:profil' %}"
+               class="btn-profil px-5 py-2.5 text-sm font-semibold rounded-xl transition">
+                ✏️ {% trans "Modifier le profil" %}
+            </a>
+            <a href="{% url 'entreprise:offre_creer' %}"
+               class="px-5 py-2.5 bg-white border border-gray-200 text-sm font-bold rounded-xl transition hover:shadow-md"
+               style="color:#009A44;">
+                + {% trans "Publier une offre" %}
+            </a>
+        </div>
+    </div>
+
+    <!-- ── Bandeau Vérification (priorité max, 1 seul à la fois) ──────── -->
+    {% if request.entreprise.statutVerification == 'REJETE' %}
+    <!-- Demande rejetée -->
+    <div class="rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center gap-4"
+         style="background: linear-gradient(135deg,#FEF2F2,#FEE2E2); border: 1px solid #FECACA;">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+             style="background:#FEE2E2;">❌</div>
+        <div class="flex-1">
+            <p class="font-bold text-red-800 text-sm">{% trans "Votre demande de vérification a été rejetée" %}</p>
+            <p class="text-red-700 text-xs mt-1">
+                {% if derniere_demande and derniere_demande.notes_admin %}
+                    {% trans "Motif :" %} {{ derniere_demande.notes_admin }}
+                {% else %}
+                    {% trans "Veuillez corriger les documents soumis et soumettre une nouvelle demande." %}
+                {% endif %}
+            </p>
+        </div>
+        <a href="{% url 'entreprise:profil' %}?tab=verification"
+           class="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold text-white transition hover:opacity-90"
+           style="background:#EF4444;">
+            {% trans "Renouveler la demande →" %}
+        </a>
+    </div>
+
+    {% elif demande_en_cours %}
+    <!-- Demande en cours d'examen -->
+    <div class="rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center gap-4"
+         style="background: linear-gradient(135deg,#EFF6FF,#DBEAFE); border: 1px solid #BFDBFE;">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 animate-pulse"
+             style="background:#DBEAFE;">⏳</div>
+        <div class="flex-1">
+            <p class="font-bold text-blue-800 text-sm">{% trans "Demande de vérification en cours d'examen" %}</p>
+            <p class="text-blue-700 text-xs mt-1">
+                {% blocktrans with date=demande_en_cours.date_soumission|date:"d/m/Y" %}Soumise le {{ date }} — traitement sous 2 à 5 jours ouvrables. Notre équipe examine vos documents.{% endblocktrans %}
+            </p>
+        </div>
+        <a href="{% url 'entreprise:profil' %}?tab=verification"
+           class="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold text-blue-700 bg-blue-100 hover:bg-blue-200 transition">
+            {% trans "Voir le statut →" %}
+        </a>
+    </div>
+
+    {% elif not request.entreprise.emailVerifie %}
+    <!-- Email non vérifié -->
+    <div class="rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center gap-4"
+         style="background: linear-gradient(135deg,#FFFBEB,#FEF3C7); border: 1px solid #FDE68A;">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+             style="background:#FEF3C7;">✉️</div>
+        <div class="flex-1">
+            <p class="font-bold text-amber-800 text-sm">{% trans "Vérifiez votre email pour +20 points de score" %}</p>
+            <p class="text-amber-700 text-xs mt-1">
+                {% trans "Un email vérifié augmente votre visibilité et débloque la vérification officielle du compte." %}
+            </p>
+        </div>
+        <a href="{% url 'entreprise:profil' %}?tab=verification"
+           class="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold text-white transition hover:opacity-90"
+           style="background:#c96010;">
+            {% trans "Vérifier l'email →" %}
+        </a>
+    </div>
+
+    {% elif request.entreprise.statutVerification != 'VERIFIE' %}
+    <!-- Pas encore vérifié - incitation -->
+    <div class="rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center gap-4"
+         style="background: linear-gradient(135deg,#F0FDF4,#DCFCE7); border: 1px solid #BBF7D0;">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+             style="background:#DCFCE7;">🏆</div>
+        <div class="flex-1">
+            <p class="font-bold text-green-800 text-sm">{% trans "Obtenez le badge \"Entreprise vérifiée\" RecrutePro" %}</p>
+            <p class="text-green-700 text-xs mt-1">
+                {% blocktrans %}Les entreprises vérifiées reçoivent <strong>3× plus de candidatures</strong>. Soumettez vos documents officiels en 2 minutes.{% endblocktrans %}
+            </p>
+        </div>
+        <a href="{% url 'entreprise:profil' %}?tab=verification"
+           class="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold text-white transition hover:opacity-90"
+           style="background:#009A44;">
+            {% trans "Vérifier mon compte →" %}
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- ── Score de pertinence (si < 70) ───────────────────────────────── -->
+    {% if request.entreprise.scorePertinence < 70 %}
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center gap-4">
+        <div class="text-3xl">💡</div>
+        <div class="flex-1">
+            <p class="font-bold text-amber-800 text-sm">{% trans "Complétez votre profil pour plus de visibilité" %}</p>
+            <p class="text-amber-700 text-xs mt-1">
+                {% blocktrans with score=request.entreprise.scorePertinence %}Votre score de pertinence est de <strong>{{ score }}/100</strong>. Un profil complet augmente significativement vos chances d'attirer des candidats qualifiés.{% endblocktrans %}
+            </p>
+            <div class="mt-3 h-2 bg-amber-200 rounded-full overflow-hidden w-full max-w-xs">
+                <div class="h-full rounded-full bg-amber-400 transition-all duration-500"
+                     style="width: {{ request.entreprise.scorePertinence }}%;"></div>
+            </div>
+        </div>
+        <a href="{% url 'entreprise:profil' %}"
+           class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl transition flex-shrink-0">
+            {% trans "Compléter →" %}
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- ── Cartes statistiques ─────────────────────────────────────────── -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+        <!-- Offres actives -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">{% trans "Offres actives" %}</p>
+                <span class="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+                      style="background:#009A4415;">📋</span>
+            </div>
+            <p class="text-3xl font-extrabold text-gray-900">{{ stat_offres_actives }}</p>
+            <p class="text-xs text-gray-400 mt-1">
+                {% trans "offres publiées" %}
+                {% if stat_offres_expirees %}
+                <span class="text-amber-500 ml-1">· {{ stat_offres_expirees }} {% trans "expirée" %}{{ stat_offres_expirees|pluralize }}</span>
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Candidatures reçues -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">{% trans "Candidatures" %}</p>
+                <span class="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+                      style="background:#c9601015;">📨</span>
+            </div>
+            <p class="text-3xl font-extrabold text-gray-900">{{ stat_candidatures }}</p>
+            <p class="text-xs text-gray-400 mt-1">
+                {% trans "reçues au total" %}
+                {% if stat_candidatures_7j %}
+                <span class="text-green-600 ml-1">· +{{ stat_candidatures_7j }} {% trans "cette semaine" %}</span>
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Score profil -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">{% trans "Score profil" %}</p>
+                <span class="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+                      style="background:#3B82F615;">⭐</span>
+            </div>
+            <p class="text-3xl font-extrabold text-gray-900">{{ stat_score|floatformat:0 }}<span class="text-lg text-gray-400">/100</span></p>
+            <div class="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-700
+                    {% if stat_score >= 70 %}bg-green-500
+                    {% elif stat_score >= 40 %}bg-amber-400
+                    {% else %}bg-red-400{% endif %}"
+                     style="width: {{ stat_score }}%;"></div>
+            </div>
+        </div>
+
+        <!-- Membres actifs -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">{% trans "Membres" %}</p>
+                <span class="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+                      style="background:#8B5CF615;">👥</span>
+            </div>
+            <p class="text-3xl font-extrabold text-gray-900">{{ stat_membres }}</p>
+            <p class="text-xs text-gray-400 mt-1">{% trans "membres actifs" %}</p>
+        </div>
+
+    </div>
+
+    <!-- ── Actions rapides + Analytiques ────────────────────────────────── -->
+    <div class="grid lg:grid-cols-3 gap-6 items-start">
+
+        <!-- Accès rapides -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+            <h2 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-4">{% trans "Actions rapides" %}</h2>
+            <div class="grid grid-cols-2 gap-3">
+                <a href="{% url 'entreprise:offre_creer' %}"
+                   class="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-green-300 hover:bg-green-50 transition group">
+                    <span class="text-2xl">📝</span>
+                    <span class="text-xs font-semibold text-gray-600 dark:text-gray-300 group-hover:text-green-700 text-center">{% trans "Publier une offre" %}</span>
+                </a>
+                <a href="{% url 'entreprise:offres_liste' %}"
+                   class="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-blue-300 hover:bg-blue-50 transition group">
+                    <span class="text-2xl">📋</span>
+                    <span class="text-xs font-semibold text-gray-600 dark:text-gray-300 group-hover:text-blue-700 text-center">{% trans "Mes offres" %}</span>
+                </a>
+                <a href="{% url 'entreprise:profil' %}"
+                   class="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-orange-300 hover:bg-orange-50 transition group">
+                    <span class="text-2xl">🏢</span>
+                    <span class="text-xs font-semibold text-gray-600 dark:text-gray-300 group-hover:text-orange-700 text-center">{% trans "Mon entreprise" %}</span>
+                </a>
+                <a href="{% url 'entreprise:membres_liste' %}"
+                   class="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-purple-300 hover:bg-purple-50 transition group">
+                    <span class="text-2xl">👥</span>
+                    <span class="text-xs font-semibold text-gray-600 dark:text-gray-300 group-hover:text-purple-700 text-center">{% trans "Membres" %}</span>
+                </a>
+                <a href="{% url 'entreprise:modeles_messages' %}"
+                   class="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-amber-300 hover:bg-amber-50 transition group">
+                    <span class="text-2xl">✉️</span>
+                    <span class="text-xs font-semibold text-gray-600 dark:text-gray-300 group-hover:text-amber-700 text-center">{% trans "Modèles de message" %}</span>
+                </a>
+                <a href="{% url 'entreprise:suggestions_recues' %}"
+                   class="flex flex-col items-center gap-2 p-4 rounded-xl border transition group relative
+                   {% if suggestions_non_lues %}border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30{% else %}border-gray-100 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-700 hover:bg-green-50 dark:hover:bg-green-900/20{% endif %}">
+                    <span class="text-2xl relative">
+                        👥
+                        {% if suggestions_non_lues %}
+                        <span class="absolute -top-1 -right-2 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center" style="background:#c96010;">{{ suggestions_non_lues }}</span>
+                        {% endif %}
+                    </span>
+                    <span class="text-xs font-semibold text-center
+                        {% if suggestions_non_lues %}text-orange-700 dark:text-orange-300 group-hover:text-orange-800{% else %}text-gray-600 dark:text-gray-300 group-hover:text-green-700 dark:group-hover:text-green-400{% endif %}">{% trans "Suggestions" %}</span>
+                </a>
+                <a href="{% url 'entreprise:partages_liste' %}"
+                   class="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-cyan-300 dark:hover:border-cyan-700 hover:bg-cyan-50 transition group">
+                    <span class="text-2xl">🔗</span>
+                    <span class="text-xs font-semibold text-gray-600 dark:text-gray-300 group-hover:text-cyan-700 dark:group-hover:text-cyan-400 text-center">{% trans "Liens de partage" %}</span>
+                </a>
+                <a href="{% url 'entreprise:entretiens' %}"
+                   class="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-700 hover:bg-green-50 transition group">
+                    <span class="text-2xl">🤝</span>
+                    <span class="text-xs font-semibold text-gray-600 dark:text-gray-300 group-hover:text-green-700 dark:group-hover:text-green-400 text-center">{% trans "Entretiens" %}</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Analytiques -->
+        <div class="lg:col-span-2 space-y-4">
+            <h2 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">{% trans "Analytiques" %}</h2>
+
+            <!-- Courbe candidatures -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200">📈 {% trans "Candidatures reçues" %}</h3>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{% trans "30 derniers jours" %}</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="sse-badge" class="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full text-white" style="background:#009A44;">
+                            <span id="sse-dot" class="w-1.5 h-1.5 rounded-full bg-white animate-pulse inline-block"></span>
+                            <span id="sse-7j">{{ stat_candidatures_7j }}</span> {% trans "cette semaine" %}
+                        </span>
+                        <span id="sse-maj" class="text-[10px] text-gray-400 dark:text-gray-500 hidden">
+                            ↻ <span id="sse-heure"></span>
+                        </span>
+                    </div>
+                </div>
+                <div class="relative h-44">
+                    <canvas id="chartCandidatures"></canvas>
+                </div>
+            </div>
+
+            <!-- Donut statuts + Bar offres -->
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+                    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-1">🎯 {% trans "Statuts des candidatures" %}</h3>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mb-4">{% trans "Répartition globale" %}</p>
+                    <div class="relative h-48">
+                        <canvas id="chartStatuts"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+                    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-1">📋 {% trans "Offres par statut" %}</h3>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mb-4">{% trans "Toutes les offres" %}</p>
+                    <div class="relative h-48">
+                        <canvas id="chartOffres"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Funnel + Top offres -->
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+                    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-1">🔽 {% trans "Funnel de recrutement" %}</h3>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mb-4">{% trans "Reçues → Traitées → Planifiés → Réalisés" %}</p>
+                    <div class="relative h-48">
+                        <canvas id="chartFunnel"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+                    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-1">🏆 {% trans "Top 5 offres" %}</h3>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mb-4">{% trans "Par nombre de candidatures" %}</p>
+                    <div class="relative h-48">
+                        <canvas id="chartTopOffres"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+
+{% block js_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    // ── Thème ─────────────────────────────────────────────────────────────
+    const html     = document.documentElement;
+    const isDark   = html.classList.contains('dark') || html.classList.contains('noir');
+    const textColor = isDark ? '#94a3b8' : '#6b7280';
+    const gridColor = isDark ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.06)';
+    const tooltipBg  = isDark ? '#1e293b' : '#fff';
+    const tooltipTxt = isDark ? '#e2e8f0' : '#1f2937';
+    const donutBorder = isDark ? '#1e293b' : '#fff';
+    const donutColors = ['#009A44','#c96010','#1d4ed8','#7c3aed','#0891b2','#db2777','#d97706','#6b7280'];
+
+    Chart.defaults.font.family = 'system-ui, -apple-system, sans-serif';
+    Chart.defaults.font.size   = 11;
+    Chart.defaults.color       = textColor;
+
+    const tooltipOpts = {
+        backgroundColor: tooltipBg,
+        titleColor: tooltipTxt,
+        bodyColor: tooltipTxt,
+        borderColor: isDark ? '#334155' : '#e5e7eb',
+        borderWidth: 1,
+        padding: 10,
+    };
+
+    // ── 1. Courbe candidatures ────────────────────────────────────────────
+    const chartCand = new Chart(document.getElementById('chartCandidatures'), {
+        type: 'line',
+        data: {
+            labels: {{ chart_cand_labels|safe }},
+            datasets: [{
+                label: 'Candidatures',
+                data: {{ chart_cand_data|safe }},
+                borderColor: '#009A44',
+                backgroundColor: isDark ? 'rgba(0,154,68,.12)' : 'rgba(0,154,68,.08)',
+                borderWidth: 2.5,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                pointBackgroundColor: '#009A44',
+                tension: 0.4,
+                fill: true,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { ...tooltipOpts, callbacks: { label: ctx => ` ${ctx.parsed.y} candidature${ctx.parsed.y !== 1 ? 's' : ''}` } }
+            },
+            scales: {
+                x: { grid: { color: gridColor, drawBorder: false }, ticks: { maxTicksLimit: 10, color: textColor } },
+                y: { beginAtZero: true, grid: { color: gridColor, drawBorder: false }, ticks: { stepSize: 1, color: textColor, callback: v => Number.isInteger(v) ? v : '' } }
+            }
+        }
+    });
+
+    // ── 2. Donut statuts ──────────────────────────────────────────────────
+    let chartStatuts = null;
+    const statutLabels0 = {{ chart_statuts_labels|safe }};
+    const statutData0   = {{ chart_statuts_data|safe }};
+
+    function buildDonut(labels, data) {
+        const el = document.getElementById('chartStatuts');
+        if (!el) return;
+        if (data.length === 0 || !data.some(v => v > 0)) {
+            el.closest('.relative').innerHTML = '<p class="flex items-center justify-center h-full text-sm text-gray-400 dark:text-gray-500">Aucune candidature</p>';
+            return;
+        }
+        if (chartStatuts) {
+            chartStatuts.data.labels = labels;
+            chartStatuts.data.datasets[0].data = data;
+            chartStatuts.data.datasets[0].backgroundColor = donutColors.slice(0, labels.length);
+            chartStatuts.update();
+        } else {
+            chartStatuts = new Chart(el, {
+                type: 'doughnut',
+                data: {
+                    labels,
+                    datasets: [{ data, backgroundColor: donutColors.slice(0, labels.length), borderWidth: 2, borderColor: donutBorder, hoverOffset: 6 }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '62%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { padding: 14, usePointStyle: true, pointStyleWidth: 8, color: textColor } },
+                        tooltip: { ...tooltipOpts, callbacks: { label: ctx => ` ${ctx.label} : ${ctx.parsed} (${Math.round(ctx.parsed / ctx.dataset.data.reduce((a,b)=>a+b,0)*100)}%)` } }
+                    }
+                }
+            });
+        }
+    }
+    buildDonut(statutLabels0, statutData0);
+
+    // ── 3. Bar offres ─────────────────────────────────────────────────────
+    const offresColors = ['#009A44','#94a3b8','#f59e0b','#3b82f6','#6b7280'];
+    const chartOffres = new Chart(document.getElementById('chartOffres'), {
+        type: 'bar',
+        data: {
+            labels: ['Publiées', 'Brouillons', 'Expirées', 'Pourvues', 'Fermées'],
+            datasets: [{ label: 'Offres', data: {{ chart_offres_data|safe }}, backgroundColor: offresColors, borderRadius: 8, borderSkipped: false }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { ...tooltipOpts, callbacks: { label: ctx => ` ${ctx.parsed.y} offre${ctx.parsed.y !== 1 ? 's' : ''}` } } },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: textColor } },
+                y: { beginAtZero: true, grid: { color: gridColor, drawBorder: false }, ticks: { stepSize: 1, color: textColor, callback: v => Number.isInteger(v) ? v : '' } }
+            }
+        }
+    });
+
+    // ── 4. Funnel de recrutement ──────────────────────────────────────────
+    const funnelLabels = ['Reçues', 'Traitées', 'Planifiés', 'Réalisés'];
+    const funnelColors = ['#009A44', '#0891b2', '#7c3aed', '#c96010'];
+    const chartFunnel = new Chart(document.getElementById('chartFunnel'), {
+        type: 'bar',
+        data: {
+            labels: funnelLabels,
+            datasets: [{
+                data: {{ chart_funnel_data|safe }},
+                backgroundColor: funnelColors,
+                borderRadius: 8,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    ...tooltipOpts,
+                    callbacks: {
+                        label: ctx => {
+                            const total = ctx.dataset.data[0] || 1;
+                            const pct = Math.round(ctx.parsed.x / total * 100);
+                            return ` ${ctx.parsed.x} candidature${ctx.parsed.x !== 1 ? 's' : ''} (${pct}%)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { beginAtZero: true, grid: { color: gridColor, drawBorder: false }, ticks: { stepSize: 1, color: textColor, callback: v => Number.isInteger(v) ? v : '' } },
+                y: { grid: { display: false }, ticks: { color: textColor } }
+            }
+        }
+    });
+
+    // ── 5. Top 5 offres ───────────────────────────────────────────────────
+    const topLabels0 = {{ chart_top_labels|safe }};
+    const topData0   = {{ chart_top_data|safe }};
+
+    function truncate(str, n) { return str.length > n ? str.slice(0, n) + '…' : str; }
+
+    const chartTop = new Chart(document.getElementById('chartTopOffres'), {
+        type: 'bar',
+        data: {
+            labels: topLabels0.map(l => truncate(l, 28)),
+            datasets: [{
+                data: topData0,
+                backgroundColor: isDark ? 'rgba(0,154,68,.7)' : 'rgba(0,154,68,.85)',
+                borderRadius: 6,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    ...tooltipOpts,
+                    callbacks: {
+                        title: ctx => topLabels0[ctx[0].dataIndex],
+                        label: ctx => ` ${ctx.parsed.x} candidature${ctx.parsed.x !== 1 ? 's' : ''}`
+                    }
+                }
+            },
+            scales: {
+                x: { beginAtZero: true, grid: { color: gridColor, drawBorder: false }, ticks: { stepSize: 1, color: textColor, callback: v => Number.isInteger(v) ? v : '' } },
+                y: { grid: { display: false }, ticks: { color: textColor } }
+            }
+        }
+    });
+
+    // ── Polling — mise à jour périodique (pas de SSE : hébergement mutualisé
+    // sans support ASGI/process persistant) ────────────────────────────────
+    async function pollStats() {
+        let d;
+        try {
+            const r = await fetch('{% url "entreprise:api_stats_tableau_bord" %}',
+                { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!r.ok) return;
+            d = await r.json();
+        } catch (_) { return; }
+
+        // Courbe candidatures
+        chartCand.data.labels = d.cand_labels;
+        chartCand.data.datasets[0].data = d.cand_data;
+        chartCand.update('none');   // 'none' = sans animation pour fluidité
+
+        // Donut statuts
+        buildDonut(d.statuts_labels, d.statuts_data);
+
+        // Bar offres
+        chartOffres.data.datasets[0].data = d.offres_data;
+        chartOffres.update('none');
+
+        // Funnel
+        if (d.funnel_data) {
+            chartFunnel.data.datasets[0].data = d.funnel_data;
+            chartFunnel.update('none');
+        }
+
+        // Top offres
+        if (d.top_labels && d.top_data) {
+            chartTop.data.labels = d.top_labels.map(l => truncate(l, 28));
+            chartTop.data.datasets[0].data = d.top_data;
+            chartTop.update('none');
+        }
+
+        // Badge "X cette semaine"
+        const el7j = document.getElementById('sse-7j');
+        if (el7j) el7j.textContent = d.cand_7j;
+
+        // Heure de dernière mise à jour
+        const maj = document.getElementById('sse-maj');
+        const heure = document.getElementById('sse-heure');
+        if (maj && heure) {
+            const now = new Date();
+            heure.textContent = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            maj.classList.remove('hidden');
+        }
+    }
+
+    pollStats();
+    setInterval(pollStats, 30000);
+})();
+</script>
+{% endblock %}

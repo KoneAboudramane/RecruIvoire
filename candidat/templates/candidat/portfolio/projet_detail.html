@@ -1,0 +1,557 @@
+﻿{% extends "candidat/base.html" %}
+{% load i18n static %}
+
+{% block titre %}{{ projet.nom }} — {{ candidat.prenom }} {{ candidat.nom }}{% endblock %}
+
+{% block css_extra %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --pf-accent: {{ couleur_accent|default:'#c96010' }};
+        --pf-green:  #009A44;
+        --pf-paper:  #FFFEFB;
+        --pf-cream:  #FAF7F2;
+        --pf-ink:    #181615;
+        --pf-rule:   #1816151a;
+        --pf-mute:   #6B6964;
+    }
+
+    .pj, .pj * {
+        font-feature-settings: "ss01","kern","liga";
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        box-sizing: border-box;
+    }
+    .pj {
+        font-family: 'Manrope', system-ui, sans-serif;
+        background: var(--pf-paper);
+        color: var(--pf-ink);
+        font-size: 16px; line-height: 1.6;
+    }
+    .pj-display { font-family: 'Fraunces', Georgia, serif; letter-spacing: -0.02em; }
+    .pj-mono    { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; }
+    .pj a:not([class]) { color: inherit; text-decoration: none; }
+
+    @keyframes pj-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .pj-reveal { opacity: 0; }
+    .pj-reveal.in { animation: pj-up .8s cubic-bezier(.16,.84,.44,1) both; }
+    .pj-reveal.d1 { animation-delay: .08s; }
+    .pj-reveal.d2 { animation-delay: .16s; }
+    .pj-reveal.d3 { animation-delay: .24s; }
+    .pj-reveal.d4 { animation-delay: .32s; }
+
+    /* Top bar : retour + lien démo */
+    .pj-topbar {
+        position: sticky; top: 0; z-index: 30;
+        background: color-mix(in srgb, var(--pf-paper) 92%, transparent);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--pf-rule);
+        padding: 14px clamp(20px, 4vw, 64px);
+        display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    }
+    .pj-back {
+        display: inline-flex; align-items: center; gap: 8px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+        font-weight: 600; color: var(--pf-ink); text-decoration: none;
+        padding: 8px 14px; border-radius: 999px;
+        border: 1px solid var(--pf-rule);
+        transition: background .2s, border-color .2s, color .2s;
+    }
+    .pj-back:hover { background: var(--pf-ink); color: var(--pf-paper); border-color: var(--pf-ink); }
+    .pj-back svg { width: 14px; height: 14px; transition: transform .25s; }
+    .pj-back:hover svg { transform: translateX(-3px); }
+
+    .pj-topbar-cta {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 10px 18px; border-radius: 999px;
+        background: var(--pf-accent); color: var(--pf-ink);
+        font-weight: 700; font-size: 13px; text-decoration: none;
+        transition: transform .25s, box-shadow .25s;
+    }
+    .pj-topbar-cta:hover { transform: translateY(-1px); box-shadow: 0 12px 26px -10px var(--pf-accent); }
+    .pj-topbar-cta svg { width: 14px; height: 14px; }
+
+    /* Hero du projet */
+    .pj-hero {
+        padding: clamp(48px, 7vw, 96px) clamp(24px, 5vw, 96px) clamp(40px, 5vw, 56px);
+    }
+    .pj-eyebrow {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px; letter-spacing: .22em; text-transform: uppercase;
+        color: var(--pf-mute);
+        display: inline-flex; align-items: center; gap: 14px;
+        margin-bottom: 20px;
+    }
+    .pj-eyebrow::before { content: ''; width: 32px; height: 1px; background: var(--pf-accent); }
+
+    .pj-title {
+        font-family: 'Fraunces', serif;
+        font-weight: 600;
+        font-size: clamp(40px, 7vw, 96px);
+        line-height: .98; letter-spacing: -0.035em;
+        margin: 0 0 28px;
+        font-variation-settings: "opsz" 144;
+        max-width: 18ch;
+    }
+    .pj-title em { font-style: italic; color: var(--pf-accent); font-weight: 500; }
+
+    .pj-meta {
+        display: flex; flex-wrap: wrap; gap: 12px;
+        margin-top: 16px;
+    }
+    .pj-meta-pill {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 8px 16px; border-radius: 999px;
+        background: color-mix(in srgb, var(--pf-accent) 10%, transparent);
+        border: 1px solid color-mix(in srgb, var(--pf-accent) 25%, transparent);
+        font-size: 13px; font-weight: 600; color: var(--pf-ink);
+    }
+    .pj-meta-pill svg { width: 14px; height: 14px; color: var(--pf-accent); }
+    .pj-meta-pill .key {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+        color: var(--pf-mute); margin-right: 4px;
+    }
+
+    /* Cover image */
+    .pj-cover {
+        max-width: 1320px; margin: 0 auto;
+        padding: 0 clamp(24px, 5vw, 96px);
+    }
+    .pj-cover-wrap {
+        position: relative;
+        aspect-ratio: 16 / 9;
+        border-radius: 16px;
+        overflow: hidden;
+        background: var(--pf-cream);
+        box-shadow: 0 30px 80px -30px color-mix(in srgb, var(--pf-ink) 35%, transparent);
+    }
+    .pj-cover-wrap img {
+        width: 100%; height: 100%; object-fit: cover;
+    }
+    .pj-cover-fallback {
+        width: 100%; height: 100%;
+        background: linear-gradient(135deg,
+            color-mix(in srgb, var(--pf-accent) 18%, var(--pf-paper)),
+            color-mix(in srgb, var(--pf-accent) 35%, var(--pf-cream)));
+        display: flex; align-items: center; justify-content: center;
+        color: var(--pf-accent);
+    }
+    .pj-cover-fallback svg { width: 80px; height: 80px; opacity: .55; }
+
+    /* Sections de contenu */
+    .pj-section {
+        padding: clamp(48px, 6vw, 80px) clamp(24px, 5vw, 96px);
+    }
+
+    .pj-content {
+        display: grid;
+        grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
+        gap: clamp(40px, 6vw, 96px);
+        align-items: start;
+    }
+    @media (max-width: 880px) { .pj-content { grid-template-columns: 1fr; gap: 32px; } }
+
+    /* Fiche projet : encart prominent type carte d'identité */
+    .pj-content-aside {
+        position: sticky; top: 96px;
+        background: var(--pf-paper);
+        border: 1px solid var(--pf-rule);
+        border-radius: 14px;
+        padding: clamp(28px, 3vw, 36px);
+        overflow: hidden;
+        box-shadow:
+            0 1px 2px color-mix(in srgb, var(--pf-ink) 6%, transparent),
+            0 24px 60px -25px color-mix(in srgb, var(--pf-ink) 22%, transparent);
+    }
+    @media (max-width: 880px) { .pj-content-aside { position: static; } }
+    .pj-content-aside::before {
+        content: '';
+        position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
+        background: linear-gradient(to bottom,
+            var(--pf-accent) 0%, var(--pf-accent) 50%,
+            var(--pf-green) 50%, var(--pf-green) 100%);
+    }
+    .pj-content-aside-title {
+        display: flex; align-items: center; gap: 10px;
+        font-family: 'Fraunces', serif;
+        font-style: italic; font-weight: 600;
+        font-size: clamp(20px, 1.8vw, 24px);
+        color: var(--pf-ink);
+        margin-bottom: 22px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid var(--pf-rule);
+        font-variation-settings: "opsz" 24;
+    }
+    .pj-content-aside-title::before {
+        content: '✦'; color: var(--pf-accent); font-style: normal; font-size: .9em;
+    }
+    .pj-content-aside-row {
+        display: grid;
+        grid-template-columns: 36px 1fr;
+        column-gap: 14px;
+        align-items: center;
+        padding: 14px 0;
+        border-bottom: 1px solid color-mix(in srgb, var(--pf-ink) 6%, transparent);
+    }
+    .pj-content-aside-row:last-child { border-bottom: none; }
+    .pj-content-aside-row .icon {
+        grid-row: span 2;
+        width: 36px; height: 36px;
+        background: color-mix(in srgb, var(--pf-accent) 12%, transparent);
+        color: var(--pf-accent);
+        border-radius: 9px;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .pj-content-aside-row .icon svg { width: 18px; height: 18px; }
+    .pj-content-aside-row .key {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+        color: var(--pf-mute); font-weight: 600;
+        margin-bottom: 2px;
+    }
+    .pj-content-aside-row .val {
+        font-size: clamp(15px, 1.2vw, 17px);
+        font-weight: 700; color: var(--pf-ink);
+        line-height: 1.3;
+        word-break: break-word;
+    }
+    .pj-content-aside-row .val.accent { color: var(--pf-accent); }
+    .pj-content-aside-row .val a {
+        color: var(--pf-accent);
+        text-decoration: none;
+        border-bottom: 1.5px solid color-mix(in srgb, var(--pf-accent) 50%, transparent);
+        transition: border-color .2s;
+    }
+    .pj-content-aside-row .val a:hover {
+        border-bottom-color: var(--pf-accent);
+    }
+
+    .pj-block {
+        margin-bottom: 48px;
+    }
+    .pj-block:last-child { margin-bottom: 0; }
+    .pj-block-title {
+        font-family: 'Fraunces', serif;
+        font-style: italic; font-weight: 500;
+        font-size: clamp(24px, 2.4vw, 32px);
+        line-height: 1.1; letter-spacing: -0.015em;
+        margin: 0 0 20px;
+        color: var(--pf-ink);
+        font-variation-settings: "opsz" 32;
+        display: flex; align-items: center; gap: 14px;
+    }
+    .pj-block-title::before {
+        content: ''; width: 28px; height: 2px; background: var(--pf-accent);
+        flex-shrink: 0;
+    }
+    .pj-block-text {
+        font-size: clamp(16px, 1.3vw, 18px);
+        line-height: 1.7;
+        color: color-mix(in srgb, var(--pf-ink) 88%, transparent);
+    }
+    .pj-block-text p { margin: 0 0 1em; }
+    .pj-block-text p:last-child { margin-bottom: 0; }
+
+    /* Galerie images */
+    .pj-gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+    }
+    .pj-gallery-item {
+        aspect-ratio: 4 / 3;
+        border-radius: 12px; overflow: hidden;
+        background: var(--pf-cream);
+        cursor: zoom-in;
+        transition: transform .25s, box-shadow .25s;
+    }
+    .pj-gallery-item:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 18px 40px -22px color-mix(in srgb, var(--pf-ink) 30%, transparent);
+    }
+    .pj-gallery-item img { width: 100%; height: 100%; object-fit: cover; transition: transform .8s; }
+    .pj-gallery-item:hover img { transform: scale(1.04); }
+
+    /* Vidéos */
+    .pj-videos { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+    .pj-video {
+        position: relative;
+        aspect-ratio: 16 / 9;
+        border-radius: 12px; overflow: hidden;
+        background: var(--pf-ink);
+        cursor: pointer; text-decoration: none;
+        transition: transform .25s;
+    }
+    .pj-video:hover { transform: translateY(-3px); }
+    .pj-video::before {
+        content: '';
+        position: absolute; inset: 0;
+        background: linear-gradient(135deg, var(--pf-ink), #3d3a37);
+    }
+    .pj-video::after {
+        content: '▶';
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        font-size: 32px; color: var(--pf-paper);
+    }
+    .pj-video-name {
+        position: absolute; bottom: 14px; left: 14px; right: 14px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px; color: var(--pf-paper); letter-spacing: .04em;
+        text-shadow: 0 2px 8px rgba(0,0,0,.5);
+    }
+
+    /* CTA "voir la démo" en bas */
+    .pj-bottom-cta {
+        margin-top: 56px;
+        padding: clamp(32px, 4vw, 48px);
+        background: var(--pf-cream);
+        border: 1px dashed color-mix(in srgb, var(--pf-accent) 35%, transparent);
+        border-radius: 16px;
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 24px; flex-wrap: wrap;
+    }
+    .pj-bottom-cta-text {
+        font-family: 'Fraunces', serif;
+        font-weight: 500; font-size: clamp(20px, 1.8vw, 26px);
+        line-height: 1.3;
+        font-variation-settings: "opsz" 28;
+    }
+    .pj-bottom-cta-btn {
+        display: inline-flex; align-items: center; gap: 10px;
+        padding: 14px 26px;
+        background: var(--pf-ink); color: var(--pf-paper);
+        border-radius: 999px;
+        font-weight: 700; font-size: 14px; text-decoration: none;
+        transition: transform .25s, background .25s, box-shadow .25s;
+    }
+    .pj-bottom-cta-btn:hover {
+        transform: translateY(-2px);
+        background: var(--pf-accent); color: var(--pf-ink);
+        box-shadow: 0 18px 40px -10px var(--pf-accent);
+    }
+    .pj-bottom-cta-btn svg { width: 16px; height: 16px; }
+
+    body { background: var(--pf-paper); }
+    [x-cloak] { display: none !important; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="pj -mx-6 -my-8" x-data x-init="(() => {
+    const io = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+            if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+        }
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.pj-reveal').forEach(el => io.observe(el));
+})()">
+
+    {# Top bar sticky : retour + lien démo si présent #}
+    <div class="pj-topbar">
+        <a href="{% url 'candidat:portfolio_public' candidat.id %}#travaux" class="pj-back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+            </svg>
+            Retour au portfolio
+        </a>
+        {% if projet.has_demo %}
+        <a href="{{ projet.lien }}" target="_blank" rel="noopener" class="pj-topbar-cta">
+            Voir la démo
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M7 17L17 7"/><polyline points="7 7 17 7 17 17"/>
+            </svg>
+        </a>
+        {% endif %}
+    </div>
+
+    {# Hero du projet #}
+    <section class="pj-hero">
+        <div style="max-width:1320px; margin:0 auto;">
+            <div class="pj-eyebrow pj-reveal">
+                Réalisation · {{ candidat.prenom }} {{ candidat.nom }}
+            </div>
+            <h1 class="pj-title pj-display pj-reveal d1">{{ projet.nom }}</h1>
+            <div class="pj-meta pj-reveal d2">
+                {% if projet.dateDebut or projet.dateFin %}
+                <span class="pj-meta-pill">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+                    <span class="key">{% trans "Période" %}</span>
+                    <span>{{ projet.dateDebut|slice:":7"|default:'—' }}{% if projet.dateFin %} → {{ projet.dateFin|slice:":7" }}{% endif %}</span>
+                </span>
+                {% endif %}
+                {% if projet.tailleEquipe %}
+                <span class="pj-meta-pill">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <span class="key">{% trans "Équipe" %}</span>
+                    <span>{{ projet.tailleEquipe }} personne{{ projet.tailleEquipe|pluralize }}</span>
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    {# Cover image (1ère image, sinon fallback) #}
+    {% if projet.images.0.url %}
+    <div class="pj-cover">
+        <div class="pj-cover-wrap pj-reveal d2">
+            <img src="{{ projet.images.0.url }}" alt="{{ projet.nom }}">
+        </div>
+    </div>
+    {% else %}
+    <div class="pj-cover">
+        <div class="pj-cover-wrap pj-reveal d2">
+            <div class="pj-cover-fallback">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# Contenu principal : aside méta + blocs contexte/réalisation #}
+    <section class="pj-section">
+        <div style="max-width:1320px; margin:0 auto;">
+            <div class="pj-content">
+
+                {# Aside : Fiche projet #}
+                <aside class="pj-content-aside pj-reveal">
+                    <div class="pj-content-aside-title">{% trans "Fiche projet" %}</div>
+
+                    {% if projet.dateDebut %}
+                    <div class="pj-content-aside-row">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </span>
+                        <span class="key">{% trans "Démarré" %}</span>
+                        <span class="val">{{ projet.dateDebut|slice:":7" }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% if projet.dateFin %}
+                    <div class="pj-content-aside-row">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                        </span>
+                        <span class="key">{% trans "Terminé" %}</span>
+                        <span class="val">{{ projet.dateFin|slice:":7" }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% if projet.tailleEquipe %}
+                    <div class="pj-content-aside-row">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        </span>
+                        <span class="key">{% trans "Taille d'équipe" %}</span>
+                        <span class="val">{{ projet.tailleEquipe }} personne{{ projet.tailleEquipe|pluralize }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% if projet.has_demo %}
+                    <div class="pj-content-aside-row">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                        </span>
+                        <span class="key">{% trans "Démo en ligne" %}</span>
+                        <span class="val"><a href="{{ projet.lien }}" target="_blank" rel="noopener">{{ projet.lien|truncatechars:38 }}</a></span>
+                    </div>
+                    {% endif %}
+
+                    {% if projet.images %}
+                    <div class="pj-content-aside-row">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+                        </span>
+                        <span class="key">{% trans "Images" %}</span>
+                        <span class="val">{{ projet.images|length }} fichier{{ projet.images|length|pluralize }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% if projet.videos %}
+                    <div class="pj-content-aside-row">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                        </span>
+                        <span class="key">{% trans "Vidéos" %}</span>
+                        <span class="val">{{ projet.videos|length }} fichier{{ projet.videos|length|pluralize }}</span>
+                    </div>
+                    {% endif %}
+                </aside>
+
+                {# Contenu : contexte + réalisation + médias #}
+                <div>
+                    {% if projet.contexte %}
+                    <div class="pj-block pj-reveal d1">
+                        <h2 class="pj-block-title pj-display">{% trans "Contexte" %}</h2>
+                        <div class="pj-block-text">{{ projet.contexte|linebreaks }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if projet.realisation %}
+                    <div class="pj-block pj-reveal d2">
+                        <h2 class="pj-block-title pj-display">{% trans "Mes contributions" %}</h2>
+                        <div class="pj-block-text">{{ projet.realisation|linebreaks }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if projet.images|length > 1 %}
+                    <div class="pj-block pj-reveal d3">
+                        <h2 class="pj-block-title pj-display">{% trans "Galerie" %}</h2>
+                        <div class="pj-gallery">
+                            {% for img in projet.images %}
+                            {% if img.url %}
+                            <a href="{{ img.url }}" target="_blank" rel="noopener" class="pj-gallery-item">
+                                <img src="{{ img.url }}" alt="{{ img.name|default:projet.nom }}" loading="lazy">
+                            </a>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if projet.videos %}
+                    <div class="pj-block pj-reveal d4">
+                        <h2 class="pj-block-title pj-display">{% trans "Vidéos" %}</h2>
+                        <div class="pj-videos">
+                            {% for vid in projet.videos %}
+                            {% if vid.url %}
+                            <a href="{{ vid.url }}" target="_blank" rel="noopener" class="pj-video">
+                                <span class="pj-video-name">{{ vid.name|default:'Vidéo' }}</span>
+                            </a>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if projet.has_demo %}
+                    <div class="pj-bottom-cta pj-reveal">
+                        <span class="pj-bottom-cta-text pj-display">{% trans "Découvrir" %} <em>{% trans "le projet en ligne" %}</em>.</span>
+                        <a href="{{ projet.lien }}" target="_blank" rel="noopener" class="pj-bottom-cta-btn">
+                            Voir la démo
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <path d="M7 17L17 7"/><polyline points="7 7 17 7 17 17"/>
+                            </svg>
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    {% if not projet.contexte and not projet.realisation and not projet.images and not projet.videos %}
+                    <div class="pj-block-text" style="font-style:italic; color:var(--pf-mute);">
+                        Ce projet n'a pas encore de description détaillée.
+                        {% if est_proprio %}Ajoutez son contexte, vos contributions et des médias depuis l'onglet <a href="{% url 'candidat:profil' %}?onglet=rubriques" style="color:var(--pf-accent);text-decoration:underline;">Profil → Rubriques → Réalisations</a>.{% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+</div>
+{% endblock %}

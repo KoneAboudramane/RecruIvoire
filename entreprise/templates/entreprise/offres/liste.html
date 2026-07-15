@@ -1,0 +1,326 @@
+{% extends "entreprise/base.html" %}
+{% load i18n %}
+
+{% block titre %}Offres d'emploi — {{ request.entreprise.raisonSocial }}{% endblock %}
+
+{% block css_extra %}
+<style>
+    .badge-contrat { display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .6rem; border-radius:9999px; font-size:.7rem; font-weight:700; }
+    .badge-statut  { display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .6rem; border-radius:9999px; font-size:.7rem; font-weight:700; }
+    .card-offre:hover { box-shadow: 0 8px 30px rgba(0,0,0,.08); transform:translateY(-1px); }
+    .card-offre { transition:all .2s; }
+    .filter-btn { padding:.4rem .9rem; border-radius:.6rem; font-size:.75rem; font-weight:600; cursor:pointer; transition:all .2s; }
+    .filter-btn.active { background:#009A44; color:white; }
+    .filter-btn:not(.active) { background:white; border:1px solid #e5e7eb; color:#6b7280; }
+    .filter-btn:not(.active):hover { border-color:#009A44; color:#009A44; }
+    @media (prefers-color-scheme: dark) {
+        .card-offre:hover { box-shadow: 0 8px 30px rgba(0,0,0,.3); }
+        .filter-btn:not(.active) { background:#1f2937; border-color:#374151; color:#9ca3af; }
+        .filter-btn:not(.active):hover { border-color:#009A44; color:#34d399; }
+    }
+    .dark .card-offre:hover { box-shadow: 0 8px 30px rgba(0,0,0,.3); }
+    .dark .filter-btn:not(.active) { background:#1f2937; border-color:#374151; color:#9ca3af; }
+    .dark .filter-btn:not(.active):hover { border-color:#009A44; color:#34d399; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="w-full space-y-6">
+
+    <!-- ── En-tête ────────────────────────────────────────────────────────── -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">{% trans "Offres d'emploi" %}</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{% trans "Gérez vos annonces et suivez les candidatures." %}</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+            <a href="{% url 'entreprise:offres_historique' %}"
+               class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                🗂 Historique
+            </a>
+            {% if not request.recruteur or request.recruteur.roleMembre in 'ADMIN,RH' %}
+            <a href="{% url 'entreprise:offre_creer' %}"
+               class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white shadow-lg hover:shadow-xl hover:opacity-90 transition"
+               style="background: linear-gradient(135deg, #009A44, #007a36);">
+                + Publier une offre
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ── Stats ──────────────────────────────────────────────────────────── -->
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-4 text-center cursor-pointer hover:shadow-md transition {% if not filtres.statut %}ring-2 ring-gray-400 border-gray-400{% else %}border-gray-100 dark:border-gray-700{% endif %}">
+            <a href="{% url 'entreprise:offres_liste' %}?statut=" class="block">
+                <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ stats.total }}</p>
+                <p class="text-xs mt-0.5 {% if not filtres.statut %}font-bold text-gray-700 dark:text-gray-200{% else %}text-gray-500 dark:text-gray-400{% endif %}">{% trans "Total" %}</p>
+            </a>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-4 text-center cursor-pointer hover:shadow-md transition {% if filtres.statut == 'PUBLIEE' %}ring-2 ring-green-400 border-green-400{% else %}border-gray-100 dark:border-gray-700{% endif %}">
+            <a href="?statut=PUBLIEE" class="block">
+                <p class="text-2xl font-extrabold text-green-600 dark:text-green-400">{{ stats.publiees }}</p>
+                <p class="text-xs mt-0.5 {% if filtres.statut == 'PUBLIEE' %}font-bold text-green-700 dark:text-green-300{% else %}text-gray-500 dark:text-gray-400{% endif %}">{% trans "Publiées" %}</p>
+            </a>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-4 text-center cursor-pointer hover:shadow-md transition {% if filtres.statut == 'BROUILLON' %}ring-2 ring-gray-400 border-gray-400{% else %}border-gray-100 dark:border-gray-700{% endif %}">
+            <a href="?statut=BROUILLON" class="block">
+                <p class="text-2xl font-extrabold text-gray-600 dark:text-gray-300">{{ stats.brouillons }}</p>
+                <p class="text-xs mt-0.5 {% if filtres.statut == 'BROUILLON' %}font-bold text-gray-700 dark:text-gray-200{% else %}text-gray-500 dark:text-gray-400{% endif %}">{% trans "Brouillons" %}</p>
+            </a>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-4 text-center cursor-pointer hover:shadow-md transition {% if filtres.statut == 'EXPIREE' %}ring-2 ring-amber-400 border-amber-400{% else %}border-gray-100 dark:border-gray-700{% endif %}">
+            <a href="?statut=EXPIREE" class="block">
+                <p class="text-2xl font-extrabold text-amber-500 dark:text-amber-400">{{ stats.expirees }}</p>
+                <p class="text-xs mt-0.5 {% if filtres.statut == 'EXPIREE' %}font-bold text-amber-600 dark:text-amber-300{% else %}text-gray-500 dark:text-gray-400{% endif %}">{% trans "Expirées" %}</p>
+            </a>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-4 text-center cursor-pointer hover:shadow-md transition {% if filtres.statut == 'POURVUE' %}ring-2 ring-purple-400 border-purple-400{% else %}border-gray-100 dark:border-gray-700{% endif %}">
+            <a href="?statut=POURVUE" class="block">
+                <p class="text-2xl font-extrabold text-purple-600 dark:text-purple-400">{{ stats.pourvues }}</p>
+                <p class="text-xs mt-0.5 {% if filtres.statut == 'POURVUE' %}font-bold text-purple-700 dark:text-purple-300{% else %}text-gray-500 dark:text-gray-400{% endif %}">{% trans "Pourvues" %}</p>
+            </a>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-4 text-center cursor-pointer hover:shadow-md transition {% if filtres.statut == 'FERMEE' %}ring-2 ring-red-400 border-red-400{% else %}border-gray-100 dark:border-gray-700{% endif %}">
+            <a href="?statut=FERMEE" class="block">
+                <p class="text-2xl font-extrabold text-red-500 dark:text-red-400">{{ stats.fermees }}</p>
+                <p class="text-xs mt-0.5 {% if filtres.statut == 'FERMEE' %}font-bold text-red-600 dark:text-red-300{% else %}text-gray-500 dark:text-gray-400{% endif %}">{% trans "Fermées" %}</p>
+            </a>
+        </div>
+    </div>
+
+    <!-- ── Filtres ────────────────────────────────────────────────────────── -->
+    <form method="get" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-4 flex flex-wrap items-center gap-3">
+        <!-- Recherche -->
+        <div class="relative flex-1 min-w-48">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm">🔍</span>
+            <input type="text" name="q" value="{{ filtres.q }}"
+                   placeholder="{% trans "Rechercher un titre…" %}"
+                   class="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-green-400 focus:bg-white dark:focus:bg-gray-600 transition">
+        </div>
+        <!-- Type contrat -->
+        <select name="typeContrat" onchange="this.form.submit()"
+                class="py-2 px-3 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:border-green-400 cursor-pointer">
+            <option value="">{% trans "Tous les contrats" %}</option>
+            {% for val, lbl in types_contrat %}
+            <option value="{{ val }}" {% if filtres.typeContrat == val %}selected{% endif %}>{{ lbl }}</option>
+            {% endfor %}
+        </select>
+        <!-- Mode -->
+        <select name="modeTravail" onchange="this.form.submit()"
+                class="py-2 px-3 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:border-green-400 cursor-pointer">
+            <option value="">{% trans "Tous les modes" %}</option>
+            {% for val, lbl in modes_travail %}
+            <option value="{{ val }}" {% if filtres.modeTravail == val %}selected{% endif %}>{{ lbl }}</option>
+            {% endfor %}
+        </select>
+        {% if est_admin and recruteurs_liste %}
+        <!-- Recruteur (admin uniquement) -->
+        <select name="recruteur" onchange="this.form.submit()"
+                title="{% trans "Filtrer par recruteur créateur" %}"
+                class="py-2 px-3 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:border-green-400 cursor-pointer">
+            <option value="">👥 Tous les recruteurs</option>
+            {% for rec in recruteurs_liste %}
+            <option value="{{ rec.pk }}" {% if filtres.recruteur == rec.pk|stringformat:"s" %}selected{% endif %}>
+                {% if request.recruteur and request.recruteur.pk == rec.pk and not request.recruteur.est_lecteur %}⭐ Pour moi{% else %}{{ rec.nomComplet|default:rec.emailProfessionnel }}{% endif %}
+            </option>
+            {% endfor %}
+            <option value="aucun" {% if filtres.recruteur == 'aucun' %}selected{% endif %}>
+                {% if not request.recruteur %}⭐ Pour moi (admin principal){% else %}Administrateur principal{% endif %}
+            </option>
+        </select>
+        {% endif %}
+        <button type="submit"
+                class="px-4 py-2 rounded-xl text-sm font-bold text-white transition hover:opacity-90"
+                style="background:#009A44;">
+            Filtrer
+        </button>
+        {% if filtres.statut != 'PUBLIEE' or filtres.typeContrat or filtres.modeTravail or filtres.q or filtres.recruteur %}
+        <a href="{% url 'entreprise:offres_liste' %}"
+           class="px-4 py-2 rounded-xl text-sm font-semibold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+            ✕ Réinitialiser
+        </a>
+        {% endif %}
+    </form>
+
+    <!-- ── Liste des offres ───────────────────────────────────────────────── -->
+    {% if offres %}
+    <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {% for offre in offres %}
+        {% with s=offre.get_style_statut c=offre.get_style_contrat %}
+        <div class="card-offre bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col">
+
+            <!-- Bande colorée haut -->
+            <div class="h-1.5 w-full"
+                 style="background:{{ s.dot }};"></div>
+
+            <div class="p-5 flex flex-col flex-1">
+                <!-- Badges -->
+                <div class="flex items-center gap-2 flex-wrap mb-3">
+                    <span class="badge-contrat"
+                          style="background:{{ c.bg }};color:{{ c.text }};">
+                        {{ c.icon }} {{ offre.get_typeContrat_display }}
+                    </span>
+                    <span class="badge-statut"
+                          style="background:{{ s.bg }};color:{{ s.text }};">
+                        <span class="w-1.5 h-1.5 rounded-full inline-block" style="background:{{ s.dot }};"></span>
+                        {{ offre.get_statutOffre_display }}
+                    </span>
+                    {% if offre.modeTravail == 'REMOTE' %}
+                    <span class="badge-contrat" style="background:#F0FDF4;color:#15803D;">🌐 Remote</span>
+                    {% elif offre.modeTravail == 'HYBRIDE' %}
+                    <span class="badge-contrat" style="background:#F5F3FF;color:#6D28D9;">🔀 Hybride</span>
+                    {% endif %}
+                </div>
+
+                <!-- Titre -->
+                <h2 class="font-extrabold text-gray-900 dark:text-white text-base leading-tight mb-1">
+                    <a href="{% url 'entreprise:offre_detail' offre.pk %}" class="hover:text-green-700 dark:hover:text-green-400 transition">
+                        {{ offre.titre }}
+                    </a>
+                </h2>
+
+                <!-- Réf + location -->
+                <p class="text-xs text-gray-400 dark:text-gray-500 mb-2">{% trans "Réf." %} {{ offre.reference }}</p>
+                {% if est_admin %}
+                <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mb-1">
+                    <span>👤</span>
+                    {% if offre.creePar %}
+                        {% if request.recruteur and request.recruteur.pk == offre.creePar.pk %}
+                            <span class="font-semibold text-green-700 dark:text-green-400">⭐ Pour moi</span>
+                        {% else %}
+                            <span class="font-semibold dark:text-gray-300">{{ offre.creePar.nomComplet|default:offre.creePar.emailProfessionnel }}</span>
+                        {% endif %}
+                    {% else %}
+                        {% if not request.recruteur %}
+                            <span class="font-semibold text-green-700 dark:text-green-400">⭐ Pour moi (admin principal)</span>
+                        {% else %}
+                            <span class="italic text-gray-400 dark:text-gray-500">{% trans "Administrateur principal" %}</span>
+                        {% endif %}
+                    {% endif %}
+                </p>
+                {% endif %}
+                {% if offre.ville %}
+                <p class="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1 mb-1">
+                    <span>📍</span> {{ offre.ville }}{% if offre.pays %}, {{ offre.pays }}{% endif %}
+                </p>
+                {% endif %}
+
+                <!-- Salaire -->
+                {% with sal=offre.salaire_display %}
+                {% if sal %}
+                <p class="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1 mb-1">
+                    <span>💰</span> {{ sal }}
+                </p>
+                {% endif %}
+                {% endwith %}
+
+                <!-- Expérience -->
+                {% if offre.experienceRequise %}
+                <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mb-1">
+                    <span>👤</span> {{ offre.get_experienceRequise_display }}
+                </p>
+                {% endif %}
+
+                <!-- Expiration -->
+                {% if offre.dateExpiration %}
+                <p class="text-xs flex items-center gap-1 mt-1
+                    {% if offre.statutOffre == 'EXPIREE' %}text-red-500 dark:text-red-400{% else %}text-gray-400 dark:text-gray-500{% endif %}">
+                    <span>⏰</span> {% trans "Expire le" %} {{ offre.dateExpiration|date:"d/m/Y" }}
+                </p>
+                {% endif %}
+
+                <!-- Spacer -->
+                <div class="flex-1"></div>
+
+                <!-- Stats + actions -->
+                <div class="flex items-center justify-between mt-4 pt-3 border-t border-gray-50 dark:border-gray-700">
+                    <div class="flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
+                        <span class="flex items-center gap-1">👁️ {{ offre.nbVues }}</span>
+                        <span class="flex items-center gap-1">📨 {{ offre.nbCandidatures }}</span>
+                        <span>{{ offre.dateCreation|date:"d/m/Y" }}</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        {% if offre.peut_modifier %}
+                        <a href="{% url 'entreprise:offre_modifier' offre.pk %}"
+                           class="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition" title="{% trans "Modifier" %}">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                        </a>
+                        {% if offre.statutOffre == 'BROUILLON' %}
+                        <form method="post" action="{% url 'entreprise:offre_changer_statut' offre.pk %}" class="inline">
+                            {% csrf_token %}<input type="hidden" name="action" value="publier">
+                            <button type="submit" class="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition" title="{% trans "Publier" %}">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                                </svg>
+                            </button>
+                        </form>
+                        {% elif offre.statutOffre == 'PUBLIEE' %}
+                        <form method="post" action="{% url 'entreprise:offre_changer_statut' offre.pk %}" class="inline">
+                            {% csrf_token %}<input type="hidden" name="action" value="fermer">
+                            <button type="submit" class="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition" title="{% trans "Fermer" %}">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                                </svg>
+                            </button>
+                        </form>
+                        {% endif %}
+                        <form method="post" action="{% url 'entreprise:offre_supprimer' offre.pk %}"
+                              onsubmit="return confirm('Supprimer cette offre ?')" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition" title="{% trans "Supprimer" %}">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                        </form>
+                        {% else %}
+                        <a href="{% url 'entreprise:offre_detail' offre.pk %}"
+                           class="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition" title="{% trans "Voir le détail (lecture seule)" %}">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                        </a>
+                        <span class="text-[10px] text-gray-300 dark:text-gray-600 italic px-1" title="{% trans "Vous n'êtes pas le créateur de cette offre" %}">🔒</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- État vide -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-600 py-20 text-center">
+        <div class="text-5xl mb-4">📋</div>
+        <h3 class="font-bold text-gray-700 dark:text-gray-200 mb-1">
+            {% if filtres.statut != 'PUBLIEE' or filtres.typeContrat or filtres.modeTravail or filtres.q %}
+                Aucune offre ne correspond à ces filtres
+            {% else %}
+                Aucune offre publiée pour le moment
+            {% endif %}
+        </h3>
+        <p class="text-sm text-gray-400 dark:text-gray-500 mb-6">
+            {% if filtres.statut != 'PUBLIEE' or filtres.typeContrat or filtres.modeTravail or filtres.q %}
+                Essayez de modifier vos critères de recherche.
+            {% else %}
+                Créez votre première offre d'emploi et commencez à recruter.
+            {% endif %}
+        </p>
+        {% if filtres.statut == 'PUBLIEE' and not filtres.typeContrat and not filtres.q %}
+        {% if not request.recruteur or request.recruteur.roleMembre == 'ADMIN' or request.recruteur.roleMembre == 'RH' %}
+        <a href="{% url 'entreprise:offre_creer' %}"
+           class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white"
+           style="background: linear-gradient(135deg, #009A44, #007a36);">
+            + Créer ma première offre
+        </a>
+        {% endif %}
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

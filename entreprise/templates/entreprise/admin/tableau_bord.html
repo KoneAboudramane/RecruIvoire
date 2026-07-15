@@ -1,0 +1,472 @@
+﻿{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Tableau de bord Vérifications | {{ site_title|default:'Django site admin' }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<script>(function(){var t=localStorage.getItem('rp_theme')||'light';if(t==='noir')document.documentElement.classList.add('rp-noir');else if(t==='dark')document.documentElement.classList.add('rp-dark');})();</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+    #content { background:#f8fafc; }
+    #content-main { max-width:1400px; margin:0 auto; }
+    .kpi-card { background:#fff; border:1px solid #f1f5f9; border-radius:1.25rem; padding:1.25rem 1.5rem;
+                display:flex; align-items:center; gap:1rem; transition:box-shadow .2s; }
+    .kpi-card:hover { box-shadow:0 4px 20px rgba(0,0,0,.07); }
+    .kpi-icon { width:2.75rem; height:2.75rem; border-radius:.875rem; display:flex; align-items:center;
+                justify-content:center; font-size:1.25rem; flex-shrink:0; }
+    .kpi-val  { font-size:1.875rem; font-weight:900; color:#1e293b; line-height:1; }
+    .kpi-pct  { font-size:.7rem; font-weight:700; color:#6b7280; margin-top:.1rem; }
+    .filter-tab { padding:.5rem 1rem; border-radius:.75rem; font-size:.8rem; font-weight:600;
+                  transition:all .15s; cursor:pointer; white-space:nowrap; }
+    .filter-tab.active { background:#c96010; color:#fff; }
+    .filter-tab:not(.active) { color:#6b7280; background:#f1f5f9; }
+    .filter-tab:not(.active):hover { background:#e2e8f0; color:#374151; }
+    .tbl-th { padding:.75rem 1rem; font-size:.7rem; font-weight:700; color:#94a3b8;
+               text-transform:uppercase; letter-spacing:.06em; background:#f8fafc;
+               border-bottom:1px solid #f1f5f9; text-align:left; white-space:nowrap; }
+    .tbl-td { padding:.875rem 1rem; font-size:.8125rem; color:#334155;
+               border-bottom:1px solid #f8fafc; vertical-align:middle; }
+    tr:last-child .tbl-td { border-bottom:none; }
+    tr:hover .tbl-td { background:#f8fafc; }
+    .score-bar { height:4px; border-radius:9999px; background:#e2e8f0; overflow:hidden; width:60px; }
+    .score-fill { height:100%; border-radius:9999px; transition:width .4s; }
+    .action-btn { display:inline-flex; align-items:center; gap:.375rem; padding:.35rem .75rem;
+                  border-radius:.625rem; font-size:.7rem; font-weight:700; transition:all .15s;
+                  border:none; cursor:pointer; }
+    .btn-green  { background:#dcfce7; color:#166534; }
+    .btn-green:hover  { background:#bbf7d0; }
+    .btn-orange { background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; }
+    .btn-orange:hover { background:#ffedd5; }
+    .btn-blue   { background:#dbeafe; color:#1d4ed8; }
+    .btn-blue:hover   { background:#bfdbfe; }
+    .urgent-card { background:#fff; border:1.5px solid #fde68a; border-radius:1.25rem; padding:1.25rem;
+                   transition:box-shadow .2s; }
+    .urgent-card:hover { box-shadow:0 6px 24px rgba(245,158,11,.15); border-color:#f59e0b; }
+
+    /* ── Dark mode ───────────────────────────────────────────────────── */
+    html.rp-dark #content { background:#0f172a; }
+    html.rp-dark .kpi-card { background:#1e293b; border-color:#334155; }
+    html.rp-dark .kpi-val { color:#f1f5f9; }
+    html.rp-dark .kpi-pct { color:#94a3b8; }
+    html.rp-dark .filter-tab.active { background:#c96010; color:#fff; }
+    html.rp-dark .filter-tab:not(.active) { color:#cbd5e1; background:#1e293b; }
+    html.rp-dark .filter-tab:not(.active):hover { background:#334155; color:#f1f5f9; }
+    html.rp-dark .tbl-th { background:#162032; color:#94a3b8; border-bottom-color:#334155; }
+    html.rp-dark .tbl-td { color:#e2e8f0; border-bottom-color:#1e293b; }
+    html.rp-dark tr:hover .tbl-td { background:#162032; }
+    html.rp-dark .score-bar { background:#334155; }
+    html.rp-dark .btn-green  { background:rgba(34,197,94,.15); color:#86efac; }
+    html.rp-dark .btn-green:hover  { background:rgba(34,197,94,.25); }
+    html.rp-dark .btn-orange { background:rgba(201,96,16,.12); color:#fdba74; border-color:rgba(201,96,16,.3); }
+    html.rp-dark .btn-orange:hover { background:rgba(201,96,16,.2); }
+    html.rp-dark .btn-blue   { background:rgba(59,130,246,.15); color:#93c5fd; }
+    html.rp-dark .btn-blue:hover { background:rgba(59,130,246,.25); }
+    html.rp-dark .urgent-card { background:#1e293b; border-color:rgba(245,158,11,.4); }
+    html.rp-dark .urgent-card:hover { border-color:rgba(245,158,11,.7); }
+
+    /* ── Mode NOIR (OLED) ────────────────────────────────────────────── */
+    html.rp-noir #content { background:#000; }
+    html.rp-noir .kpi-card { background:#000; border-color:#1a1a1a; }
+    html.rp-noir .kpi-card:hover { box-shadow:0 4px 20px rgba(0,0,0,.7); }
+    html.rp-noir .section-card { background:#000; border-color:#1a1a1a; box-shadow:0 1px 4px rgba(0,0,0,.5); }
+    html.rp-noir .kpi-val { color:#f1f5f9; }
+    html.rp-noir .kpi-pct { color:#64748b; }
+    html.rp-noir .filter-tab.active { background:#c96010; color:#fff; }
+    html.rp-noir .filter-tab:not(.active) { color:#94a3b8; background:#0a0a0a; }
+    html.rp-noir .filter-tab:not(.active):hover { background:#111; color:#f1f5f9; }
+    html.rp-noir .tbl-th { background:#080808; color:#64748b; border-bottom-color:#1a1a1a; }
+    html.rp-noir .tbl-td { color:#e2e8f0; border-bottom-color:#0a0a0a; }
+    html.rp-noir tr:hover .tbl-td { background:#080808; }
+    html.rp-noir .score-bar { background:#1a1a1a; }
+    html.rp-noir .btn-green  { background:rgba(34,197,94,.10); color:#86efac; }
+    html.rp-noir .btn-green:hover  { background:rgba(34,197,94,.18); }
+    html.rp-noir .btn-orange { background:rgba(201,96,16,.08); color:#fdba74; border-color:rgba(201,96,16,.25); }
+    html.rp-noir .btn-orange:hover { background:rgba(201,96,16,.15); }
+    html.rp-noir .btn-blue   { background:rgba(59,130,246,.10); color:#93c5fd; }
+    html.rp-noir .btn-blue:hover { background:rgba(59,130,246,.18); }
+    html.rp-noir .urgent-card { background:#000; border-color:rgba(245,158,11,.3); }
+    html.rp-noir .urgent-card:hover { border-color:rgba(245,158,11,.55); }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans "Accueil" %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='entreprise' %}">{% trans "Entreprise" %}</a>
+    &rsaquo; Tableau de bord vérifications
+</div>
+{% endblock %}
+
+{% block content %}
+<div x-data="{}" >
+
+<!-- ── En-tête ────────────────────────────────────────────────────────── -->
+<div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-8">
+    <div>
+        <div class="flex items-center gap-3 mb-1">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center"
+                 style="background:linear-gradient(135deg,#009A44,#007a36);">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+            </div>
+            <h1 class="text-2xl font-extrabold text-slate-900">{% trans "Tableau de bord — Vérifications" %}</h1>
+        </div>
+        <p class="text-sm text-slate-400 ml-12">
+            {{ stats.total }} entreprise{{ stats.total|pluralize }} inscrite{{ stats.total|pluralize }} ·
+            Mis à jour en temps réel
+        </p>
+    </div>
+    <div class="flex items-center gap-3">
+        {% if stats.en_attente %}
+        <div class="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm"
+             style="background:#FEF3C7; color:#92400E; border:2px solid #FDE68A;">
+            <span class="w-2 h-2 bg-amber-500 rounded-full animate-ping inline-block"></span>
+            {{ stats.en_attente }} demande{{ stats.en_attente|pluralize }} en attente
+        </div>
+        {% else %}
+        <div class="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm"
+             style="background:#DCFCE7; color:#166534; border:2px solid #BBF7D0;">
+            ✅ Tout est traité
+        </div>
+        {% endif %}
+        <a href="{% url 'admin:entreprise_demandeverification_liste_traitement' %}"
+           class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 border border-slate-200 hover:bg-slate-100 transition">
+            📋 Historique
+        </a>
+        <a href="{% url 'admin:entreprise_demandeverification_ml_status' %}"
+           class="px-4 py-2 rounded-xl text-sm font-semibold text-white transition hover:opacity-90"
+           style="background:linear-gradient(135deg,#c96010,#e06a00);">
+            🤖 Modèles ML
+        </a>
+        <a href="{{ flower_url }}" target="_blank" rel="noopener"
+           class="px-4 py-2 rounded-xl text-sm font-semibold text-white transition hover:opacity-90"
+           style="background:linear-gradient(135deg,#7c3aed,#a855f7);"
+           title="{% trans "Ouvre Flower dans un nouvel onglet — authentification séparée requise" %}">
+            🌸 {% trans "Tâches Celery" %}
+        </a>
+    </div>
+</div>
+
+<!-- ── 5 KPIs ─────────────────────────────────────────────────────────── -->
+<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
+
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background:#f1f5f9;">🏢</div>
+        <div>
+            <div class="kpi-val">{{ stats.total }}</div>
+            <div class="kpi-pct">{% trans "Entreprises" %}</div>
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background:#dcfce7;">✉️</div>
+        <div>
+            <div class="kpi-val" style="color:#16a34a;">{{ stats.emails_verifies }}</div>
+            <div class="kpi-pct">
+                Emails vérifiés
+                {% if stats.total %}
+                · {% widthratio stats.emails_verifies stats.total 100 %}%
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background:#dbeafe;">🏆</div>
+        <div>
+            <div class="kpi-val" style="color:#2563eb;">{{ stats.comptes_verifies }}</div>
+            <div class="kpi-pct">
+                Comptes vérifiés
+                {% if stats.total %}
+                · {% widthratio stats.comptes_verifies stats.total 100 %}%
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="{% if stats.en_attente %}border-color:#fde68a;{% endif %}">
+        <div class="kpi-icon" style="background:#fef3c7;">⏳</div>
+        <div>
+            <div class="kpi-val" style="{% if stats.en_attente %}color:#d97706;{% endif %}">
+                {{ stats.en_attente }}
+            </div>
+            <div class="kpi-pct">{% trans "En attente" %}</div>
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background:#f3e8ff;">🆕</div>
+        <div>
+            <div class="kpi-val" style="color:#7c3aed;">{{ stats.nouvelles_7j }}</div>
+            <div class="kpi-pct">{% trans "Nouvelles 7 jours" %}</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ── Demandes urgentes ───────────────────────────────────────────────── -->
+{% if demandes_urgentes %}
+<div class="mb-8">
+    <div class="flex items-center gap-2.5 mb-4">
+        <span class="relative flex h-3 w-3">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+        </span>
+        <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider">
+            Demandes urgentes — Action requise
+        </h2>
+    </div>
+
+    <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {% for demande in demandes_urgentes %}
+        <div class="urgent-card">
+            <div class="flex items-start gap-3 mb-3">
+                <!-- Logo -->
+                <div class="w-11 h-11 rounded-xl flex items-center justify-center font-extrabold text-base flex-shrink-0 overflow-hidden shadow-sm"
+                     style="background:linear-gradient(135deg,#009A44,#007a36); color:white;">
+                    {% if demande.entreprise.logoEntreprise %}
+                    <img src="{{ demande.entreprise.logoEntreprise.url }}" alt="" class="w-full h-full object-cover">
+                    {% else %}
+                    {{ demande.entreprise.raisonSocial|slice:":1"|upper }}
+                    {% endif %}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-bold text-slate-900 text-sm truncate">{{ demande.entreprise.raisonSocial }}</p>
+                    <p class="text-xs text-slate-400 truncate">{{ demande.entreprise.emailProfessionnel }}</p>
+                    <!-- Âge de la demande -->
+                    <p class="text-xs text-amber-600 font-semibold mt-0.5">
+                        ⏱ Soumise il y a {{ demande.date_soumission|timesince }}
+                    </p>
+                </div>
+                <!-- NEW badge si < 24h -->
+                {% if demande.date_soumission >= now|add:"-86400 seconds" %}
+                <span class="flex-shrink-0 text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-extrabold">NOUVEAU</span>
+                {% endif %}
+            </div>
+
+            <!-- Documents -->
+            <div class="flex gap-2 mb-3">
+                <span class="badge {% if demande.document_rccm %}badge-approved{% else %}badge-rejected{% endif %}">
+                    {% if demande.document_rccm %}✓ RCCM{% else %}✗ RCCM{% endif %}
+                </span>
+                <span class="badge {% if demande.document_identite %}badge-approved{% else %}badge-rejected{% endif %}">
+                    {% if demande.document_identite %}✓ Identité{% else %}✗ Identité{% endif %}
+                </span>
+                <span class="badge {% if demande.entreprise.emailVerifie %}badge-approved{% else %}badge-pending{% endif %}">
+                    {% if demande.entreprise.emailVerifie %}✓ Email{% else %}⚠ Email{% endif %}
+                </span>
+            </div>
+
+            <a href="{% url 'admin:entreprise_demandeverification_reviser' demande.pk %}"
+               class="action-btn w-full justify-center"
+               style="background:linear-gradient(135deg,#c96010,#e06a00); color:white; text-decoration:none;">
+                🔍 Examiner la demande →
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- ── Table principale ───────────────────────────────────────────────── -->
+<div class="section-card">
+
+    <!-- Header table + filtres -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+        <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+            <span class="w-1.5 h-4 rounded-full inline-block" style="background:#009A44;"></span>
+            Entreprises — Email & Compte côte à côte
+        </h2>
+
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <!-- Recherche -->
+            <form method="get" class="flex">
+                <input type="hidden" name="filtre" value="{{ filtre }}">
+                <input type="search" name="q" value="{{ q }}"
+                       placeholder="{% trans "Rechercher une entreprise…" %}"
+                       class="w-48 px-3 py-1.5 text-xs border border-slate-200 rounded-l-lg outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100">
+                <button type="submit" class="px-3 py-1.5 text-xs font-bold text-white rounded-r-lg transition hover:opacity-90"
+                        style="background:#009A44;">🔍</button>
+            </form>
+
+            <!-- Tabs filtre -->
+            <div class="flex gap-1.5 flex-wrap">
+                <a href="?filtre=tous{% if q %}&q={{ q }}{% endif %}"
+                   class="filter-tab {% if filtre == 'tous' %}active{% endif %}">
+                    Tous ({{ stats.total }})
+                </a>
+                <a href="?filtre=email_non_verifie{% if q %}&q={{ q }}{% endif %}"
+                   class="filter-tab {% if filtre == 'email_non_verifie' %}active{% endif %}">
+                    ✉️ Email ✗
+                </a>
+                <a href="?filtre=compte_non_verifie{% if q %}&q={{ q }}{% endif %}"
+                   class="filter-tab {% if filtre == 'compte_non_verifie' %}active{% endif %}">
+                    🏢 Compte ✗
+                </a>
+                <a href="?filtre=non_verifies{% if q %}&q={{ q }}{% endif %}"
+                   class="filter-tab {% if filtre == 'non_verifies' %}active{% endif %}">
+                    ⚠ Non vérifiés
+                </a>
+                <a href="?filtre=verifies{% if q %}&q={{ q }}{% endif %}"
+                   class="filter-tab {% if filtre == 'verifies' %}active{% endif %}">
+                    ✅ Tout vérifié
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto rounded-xl border border-slate-100">
+        <table class="w-full">
+            <thead>
+                <tr>
+                    <th class="tbl-th rounded-tl-xl">{% trans "Entreprise" %}</th>
+                    <th class="tbl-th text-center">{% trans "Score" %}</th>
+                    <!-- EMAIL VÉRIFIÉ ─ côte à côte avec COMPTE VÉRIFIÉ -->
+                    <th class="tbl-th text-center" style="border-left:2px solid #e2e8f0;">
+                        ✉️ Email vérifié
+                    </th>
+                    <th class="tbl-th text-center" style="border-left:1px dashed #e2e8f0;">
+                        🏆 Compte vérifié
+                    </th>
+                    <th class="tbl-th text-center">{% trans "Demande" %}</th>
+                    <th class="tbl-th rounded-tr-xl text-center">{% trans "Actions" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ent in entreprises %}
+                <tr class="group">
+                    <!-- Entreprise -->
+                    <td class="tbl-td">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-sm flex-shrink-0 overflow-hidden shadow-sm"
+                                 style="background:linear-gradient(135deg,#009A44,#007a36); color:white;">
+                                {% if ent.logoEntreprise %}
+                                <img src="{{ ent.logoEntreprise.url }}" alt="" class="w-full h-full object-cover">
+                                {% else %}
+                                {{ ent.raisonSocial|slice:":1"|upper }}
+                                {% endif %}
+                            </div>
+                            <div class="min-w-0">
+                                <p class="font-semibold text-slate-900 truncate max-w-[180px] text-xs">{{ ent.raisonSocial }}</p>
+                                <p class="text-slate-400 text-xs truncate max-w-[180px]">{{ ent.emailProfessionnel }}</p>
+                                <p class="text-slate-300 text-xs">{{ ent.dateCreationCompte|date:"d/m/Y" }}</p>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Score -->
+                    <td class="tbl-td text-center">
+                        <div class="flex flex-col items-center gap-1">
+                            <span class="font-extrabold text-sm
+                                {% if ent.scorePertinence >= 70 %}text-green-600
+                                {% elif ent.scorePertinence >= 40 %}text-amber-600
+                                {% else %}text-red-500{% endif %}">
+                                {{ ent.scorePertinence|floatformat:0 }}
+                            </span>
+                            <div class="score-bar">
+                                <div class="score-fill
+                                    {% if ent.scorePertinence >= 70 %}bg-green-400
+                                    {% elif ent.scorePertinence >= 40 %}bg-amber-400
+                                    {% else %}bg-red-400{% endif %}"
+                                     style="width:{{ ent.scorePertinence }}%;"></div>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- ─── EMAIL VÉRIFIÉ ─── -->
+                    <td class="tbl-td text-center" style="border-left:2px solid #f1f5f9;">
+                        {% if ent.emailVerifie %}
+                        <span class="badge badge-approved">✅ Vérifié</span>
+                        {% else %}
+                        <div class="flex flex-col items-center gap-1.5">
+                            <span class="badge badge-rejected">✗ Non vérifié</span>
+                            <form method="post" action="{% url 'admin:entreprise_demandeverification_verifier_email' ent.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next"
+                                       value="{% url 'admin:entreprise_demandeverification_dashboard' %}?filtre={{ filtre }}{% if q %}&q={{ q }}{% endif %}">
+                                <button type="submit" class="action-btn btn-green">
+                                    ✓ Valider email
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </td>
+
+                    <!-- ─── COMPTE VÉRIFIÉ ─── -->
+                    <td class="tbl-td text-center" style="border-left:1px dashed #f1f5f9;">
+                        {% if ent.statutVerification == 'VERIFIE' %}
+                        <span class="badge badge-approved">🏆 Vérifié</span>
+
+                        {% elif ent.has_pending %}
+                        <div class="flex flex-col items-center gap-1.5">
+                            <span class="badge badge-info">⏳ En examen</span>
+                            {% for d in ent.pending_demandes %}
+                            <a href="{% url 'admin:entreprise_demandeverification_reviser' d.pk %}"
+                               class="action-btn btn-orange">🔍 Examiner</a>
+                            {% endfor %}
+                        </div>
+
+                        {% elif ent.statutVerification == 'REJETE' %}
+                        <span class="badge badge-rejected">❌ Rejeté</span>
+
+                        {% else %}
+                        <span class="text-slate-300 text-xs">— Non soumis</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Dernière demande -->
+                    <td class="tbl-td text-center">
+                        {% if ent.has_pending %}
+                        {% for d in ent.pending_demandes %}
+                        <p class="text-xs text-amber-600 font-semibold">{{ d.date_soumission|date:"d/m/Y" }}</p>
+                        <p class="text-xs text-slate-400">{% trans "il y a" %} {{ d.date_soumission|timesince }}</p>
+                        {% endfor %}
+                        {% else %}
+                        <span class="text-slate-300 text-xs">—</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Actions -->
+                    <td class="tbl-td text-center">
+                        <a href="/admin/entreprise/entreprise/{{ ent.pk }}/change/" target="_blank"
+                           class="action-btn btn-blue">
+                            ⚙ Admin
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="tbl-td text-center py-12">
+                        <div class="text-4xl mb-3">🔍</div>
+                        <p class="font-semibold text-slate-500">{% trans "Aucune entreprise trouvée" %}</p>
+                        <p class="text-xs text-slate-400 mt-1">{% trans "Essayez de changer les filtres ou la recherche" %}</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Footer table -->
+    {% if entreprises %}
+    <div class="flex items-center justify-between mt-4 pt-4 border-t border-slate-50">
+        <p class="text-xs text-slate-400">
+            {{ entreprises|length }} entreprise{{ entreprises|length|pluralize }} affichée{{ entreprises|length|pluralize }}
+        </p>
+        <div class="flex items-center gap-4 text-xs text-slate-400">
+            <span class="flex items-center gap-1"><span class="badge badge-approved">✅</span> = vérifié manuellement ou par lien</span>
+            <span class="flex items-center gap-1"><span class="badge badge-rejected">✗</span> = action requise</span>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+</div>
+{% endblock %}
+

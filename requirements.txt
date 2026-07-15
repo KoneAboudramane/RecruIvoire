@@ -1,0 +1,59 @@
+# ── Framework ─────────────────────────────────────────────────────────────────
+Django==6.0.5
+asgiref==3.11.1
+daphne==4.2.2
+sqlparse==0.5.5
+tzdata==2026.2
+
+# ── Base de données ──────────────────────────────────────────────────────────
+psycopg2-binary==2.9.12
+redis==4.6.0
+# pgvector : plus utilisé comme VectorField (embeddings ATS en JSONField,
+# cosinus calculé en Python — voir candidat/models.py, entreprise/models.py,
+# entreprise/ats_predict.py ; l'extension serveur PostgreSQL "vector" est de
+# toute façon indisponible sur O2switch mutualisé, PostgreSQL 9.6). Le paquet
+# Python reste nécessaire : les anciennes migrations (candidat/0009,
+# entreprise/0004) importent encore pgvector.django au chargement. C'est un
+# paquet 100% Python (pas de compilation, pas besoin de l'extension serveur),
+# donc sans risque à installer sur un hébergement mutualisé.
+pgvector==0.4.2
+
+# ── Authentification & OAuth ─────────────────────────────────────────────────
+django-allauth==65.18.0
+PyJWT==2.13.0
+
+# ── Sécurité ─────────────────────────────────────────────────────────────────
+django-ratelimit==4.1.0
+python-dotenv==1.2.2
+
+# ── Tâches asynchrones ───────────────────────────────────────────────────────
+celery==5.6.3
+flower==2.0.1
+
+# ── Stockage objet (MinIO / S3) ──────────────────────────────────────────────
+django-storages[s3]==1.14.4
+boto3==1.38.0
+
+# ── Rendu CV / Lettres (PDF, images, DOCX) ───────────────────────────────────
+playwright==1.60.0
+PyMuPDF==1.27.2.3
+pillow==12.2.0
+python-docx==1.2.0
+pdf2docx==0.5.13
+
+# ── Machine Learning / IA (matching, scoring ATS) ────────────────────────────
+scikit-learn==1.8.0
+joblib==1.5.3
+sentence-transformers==5.5.1
+torch==2.12.0
+transformers==5.9.0
+numpy==2.4.6
+
+# ── Traduction automatique ───────────────────────────────────────────────────
+deep-translator==1.11.4
+
+# ── Utilitaires ──────────────────────────────────────────────────────────────
+beautifulsoup4==4.14.3
+lxml==6.1.1
+requests==2.34.2
+opencv-python-headless==4.13.0.92

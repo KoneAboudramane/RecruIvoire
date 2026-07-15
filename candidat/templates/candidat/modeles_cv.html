@@ -1,0 +1,498 @@
+﻿{% extends "candidat/base.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Modèles de CV" %} — {{ logo_site.nom_site }}{% endblock %}
+
+{% block css_extra %}
+<style>
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(24px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse-ring {
+        0%   { box-shadow: 0 0 0 0 rgba(201,96,16,0.4); }
+        70%  { box-shadow: 0 0 0 12px rgba(201,96,16,0); }
+        100% { box-shadow: 0 0 0 0 rgba(201,96,16,0); }
+    }
+    @keyframes floatFlag {
+        0%, 100% { transform: translateY(0px) rotate(-2deg); }
+        50%       { transform: translateY(-8px) rotate(2deg); }
+    }
+
+    .fade-up { animation: fadeUp 0.5s ease both; }
+    .card-hover { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+    .card-hover:hover { transform: translateY(-6px); box-shadow: 0 16px 40px rgba(0,0,0,0.13); }
+
+    /* Drapeau */
+    .flag-widget {
+        position: fixed; right: 24px; top: 50%; transform: translateY(-50%);
+        z-index: 999; display: none; flex-direction: column;
+        border-radius: 8px; overflow: hidden;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+        width: 28px; height: 90px;
+        animation: floatFlag 3.5s ease-in-out infinite;
+    }
+    @media (min-width: 640px) { .flag-widget { display: flex; } }
+    .f-orange { flex:1; background:#c96010; }
+    .f-white  { flex:1; background:#FFFFFF; }
+    .f-green  { flex:1; background:#2e7d52; }
+
+    /* Filtre actif */
+    .filter-btn { transition: all 0.2s ease; cursor: pointer; }
+    .filter-btn.active { color:#fff !important; }
+
+    /* Preview CV — la hauteur suit l'image (A4 naturel) */
+    .prev { width:100%; overflow:hidden; position:relative; background:#f3f4f6; }
+    .prev .prev-fallback { aspect-ratio:210/297; }
+
+    /* orange-plain */
+    .orange-plain { background:#c96010; }
+    /* white-minimal */
+    .white-minimal { background:#fff; border:1px solid #e5e7eb; }
+    /* dark-side */
+    .dark-side { background:#1a1a2e; display:flex; }
+    /* green-top */
+    .green-top { background:#f8f8f8; }
+    /* orange-band */
+    .orange-band { background:#fff; display:flex; }
+    /* academic */
+    .academic { background:#fff; border-top: 6px solid #1a1a2e; }
+    /* bicolor */
+    .bicolor { background:#fff; }
+    /* executive */
+    .executive { background:#1a1a2e; }
+    /* tech-side */
+    .tech-side { background:#f0faf4; display:flex; }
+    /* artistic */
+    .artistic { background:#fff8f0; }
+    /* corporate-green */
+    .corporate-green { background:#fff; }
+    /* medical */
+    .medical { background:#fff; border-left:6px solid #2e7d52; }
+    /* infographic */
+    .infographic { background:#c96010; }
+    /* legal */
+    .legal { background:#fff; border-top:4px solid #1a1a2e; }
+    /* btp */
+    .btp { background:#1a1a2e; }
+    /* accountant */
+    .accountant { background:#fff; }
+
+    /* Overlay hover */
+    .cv-overlay {
+        position:absolute; inset:0;
+        background:rgba(0,0,0,0.55);
+        display:flex; flex-direction:column;
+        align-items:center; justify-content:center; gap:8px;
+        opacity:0; transition:opacity 0.3s;
+    }
+    .cv-card:hover .cv-overlay { opacity:1; }
+
+    /* Masquage filtre JS */
+    .cv-item { transition: opacity 0.3s, transform 0.3s; }
+    .cv-item.hidden-item { display:none; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div x-data="previewManager()" x-cloak>
+
+<!-- ══════════ MODAL PRÉVISUALISATION ══════════ -->
+<template x-if="open">
+  <div class="fixed inset-0 z-50 flex flex-col" style="background:rgba(15,15,25,0.92)">
+
+    <!-- Barre du haut -->
+    <div class="flex items-center justify-between px-6 py-3 bg-white/5 border-b border-white/10 shrink-0">
+      <div class="flex items-center gap-3">
+        <span class="text-white font-bold text-sm" x-text="current.nom"></span>
+        <span class="text-xs px-2.5 py-0.5 rounded-full font-semibold"
+              :class="current.premium ? 'bg-yellow-400/20 text-yellow-300' : 'bg-green-400/20 text-green-300'"
+              x-text="current.premium ? '👑 Premium' : 'Gratuit'"></span>
+      </div>
+      <div class="flex items-center gap-3">
+        <template x-if="!current.premium">
+          <a :href="current.creerUrl"
+             class="flex items-center gap-2 px-5 py-2 rounded-xl text-white text-sm font-bold shadow-lg transition hover:opacity-90"
+             style="background:#c96010">
+            ✏️ {% trans "Utiliser ce modèle" %}
+          </a>
+        </template>
+        <template x-if="current.premium">
+          <a href="#"
+             class="flex items-center gap-2 px-5 py-2 rounded-xl text-white text-sm font-bold shadow-lg transition hover:opacity-90"
+             style="background:#C9A227">
+            🔓 {% trans "Débloquer Premium" %}
+          </a>
+        </template>
+        <button @click="close()"
+                class="w-9 h-9 rounded-xl flex items-center justify-center text-white hover:bg-white/10 transition text-lg">
+          ✕
+        </button>
+      </div>
+    </div>
+
+    <!-- Corps : aperçu image ou iframe -->
+    <div class="flex-1 overflow-auto flex items-start justify-center py-8 px-4">
+      <template x-if="current.apercuUrl">
+        <img :src="current.apercuUrl" :alt="current.nom"
+             class="rounded-2xl shadow-2xl max-w-3xl w-full"
+             style="max-height:calc(100vh - 120px); object-fit:contain; object-position:top;">
+      </template>
+      <template x-if="!current.apercuUrl">
+        <div class="rounded-2xl overflow-hidden shadow-2xl bg-white" style="width:794px;">
+          <iframe :src="current.apercuUrl !== null ? '' : current.iframeUrl"
+                  class="w-full border-0"
+                  style="height:1123px;"
+                  loading="lazy"
+                  title="{% trans "Prévisualisation du modèle" %}"></iframe>
+        </div>
+      </template>
+    </div>
+
+    <!-- Pied : navigation rapide -->
+    <div class="flex items-center justify-center gap-4 py-3 border-t border-white/10 bg-white/5 shrink-0">
+      <span class="text-white/50 text-xs">{% trans "Appuyez sur" %} <kbd class="bg-white/10 text-white px-2 py-0.5 rounded text-xs">{% trans "Échap" %}</kbd> {% trans "pour fermer" %}</span>
+    </div>
+
+  </div>
+</template>
+
+<!-- Drapeau flottant -->
+<div class="flag-widget" title="{% trans "🇨🇮 Fièrement ivoirien" %}">
+    <div class="f-orange"></div><div class="f-white"></div><div class="f-green"></div>
+</div>
+
+<!-- ══════════ EN-TÊTE ══════════ -->
+<div class="fade-up mb-10">
+    <div class="flex items-center gap-2 text-sm text-gray-400 mb-4">
+        <a href="{% url 'candidat:accueil' %}" class="hover:underline" style="color:#c96010;">{% trans "Accueil" %}</a>
+        <span>/</span>
+        <span class="text-gray-600 font-medium">{% trans "Modèles de CV" %}</span>
+    </div>
+
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+        <div>
+            <h1 class="text-4xl font-extrabold text-gray-800 mb-2">
+                {% trans "Choisissez votre" %} <span style="color:#c96010;">{% trans "modèle de CV" %}</span>
+            </h1>
+            <p class="text-gray-500 text-lg">
+                {% blocktrans with total=total gratuits=gratuits premium=premium %}{{ total }} modèles disponibles · {{ gratuits }} gratuits · {{ premium }} premium{% endblocktrans %}
+            </p>
+        </div>
+        <a href="#" class="pulse-btn inline-flex items-center gap-2 text-white font-bold px-6 py-3 rounded-xl shadow-md transition hover:opacity-90"
+           style="background:#c96010; animation: pulse-ring 2s ease-in-out infinite;">
+            ✏️ {% trans "Créer mon CV maintenant" %}
+        </a>
+    </div>
+</div>
+
+
+<!-- ══════════ STATS RAPIDES ══════════ -->
+<div class="grid grid-cols-3 gap-4 mb-8 fade-up">
+    <div class="bg-white rounded-2xl p-5 text-center border border-gray-100 shadow-sm">
+        <div class="text-3xl font-extrabold mb-1" style="color:#c96010;">{{ total }}</div>
+        <div class="text-gray-500 text-sm">{% trans "Modèles au total" %}</div>
+    </div>
+    <div class="bg-white rounded-2xl p-5 text-center border border-gray-100 shadow-sm">
+        <div class="text-3xl font-extrabold mb-1" style="color:#2e7d52;">{{ gratuits }}</div>
+        <div class="text-gray-500 text-sm">{% trans "Modèles gratuits" %}</div>
+    </div>
+    <div class="rounded-2xl p-5 text-center text-white shadow-sm" style="background:#1a1a2e;">
+        <div class="text-3xl font-extrabold mb-1" style="color:#c96010;">{{ premium }}</div>
+        <div class="text-white/70 text-sm">{% trans "Modèles premium" %}</div>
+    </div>
+</div>
+
+
+<!-- ══════════ FILTRES ══════════ -->
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-8 fade-up">
+    <div class="flex flex-col gap-4">
+
+        <!-- Recherche -->
+        <div class="relative">
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+            <input id="searchInput" type="text" placeholder="{% trans 'Rechercher un modèle...' %}"
+                   class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+        </div>
+
+        <!-- Catégories -->
+        <div>
+            <p class="text-xs font-semibold text-gray-400 uppercase mb-2">{% trans "Catégorie" %}</p>
+            <div class="flex flex-wrap gap-2" id="catFilters">
+                {% for cat in categories %}
+                <button class="filter-btn px-4 py-2 rounded-full text-sm font-semibold border transition
+                               {% if forloop.first %}active border-transparent{% else %}border-gray-200 text-gray-600 hover:border-orange-400{% endif %}"
+                        data-cat="{{ cat }}"
+                        {% if forloop.first %}style="background:#c96010;"{% endif %}>
+                    {% if forloop.first %}{% trans "Tous" %}{% else %}{{ cat }}{% endif %}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Secteurs -->
+        <div>
+            <p class="text-xs font-semibold text-gray-400 uppercase mb-2">{% trans "Secteur d'activité" %}</p>
+            <div class="flex flex-wrap gap-2" id="secteurFilters">
+                {% for s in secteurs %}
+                <button class="filter-btn px-4 py-2 rounded-full text-sm font-semibold border transition
+                               {% if forloop.first %}active border-transparent{% else %}border-gray-200 text-gray-600 hover:border-green-500{% endif %}"
+                        data-secteur="{{ s }}"
+                        {% if forloop.first %}style="background:#2e7d52;"{% endif %}>
+                    {% if forloop.first %}{% trans "Tous secteurs" %}{% else %}{{ s }}{% endif %}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Toggle gratuit/premium -->
+        <div class="flex gap-3 pt-1">
+            <button class="filter-btn px-4 py-2 rounded-full text-sm font-semibold border border-gray-200 text-gray-600 hover:border-orange-400 transition" data-type="all" id="typeAll">
+                {% trans "Tous" %}
+            </button>
+            <button class="filter-btn px-4 py-2 rounded-full text-sm font-semibold border border-green-400 text-green-700 hover:bg-green-50 transition" data-type="gratuit" id="typeGratuit">
+                ✅ {% trans "Gratuits seulement" %}
+            </button>
+            <button class="filter-btn px-4 py-2 rounded-full text-sm font-semibold border border-yellow-400 text-yellow-700 hover:bg-yellow-50 transition" data-type="premium" id="typePremium">
+                👑 {% trans "Premium seulement" %}
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ══════════ GRILLE MODÈLES ══════════ -->
+<div id="compteur" class="text-sm text-gray-400 mb-4">
+    {% blocktrans with nb=total %}Affichage de <span id="compteurNb">{{ nb }}</span> modèle(s){% endblocktrans %}
+</div>
+
+{% include "candidat/partials/_pagination.html" with total_count=total item_label="modèle" %}
+
+<div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4" id="cvGrid">
+
+    {% for m in modeles %}
+    <div class="cv-item bg-white rounded-2xl shadow-sm border border-gray-100 card-hover overflow-hidden"
+         data-nom="{{ m.nom|lower }}"
+         data-cat="{{ m.categorie }}"
+         data-secteur="{{ m.secteur }}"
+         data-premium="{{ m.premium|yesno:'true,false' }}">
+
+        <!-- Preview CV -->
+        <div class="cv-card relative">
+            <div class="prev {{ m.fichier }}">
+                {% if m.apercu %}
+                <img src="{{ m.apercu.url }}" alt="{{ m.nom }}" class="w-full h-auto block">
+                {% else %}
+                <div class="prev-fallback">
+                {% include "candidat/partials/cv_preview.html" with style=m.fichier couleur=m.couleur %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Overlay au hover -->
+            <div class="cv-overlay rounded-t-2xl">
+                {% if not m.premium %}
+                <a href="{% url 'candidat:creer_cv' m.id %}" class="w-4/5 text-center text-sm font-bold text-white py-2.5 rounded-xl transition hover:opacity-90"
+                   style="background:#c96010;">
+                    ✏️ {% trans "Utiliser ce modèle" %}
+                </a>
+                {% else %}
+                <a href="#" class="w-4/5 text-center text-sm font-bold text-white py-2.5 rounded-xl transition hover:opacity-90"
+                   style="background:#c96010;">
+                    👑 {% trans "Débloquer Premium" %}
+                </a>
+                {% endif %}
+                <button @click.prevent="preview({
+                            id: {{ m.id }},
+                            nom: '{{ m.nom|escapejs }}',
+                            premium: {{ m.premium|yesno:'true,false' }},
+                            apercuUrl: {% if m.apercu %}'{{ m.apercu.url }}'{% else %}null{% endif %},
+                            iframeUrl: '{% url 'candidat:apercu_cv' m.id %}',
+                            creerUrl:  '{% url 'candidat:creer_cv' m.id %}'
+                        })"
+                        class="w-4/5 text-center text-sm font-semibold border border-white text-white py-2 rounded-xl hover:bg-white/10 transition">
+                    👁 {% trans "Prévisualiser" %}
+                </button>
+            </div>
+        </div>
+
+        <!-- Infos -->
+        <div class="p-4 flex justify-between items-start">
+            <div>
+                <p class="font-bold text-gray-800 text-sm">{{ m.nom }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">{{ m.categorie }} · {{ m.secteur }}</p>
+            </div>
+            {% if m.premium %}
+                <span class="text-xs bg-yellow-100 text-yellow-700 font-bold px-2.5 py-1 rounded-full whitespace-nowrap">👑 Premium</span>
+            {% else %}
+                <span class="text-xs bg-green-100 text-green-700 font-bold px-2.5 py-1 rounded-full">{% trans "Gratuit" %}</span>
+            {% endif %}
+        </div>
+
+        <!-- Bouton bas -->
+        <div class="px-4 pb-4">
+            <a href="{% if not m.premium %}{% url 'candidat:creer_cv' m.id %}{% else %}#{% endif %}"
+               class="block w-full text-center text-sm font-bold py-2.5 rounded-xl transition hover:opacity-90
+                      {% if m.premium %}text-white{% else %}{% endif %}"
+               style="{% if m.premium %}background:#1a1a2e;{% else %}background:#c96010; color:#fff;{% endif %}">
+                {% if m.premium %}🔓 {% trans "Débloquer avec Premium" %}{% else %}✏️ {% trans "Utiliser gratuitement" %}{% endif %}
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+
+</div>
+
+{% include "candidat/partials/_pagination.html" with total_count=total item_label="modèle" %}
+
+<!-- Message aucun résultat -->
+<div id="noResult" class="hidden text-center py-16">
+    <div class="text-5xl mb-4">😕</div>
+    <h3 class="text-xl font-bold text-gray-600 mb-2">{% trans "Aucun modèle trouvé" %}</h3>
+    <p class="text-gray-400">{% trans "Essayez d'autres filtres ou une autre recherche." %}</p>
+</div>
+
+
+<!-- ══════════ BANNIÈRE PREMIUM ══════════ -->
+<section class="mt-12 rounded-3xl overflow-hidden shadow-lg" style="background:#1a1a2e;">
+    <div class="flex flex-col md:flex-row items-center gap-8 px-10 py-10">
+        <div class="text-6xl">👑</div>
+        <div class="flex-1 text-white">
+            <span class="inline-block text-xs font-bold px-3 py-1 rounded-full mb-3" style="background:#c96010;">{% trans "OFFRE LIMITÉE" %}</span>
+            <h3 class="text-2xl font-extrabold mb-2">{% trans "Débloquez tous les modèles Premium" %}</h3>
+            <ul class="text-white/75 text-sm space-y-1">
+                <li>✅ {% blocktrans with premium=premium %}Accès à {{ premium }} modèles exclusifs{% endblocktrans %}</li>
+                <li>✅ {% trans "Export PDF haute qualité illimité" %}</li>
+                <li>✅ {% trans "Profil mis en avant auprès des recruteurs" %}</li>
+                <li>✅ {% trans "Statistiques de consultation de votre CV" %}</li>
+            </ul>
+        </div>
+        <div class="text-center shrink-0">
+            <p class="text-white/50 text-sm line-through mb-1">10 000 FCFA/mois</p>
+            <p class="text-4xl font-extrabold text-white mb-1">5 000 <span class="text-lg">FCFA</span></p>
+            <p class="text-xs text-white/50 mb-4">{% trans "pendant 3 mois" %}</p>
+            <a href="#" class="inline-block font-bold px-8 py-3 rounded-xl text-white transition hover:opacity-90" style="background:#c96010;">
+                {% trans "Je passe Premium →" %}
+            </a>
+        </div>
+    </div>
+</section>
+
+</div>{# /x-data previewManager #}
+
+{% endblock %}
+
+
+{% block js_extra %}
+<script>
+/* ── Gestionnaire de prévisualisation ─────────────────────────── */
+function previewManager() {
+  return {
+    open: false,
+    current: null,
+
+    preview(data) {
+      this.current = data;
+      this.open = true;
+      document.body.style.overflow = 'hidden';
+    },
+
+    close() {
+      this.open = false;
+      this.current = null;
+      document.body.style.overflow = '';
+    },
+
+    init() {
+      window.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && this.open) this.close();
+      });
+    },
+  };
+}
+
+/* ── Filtres catalogue ─────────────────────────────────────────── */
+(function () {
+    let activeCat     = 'Tous';
+    let activeSecteur = 'Tous secteurs';
+    let activeType    = 'all';
+    let searchVal     = '';
+
+    const items  = document.querySelectorAll('.cv-item');
+    const noRes  = document.getElementById('noResult');
+    const cptNb  = document.getElementById('compteurNb');
+
+    function applyFilters() {
+        let visible = 0;
+        items.forEach(item => {
+            const nom     = item.dataset.nom;
+            const cat     = item.dataset.cat;
+            const secteur = item.dataset.secteur;
+            const premium = item.dataset.premium === 'true';
+
+            const matchCat     = activeCat === 'Tous'           || cat === activeCat;
+            const matchSecteur = activeSecteur === 'Tous secteurs' || secteur === activeSecteur;
+            const matchType    = activeType === 'all'
+                                    || (activeType === 'gratuit'  && !premium)
+                                    || (activeType === 'premium'  && premium);
+            const matchSearch  = nom.includes(searchVal.toLowerCase());
+
+            if (matchCat && matchSecteur && matchType && matchSearch) {
+                item.classList.remove('hidden-item');
+                visible++;
+            } else {
+                item.classList.add('hidden-item');
+            }
+        });
+        cptNb.textContent = visible;
+        noRes.classList.toggle('hidden', visible > 0);
+    }
+
+    // Filtres catégorie
+    document.getElementById('catFilters').addEventListener('click', e => {
+        const btn = e.target.closest('.filter-btn');
+        if (!btn) return;
+        document.querySelectorAll('#catFilters .filter-btn').forEach(b => {
+            b.classList.remove('active');
+            b.style.background = '';
+            b.style.color = '';
+        });
+        btn.classList.add('active');
+        btn.style.background = '#c96010';
+        btn.style.color = '#fff';
+        activeCat = btn.dataset.cat;
+        applyFilters();
+    });
+
+    // Filtres secteur
+    document.getElementById('secteurFilters').addEventListener('click', e => {
+        const btn = e.target.closest('.filter-btn');
+        if (!btn) return;
+        document.querySelectorAll('#secteurFilters .filter-btn').forEach(b => {
+            b.classList.remove('active');
+            b.style.background = '';
+            b.style.color = '';
+        });
+        btn.classList.add('active');
+        btn.style.background = '#2e7d52';
+        btn.style.color = '#fff';
+        activeSecteur = btn.dataset.secteur;
+        applyFilters();
+    });
+
+    // Toggle type
+    ['typeAll', 'typeGratuit', 'typePremium'].forEach(id => {
+        document.getElementById(id).addEventListener('click', function () {
+            activeType = this.dataset.type;
+            applyFilters();
+        });
+    });
+
+    // Recherche
+    document.getElementById('searchInput').addEventListener('input', function () {
+        searchVal = this.value.trim();
+        applyFilters();
+    });
+})();
+</script>
+{% endblock %}

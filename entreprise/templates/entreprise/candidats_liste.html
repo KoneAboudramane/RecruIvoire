@@ -1,0 +1,271 @@
+{% extends "entreprise/base.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Profils candidats" %} — {% trans "Espace Entreprise" %}{% endblock %}
+
+{% block css_extra %}
+<style>
+    .card-lift { transition: transform .25s, box-shadow .25s; }
+    .card-lift:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,154,68,.15); }
+    .profils-header { background:#fff; color:#1f2937; border:1px solid #e5e7eb; }
+    .profils-header .sous-titre { color:#6b7280; }
+    .profils-header .btn-effacer { background:rgba(0,0,0,.06); border-color:rgba(0,0,0,.12); color:#374151; }
+    .profils-header .btn-effacer:hover { background:rgba(0,0,0,.10); }
+    .profils-header .deco { display:none; }
+    html.dark .profils-header { background:#1e293b; color:#f1f5f9; border-color:#334155; }
+    html.dark .profils-header .sous-titre { color:#94a3b8; }
+    html.dark .profils-header .btn-effacer { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.15); color:#e2e8f0; }
+    html.dark .profils-header .btn-effacer:hover { background:rgba(255,255,255,.14); }
+    html.noir .profils-header { background:linear-gradient(135deg,#000 0%,#080808 60%,#111 100%); color:#f1f5f9; border-color:#222; }
+    html.noir .profils-header .sous-titre { color:#94a3b8; }
+    html.noir .profils-header .btn-effacer { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.12); color:#e2e8f0; }
+    html.noir .profils-header .deco { display:block; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<section class="w-full pb-10">
+
+    {# ── Fil d'Ariane ── #}
+    <nav class="text-sm text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2 flex-wrap">
+        <a href="{% url 'entreprise:accueil' %}" class="hover:underline">{% trans "Accueil" %}</a>
+        <span>›</span>
+        <span class="text-gray-700 dark:text-gray-300 font-semibold">{% trans "Profils candidats" %}</span>
+    </nav>
+
+    {# ── Bandeau hero ── #}
+    <div class="profils-header rounded-3xl px-6 sm:px-10 py-8 mb-6 relative overflow-hidden shadow-sm">
+        <div class="deco absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
+        <div class="deco absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full -translate-x-1/2 translate-y-1/2 pointer-events-none"></div>
+        <div class="relative flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold mb-1">{% trans "Profils candidats" %}</h1>
+                <p class="sous-titre text-sm">
+                    {% if filtres_actifs %}
+                        <span class="font-bold">{{ total }}</span>
+                        {% trans "résultat" %}{{ total|pluralize }}
+                        {% trans "sur" %} {{ total_tous }} {% trans "profil" %}{{ total_tous|pluralize }}
+                    {% else %}
+                        <span class="font-bold">{{ total_tous }}</span>
+                        {% trans "profil" %}{{ total_tous|pluralize }} {% trans "public" %}{{ total_tous|pluralize }}
+                    {% endif %}
+                </p>
+            </div>
+            {% if filtres_actifs %}
+            <a href="{% url 'entreprise:candidats' %}"
+               class="btn-effacer inline-flex items-center gap-2 border px-4 py-2 rounded-xl text-sm font-bold transition">
+                ✕ {% trans "Effacer les filtres" %}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ── Barre de filtres ── #}
+    <form method="get" id="form-filtres"
+          class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-4 mb-6">
+        <div class="flex flex-wrap gap-3 items-end">
+
+            {# Recherche texte #}
+            <div class="flex-1 min-w-[220px]">
+                <label class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                    🔍 {% trans "Recherche" %}
+                </label>
+                <div class="relative">
+                    <input type="text" name="q" value="{{ q }}"
+                           placeholder="{% trans 'Nom, titre, secteur, ville…' %}"
+                           class="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-300 transition">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                </div>
+            </div>
+
+            {# Secteur #}
+            {% if secteurs %}
+            <div class="min-w-[170px]">
+                <label class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                    🏭 {% trans "Secteur" %}
+                </label>
+                <select name="secteur"
+                        class="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-300 transition">
+                    <option value="">— {% trans "Tous" %} —</option>
+                    {% for s in secteurs %}
+                    <option value="{{ s.id }}" {% if secteur == s.id|stringformat:"s" %}selected{% endif %}>{{ s.nomSecteur }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            {# Contrat #}
+            {% if contrats %}
+            <div class="min-w-[150px]">
+                <label class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                    📄 {% trans "Contrat" %}
+                </label>
+                <select name="contrat"
+                        class="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-300 transition">
+                    <option value="">— {% trans "Tous" %} —</option>
+                    {% for c in contrats %}
+                    <option value="{{ c.id }}" {% if contrat == c.id|stringformat:"s" %}selected{% endif %}>{{ c.libelle }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            {# Mobilité #}
+            {% if mobilites %}
+            <div class="min-w-[150px]">
+                <label class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                    🚗 {% trans "Mobilité" %}
+                </label>
+                <select name="mobilite"
+                        class="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-300 transition">
+                    <option value="">— {% trans "Tous" %} —</option>
+                    {% for m in mobilites %}
+                    <option value="{{ m.id }}" {% if mobilite == m.id|stringformat:"s" %}selected{% endif %}>{{ m.libelle }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            {# Tri #}
+            <div class="min-w-[140px]">
+                <label class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                    ↕ {% trans "Trier par" %}
+                </label>
+                <select name="tri"
+                        class="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-300 transition">
+                    <option value="recent" {% if tri == 'recent' %}selected{% endif %}>{% trans "Plus récents" %}</option>
+                    <option value="alpha"  {% if tri == 'alpha'  %}selected{% endif %}>{% trans "A → Z" %}</option>
+                </select>
+            </div>
+
+            {# Disponible uniquement #}
+            <label class="flex items-center gap-2 cursor-pointer self-end pb-2.5">
+                <input type="checkbox" name="dispo" value="1" {% if dispo == '1' %}checked{% endif %}
+                       class="w-4 h-4 rounded accent-green-600">
+                <span class="text-sm font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">{% trans "Disponibles" %}</span>
+            </label>
+
+            {# Bouton #}
+            <button type="submit"
+                    class="self-end px-5 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm hover:opacity-90 transition"
+                    style="background:#009A44;">
+                {% trans "Filtrer" %}
+            </button>
+        </div>
+
+        {# Chips filtres actifs #}
+        {% if filtres_actifs %}
+        <div class="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+            <span class="text-xs text-gray-400 dark:text-gray-500 font-semibold self-center">{% trans "Actifs :" %}</span>
+            {% if q %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800">
+                🔍 {{ q }}
+            </span>
+            {% endif %}
+            {% if secteur %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                🏭 {% for s in secteurs %}{% if s.id|stringformat:"s" == secteur %}{{ s.nomSecteur }}{% endif %}{% endfor %}
+            </span>
+            {% endif %}
+            {% if contrat %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800">
+                📄 {% for c in contrats %}{% if c.id|stringformat:"s" == contrat %}{{ c.libelle }}{% endif %}{% endfor %}
+            </span>
+            {% endif %}
+            {% if mobilite %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
+                🚗 {% for m in mobilites %}{% if m.id|stringformat:"s" == mobilite %}{{ m.libelle }}{% endif %}{% endfor %}
+            </span>
+            {% endif %}
+            {% if dispo == '1' %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800">
+                ✅ {% trans "Disponibles seulement" %}
+            </span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </form>
+
+    {# ── Résultats ── #}
+    {% if candidats %}
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-8">
+            {% for cand in candidats %}
+            <div class="card-lift">
+                {% include "entreprise/partials/candidat_card.html" with cand=cand %}
+            </div>
+            {% endfor %}
+        </div>
+
+        {# ── Pagination ── #}
+        {% if page_obj.has_other_pages %}
+        <nav class="flex items-center justify-center gap-2 flex-wrap" aria-label="{% trans 'Pagination' %}">
+
+            {# Première page #}
+            {% if page_obj.has_previous %}
+            <a href="?{% if q %}q={{ q }}&{% endif %}{% if secteur %}secteur={{ secteur }}&{% endif %}{% if contrat %}contrat={{ contrat }}&{% endif %}{% if mobilite %}mobilite={{ mobilite }}&{% endif %}{% if dispo %}dispo={{ dispo }}&{% endif %}{% if tri != 'recent' %}tri={{ tri }}&{% endif %}page=1"
+               class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                «
+            </a>
+            <a href="?{% if q %}q={{ q }}&{% endif %}{% if secteur %}secteur={{ secteur }}&{% endif %}{% if contrat %}contrat={{ contrat }}&{% endif %}{% if mobilite %}mobilite={{ mobilite }}&{% endif %}{% if dispo %}dispo={{ dispo }}&{% endif %}{% if tri != 'recent' %}tri={{ tri }}&{% endif %}page={{ page_obj.previous_page_number }}"
+               class="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                ‹
+            </a>
+            {% endif %}
+
+            {# Pages numérotées #}
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <span class="px-4 py-2 rounded-xl text-sm font-extrabold text-white shadow-sm"
+                      style="background:#009A44;">{{ num }}</span>
+                {% elif num >= page_obj.number|add:'-3' and num <= page_obj.number|add:'3' %}
+                <a href="?{% if q %}q={{ q }}&{% endif %}{% if secteur %}secteur={{ secteur }}&{% endif %}{% if contrat %}contrat={{ contrat }}&{% endif %}{% if mobilite %}mobilite={{ mobilite }}&{% endif %}{% if dispo %}dispo={{ dispo }}&{% endif %}{% if tri != 'recent' %}tri={{ tri }}&{% endif %}page={{ num }}"
+                   class="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-300 transition">
+                    {{ num }}
+                </a>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <a href="?{% if q %}q={{ q }}&{% endif %}{% if secteur %}secteur={{ secteur }}&{% endif %}{% if contrat %}contrat={{ contrat }}&{% endif %}{% if mobilite %}mobilite={{ mobilite }}&{% endif %}{% if dispo %}dispo={{ dispo }}&{% endif %}{% if tri != 'recent' %}tri={{ tri }}&{% endif %}page={{ page_obj.next_page_number }}"
+               class="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                ›
+            </a>
+            <a href="?{% if q %}q={{ q }}&{% endif %}{% if secteur %}secteur={{ secteur }}&{% endif %}{% if contrat %}contrat={{ contrat }}&{% endif %}{% if mobilite %}mobilite={{ mobilite }}&{% endif %}{% if dispo %}dispo={{ dispo }}&{% endif %}{% if tri != 'recent' %}tri={{ tri }}&{% endif %}page={{ page_obj.paginator.num_pages }}"
+               class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                »
+            </a>
+            {% endif %}
+
+        </nav>
+
+        <p class="text-center text-xs text-gray-400 dark:text-gray-500 mt-3">
+            {% trans "Page" %} {{ page_obj.number }} {% trans "sur" %} {{ page_obj.paginator.num_pages }}
+            · {{ total }} {% trans "profil" %}{{ total|pluralize }}
+        </p>
+        {% endif %}
+
+    {% else %}
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-14 border border-dashed border-gray-200 dark:border-gray-700 text-center">
+            <div class="text-6xl mb-4">🔭</div>
+            {% if filtres_actifs %}
+                <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% trans "Aucun profil ne correspond" %}</h3>
+                <p class="text-gray-500 dark:text-gray-400 mb-5">{% trans "Essayez d'élargir vos critères de recherche." %}</p>
+                <a href="{% url 'entreprise:candidats' %}"
+                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm hover:opacity-90 transition"
+                   style="background:#009A44;">
+                    ✕ {% trans "Effacer les filtres" %}
+                </a>
+            {% else %}
+                <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% trans "Aucun profil disponible" %}</h3>
+                <p class="text-gray-500 dark:text-gray-400">{% trans "Aucun candidat n'a encore rendu son portfolio public." %}</p>
+            {% endif %}
+        </div>
+    {% endif %}
+
+</section>
+
+{% include "entreprise/partials/modal_suggestion_profil.html" %}
+{% endblock %}

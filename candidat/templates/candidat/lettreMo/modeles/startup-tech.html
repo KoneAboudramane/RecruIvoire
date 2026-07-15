@@ -1,0 +1,91 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% trans "Lettre de motivation —" %} {{ lettre.prenom }} {{ lettre.nom }}</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:794px; min-height:1123px; background:#fff; }
+body {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 11px;
+    line-height: 1.7;
+    color: #1e1e2e;
+}
+
+.st-header { padding: 44px 60px 0; }
+.st-tag {
+    display:inline-block; background:#0f172a; color:#4ade80;
+    font-size:10px; font-weight:700; padding:4px 10px; border-radius:4px;
+    margin-bottom:14px;
+}
+.st-name { font-size:22px; font-weight:800; color:#0f172a; }
+.st-contact { font-size:10px; color:#64748b; margin-top:8px; }
+.st-contact span { margin-right:14px; }
+.st-rule { height:1px; background:repeating-linear-gradient(90deg,#0f172a 0 6px,transparent 6px 10px); margin:22px 60px; }
+
+.st-main { padding: 0 60px 50px; }
+.st-date { font-size:10px; color:#64748b; margin-bottom:22px; }
+.st-date::before { content:"// "; color:#4ade80; font-weight:700; }
+
+.st-recipient { margin-bottom:22px; }
+.st-rcp-name  { font-weight:700; color:#0f172a; }
+.st-rcp-fn, .st-rcp-addr, .st-rcp-city { font-size:10px; color:#64748b; }
+
+.st-objet {
+    border:1px solid #0f172a; border-radius:6px;
+    padding:10px 14px; margin-bottom:22px; font-size:11px;
+}
+.st-objet::before { content:"$ objet: "; color:#16a34a; font-weight:700; }
+
+.st-salut { margin-bottom:14px; font-weight:700; }
+.st-para  { margin-bottom:13px; text-align:justify; white-space:pre-wrap; word-break:break-word; }
+.st-formule { margin-top:24px; margin-bottom:46px; }
+.st-sig   { font-weight:700; }
+.st-sig::before { content:"~$ "; color:#4ade80; }
+</style>
+</head>
+<body>
+
+<div class="st-header">
+    <span class="st-tag">{% trans "CANDIDATURE" %}</span>
+    <div class="st-name">{{ lettre.prenom }} {{ lettre.nom }}</div>
+    <div class="st-contact">
+        {% if lettre.email %}<span>✉ {{ lettre.email }}</span>{% endif %}
+        {% if lettre.telephone %}<span>☎ {{ lettre.telephone }}</span>{% endif %}
+        {% if lettre.ville %}<span>📍 {{ lettre.codePostal }} {{ lettre.ville }}</span>{% endif %}
+    </div>
+</div>
+<div class="st-rule"></div>
+
+<div class="st-main">
+    <div class="st-date">{{ lettre.lieu|default:"Abidjan" }}, le {{ lettre.date }}</div>
+
+    <div class="st-recipient">
+        <div class="st-rcp-name">{{ lettre.titreDestinataire }} {{ lettre.nomDestinataire }}</div>
+        {% if lettre.posteDestinataire %}<div class="st-rcp-fn">{{ lettre.posteDestinataire }}</div>{% endif %}
+        {% if lettre.entreprise %}<div style="font-weight:700;">{{ lettre.entreprise }}</div>{% endif %}
+        {% if lettre.villeEntreprise %}<div class="st-rcp-city">{{ lettre.villeEntreprise }}</div>{% endif %}
+    </div>
+
+    {% if lettre.objet %}
+    <div class="st-objet">{{ lettre.objet }}</div>
+    {% endif %}
+
+    <p class="st-salut">
+        {% if lettre.titreDestinataire == "M." or lettre.titreDestinataire == "M" %}Monsieur
+        {% elif lettre.titreDestinataire == "Mme" or lettre.titreDestinataire == "Mme." %}Madame
+        {% elif lettre.titreDestinataire == "Dr." %}Docteur
+        {% elif lettre.titreDestinataire == "Pr." %}Professeur
+        {% else %}{{ lettre.titreDestinataire }}{% endif %},
+    </p>
+    {% if lettre.corps %}<p class="st-para">{{ lettre.corps }}</p>{% endif %}
+
+    <p class="st-formule">{{ lettre.formuleFull }}</p>
+    <div class="st-sig">{{ lettre.prenom }} {{ lettre.nom }}</div>
+</div>
+
+</body>
+</html>

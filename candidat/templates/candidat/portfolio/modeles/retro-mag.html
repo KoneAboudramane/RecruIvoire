@@ -1,0 +1,960 @@
+{% extends base_template|default:"candidat/base.html" %}
+{% load i18n static %}
+
+{% block titre %}{{ candidat.prenom }} {{ candidat.nom }} — Portfolio{% endblock %}
+
+{% block css_extra %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,600&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300;1,8..60,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════════════════════════════════════
+   Retro Magazine — Portfolio
+   Prefix : .rm-
+   Thème  : papier chaud, encre noire, accent rouge journal
+═══════════════════════════════════════════════════════════ */
+.rm {
+  --rm-accent:   {{ couleur_accent|default:'#c0392b' }};
+  --rm-accent-d: color-mix(in srgb, var(--rm-accent) 80%, #000);
+  --rm-paper:    #faf8f3;
+  --rm-paper2:   #f0ece0;
+  --rm-ink:      #1a1a1a;
+  --rm-ink2:     #333;
+  --rm-mute:     #777;
+  --rm-rule-l:   #d4cfc0;
+  --rm-serif:    'Playfair Display', Georgia, serif;
+  --rm-body:     'Source Serif 4', Georgia, serif;
+  --rm-sans:     'Inter', system-ui, sans-serif;
+
+  background: var(--rm-paper);
+  color: var(--rm-ink);
+  font-family: var(--rm-body);
+  font-size: 16px;
+  line-height: 1.7;
+}
+.rm *, .rm *::before, .rm *::after { box-sizing: border-box; }
+.rm a { text-decoration: none; color: inherit; transition: .25s; }
+.rm h1,.rm h2,.rm h3,.rm h4 { font-family: var(--rm-serif); margin: 0; line-height: 1.15; }
+.rm ul { list-style: none; margin: 0; padding: 0; }
+.rm img { max-width: 100%; display: block; }
+.rm p { margin: 0; }
+
+/* ── Owner banner ── */
+.rm-owner {
+  background: var(--rm-accent); color: #fff;
+  padding: 7px 24px; font-size: 13px; font-family: var(--rm-sans); font-weight: 600;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  position: relative; z-index: 45;
+}
+.rm-owner a {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 14px; border: 1.5px solid rgba(255,255,255,.6);
+  font-size: 12px; font-weight: 700; color: #fff;
+}
+.rm-owner a:hover { background: rgba(255,255,255,.15); }
+
+/* ══ MASTHEAD ══ */
+.rm-masthead { background: var(--rm-ink); color: #fff; }
+.rm-mast-meta {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 7px 28px; font-family: var(--rm-sans); font-size: 10px;
+  letter-spacing: .14em; text-transform: uppercase;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+  color: rgba(255,255,255,.5);
+}
+.rm-mast-name {
+  font-family: var(--rm-serif);
+  font-size: clamp(40px, 6.5vw, 82px);
+  font-weight: 900; letter-spacing: .01em;
+  color: #fff; text-align: center;
+  padding: 18px 28px 12px; line-height: 1;
+}
+.rm-mast-sub-row {
+  display: flex; align-items: center; justify-content: center;
+  border-top: 2px solid rgba(255,255,255,.7);
+  border-bottom: 2px solid rgba(255,255,255,.7);
+  margin: 0 28px;
+}
+.rm-mast-sub-row .sep { width: 1px; background: rgba(255,255,255,.25); align-self: stretch; margin: 0 20px; }
+.rm-mast-subtitle {
+  font-family: var(--rm-sans); font-size: 10px; font-weight: 600;
+  letter-spacing: .2em; text-transform: uppercase; color: rgba(255,255,255,.65); padding: 9px 0;
+}
+.rm-mast-accent-txt {
+  font-family: var(--rm-sans); font-size: 10px; font-weight: 700;
+  letter-spacing: .2em; text-transform: uppercase; color: var(--rm-accent); padding: 9px 0;
+}
+.rm-mast-foot {
+  padding: 7px 28px; font-family: var(--rm-sans); font-size: 10px;
+  color: rgba(255,255,255,.35); text-align: center; letter-spacing: .08em;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+/* ══ NAV ══ */
+.rm-nav {
+  position: sticky; top: 0; z-index: 44;
+  background: var(--rm-paper);
+  border-bottom: 3px solid var(--rm-ink);
+  transition: top .3s;
+}
+.rm-nav-inner {
+  max-width: 1280px; margin: 0 auto; padding: 0 24px;
+  display: flex; align-items: center; overflow-x: auto; scrollbar-width: none;
+}
+.rm-nav-inner::-webkit-scrollbar { display: none; }
+.rm-nav-link {
+  display: flex; align-items: center; gap: 6px;
+  padding: 11px 16px; font-family: var(--rm-sans); font-size: 11px;
+  font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--rm-mute); white-space: nowrap;
+  border-bottom: 3px solid transparent; margin-bottom: -3px; transition: .2s;
+}
+.rm-nav-link:hover { color: var(--rm-ink); }
+.rm-nav-link.active { color: var(--rm-ink); border-bottom-color: var(--rm-accent); }
+
+/* ══ LAYOUT ══ */
+.rm-container { max-width: 1280px; margin: 0 auto; padding: 0 28px; }
+.rm-section { padding: 64px 0; }
+.rm-section-alt { background: var(--rm-paper2); }
+
+.rm-section-head { margin-bottom: 44px; }
+.rm-section-label {
+  display: inline-block;
+  background: var(--rm-ink); color: #fff;
+  font-family: var(--rm-sans); font-size: 10px; font-weight: 700;
+  letter-spacing: .2em; text-transform: uppercase; padding: 4px 12px; margin-bottom: 8px;
+}
+.rm-section-head h2 {
+  font-size: clamp(26px, 4vw, 44px); font-weight: 800; color: var(--rm-ink);
+  padding-bottom: 12px; border-bottom: 3px double var(--rm-ink);
+}
+.rm-deck { font-style: italic; font-size: 15px; color: var(--rm-mute); margin-top: 10px; }
+
+/* ── Buttons ── */
+.rm-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 22px; font-family: var(--rm-sans); font-size: 12px;
+  font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  cursor: pointer; border: 2px solid transparent; transition: .25s;
+}
+.rm a.rm-btn-primary, .rm-btn-primary { background: var(--rm-ink); color: #fff !important; border-color: var(--rm-ink); }
+.rm a.rm-btn-primary:hover, .rm-btn-primary:hover { background: var(--rm-accent); border-color: var(--rm-accent); }
+.rm a.rm-btn-outline, .rm-btn-outline { border-color: var(--rm-ink); color: var(--rm-ink) !important; }
+.rm a.rm-btn-outline:hover, .rm-btn-outline:hover { background: var(--rm-ink); color: #fff !important; }
+.rm a.rm-btn-accent, .rm-btn-accent { background: var(--rm-accent); color: #fff !important; border-color: var(--rm-accent); }
+.rm a.rm-btn-accent:hover, .rm-btn-accent:hover { background: var(--rm-accent-d); }
+
+/* ══ HERO ══ */
+.rm-hero { padding: 52px 0; border-bottom: 3px solid var(--rm-ink); }
+.rm-hero-grid {
+  display: grid; grid-template-columns: 1fr; gap: 36px; align-items: start;
+}
+@media (min-width: 900px) { .rm-hero-grid { grid-template-columns: 260px 1fr 190px; gap: 40px; } }
+
+.rm-hero-photo {
+  border: 3px solid var(--rm-ink); overflow: hidden;
+  aspect-ratio: 3/4; background: var(--rm-paper2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--rm-serif); font-size: 56px; font-weight: 700; color: var(--rm-rule-l);
+}
+.rm-hero-photo img { width: 100%; height: 100%; object-fit: cover; filter: contrast(1.05) saturate(.82); }
+.rm-photo-caption {
+  font-family: var(--rm-sans); font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--rm-mute); border-top: 1px solid var(--rm-rule-l); padding-top: 6px; margin-top: 6px;
+}
+
+.rm-hero-eyebrow {
+  font-family: var(--rm-sans); font-size: 11px; font-weight: 700;
+  letter-spacing: .2em; text-transform: uppercase; color: var(--rm-accent); margin-bottom: 10px;
+}
+.rm-hero-h1 {
+  font-size: clamp(28px, 4.5vw, 56px); font-weight: 900; color: var(--rm-ink);
+  line-height: 1.05; margin-bottom: 16px;
+  border-bottom: 3px solid var(--rm-ink); padding-bottom: 16px;
+}
+.rm-hero-typed {
+  font-family: var(--rm-serif); font-style: italic;
+  font-size: clamp(15px, 2vw, 20px); color: var(--rm-mute);
+  margin-bottom: 18px; min-height: 28px;
+}
+.rm-cursor { color: var(--rm-accent); animation: rmBlink .7s step-end infinite; }
+@keyframes rmBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+.rm-hero-lead {
+  font-size: 15.5px; line-height: 1.85; color: var(--rm-ink2);
+  border-left: 4px solid var(--rm-accent); padding-left: 18px; margin-bottom: 22px;
+}
+.rm-hero-btns { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+.rm-hero-stats {
+  display: grid; grid-template-columns: repeat(3,1fr);
+  border: 1px solid var(--rm-rule-l); border-right: none; margin-top: 28px;
+}
+.rm-hero-stat { padding: 12px 10px; border-right: 1px solid var(--rm-rule-l); text-align: center; }
+.rm-hero-stat .val {
+  font-family: var(--rm-serif); font-size: 28px; font-weight: 800;
+  color: var(--rm-accent); display: block; line-height: 1;
+}
+.rm-hero-stat .lbl {
+  font-family: var(--rm-sans); font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--rm-mute); display: block; margin-top: 3px;
+}
+
+.rm-hero-side { display: none; }
+@media (min-width: 900px) { .rm-hero-side { display: block; } }
+.rm-side-box { border: 1px solid var(--rm-rule-l); padding: 16px; margin-bottom: 16px; }
+.rm-side-box h4 {
+  font-family: var(--rm-sans); font-size: 10px; font-weight: 700;
+  letter-spacing: .18em; text-transform: uppercase; color: var(--rm-mute);
+  border-bottom: 2px solid var(--rm-ink); padding-bottom: 6px; margin-bottom: 10px;
+}
+.rm-side-link {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--rm-sans); font-size: 12px; color: var(--rm-ink2);
+  padding: 5px 0; border-bottom: 1px solid var(--rm-rule-l); word-break: break-all;
+}
+.rm-side-link:last-child { border-bottom: none; }
+.rm-side-link i { color: var(--rm-accent); font-size: 14px; flex-shrink: 0; }
+.rm-side-link:hover { color: var(--rm-accent); }
+.rm-social-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.rm-social-row a {
+  width: 30px; height: 30px; border: 1px solid var(--rm-rule-l);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 14px; color: var(--rm-mute);
+}
+.rm-social-row a:hover { border-color: var(--rm-accent); color: var(--rm-accent); }
+
+/* ══ STATS BAR ══ */
+.rm-stats-bar {
+  background: var(--rm-ink);
+  border-top: 4px solid var(--rm-accent);
+  padding: 24px 0;
+}
+.rm-stats-bar .rm-container {
+  display: grid; grid-template-columns: repeat(2,1fr);
+}
+@media (min-width: 640px) { .rm-stats-bar .rm-container { grid-template-columns: repeat(4,1fr); } }
+.rm-stats-item { text-align: center; padding: 16px; border-right: 1px solid rgba(255,255,255,.08); }
+.rm-stats-item:last-child { border-right: none; }
+.rm-counter {
+  display: block; font-family: var(--rm-serif); font-size: 44px; font-weight: 800;
+  color: var(--rm-accent); line-height: 1;
+}
+.rm-stats-item p {
+  font-family: var(--rm-sans); font-size: 10px; letter-spacing: .14em;
+  text-transform: uppercase; color: rgba(255,255,255,.45); margin-top: 6px;
+}
+
+/* ══ SKILLS ══ */
+.rm-skills-grid { display: grid; grid-template-columns: 1fr; gap: 40px; }
+@media (min-width: 900px) { .rm-skills-grid { grid-template-columns: 5fr 7fr; } }
+.rm-skills-intro h3 { font-size: clamp(20px,3vw,32px); font-weight: 800; margin-bottom: 14px; }
+.rm-skills-intro p { color: var(--rm-ink2); margin-bottom: 18px; }
+.rm-pull-quote {
+  font-family: var(--rm-serif); font-size: 17px; font-style: italic;
+  color: var(--rm-mute); border-left: 4px solid var(--rm-accent);
+  padding: 10px 18px; margin: 18px 0; line-height: 1.55;
+}
+.rm-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+.rm-tag { padding: 4px 12px; border: 1px solid var(--rm-rule-l); font-family: var(--rm-sans); font-size: 11px; color: var(--rm-mute); }
+
+.rm-skill-item { margin-bottom: 18px; }
+.rm-skill-hdr { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.rm-skill-name { font-family: var(--rm-sans); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.rm-skill-pct  { font-family: var(--rm-sans); font-size: 12px; font-weight: 700; color: var(--rm-accent); }
+.rm-skill-track { height: 8px; background: var(--rm-paper2); border: 1px solid var(--rm-rule-l); }
+.rm-skill-bar { height: 100%; width: 0; background: var(--rm-ink); transition: width 1.2s cubic-bezier(.4,0,.2,1); }
+
+/* ══ RESUME ══ */
+.rm-timeline-grid { display: grid; grid-template-columns: 1fr; gap: 40px; }
+@media (min-width: 900px) { .rm-timeline-grid { grid-template-columns: 1fr 1fr; } }
+.rm-tl-col h3 {
+  font-family: var(--rm-sans); font-size: 10px; font-weight: 700;
+  letter-spacing: .2em; text-transform: uppercase;
+  background: var(--rm-ink); color: #fff;
+  display: inline-block; padding: 5px 14px; margin-bottom: 24px;
+}
+.rm-tl-item {
+  position: relative; padding-left: 20px; padding-bottom: 26px;
+  border-left: 2px solid var(--rm-rule-l);
+}
+.rm-tl-item:last-child { padding-bottom: 0; }
+.rm-tl-item::before {
+  content: ''; position: absolute; left: -7px; top: 5px;
+  width: 12px; height: 12px;
+  background: var(--rm-accent); border: 2px solid var(--rm-paper);
+  box-shadow: 0 0 0 1px var(--rm-accent);
+}
+.rm-tl-item h4 { font-family: var(--rm-serif); font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+.rm-tl-date {
+  display: inline-block; font-family: var(--rm-sans); font-size: 10px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  border: 1px solid var(--rm-rule-l); padding: 2px 9px; color: var(--rm-mute); margin-bottom: 5px;
+}
+.rm-tl-co { font-family: var(--rm-sans); font-size: 12px; color: var(--rm-mute); }
+.rm-tl-co i { color: var(--rm-accent); margin-right: 4px; }
+
+/* ══ PORTFOLIO ══ */
+.rm-proj-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+@media (min-width: 640px) { .rm-proj-grid { grid-template-columns: repeat(2,1fr); } }
+@media (min-width: 1000px) { .rm-proj-grid { grid-template-columns: repeat(3,1fr); } }
+.rm-proj-card {
+  border: 1px solid var(--rm-rule-l); overflow: hidden; transition: .28s;
+  display: flex; flex-direction: column;
+}
+.rm-proj-card:hover { box-shadow: 5px 5px 0 var(--rm-ink); transform: translate(-2px,-2px); }
+.rm-proj-img { height: 200px; overflow: hidden; position: relative; background: var(--rm-paper2); }
+.rm-proj-img img { width: 100%; height: 100%; object-fit: cover; filter: contrast(1.05) saturate(.8); transition: transform .5s; }
+.rm-proj-card:hover .rm-proj-img img { transform: scale(1.04); }
+.rm-proj-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 52px; color: var(--rm-rule-l); }
+.rm-proj-overlay {
+  position: absolute; inset: 0; background: rgba(26,26,26,.82);
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  opacity: 0; transition: .3s;
+}
+.rm-proj-card:hover .rm-proj-overlay { opacity: 1; }
+.rm-proj-overlay a {
+  width: 38px; height: 38px; background: #fff; color: var(--rm-ink);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 16px;
+}
+.rm-proj-overlay a:hover { background: var(--rm-accent); color: #fff; }
+.rm-proj-body { padding: 16px; flex: 1; display: flex; flex-direction: column; }
+.rm-proj-cat { font-family: var(--rm-sans); font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--rm-accent); margin-bottom: 4px; }
+.rm-proj-body h4 { font-family: var(--rm-serif); font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+.rm-proj-body p { font-size: 13px; color: var(--rm-mute); flex: 1; }
+.rm-proj-footer { padding: 12px 16px; border-top: 1px solid var(--rm-rule-l); display: flex; gap: 8px; }
+.rm-proj-footer a {
+  flex: 1; padding: 7px 0; text-align: center;
+  font-family: var(--rm-sans); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+}
+.rm-proj-btn-main { background: var(--rm-ink); color: #fff; }
+.rm-proj-btn-main:hover { background: var(--rm-accent); }
+.rm-proj-btn-alt { border: 1px solid var(--rm-rule-l); color: var(--rm-mute); }
+.rm-proj-btn-alt:hover { border-color: var(--rm-ink); color: var(--rm-ink); }
+
+/* ══ SERVICES ══ */
+.rm-svc-grid { display: grid; grid-template-columns: 1fr; gap: 22px; }
+@media (min-width: 640px) { .rm-svc-grid { grid-template-columns: repeat(2,1fr); } }
+@media (min-width: 900px) { .rm-svc-grid { grid-template-columns: repeat(3,1fr); } }
+.rm-svc-card { border: 1px solid var(--rm-rule-l); padding: 26px 20px; transition: .28s; }
+.rm-svc-card:hover { border-color: var(--rm-ink); box-shadow: 5px 5px 0 var(--rm-ink); transform: translate(-2px,-2px); }
+.rm-svc-icon {
+  width: 48px; height: 48px; background: var(--rm-ink); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 14px;
+}
+.rm-svc-card:hover .rm-svc-icon { background: var(--rm-accent); }
+.rm-svc-card h3 { font-family: var(--rm-serif); font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+.rm-svc-card p  { font-size: 13px; color: var(--rm-mute); line-height: 1.7; margin-bottom: 14px; }
+.rm-svc-pips { display: flex; gap: 4px; }
+.rm-svc-pip { width: 18px; height: 4px; background: var(--rm-rule-l); }
+.rm-svc-pip.on { background: var(--rm-accent); }
+
+/* ══ CONTACT ══ */
+.rm-contact-inner { display: grid; grid-template-columns: 1fr; gap: 36px; }
+@media (min-width: 900px) { .rm-contact-inner { grid-template-columns: 1fr 1fr; } }
+.rm-contact-left h3 { font-size: clamp(22px,3vw,34px); font-weight: 800; margin-bottom: 12px; }
+.rm-contact-lead { font-size: 15px; color: var(--rm-mute); font-style: italic; margin-bottom: 26px; }
+.rm-info-item { display: flex; gap: 14px; margin-bottom: 16px; align-items: flex-start; }
+.rm-info-icon {
+  width: 42px; height: 42px; flex-shrink: 0;
+  background: var(--rm-ink); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.rm-info-item h4 { font-family: var(--rm-sans); font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--rm-mute); margin-bottom: 3px; }
+.rm-info-item p, .rm-info-item a { font-size: 14px; color: var(--rm-ink2); }
+.rm-info-item a:hover { color: var(--rm-accent); }
+
+.rm-contact-right { background: var(--rm-ink); color: #fff; padding: 30px; }
+.rm-contact-right h3 { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+.rm-contact-right > p { font-size: 13px; color: rgba(255,255,255,.55); margin-bottom: 20px; }
+.rm-social-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
+.rm-social-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px; border: 1px solid rgba(255,255,255,.1);
+  font-family: var(--rm-sans); font-size: 12px; font-weight: 600; letter-spacing: .05em;
+  color: rgba(255,255,255,.7); transition: .25s;
+}
+.rm-social-item:hover { border-color: var(--rm-accent); color: var(--rm-accent); }
+.rm-social-item i { font-size: 18px; }
+
+/* ══ FOOTER ══ */
+.rm-footer {
+  background: var(--rm-ink); color: rgba(255,255,255,.45);
+  padding: 20px 28px; text-align: center;
+  font-family: var(--rm-sans); font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+  border-top: 4px solid var(--rm-accent);
+}
+
+/* ══ SCROLL TOP ══ */
+.rm-scroll-top {
+  position: fixed; right: 20px; bottom: 20px; z-index: 996;
+  width: 42px; height: 42px;
+  background: var(--rm-ink); color: #fff; border: none;
+  display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer;
+  transform: translateY(80px); opacity: 0; transition: .3s;
+}
+.rm-scroll-top.show  { transform: translateY(0); opacity: 1; }
+.rm-scroll-top:hover { background: var(--rm-accent); }
+
+@media (max-width: 899px) {
+  .rm-section { padding: 44px 0; }
+  .rm-section-head { margin-bottom: 28px; }
+}
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="rm" x-data="retroMag()" x-init="init()">
+
+  {% if est_proprio %}
+  <div class="rm-owner">
+    <span>{% trans "Aperçu privé — Retro Magazine" %}</span>
+    <a href="{% url 'candidat:profil' %}?onglet=portfolio"><i class="bi bi-pencil-square"></i>{% trans "Modifier" %}</a>
+  </div>
+  {% endif %}
+
+  <!-- ══ MASTHEAD ══ -->
+  <header class="rm-masthead">
+    <div class="rm-mast-meta">
+      <span>{% trans "Portfolio Edition ·" %} {% now "Y" %}</span>
+      <span>{{ candidat.ville|default:"" }}{% if candidat.ville and candidat.secteurActivite %} · {% endif %}{{ candidat.secteurActivite|default:"" }}</span>
+      <span>{% trans "Vol. 1 · N° 001" %}</span>
+    </div>
+    <div class="rm-mast-name">{{ candidat.prenom }} {{ candidat.nom }}</div>
+    <div class="rm-mast-sub-row">
+      <div class="rm-mast-subtitle">{% trans "Portfolio Professionnel" %}</div>
+      <div class="sep"></div>
+      <div class="rm-mast-accent-txt">{% if candidat.titreProfessionnel %}{{ candidat.titreProfessionnel }}{% else %}Portfolio{% endif %}</div>
+      <div class="sep"></div>
+      <div class="rm-mast-subtitle">{% trans "Édition" %} {% now "Y" %}</div>
+    </div>
+    <div class="rm-mast-foot">{% trans "Compétences · Expériences · Projets · Contact" %}</div>
+  </header>
+
+  <!-- ══ NAV ══ -->
+  <nav class="rm-nav" x-ref="rmNav">
+    <div class="rm-nav-inner">
+      <a href="#rm-hero"      class="rm-nav-link" :class="{ active: active==='hero' }"><i class="bi bi-house"></i>{% trans "Accueil" %}</a>
+      {% if params.showAbout %}
+      <a href="#rm-about"     class="rm-nav-link" :class="{ active: active==='about' }"><i class="bi bi-person"></i>{% trans "À propos" %}</a>
+      {% endif %}
+      {% if params.showCompetences and rubriques.competences %}
+      <a href="#rm-skills"    class="rm-nav-link" :class="{ active: active==='skills' }"><i class="bi bi-bar-chart"></i>{% trans "Compétences" %}</a>
+      {% endif %}
+      {% if params.showExperiences or params.showFormations %}
+      <a href="#rm-resume"    class="rm-nav-link" :class="{ active: active==='resume' }"><i class="bi bi-briefcase"></i>{% trans "Parcours" %}</a>
+      {% endif %}
+      {% if params.showProjets and rubriques.projets %}
+      <a href="#rm-portfolio" class="rm-nav-link" :class="{ active: active==='portfolio' }"><i class="bi bi-grid"></i>{% trans "Portfolio" %}</a>
+      {% endif %}
+      {% if params.showCompetences and rubriques.competences %}
+      <a href="#rm-services"  class="rm-nav-link" :class="{ active: active==='services' }"><i class="bi bi-layers"></i>{% trans "Services" %}</a>
+      {% endif %}
+      {% if params.showContact and candidat.email %}
+      <a href="#rm-contact"   class="rm-nav-link" :class="{ active: active==='contact' }"><i class="bi bi-envelope"></i>{% trans "Contact" %}</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <!-- ══ HERO ══ -->
+  <section id="rm-hero" class="rm-hero">
+    <div class="rm-container">
+      <div class="rm-hero-grid">
+
+        <!-- Photo -->
+        <div data-aos="fade-right">
+          <div class="rm-hero-photo">
+            {% if candidat.photoProfil %}
+            <img src="{{ candidat.photoProfil.url }}" alt="{{ candidat.prenom }} {{ candidat.nom }}">
+            {% else %}
+            {{ candidat.prenom|slice:":1"|upper }}{{ candidat.nom|slice:":1"|upper }}
+            {% endif %}
+          </div>
+          <div class="rm-photo-caption">
+            {{ candidat.prenom }} {{ candidat.nom }}{% if candidat.titreProfessionnel %} · {{ candidat.titreProfessionnel }}{% endif %}
+          </div>
+        </div>
+
+        <!-- Centre -->
+        <div data-aos="fade-up" data-aos-delay="100">
+          <div class="rm-hero-eyebrow">— Édition Exclusive</div>
+          <h1 class="rm-hero-h1">
+            {% if candidat.titreProfessionnel %}{{ candidat.titreProfessionnel }}{% else %}Professionnel Passionné{% endif %}
+          </h1>
+          {% if rubriques.competences %}
+          <div class="rm-hero-typed">
+            <span x-text="typedWord"></span><span class="rm-cursor">|</span>
+          </div>
+          {% elif candidat.sloganPortfolio %}
+          <div class="rm-hero-typed">« {{ candidat.sloganPortfolio }} »</div>
+          {% endif %}
+          {% if candidat.biographie %}
+          <p class="rm-hero-lead">{{ candidat.biographie|truncatewords:30 }}</p>
+          {% else %}
+          <p class="rm-hero-lead">{% trans "Bienvenue sur mon portfolio — découvrez mon parcours, mes compétences et mes réalisations à travers cette édition spéciale." %}</p>
+          {% endif %}
+          <div class="rm-hero-btns">
+            {% if params.showProjets and rubriques.projets %}
+            <a href="#rm-portfolio" class="rm-btn rm-btn-primary"><i class="bi bi-grid"></i>{% trans "Mes projets" %}</a>
+            {% endif %}
+            {% if params.showContact and candidat.email %}
+            <a href="#rm-contact" class="rm-btn rm-btn-outline"><i class="bi bi-envelope"></i>{% trans "Me contacter" %}</a>
+            {% endif %}
+          </div>
+          <div class="rm-hero-stats">
+            <div class="rm-hero-stat">
+              <span class="val">{{ rubriques.projets|length }}</span>
+              <span class="lbl">{% trans "Projets" %}</span>
+            </div>
+            <div class="rm-hero-stat">
+              <span class="val">{% if annees_xp is not None %}{{ annees_xp }}+{% else %}—{% endif %}</span>
+              <span class="lbl">{% trans "Ans d'XP" %}</span>
+            </div>
+            <div class="rm-hero-stat">
+              <span class="val">{{ rubriques.competences|length }}</span>
+              <span class="lbl">{% trans "Skills" %}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar (desktop) -->
+        <div class="rm-hero-side" data-aos="fade-left" data-aos-delay="200">
+          {% if not masquer_contact and candidat.email or candidat.telephone or candidat.ville %}
+          <div class="rm-side-box">
+            <h4>{% trans "Contact" %}</h4>
+            {% if not masquer_contact %}{% if candidat.email %}<a href="mailto:{{ candidat.email }}" class="rm-side-link"><i class="bi bi-envelope"></i>{{ candidat.email }}</a>{% endif %}{% endif %}
+            {% if not masquer_contact %}{% if candidat.telephone %}<a href="tel:{{ candidat.telephone }}" class="rm-side-link"><i class="bi bi-telephone"></i>{{ candidat.telephone }}</a>{% endif %}{% endif %}
+            {% if candidat.ville or candidat.adresse %}<span class="rm-side-link"><i class="bi bi-geo-alt"></i>{{ candidat.ville|default:candidat.adresse }}</span>{% endif %}
+          </div>
+          {% endif %}
+          {% if liens_sociaux %}
+          <div class="rm-side-box">
+            <h4>{% trans "Réseaux" %}</h4>
+            <div class="rm-social-row">
+              {% for lien in liens_sociaux %}
+              <a href="{{ lien.url }}" target="_blank" rel="noopener" title="{{ lien.reseau.libelle }}">
+                <i class="bi {{ lien.reseau.bi_class }}"></i>
+              </a>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+          {% if rubriques.langues %}
+          <div class="rm-side-box">
+            <h4>{% trans "Langues" %}</h4>
+            {% for l in rubriques.langues %}
+            <span class="rm-side-link"><i class="bi bi-translate"></i>{{ l.nom }}{% if l.niveau %} — {{ l.niveau }}{% endif %}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ STATS BAR ══ -->
+  {% if rubriques.projets or annees_xp is not None or rubriques.competences %}
+  <div class="rm-stats-bar">
+    <div class="rm-container">
+      <div class="rm-stats-item" data-aos="zoom-in" data-aos-delay="50">
+        <span class="rm-counter" data-count="{{ rubriques.projets|length }}">0</span>
+        <p>{% trans "Projets réalisés" %}</p>
+      </div>
+      <div class="rm-stats-item" data-aos="zoom-in" data-aos-delay="100">
+        <span class="rm-counter" data-count="{{ rubriques.experiences|length }}">0</span>
+        <p>{% trans "Expériences" %}</p>
+      </div>
+      <div class="rm-stats-item" data-aos="zoom-in" data-aos-delay="150">
+        <span class="rm-counter" data-count="{{ rubriques.formations|length|default:0 }}">0</span>
+        <p>{% trans "Formations" %}</p>
+      </div>
+      <div class="rm-stats-item" data-aos="zoom-in" data-aos-delay="200">
+        <span class="rm-counter" data-count="{{ rubriques.competences|length }}">0</span>
+        <p>{% trans "Compétences" %}</p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ══ ABOUT ══ -->
+  {% if params.showAbout %}
+  <section id="rm-about" class="rm-section">
+    <div class="rm-container">
+      <div class="rm-section-head" data-aos="fade-up">
+        <div class="rm-section-label">{% trans "À propos" %}</div>
+        <h2>{% trans "Mon histoire" %}</h2>
+        <p class="rm-deck">{% trans "Un parcours façonné par la passion, l'expérience et la curiosité." %}</p>
+      </div>
+      <div data-aos="fade-up" data-aos-delay="100" style="max-width:760px;">
+        {% if candidat.biographie %}
+        <div style="font-size:15.5px;line-height:1.9;color:var(--rm-ink2);">{{ candidat.biographie|linebreaks }}</div>
+        {% else %}
+        <p style="font-size:15.5px;line-height:1.9;color:var(--rm-ink2);">{% trans "Je suis" %} {{ candidat.prenom }} {{ candidat.nom }}, {{ candidat.titreProfessionnel|default:"professionnel passionné" }}. Bienvenue sur mon espace portfolio.</p>
+        {% if candidat.sloganPortfolio %}<blockquote class="rm-pull-quote">« {{ candidat.sloganPortfolio }} »</blockquote>{% endif %}
+        {% endif %}
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:28px;">
+          {% if candidat.secteurActivite %}
+          <div style="padding:14px 16px;border:1px solid var(--rm-rule-l);">
+            <span style="display:block;font-family:var(--rm-sans);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--rm-mute);margin-bottom:4px;">{% trans "Secteur" %}</span>
+            <span style="font-family:var(--rm-serif);font-size:15px;font-weight:700;">{{ candidat.secteurActivite }}</span>
+          </div>
+          {% endif %}
+          {% if annees_xp is not None %}
+          <div style="padding:14px 16px;border:1px solid var(--rm-rule-l);">
+            <span style="display:block;font-family:var(--rm-sans);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--rm-mute);margin-bottom:4px;">{% trans "Expérience" %}</span>
+            <span style="font-family:var(--rm-serif);font-size:15px;font-weight:700;">{{ annees_xp }}+ ans</span>
+          </div>
+          {% endif %}
+          {% if formations_groupees.diplome %}{% with f0=formations_groupees.diplome|first %}
+          <div style="padding:14px 16px;border:1px solid var(--rm-rule-l);">
+            <span style="display:block;font-family:var(--rm-sans);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--rm-mute);margin-bottom:4px;">{% trans "Diplôme" %}</span>
+            <span style="font-family:var(--rm-serif);font-size:15px;font-weight:700;">{{ f0.diplome|default:f0.domaine|default:"Diplôme" }}</span>
+          </div>{% endwith %}{% endif %}
+          {% if rubriques.langues %}
+          <div style="padding:14px 16px;border:1px solid var(--rm-rule-l);">
+            <span style="display:block;font-family:var(--rm-sans);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--rm-mute);margin-bottom:4px;">{% trans "Langues" %}</span>
+            <span style="font-family:var(--rm-serif);font-size:15px;font-weight:700;">{% for l in rubriques.langues %}{{ l.nom }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>
+          </div>
+          {% endif %}
+        </div>
+        <div style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap;">
+          {% if candidat.email %}<a href="mailto:{{ candidat.email }}" class="rm-btn rm-btn-accent"><i class="bi bi-envelope"></i>M'écrire</a>{% endif %}
+          {% if params.showProjets and rubriques.projets %}<a href="#rm-portfolio" class="rm-btn rm-btn-outline"><i class="bi bi-grid"></i>Mes projets</a>{% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ══ SKILLS ══ -->
+  {% if params.showCompetences and rubriques.competences %}
+  <section id="rm-skills" class="rm-section rm-section-alt">
+    <div class="rm-container">
+      <div class="rm-section-head" data-aos="fade-up">
+        <div class="rm-section-label">{% trans "Compétences" %}</div>
+        <h2>{% trans "Savoir-faire" %}</h2>
+        <p class="rm-deck">{% trans "Niveaux de maîtrise — évalués sur 5 points." %}</p>
+      </div>
+      <div class="rm-skills-grid" data-aos="fade-up" data-aos-delay="100">
+        <div class="rm-skills-intro">
+          <h3>{% trans "Expertises" %}<br>{% trans "clés" %}</h3>
+          {% if candidat.biographie %}
+          <p>{{ candidat.biographie|truncatewords:22 }}</p>
+          {% else %}
+          <p>{% trans "Des compétences construites au fil des projets et expériences professionnelles." %}</p>
+          {% endif %}
+          {% if candidat.sloganPortfolio %}
+          <blockquote class="rm-pull-quote">« {{ candidat.sloganPortfolio }} »</blockquote>
+          {% endif %}
+          <div class="rm-tags">
+            {% for c in rubriques.competences %}
+            <span class="rm-tag">{{ c.nom }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        <div>
+          {% for c in rubriques.competences %}
+          <div class="rm-skill-item">
+            <div class="rm-skill-hdr">
+              <span class="rm-skill-name">{{ c.nom }}</span>
+              <span class="rm-skill-pct">{% widthratio c.niveau 5 100 %}%</span>
+            </div>
+            <div class="rm-skill-track">
+              <div class="rm-skill-bar" data-width="{% widthratio c.niveau 5 100 %}"></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ══ RESUME ══ -->
+  {% if params.showExperiences or params.showFormations %}
+  <section id="rm-resume" class="rm-section">
+    <div class="rm-container">
+      <div class="rm-section-head" data-aos="fade-up">
+        <div class="rm-section-label">{% trans "Parcours" %}</div>
+        <h2>{% trans "Expériences & Formation" %}</h2>
+        <p class="rm-deck">{% trans "Un parcours professionnel construit avec méthode et ambition." %}</p>
+      </div>
+      <div class="rm-timeline-grid" data-aos="fade-up" data-aos-delay="100">
+
+        {% if params.showExperiences and rubriques.experiences %}
+        <div class="rm-tl-col" data-aos="fade-right">
+          <h3>{% trans "Expériences" %}</h3>
+          {% for exp in rubriques.experiences %}
+          <div class="rm-tl-item">
+            <h4>{% for p in exp.postes %}{{ p.titre }}{% if not forloop.last %} / {% endif %}{% endfor %}{% if not exp.postes %}{{ exp.entreprise }}{% endif %}</h4>
+            {% if exp.periodeFR %}<span class="rm-tl-date">{{ exp.periodeFR }}</span>{% endif %}
+            {% if exp.entreprise %}<p class="rm-tl-co"><i class="bi bi-building"></i>{{ exp.entreprise }}{% if exp.lieu %} — {{ exp.lieu }}{% endif %}</p>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <div data-aos="fade-left">
+          {% if params.showFormations and formations_groupees.diplome %}
+          <div class="rm-tl-col">
+            <h3>{% trans "Formation" %}</h3>
+            {% for f in formations_groupees.diplome %}
+            <div class="rm-tl-item">
+              <h4>{{ f.diplome|default:f.domaine|default:"Diplôme" }}</h4>
+              {% if f.debut or f.fin %}<span class="rm-tl-date">{{ f.debut|slice:":4" }}{% if f.fin %} → {{ f.fin|slice:":4" }}{% else %} → En cours{% endif %}</span>{% endif %}
+              {% if f.ecole %}<p class="rm-tl-co"><i class="bi bi-building"></i>{{ f.ecole }}{% if f.lieu %} — {{ f.lieu }}{% endif %}</p>{% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% if params.showFormations and formations_groupees.certification %}
+          <div class="rm-tl-col" style="margin-top:28px;">
+            <h3>{% trans "Certifications" %}</h3>
+            {% for f in formations_groupees.certification %}
+            <div class="rm-tl-item">
+              <h4>{{ f.diplome|default:f.domaine|default:"Certification" }}</h4>
+              {% if f.fin %}<span class="rm-tl-date">{{ f.fin|slice:":4" }}</span>{% endif %}
+              {% if f.ecole %}<p class="rm-tl-co"><i class="bi bi-building"></i>{{ f.ecole }}</p>{% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ══ PORTFOLIO ══ -->
+  {% if params.showProjets and rubriques.projets %}
+  <section id="rm-portfolio" class="rm-section rm-section-alt">
+    <div class="rm-container">
+      <div class="rm-section-head" data-aos="fade-up">
+        <div class="rm-section-label">{% trans "Portfolio" %}</div>
+        <h2>{% trans "Réalisations" %}</h2>
+        <p class="rm-deck">{% trans "Projets sélectionnés — études de cas et travaux représentatifs." %}</p>
+      </div>
+      <div class="rm-proj-grid">
+        {% for projet in rubriques.projets %}{% if projet.nom %}
+        {% with cover=projet.images.0 %}
+        <div class="rm-proj-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0 }}00">
+          <div class="rm-proj-img">
+            {% if cover.url %}
+            <img src="{{ cover.url }}" alt="{{ projet.nom }}" loading="lazy">
+            {% else %}
+            <div class="rm-proj-fallback"><i class="bi bi-image"></i></div>
+            {% endif %}
+            <div class="rm-proj-overlay">
+              {% if cover.url %}<a href="{{ cover.url }}" target="_blank" title="Aperçu"><i class="bi bi-zoom-in"></i></a>{% endif %}
+              {% if projet.db_id %}<a href="{% url 'candidat:portfolio_projet_detail' candidat.id projet.db_id %}" title="Détails"><i class="bi bi-arrow-right"></i></a>{% endif %}
+              {% if projet.has_demo %}<a href="{{ projet.lien }}" target="_blank" rel="noopener" title="Démo"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+            </div>
+          </div>
+          <div class="rm-proj-body">
+            <div class="rm-proj-cat">{{ projet.dateDebut|slice:":4"|default:"Projet" }}</div>
+            <h4>{{ projet.nom }}</h4>
+            {% if projet.description %}<p>{{ projet.description|truncatewords:12 }}</p>{% endif %}
+          </div>
+          <div class="rm-proj-footer">
+            {% if projet.db_id %}<a href="{% url 'candidat:portfolio_projet_detail' candidat.id projet.db_id %}" class="rm-proj-btn-main">Voir le projet</a>{% endif %}
+            {% if projet.has_demo %}<a href="{{ projet.lien }}" target="_blank" rel="noopener" class="rm-proj-btn-alt">Démo live</a>{% endif %}
+          </div>
+        </div>
+        {% endwith %}
+        {% endif %}{% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ══ SERVICES ══ -->
+  {% if params.showCompetences and rubriques.competences %}
+  <section id="rm-services" class="rm-section">
+    <div class="rm-container">
+      <div class="rm-section-head" data-aos="fade-up">
+        <div class="rm-section-label">{% trans "Services" %}</div>
+        <h2>{% trans "Domaines d'intervention" %}</h2>
+        <p class="rm-deck">{% trans "Solutions adaptées à vos besoins — expertise disponible." %}</p>
+      </div>
+      <div class="rm-svc-grid">
+        {% for c in rubriques.competences|slice:":6" %}
+        <div data-aos="fade-up" data-aos-delay="{{ forloop.counter0 }}00">
+          <div class="rm-svc-card">
+            <div class="rm-svc-icon">
+              <i class="bi bi-{% cycle 'code-slash' 'palette2' 'graph-up-arrow' 'gear-wide' 'shield-check' 'cpu' %}"></i>
+            </div>
+            <h3>{{ c.nom }}</h3>
+            <p>{% if c.niveau >= 4 %}Expertise avancée — niveau {{ c.niveau }}/5. Idéal pour vos projets les plus ambitieux.{% else %}Maîtrise solide — niveau {{ c.niveau }}/5. Prêt à intervenir efficacement.{% endif %}</p>
+            <div class="rm-svc-pips">
+              {% for i in "12345" %}
+              <div class="rm-svc-pip {% if forloop.counter <= c.niveau %}on{% endif %}"></div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ══ CONTACT ══ -->
+  {% if params.showContact and candidat.email %}
+  <section id="rm-contact" class="rm-section rm-section-alt">
+    <div class="rm-container">
+      <div class="rm-section-head" data-aos="fade-up">
+        <div class="rm-section-label">{% trans "Contact" %}</div>
+        <h2>{% trans "Entrons en contact" %}</h2>
+        <p class="rm-deck">{% trans "Une opportunité, une question, un projet ? Je suis disponible." %}</p>
+      </div>
+      <div class="rm-contact-inner" data-aos="fade-up" data-aos-delay="100">
+        <div class="rm-contact-left">
+          <h3>{% trans "Discutons de votre projet" %}</h3>
+          <p class="rm-contact-lead">{% trans "Je réponds généralement sous 48h ouvrées." %}</p>
+          {% if candidat.email %}
+          <div class="rm-info-item">
+            <div class="rm-info-icon"><i class="bi bi-envelope"></i></div>
+            <div><h4>{% trans "Email" %}</h4><p><a href="mailto:{{ candidat.email }}">{{ candidat.email }}</a></p></div>
+          </div>
+          {% endif %}
+          {% if candidat.telephone %}
+          <div class="rm-info-item">
+            <div class="rm-info-icon"><i class="bi bi-telephone"></i></div>
+            <div><h4>{% trans "Téléphone" %}</h4><p><a href="tel:{{ candidat.telephone }}">{{ candidat.telephone }}</a></p></div>
+          </div>
+          {% endif %}
+          {% if candidat.ville or candidat.adresse %}
+          <div class="rm-info-item">
+            <div class="rm-info-icon"><i class="bi bi-geo-alt"></i></div>
+            <div><h4>{% trans "Localisation" %}</h4><p>{{ candidat.ville|default:candidat.adresse }}</p></div>
+          </div>
+          {% endif %}
+        </div>
+        <div class="rm-contact-right" data-aos="fade-left" data-aos-delay="150">
+          <h3>{% trans "Retrouvez-moi en ligne" %}</h3>
+          <p>{% trans "Mes profils professionnels et réseaux sociaux." %}</p>
+          {% if liens_sociaux %}
+          <div class="rm-social-grid">
+            {% for lien in liens_sociaux %}
+            <a href="{{ lien.url }}" target="_blank" rel="noopener" class="rm-social-item">
+              <i class="bi {{ lien.reseau.bi_class }}"></i>{{ lien.reseau.libelle }}
+            </a>
+            {% endfor %}
+          </div>
+          {% else %}
+          {% if candidat.email %}
+          <a href="mailto:{{ candidat.email }}" class="rm-social-item" style="display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid rgba(255,255,255,.1);font-family:var(--rm-sans);font-size:12px;color:rgba(255,255,255,.7);">
+            <i class="bi bi-envelope" style="font-size:18px;"></i>{{ candidat.email }}
+          </a>
+          {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+
+  <button class="rm-scroll-top" :class="{ show: scrollTop }"
+          @click="window.scrollTo({top:0,behavior:'smooth'})" aria-label="{% trans "Haut" %}">
+    <i class="bi bi-arrow-up-short"></i>
+  </button>
+
+</div>
+{% endblock %}
+
+{% block js_extra %}
+<script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+<script>
+window.addEventListener('load', function() {
+  if (window.AOS) AOS.init({ duration: 650, once: true, offset: 60, easing: 'ease-in-out' });
+});
+</script>
+<script>
+function retroMag() {
+  return {
+    active: 'hero',
+    scrollTop: false,
+    typedWord: '',
+    typedItems: [
+      {% for c in rubriques.competences|slice:":6" %}'{{ c.nom|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}
+      {% if not rubriques.competences %}'{{ candidat.titreProfessionnel|default:"Professionnel"|escapejs }}'{% endif %}
+    ],
+
+    init() {
+      document.querySelectorAll('.rm-skill-bar').forEach(bar => {
+        const io = new IntersectionObserver(([e]) => {
+          if (e.isIntersecting) { bar.style.width = (bar.dataset.width || '0') + '%'; io.disconnect(); }
+        }, { threshold: 0.3 });
+        io.observe(bar);
+      });
+
+      document.querySelectorAll('.rm-counter').forEach(el => {
+        const io = new IntersectionObserver(([e]) => {
+          if (!e.isIntersecting) return;
+          const target = +el.dataset.count;
+          const t0 = performance.now(); const dur = 1400;
+          const tick = t => {
+            const p = Math.min(1, (t - t0) / dur);
+            el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+            if (p < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+          io.disconnect();
+        }, { threshold: 0.4 });
+        io.observe(el);
+      });
+
+      const nav = this.$refs.rmNav;
+      const syncNavTop = () => {
+        if (!nav) return;
+        const owner = document.querySelector('.rm-owner');
+        let top = 0;
+        if (owner) { const ob = owner.getBoundingClientRect().bottom; top = Math.max(0, ob); }
+        nav.style.top = top + 'px';
+      };
+
+      const sections = document.querySelectorAll('section[id]');
+      const onScroll = () => {
+        this.scrollTop = window.scrollY > 300;
+        let cur = 'hero';
+        sections.forEach(s => { if (s.getBoundingClientRect().top < 130) cur = s.id.replace('rm-',''); });
+        this.active = cur;
+        syncNavTop();
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+
+      document.querySelectorAll('a[href^="#rm-"]').forEach(a => {
+        a.addEventListener('click', e => {
+          const tgt = document.getElementById(a.getAttribute('href').slice(1));
+          if (tgt) { e.preventDefault(); tgt.scrollIntoView({ behavior: 'smooth' }); }
+        });
+      });
+
+      if (this.typedItems.length) this.startTyped();
+    },
+
+    startTyped() {
+      let i = 0, j = 0, del = false;
+      const sp = 80, pause = 1800, dsp = 40;
+      const tick = () => {
+        const w = this.typedItems[i];
+        if (!del) {
+          this.typedWord = w.slice(0, j++);
+          if (j > w.length) { del = true; setTimeout(tick, pause); return; }
+        } else {
+          this.typedWord = w.slice(0, j--);
+          if (j < 0) { del = false; j = 0; i = (i + 1) % this.typedItems.length; }
+        }
+        setTimeout(tick, del ? dsp : sp);
+      };
+      tick();
+    },
+  };
+}
+</script>
+{% endblock %}

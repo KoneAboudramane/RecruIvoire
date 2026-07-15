@@ -1,0 +1,140 @@
+{% extends "candidat/base.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Avis des candidats" %} — {% trans "Espace Candidat" %}{% endblock %}
+
+{% block contenu %}
+
+<section class="mb-10 text-center">
+    <span class="inline-block text-xs font-bold uppercase tracking-widest mb-2" style="color:#c96010;">
+        ⭐ {% trans "Témoignages" %}
+    </span>
+    <h1 class="text-3xl lg:text-4xl font-extrabold text-gray-800 mb-2">
+        {% trans "Ils ont trouvé leur emploi" %}
+    </h1>
+    <p class="text-gray-500 text-sm">
+        {% blocktrans count counter=page_obj.paginator.count %}{{ counter }} candidat nous fait confiance.{% plural %}{{ counter }} candidats nous font confiance.{% endblocktrans %}
+    </p>
+</section>
+
+{% if page_obj %}
+<div x-data="avisApp()" x-cloak class="grid md:grid-cols-3 gap-6 mb-10 items-start">
+
+    {# ── Carreaux : grille 3/ligne par défaut, liste étroite quand un avis est ouvert ── #}
+    <div :class="selected === null ? 'md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6' : 'md:col-span-2 flex flex-col gap-4'">
+        <template x-for="(t, i) in items" :key="i">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border transition"
+                 :class="selected === i ? 'border-orange-400' : 'border-gray-100'">
+                <div class="flex gap-1 mb-3">
+                    <template x-for="n in 5" :key="n">
+                        <span :style="n <= t.note ? 'color:#c96010' : ''" :class="n > t.note ? 'text-gray-200' : ''">★</span>
+                    </template>
+                </div>
+                <p class="text-gray-600 italic line-clamp-3" x-text="'« ' + t.texte + ' »'"></p>
+                <div class="flex items-center justify-between gap-3 mt-4">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <template x-if="t.photo_url">
+                            <img :src="t.photo_url" class="w-10 h-10 rounded-full object-cover flex-shrink-0">
+                        </template>
+                        <template x-if="!t.photo_url">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style="background:#c96010;" x-text="t.initiales"></div>
+                        </template>
+                        <div class="min-w-0">
+                            <p class="font-semibold text-gray-800 text-sm truncate" x-text="t.prenom_nom"></p>
+                            <p class="text-gray-400 text-xs truncate" x-text="t.titre_poste"></p>
+                        </div>
+                    </div>
+                    <button @click="selected = i" class="text-xs font-bold whitespace-nowrap hover:underline" style="color:#c96010;">
+                        {% trans "Voir plus" %}
+                    </button>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    {# ── Panneau d'affichage : n'existe que lorsqu'un avis est sélectionné ── #}
+    <template x-if="selected !== null">
+        <div id="temoignage-panel" class="md:col-span-1 md:sticky md:top-24">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border-2" style="border-color:#c96010;">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex gap-1">
+                        <template x-for="n in 5" :key="n">
+                            <span :style="n <= items[selected].note ? 'color:#c96010' : ''" :class="n > items[selected].note ? 'text-gray-200' : ''">★</span>
+                        </template>
+                    </div>
+                    <button @click="selected = null" class="text-gray-400 hover:text-gray-600 font-bold text-sm">
+                        ✕ {% trans "Fermer" %}
+                    </button>
+                </div>
+                <p class="text-gray-700 italic leading-relaxed mb-5" x-text="'« ' + items[selected].texte + ' »'"></p>
+                <div class="flex items-center gap-3">
+                    <template x-if="items[selected].photo_url">
+                        <img :src="items[selected].photo_url" class="w-12 h-12 rounded-full object-cover">
+                    </template>
+                    <template x-if="!items[selected].photo_url">
+                        <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold" style="background:#c96010;" x-text="items[selected].initiales"></div>
+                    </template>
+                    <div>
+                        <p class="font-bold text-gray-800" x-text="items[selected].prenom_nom"></p>
+                        <p class="text-gray-400 text-sm" x-text="items[selected].titre_poste"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+
+<script>
+function avisApp() {
+    return {
+        selected: null,
+        items: {{ temoignages_json|safe }},
+        init() {
+            this.$watch('selected', (value) => {
+                if (value === null) return;
+                this.$nextTick(() => {
+                    document.getElementById('temoignage-panel')
+                        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+            });
+            const cible = new URLSearchParams(window.location.search).get('t');
+            if (!cible) return;
+            const idx = this.items.findIndex(t => String(t.pk) === cible);
+            if (idx !== -1) this.selected = idx;
+        },
+    };
+}
+</script>
+
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="flex items-center justify-center gap-3 mb-10">
+    {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:border-orange-400 hover:text-orange-600 transition">
+            ← {% trans "Précédent" %}
+        </a>
+    {% endif %}
+    <span class="text-sm text-gray-500">
+        {% blocktrans with num=page_obj.number total=page_obj.paginator.num_pages %}Page {{ num }} / {{ total }}{% endblocktrans %}
+    </span>
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:border-orange-400 hover:text-orange-600 transition">
+            {% trans "Suivant" %} →
+        </a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="bg-white rounded-2xl p-10 border border-dashed border-gray-200 text-center mb-10">
+    <div class="text-5xl mb-3">💬</div>
+    <p class="text-gray-500 font-semibold">{% trans "Aucun témoignage publié pour le moment." %}</p>
+</div>
+{% endif %}
+
+<div class="text-center">
+    <a href="{% url 'candidat:accueil' %}" class="inline-flex items-center gap-2 text-sm font-bold hover:underline" style="color:#c96010;">
+        ← {% trans "Retour à l'accueil" %}
+    </a>
+</div>
+
+{% endblock %}

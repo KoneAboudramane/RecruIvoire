@@ -1,0 +1,75 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% trans "Lettre de motivation —" %} {{ lettre.prenom }} {{ lettre.nom }}</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:794px; min-height:1123px; background:#fff; }
+body {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 12px;
+    line-height: 1.55;
+    color: #111;
+}
+
+.as-main { padding: 60px 64px 60px; }
+
+/* Bloc expediteur - aligne a gauche, style US business letter */
+.as-sender { margin-bottom:30px; }
+.as-sender div { font-size:11.5px; }
+.as-name { font-weight:700; }
+
+.as-date { margin-bottom:26px; }
+
+.as-recipient { margin-bottom:26px; }
+.as-recipient div { font-size:11.5px; }
+
+.as-salut { margin-bottom:16px; }
+.as-para  { margin-bottom:15px; text-align:left; white-space:pre-wrap; word-break:break-word; }
+.as-formule { margin-top:26px; margin-bottom:56px; }
+.as-sig   { font-weight:700; }
+</style>
+</head>
+<body>
+
+<div class="as-main">
+
+    <div class="as-sender">
+        <div class="as-name">{{ lettre.prenom }} {{ lettre.nom }}</div>
+        {% if lettre.adresse %}<div>{{ lettre.adresse }}</div>{% endif %}
+        {% if lettre.codePostal or lettre.ville %}<div>{{ lettre.codePostal }} {{ lettre.ville }}</div>{% endif %}
+        {% if lettre.telephone %}<div>{{ lettre.telephone }}</div>{% endif %}
+        {% if lettre.email %}<div>{{ lettre.email }}</div>{% endif %}
+    </div>
+
+    <div class="as-date">{{ lettre.lieu|default:"Abidjan" }}, {{ lettre.date }}</div>
+
+    <div class="as-recipient">
+        <div style="font-weight:700;">{{ lettre.titreDestinataire }} {{ lettre.nomDestinataire }}</div>
+        {% if lettre.posteDestinataire %}<div>{{ lettre.posteDestinataire }}</div>{% endif %}
+        {% if lettre.entreprise %}<div>{{ lettre.entreprise }}</div>{% endif %}
+        {% if lettre.villeEntreprise %}<div>{{ lettre.villeEntreprise }}</div>{% endif %}
+    </div>
+
+    {% if lettre.objet %}
+    <div style="font-weight:700; margin-bottom:22px;">{% trans "Re:" %} {{ lettre.objet }}</div>
+    {% endif %}
+
+    <p class="as-salut">
+        {% if lettre.titreDestinataire == "M." or lettre.titreDestinataire == "M" %}Monsieur
+        {% elif lettre.titreDestinataire == "Mme" or lettre.titreDestinataire == "Mme." %}Madame
+        {% elif lettre.titreDestinataire == "Dr." %}Docteur
+        {% elif lettre.titreDestinataire == "Pr." %}Professeur
+        {% else %}{{ lettre.titreDestinataire }}{% endif %},
+    </p>
+    {% if lettre.corps %}<p class="as-para">{{ lettre.corps }}</p>{% endif %}
+
+    <p class="as-formule">{{ lettre.formuleFull }}</p>
+    <div class="as-sig">{{ lettre.prenom }} {{ lettre.nom }}</div>
+</div>
+
+</body>
+</html>

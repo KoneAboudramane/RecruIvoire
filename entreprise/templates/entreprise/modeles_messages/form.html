@@ -1,0 +1,238 @@
+﻿{% extends "entreprise/base.html" %}
+{% load i18n %}
+
+{% block titre %}
+  {% if modele %}{% trans "Modifier le modèle" %}{% else %}{% trans "Nouveau modèle" %}{% endif %}
+  — {% trans "Espace entreprise" %}
+{% endblock %}
+
+{% block css_extra %}
+<style>
+  .field-label { display:block; font-size:.7rem; font-weight:700; color:#6b7280; margin-bottom:.4rem; text-transform:uppercase; letter-spacing:.05em; }
+  .field-input { width:100%; padding:.65rem .9rem; border-radius:.75rem; border:1px solid #e5e7eb; background:#f9fafb; font-size:.875rem; color:#1f2937; transition:all .2s; }
+  .field-input:focus { outline:none; border-color:#009A44; background:#fff; box-shadow:0 0 0 3px rgba(0,154,68,.12); }
+  textarea.field-input { font-family: 'SFMono-Regular', Menlo, Monaco, Consolas, monospace; min-height: 220px; }
+  .var-chip { display:inline-flex; align-items:center; gap:.25rem; padding:.2rem .5rem; border-radius:.5rem; background:#FFF4E6; color:#92400e; font-size:.7rem; font-family:'SFMono-Regular', monospace; cursor:pointer; transition:all .15s; }
+  .var-chip:hover { background:#c96010; color:#fff; }
+  html.dark .field-input { background:#0f172a !important; color:#e2e8f0 !important; border-color:#475569 !important; }
+  html.dark .field-input:focus { background:#0f172a !important; border-color:#009A44 !important; }
+  html.dark .field-label { color:#94a3b8 !important; }
+  html.dark .var-chip { background:rgba(201,96,16,.15) !important; color:#fdba74 !important; }
+  .var-btn { display:inline-flex; align-items:center; padding:.2rem .55rem; border-radius:.5rem; background:#fff; color:#92400e; font-size:.7rem; font-family:'SFMono-Regular','Menlo',monospace; cursor:pointer; border:1px solid #fed7aa; transition:all .15s; }
+  .var-btn:hover { background:#c96010; color:#fff; border-color:#c96010; }
+  html.dark .var-btn { background:rgba(255,255,255,.05) !important; color:#fdba74 !important; border-color:rgba(201,96,16,.3) !important; }
+  html.dark .var-btn:hover { background:#c96010 !important; color:#fff !important; }
+
+  /* ── MODE NOIR (OLED) ──────────────────────────────────────── */
+  html.noir .field-input { background:#000 !important; color:#e2e8f0 !important; border-color:#333 !important; }
+  html.noir .field-input:focus { background:#000 !important; border-color:#009A44 !important; }
+  html.noir .field-label { color:#94a3b8 !important; }
+  html.noir .var-chip { background:rgba(201,96,16,.12) !important; color:#fdba74 !important; }
+  html.noir .var-btn { background:rgba(255,255,255,.04) !important; color:#fdba74 !important; border-color:rgba(201,96,16,.24) !important; }
+  html.noir .var-btn:hover { background:#c96010 !important; color:#fff !important; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<section class="mb-10 px-2 sm:px-6 lg:px-10">
+
+  <nav class="text-sm text-gray-500 mb-4 flex items-center gap-2 flex-wrap">
+    <a href="{% url 'entreprise:modeles_messages' %}" class="hover:underline">{% trans "Modèles de message" %}</a>
+    <span>›</span>
+    <span class="text-gray-700 font-semibold">
+      {% if modele %}{{ modele.sujet_modele|truncatechars:40 }}{% else %}{% trans "Nouveau modèle" %}{% endif %}
+    </span>
+  </nav>
+
+  <div class="bg-white rounded-2xl p-6 sm:p-8 border border-gray-100 shadow-sm mb-6">
+    <h1 class="text-2xl font-extrabold text-gray-800 flex items-center gap-2">
+      <span>✉️</span>
+      {% if modele %}{% trans "Modifier le modèle" %}{% else %}{% trans "Nouveau modèle de message" %}{% endif %}
+    </h1>
+    <p class="text-sm text-gray-500 mt-2">
+      {% trans "Définissez le sujet et le corps du message qui sera envoyé au candidat lors d'une acceptation ou d'un refus." %}
+    </p>
+  </div>
+
+  <form method="post" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5"
+        x-data="{ contexte: '{{ valeurs.contexte|default:"STATUT" }}' }">
+    {% csrf_token %}
+
+    {# Contexte d'utilisation — choix exclusif #}
+    <div>
+      <label class="field-label">🎯 {% trans "Ce modèle est destiné à" %}</label>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <label class="flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition"
+               :class="contexte === 'STATUT' ? 'border-green-500 bg-green-50 dark:bg-green-900/15' : 'border-gray-200 hover:border-gray-300'">
+          <input type="radio" name="contexte" value="STATUT" x-model="contexte" class="mt-0.5 accent-green-600">
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-bold text-gray-800 dark:text-gray-200">📨 {% trans "Changement de statut" %}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{% trans "Modèle proposé quand le recruteur accepte / refuse / présélectionne une candidature." %}</p>
+          </div>
+        </label>
+        <label class="flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition"
+               :class="contexte === 'ENTRETIEN' ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/15' : 'border-gray-200 hover:border-gray-300'">
+          <input type="radio" name="contexte" value="ENTRETIEN" x-model="contexte" class="mt-0.5 accent-orange-600">
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-bold text-gray-800 dark:text-gray-200">🤝 {% trans "Planification d'entretien" %}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{% trans "Modèle proposé lors de la planification d'un entretien (RH, Technique, Manager…)." %}</p>
+          </div>
+        </label>
+      </div>
+      {% if erreurs.contexte %}<p class="text-red-500 dark:text-red-400 text-xs mt-1">{{ erreurs.contexte }}</p>{% endif %}
+    </div>
+
+    {# Statut associé — visible si contexte = STATUT #}
+    <div x-show="contexte === 'STATUT'" x-transition>
+      <label class="field-label">🏷️ {% trans "Statut associé" %}</label>
+      <select name="statut_id" class="field-input" :disabled="contexte !== 'STATUT'">
+        <option value="">— {% trans "Sélectionnez un statut" %} —</option>
+        {% for s in statuts %}
+          <option value="{{ s.id }}" {% if valeurs.statut_id|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>
+            {% if s.icone %}{{ s.icone }} {% endif %}{{ s.libelle }}
+          </option>
+        {% endfor %}
+      </select>
+      {% if erreurs.statut_id %}<p class="text-red-500 dark:text-red-400 text-xs mt-1">{{ erreurs.statut_id }}</p>{% endif %}
+      <p class="text-xs text-gray-400 mt-1">{% trans "Le modèle sera proposé quand on passera une candidature à ce statut." %}</p>
+    </div>
+
+    {# Type d'entretien associé — visible si contexte = ENTRETIEN #}
+    <div x-show="contexte === 'ENTRETIEN'" x-transition x-cloak>
+      <label class="field-label">🤝 {% trans "Type d'entretien associé" %}</label>
+      <select name="typeEntretien_id" class="field-input" :disabled="contexte !== 'ENTRETIEN'">
+        <option value="">— {% trans "Sélectionnez un type d'entretien" %} —</option>
+        {% for t in types_entretien %}
+          <option value="{{ t.id }}" {% if valeurs.typeEntretien_id|stringformat:"s" == t.id|stringformat:"s" %}selected{% endif %}>
+            {% if t.icone %}{{ t.icone }} {% endif %}{{ t.libelle }}
+          </option>
+        {% endfor %}
+      </select>
+      {% if erreurs.typeEntretien_id %}<p class="text-red-500 dark:text-red-400 text-xs mt-1">{{ erreurs.typeEntretien_id }}</p>{% endif %}
+      <p class="text-xs text-gray-400 mt-1">{% trans "Ce modèle apparaîtra lors de la planification d'un entretien de ce type (RH, Technique…)." %}</p>
+    </div>
+
+    {# Sujet #}
+    <div>
+      <label class="field-label">📝 {% trans "Sujet du message" %}</label>
+      <input type="text" name="sujet_modele" value="{{ valeurs.sujet_modele }}" required
+             class="field-input" placeholder="{% trans 'Ex : Confirmation de votre candidature' %}">
+      {% if erreurs.sujet_modele %}<p class="text-red-500 dark:text-red-400 text-xs mt-1">{{ erreurs.sujet_modele }}</p>{% endif %}
+    </div>
+
+    {# Corps #}
+    <div>
+      <label class="field-label">📄 {% trans "Corps du message" %}</label>
+      <textarea name="corps_message" required id="corps_message" rows="10"
+                class="field-input"
+                placeholder="{% trans 'Bonjour,&#10;&#10;Nous vous remercions pour votre candidature…' %}">{{ valeurs.corps_message }}</textarea>
+      {% if erreurs.corps_message %}<p class="text-red-500 dark:text-red-400 text-xs mt-1">{{ erreurs.corps_message }}</p>{% endif %}
+
+      {# ── Variables gérées automatiquement par le système ─────────────── #}
+      <div class="mt-3 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-700/40 rounded-lg">
+        <p class="text-xs font-bold text-amber-800 dark:text-amber-300 mb-2 flex items-center gap-1.5">
+          💡 {% trans "Variables gérées automatiquement par le système" %}
+        </p>
+        <p class="text-xs text-gray-600 dark:text-gray-300 mb-2">
+          {% trans "Cliquez sur une variable pour l'insérer à la position du curseur. Elle sera remplacée à l'envoi." %}
+        </p>
+
+        {# Variables génériques — toujours disponibles #}
+        <p class="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider mt-1 mb-1.5">
+          🌐 {% trans "Toujours disponibles" %}
+        </p>
+        <div class="flex flex-wrap gap-1.5 mb-3">
+          {% for chemin, description in vars_generiques.items %}
+            <button type="button" onclick="insererVar('{{ chemin }}')" class="var-btn"
+                    title="{{ description }}">{% templatetag openvariable %} {{ chemin }} {% templatetag closevariable %}</button>
+          {% endfor %}
+        </div>
+
+        {# Variables entretien — visibles uniquement quand un type d'entretien est associé #}
+        <div id="vars-entretien-section">
+          <p class="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider mt-2 mb-1.5 flex items-center gap-1.5">
+            🤝 {% trans "Spécifiques à un entretien" %}
+            <span id="vars-entretien-note" class="text-gray-500 dark:text-gray-400 normal-case font-normal italic"
+                  style="display:none;">— {% trans "choisissez le contexte « Planification d'entretien » pour activer ces variables" %}</span>
+          </p>
+          <div class="flex flex-wrap gap-1.5" id="vars-entretien-buttons">
+            {% for chemin, description in vars_entretien.items %}
+              <button type="button" onclick="insererVar('{{ chemin }}')" class="var-btn"
+                      title="{{ description }}">{% templatetag openvariable %} {{ chemin }} {% templatetag closevariable %}</button>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Champ caché : on conserve la colonne BD `variables_disponibles` vide #}
+    <input type="hidden" name="variables_disponibles" value="">
+
+    {# Toggle actif #}
+    <label class="inline-flex items-center gap-2 cursor-pointer">
+      <input type="checkbox" name="est_actif" class="w-4 h-4 rounded text-green-600" {% if valeurs.est_actif %}checked{% endif %}>
+      <span class="text-sm font-semibold text-gray-700">{% trans "Modèle actif (disponible pour les recruteurs)" %}</span>
+    </label>
+
+    {# Actions #}
+    <div class="flex items-center justify-end gap-2 pt-4 border-t border-gray-100">
+      <a href="{% url 'entreprise:modeles_messages' %}"
+         class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50 border border-gray-200 transition">
+        {% trans "Annuler" %}
+      </a>
+      <button type="submit"
+              class="px-5 py-2 rounded-lg text-sm font-bold text-white shadow-sm hover:shadow transition"
+              style="background:#2e7d52;">
+        ✓ {% if modele %}{% trans "Enregistrer" %}{% else %}{% trans "Créer le modèle" %}{% endif %}
+      </button>
+    </div>
+
+  </form>
+</section>
+
+<script>
+// ── Active/désactive les variables entretien selon le contexte choisi (radio) ──
+function majVarsEntretien() {
+  const sel = document.querySelector('input[name="contexte"]:checked');
+  const actif = sel && sel.value === 'ENTRETIEN';
+  const note    = document.getElementById('vars-entretien-note');
+  const btns    = document.querySelectorAll('#vars-entretien-buttons .var-btn');
+  if (note) note.style.display = actif ? 'none' : '';
+  btns.forEach(b => {
+    b.disabled = !actif;
+    b.style.opacity = actif ? '1' : '.4';
+    b.style.cursor  = actif ? 'pointer' : 'not-allowed';
+  });
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('input[name="contexte"]').forEach(r =>
+    r.addEventListener('change', majVarsEntretien)
+  );
+  majVarsEntretien();
+});
+
+// Insère la variable choisie à la position du curseur dans le textarea corps.
+function insererVar(chemin) {
+  const ta = document.getElementById('corps_message');
+  if (!ta) return;
+  const variable = '{{ ' + chemin + ' }}';
+  const start = ta.selectionStart || 0;
+  const end   = ta.selectionEnd   || 0;
+  ta.value = ta.value.substring(0, start) + variable + ta.value.substring(end);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = start + variable.length;
+}
+
+// Alias historique conservé pour les anciens templates
+function insererVariable(chemin) {
+  const ta = document.getElementById('corps_message');
+  if (!ta) return;
+  const variable = '{{ ' + chemin + ' }}';
+  const start = ta.selectionStart;
+  const end   = ta.selectionEnd;
+  ta.value = ta.value.substring(0, start) + variable + ta.value.substring(end);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = start + variable.length;
+}
+</script>
+{% endblock %}

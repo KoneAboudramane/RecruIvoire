@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lien invalide — RecrutePro</title>
+    <link rel="icon" type="image/png" href="{{ favicon_url }}">
+    <link rel="shortcut icon" type="image/png" href="{{ favicon_url }}">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-xl p-12 max-w-md w-full text-center">
+        <div class="text-6xl mb-6">{{ expire|yesno:"⏰,🚫" }}</div>
+        <h1 class="text-2xl font-extrabold text-gray-900 mb-3">
+            {% if expire %}Ce lien a expiré{% else %}Ce lien a été révoqué{% endif %}
+        </h1>
+        <p class="text-gray-500 mb-8">
+            {% if expire %}
+                Le lien de partage était valable 30 jours. Il n'est plus accessible.
+            {% else %}
+                Ce lien de partage a été désactivé par l'entreprise.
+            {% endif %}
+        </p>
+        <a href="/entreprise/inscription/"
+           class="inline-block px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition">
+            S'inscrire sur RecrutePro →
+        </a>
+    </div>
+</body>
+</html>

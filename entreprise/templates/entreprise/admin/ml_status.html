@@ -1,0 +1,679 @@
+﻿{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Modèles ML | {{ site_title|default:'Django site admin' }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<script>
+    (function(){
+        var t = localStorage.getItem('rp_theme') || 'light';
+        if(t === 'noir') document.documentElement.classList.add('rp-noir');
+        else if(t === 'dark') document.documentElement.classList.add('rp-dark');
+    })();
+</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+    #content { background:#f8fafc; }
+    #content-main { max-width:1400px; margin:0 auto; }
+    .ml-card {
+        background:#fff; border:1px solid #e2e8f0; border-radius:1.25rem;
+        padding:1.75rem; transition:box-shadow .2s;
+    }
+    .ml-card:hover { box-shadow:0 4px 24px rgba(0,0,0,.06); }
+    .ml-badge {
+        display:inline-flex; align-items:center; gap:.375rem;
+        padding:.35rem .85rem; border-radius:9999px;
+        font-size:.7rem; font-weight:700; text-transform:uppercase;
+        letter-spacing:.04em;
+    }
+    .badge-on  { background:#dcfce7; color:#166534; }
+    .badge-off { background:#fee2e2; color:#991b1b; }
+    .metric-card {
+        background:#f8fafc; border-radius:.75rem; padding:.875rem 1rem;
+    }
+    .metric-val { font-size:1.5rem; font-weight:800; color:#0f172a; line-height:1; }
+    .metric-lbl { font-size:.7rem; color:#64748b; margin-top:.25rem;
+                  text-transform:uppercase; letter-spacing:.04em; font-weight:600; }
+    .ml-btn {
+        display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
+        padding:.65rem 1.25rem; border-radius:.75rem;
+        font-size:.85rem; font-weight:700; cursor:pointer; border:none;
+        transition:all .15s;
+    }
+    .btn-primary { background:linear-gradient(135deg,#c96010,#e06a00); color:#fff; }
+    .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(201,96,16,.3); }
+    .btn-ghost { background:#fff; border:1px solid #e2e8f0; color:#475569; }
+    .btn-ghost:hover { background:#f1f5f9; }
+    .feat-row {
+        display:flex; align-items:center; gap:.75rem; padding:.4rem 0;
+        font-size:.8125rem;
+    }
+    .feat-bar { flex:1; height:6px; background:#e2e8f0; border-radius:9999px; overflow:hidden; }
+    .feat-fill { height:100%; background:linear-gradient(90deg,#c96010,#fbbf24); border-radius:9999px; }
+
+    /* Toggle "Planification automatique" (card entière repliable) */
+    .details-planif { padding:0 !important; }
+    .details-planif > summary {
+        list-style:none; cursor:pointer; user-select:none;
+        padding:1.75rem; border-radius:1.25rem;
+        transition:background .15s;
+    }
+    .details-planif > summary::-webkit-details-marker { display:none; }
+    .details-planif > summary:hover { background:#f8fafc; }
+    .details-planif[open] > summary {
+        border-bottom:1px solid #e2e8f0;
+        border-radius:1.25rem 1.25rem 0 0;
+    }
+    .details-planif > summary .planif-chevron::before { content:'▸'; }
+    .details-planif[open] > summary .planif-chevron::before { content:'▾'; color:#c96010; }
+    .details-planif > div.pt-5 { padding:1.5rem 1.75rem 1.75rem; }
+
+    /* Toggle "Détails techniques" */
+    .details-features { border-top:1px dashed #e2e8f0; padding-top:.75rem; }
+    .details-features > summary {
+        font-size:.7rem; font-weight:700; color:#64748b;
+        text-transform:uppercase; letter-spacing:.04em;
+        cursor:pointer; padding:.25rem 0;
+        list-style:none; user-select:none;
+        transition:color .15s;
+    }
+    .details-features > summary::-webkit-details-marker { display:none; }
+    .details-features > summary:hover { color:#0f172a; }
+    .details-features[open] > summary { color:#c96010; margin-bottom:.5rem; }
+    .details-features[open] > summary::before {
+        content:'▾ ';
+    }
+    .details-features:not([open]) > summary::before {
+        content:'▸ ';
+    }
+    .details-features > summary { /* override le ▸ codé en dur dans le HTML */
+        white-space:nowrap;
+    }
+
+    /* ── Dark mode ───────────────────────────────────────────────────── */
+    html.rp-dark #content { background:#0f172a; }
+
+    html.rp-dark .ml-card {
+        background:#1e293b; border-color:#334155;
+    }
+    html.rp-dark .ml-card:hover { box-shadow:0 4px 24px rgba(0,0,0,.5); }
+
+    html.rp-dark h1, html.rp-dark h2, html.rp-dark h3 { color:#f1f5f9; }
+    html.rp-dark p, html.rp-dark .text-slate-500,
+    html.rp-dark .text-slate-700, html.rp-dark .text-slate-600 { color:#cbd5e1 !important; }
+    html.rp-dark .text-slate-400, html.rp-dark .text-slate-300 { color:#94a3b8 !important; }
+
+    html.rp-dark .badge-on  { background:rgba(34,197,94,.15); color:#86efac; }
+    html.rp-dark .badge-off { background:rgba(239,68,68,.15); color:#fca5a5; }
+
+    html.rp-dark .metric-card { background:#162032; border:1px solid #334155; }
+    html.rp-dark .metric-val { color:#f1f5f9; }
+    html.rp-dark .metric-lbl { color:#94a3b8; }
+
+    html.rp-dark .feat-bar { background:#334155; }
+
+    html.rp-dark .btn-ghost {
+        background:#162032; border-color:#334155; color:#cbd5e1;
+    }
+    html.rp-dark .btn-ghost:hover { background:#1e293b; color:#f1f5f9; }
+
+    /* Bloc note explicative en bas */
+    html.rp-dark .ml-note {
+        background:rgba(201,96,16,.10) !important;
+        border-color:rgba(201,96,16,.35) !important;
+    }
+    html.rp-dark .ml-note .ml-note-title { color:#fdba74 !important; }
+    html.rp-dark .ml-note .ml-note-body  { color:#fbd5a5 !important; }
+    html.rp-dark .ml-note pre { background:rgba(15,23,42,.6) !important; color:#fde68a !important; }
+
+    /* Bordures de séparation */
+    html.rp-dark .ml-card .border-slate-100 { border-color:#334155 !important; }
+
+    /* Formulaire de planification — inputs/selects dark */
+    html.rp-dark .ml-card input[type="time"],
+    html.rp-dark .ml-card input[type="number"],
+    html.rp-dark .ml-card select {
+        background:#162032 !important;
+        border-color:#334155 !important;
+        color:#f1f5f9 !important;
+    }
+    html.rp-dark .ml-card input:focus,
+    html.rp-dark .ml-card select:focus {
+        border-color:#c96010 !important;
+        box-shadow:0 0 0 2px rgba(201,96,16,.2) !important;
+    }
+    html.rp-dark .ml-card label { color:#cbd5e1 !important; }
+
+    /* Bandeau OS détecté */
+    html.rp-dark .ml-card [style*="background:#f1f5f9"] {
+        background:#162032 !important; color:#cbd5e1;
+    }
+
+    /* Toggle Détails techniques en dark */
+    html.rp-dark .details-features { border-top-color:#334155; }
+    html.rp-dark .details-features > summary { color:#94a3b8; }
+    html.rp-dark .details-features > summary:hover { color:#f1f5f9; }
+    html.rp-dark .details-features[open] > summary { color:#fb923c; }
+
+    /* Toggle Planification en dark */
+    html.rp-dark .details-planif > summary:hover { background:#162032; }
+    html.rp-dark .details-planif[open] > summary { border-bottom-color:#334155; }
+
+    /* ── Mode NOIR (OLED) ────────────────────────────────────────────── */
+    html.rp-noir #content { background:#000; }
+
+    html.rp-noir .ml-card { background:#000; border-color:#1a1a1a; }
+    html.rp-noir .ml-card:hover { box-shadow:0 4px 24px rgba(0,0,0,.8); }
+
+    html.rp-noir h1, html.rp-noir h2, html.rp-noir h3 { color:#f1f5f9; }
+    html.rp-noir p,
+    html.rp-noir .text-slate-500,
+    html.rp-noir .text-slate-700,
+    html.rp-noir .text-slate-600 { color:#94a3b8 !important; }
+    html.rp-noir .text-slate-400,
+    html.rp-noir .text-slate-300 { color:#64748b !important; }
+    html.rp-noir .text-slate-800 { color:#f1f5f9 !important; }
+
+    html.rp-noir .badge-on  { background:rgba(34,197,94,.10); color:#86efac; }
+    html.rp-noir .badge-off { background:rgba(239,68,68,.10); color:#fca5a5; }
+
+    html.rp-noir .metric-card { background:#000; border:1px solid #1a1a1a; }
+    html.rp-noir .metric-val  { color:#f1f5f9; }
+    html.rp-noir .metric-lbl  { color:#64748b; }
+
+    html.rp-noir .feat-bar { background:#1a1a1a; }
+
+    html.rp-noir .btn-ghost { background:#000; border-color:#1a1a1a; color:#94a3b8; }
+    html.rp-noir .btn-ghost:hover { background:#0a0a0a; color:#f1f5f9; }
+
+    html.rp-noir .ml-note {
+        background:rgba(201,96,16,.07) !important;
+        border-color:rgba(201,96,16,.25) !important;
+    }
+    html.rp-noir .ml-note .ml-note-title { color:#fdba74 !important; }
+    html.rp-noir .ml-note .ml-note-body  { color:#fbd5a5 !important; }
+    html.rp-noir .ml-note pre { background:#000 !important; color:#fde68a !important; border:1px solid #1a1a1a; }
+
+    html.rp-noir .ml-card .border-slate-100 { border-color:#1a1a1a !important; }
+
+    html.rp-noir .ml-card input[type="time"],
+    html.rp-noir .ml-card input[type="number"],
+    html.rp-noir .ml-card select {
+        background:#000 !important; border-color:#1a1a1a !important; color:#f1f5f9 !important;
+    }
+    html.rp-noir .ml-card input:focus,
+    html.rp-noir .ml-card select:focus {
+        border-color:#c96010 !important; box-shadow:0 0 0 2px rgba(201,96,16,.2) !important;
+    }
+    html.rp-noir .ml-card label { color:#94a3b8 !important; }
+
+    html.rp-noir .ml-card [style*="background:#f1f5f9"] { background:#000 !important; color:#94a3b8; }
+
+    html.rp-noir .details-features { border-top-color:#1a1a1a; }
+    html.rp-noir .details-features > summary { color:#64748b; }
+    html.rp-noir .details-features > summary:hover { color:#f1f5f9; }
+    html.rp-noir .details-features[open] > summary { color:#fb923c; }
+
+    html.rp-noir .details-planif > summary:hover { background:#0a0a0a; }
+    html.rp-noir .details-planif[open] > summary { border-bottom-color:#1a1a1a; }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans "Accueil" %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='entreprise' %}">{% trans "Entreprise" %}</a>
+    &rsaquo; Modèles ML
+</div>
+{% endblock %}
+
+{% block content %}
+<div>
+
+<!-- ── En-tête ─────────────────────────────────────────────────────── -->
+<div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-8">
+    <div>
+        <div class="flex items-center gap-3 mb-1">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
+                 style="background:linear-gradient(135deg,#c96010,#e06a00); color:white;">
+                🤖
+            </div>
+            <h1 class="text-2xl font-extrabold text-slate-900">{% trans "Modèles ML — Matching &amp; ATS" %}</h1>
+        </div>
+        <p class="text-sm text-slate-500 ml-13">
+            État des modèles d'apprentissage automatique et ré-entraînement manuel.
+        </p>
+    </div>
+    <div class="flex items-center gap-3">
+        <a href="{% url 'admin:entreprise_demandeverification_ml_dashboard' %}"
+           class="ml-btn btn-ghost" style="text-decoration:none;">
+            📊 Dashboard
+        </a>
+        <form method="post" action="{% url 'admin:entreprise_demandeverification_ml_reentrainer' %}">
+            {% csrf_token %}
+            <input type="hidden" name="cible" value="tous">
+            <button type="submit" class="ml-btn btn-primary">
+                ♻ Ré-entraîner les deux
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- ── Grille des 2 modèles ────────────────────────────────────────── -->
+<div class="grid lg:grid-cols-2 gap-6">
+
+    <!-- ═══ MATCHING ═══════════════════════════════════════════════ -->
+    <div class="ml-card">
+        <div class="flex items-start justify-between mb-5">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="text-2xl">🎯</span>
+                    <h2 class="text-lg font-extrabold text-slate-900">{% trans "Matching candidat → offre" %}</h2>
+                </div>
+                <p class="text-xs text-slate-500 ml-9">
+                    Prédit la pertinence d'un candidat pour une offre
+                </p>
+            </div>
+            {% if matching.entraine %}
+            <span class="ml-badge badge-on">● Actif</span>
+            {% else %}
+            <span class="ml-badge badge-off">○ Non entraîné</span>
+            {% endif %}
+        </div>
+
+        {% if matching.entraine %}
+        <!-- Métadonnées -->
+        <div class="grid grid-cols-2 gap-3 mb-5">
+            <div class="metric-card">
+                <div class="metric-val">{{ matching.nb_exemples }}</div>
+                <div class="metric-lbl">{% trans "Exemples d'entraînement" %}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-val">{{ matching.nb_exemples_dispo }}</div>
+                <div class="metric-lbl">{% trans "Candidatures labellisables aujourd'hui" %}</div>
+            </div>
+        </div>
+
+        <!-- Métriques -->
+        {% if matching.metriques %}
+        <div class="grid grid-cols-3 gap-3 mb-5">
+            <div class="metric-card">
+                <div class="metric-val" style="color:#dc2626;">
+                    {{ matching.metriques.mae|floatformat:1 }}
+                </div>
+                <div class="metric-lbl">MAE</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-val" style="color:#ea580c;">
+                    {{ matching.metriques.rmse|floatformat:1 }}
+                </div>
+                <div class="metric-lbl">RMSE</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-val" style="color:#16a34a;">
+                    {{ matching.metriques.r2|floatformat:3 }}
+                </div>
+                <div class="metric-lbl">R²</div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Top features (repliable) -->
+        {% if matching.top_features %}
+        <details class="details-features mb-5">
+            <summary>{% trans "Détails techniques — Top 5 features" %}</summary>
+            <div class="pt-2">
+                {% for f in matching.top_features %}
+                <div class="feat-row">
+                    <span class="text-slate-700 font-medium w-44 truncate">{{ f.nom }}</span>
+                    <div class="feat-bar">
+                        <div class="feat-fill" style="width:{{ f.pct|stringformat:'.1f' }}%;"></div>
+                    </div>
+                    <span class="text-slate-400 text-xs font-mono w-12 text-right">
+                        {{ f.imp|floatformat:2 }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </details>
+        {% endif %}
+
+        <!-- Date entraînement -->
+        <div class="text-xs text-slate-500 mb-4 pb-4 border-b border-slate-100">
+            <span class="font-semibold">{% trans "Dernier entraînement :" %}</span>
+            {{ matching.date_entrainement|slice:":19" }}
+            <span class="text-slate-400 ml-2">v{{ matching.version }}</span>
+        </div>
+
+        {% else %}
+        <div class="text-center py-8 mb-4">
+            <div class="text-5xl mb-3 opacity-30">📭</div>
+            <p class="text-sm font-semibold text-slate-500 mb-1">
+                Aucun modèle entraîné pour l'instant
+            </p>
+            <p class="text-xs text-slate-400">
+                {{ matching.nb_exemples_dispo }} candidatures labellisables disponibles
+                (seuil min : 30)
+            </p>
+        </div>
+        {% endif %}
+
+        <!-- Bouton ré-entraîner -->
+        <form method="post" action="{% url 'admin:entreprise_demandeverification_ml_reentrainer' %}">
+            {% csrf_token %}
+            <input type="hidden" name="cible" value="matching">
+            <button type="submit" class="ml-btn btn-ghost w-full">
+                ♻ Ré-entraîner ce modèle
+            </button>
+        </form>
+    </div>
+
+    <!-- ═══ ATS ════════════════════════════════════════════════════ -->
+    <div class="ml-card">
+        <div class="flex items-start justify-between mb-5">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="text-2xl">📊</span>
+                    <h2 class="text-lg font-extrabold text-slate-900">{% trans "ATS — Re-ranking recruteur" %}</h2>
+                </div>
+                <p class="text-xs text-slate-500 ml-9">
+                    Re-classe les profils proposés selon les actions du recruteur
+                </p>
+            </div>
+            {% if ats.entraine %}
+            <span class="ml-badge badge-on">● Actif</span>
+            {% else %}
+            <span class="ml-badge badge-off">○ Non entraîné</span>
+            {% endif %}
+        </div>
+
+        {% if ats.entraine %}
+        <div class="grid grid-cols-2 gap-3 mb-5">
+            <div class="metric-card">
+                <div class="metric-val">{{ ats.nb_exemples }}</div>
+                <div class="metric-lbl">{% trans "Exemples d'entraînement" %}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-val">{{ ats.nb_exemples_dispo }}</div>
+                <div class="metric-lbl">{% trans "Propositions étiquetées aujourd'hui" %}</div>
+            </div>
+        </div>
+
+        {% if ats.metriques %}
+        <div class="grid grid-cols-3 gap-3 mb-5">
+            <div class="metric-card">
+                <div class="metric-val" style="color:#dc2626;">
+                    {{ ats.metriques.mae|floatformat:1 }}
+                </div>
+                <div class="metric-lbl">MAE</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-val" style="color:#ea580c;">
+                    {{ ats.metriques.rmse|floatformat:1 }}
+                </div>
+                <div class="metric-lbl">RMSE</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-val" style="color:#16a34a;">
+                    {{ ats.metriques.r2|floatformat:3 }}
+                </div>
+                <div class="metric-lbl">R²</div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if ats.top_features %}
+        <details class="details-features mb-5">
+            <summary>{% trans "Détails techniques — Top 5 features" %}</summary>
+            <div class="pt-2">
+                {% for f in ats.top_features %}
+                <div class="feat-row">
+                    <span class="text-slate-700 font-medium w-44 truncate">{{ f.nom }}</span>
+                    <div class="feat-bar">
+                        <div class="feat-fill" style="width:{{ f.pct|stringformat:'.1f' }}%;"></div>
+                    </div>
+                    <span class="text-slate-400 text-xs font-mono w-12 text-right">
+                        {{ f.imp|floatformat:2 }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </details>
+        {% endif %}
+
+        <div class="text-xs text-slate-500 mb-4 pb-4 border-b border-slate-100">
+            <span class="font-semibold">{% trans "Dernier entraînement :" %}</span>
+            {{ ats.date_entrainement|slice:":19" }}
+            <span class="text-slate-400 ml-2">v{{ ats.version }}</span>
+        </div>
+
+        {% else %}
+        <div class="text-center py-8 mb-4">
+            <div class="text-5xl mb-3 opacity-30">📭</div>
+            <p class="text-sm font-semibold text-slate-500 mb-1">
+                Aucun modèle entraîné pour l'instant
+            </p>
+            <p class="text-xs text-slate-400">
+                {{ ats.nb_exemples_dispo }} propositions étiquetées disponibles
+                (seuil min : 30)
+            </p>
+        </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'admin:entreprise_demandeverification_ml_reentrainer' %}">
+            {% csrf_token %}
+            <input type="hidden" name="cible" value="ats">
+            <button type="submit" class="ml-btn btn-ghost w-full">
+                ♻ Ré-entraîner ce modèle
+            </button>
+        </form>
+    </div>
+
+</div>
+
+<!-- ── Planification automatique (repliable) ─────────────────────── -->
+<details class="ml-card details-planif mt-8" {% if planif.active %}open{% endif %}
+         x-data="{
+    active: {{ planif.active|yesno:'true,false' }},
+    mode: '{{ planif.mode }}',
+    frequence: '{{ planif.frequence }}',
+}">
+    <summary>
+        <div class="flex items-start justify-between gap-3">
+            <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="planif-chevron text-slate-400 text-sm"></span>
+                    <span class="text-2xl">⏰</span>
+                    <h2 class="text-lg font-extrabold text-slate-900">{% trans "Planification automatique" %}</h2>
+                </div>
+                <p class="text-xs text-slate-500 ml-12">
+                    Programme le ré-entraînement régulier sans intervention manuelle.
+                </p>
+            </div>
+            {% if planif.active %}
+            <span class="ml-badge badge-on">● Active</span>
+            {% else %}
+            <span class="ml-badge badge-off">○ Désactivée</span>
+            {% endif %}
+        </div>
+    </summary>
+
+    <div class="pt-5">
+    <!-- Statut actuel -->
+    {% if planif.active %}
+    <div class="grid md:grid-cols-3 gap-3 mb-6">
+        <div class="metric-card">
+            <div class="metric-lbl mb-1">{% trans "Prochaine exécution" %}</div>
+            <div class="text-base font-bold text-slate-800">
+                {% if planif.prochaine_execution %}
+                    {{ planif.prochaine_execution|date:"l d/m/Y à H:i" }}
+                {% else %}—{% endif %}
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-lbl mb-1">{% trans "Dernière exécution" %}</div>
+            <div class="text-base font-bold text-slate-800">
+                {% if planif.derniere_execution %}
+                    {{ planif.derniere_execution|date:"d/m/Y H:i" }}
+                    {% if planif.derniere_status == 'ok' %}
+                        <span class="ml-badge badge-on text-xs ml-1">✓</span>
+                    {% elif planif.derniere_status == 'error' %}
+                        <span class="ml-badge badge-off text-xs ml-1">✗</span>
+                    {% elif planif.derniere_status == 'running' %}
+                        <span class="ml-badge text-xs ml-1"
+                              style="background:#dbeafe;color:#1e40af;">⏳</span>
+                    {% endif %}
+                {% else %}
+                    <span class="text-slate-400">{% trans "Aucune" %}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-lbl mb-1">{% trans "Méthode active" %}</div>
+            <div class="text-base font-bold text-slate-800">
+                {% if planif_statut.methode == 'schtasks' %}🪟 Tâche Windows
+                {% elif planif_statut.methode == 'cron' %}🐧 Cron
+                {% elif planif_statut.methode == 'database' %}🌐 Trafic web
+                {% else %}—{% endif %}
+                {% if planif_statut.fallback %}
+                <span class="text-xs text-amber-600 font-normal block">(fallback)</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Capacités OS détectées -->
+    <div class="text-xs text-slate-500 mb-5 p-3 rounded-lg"
+         style="background:#f1f5f9;">
+        🖥 <strong>{% trans "OS détecté :" %}</strong> {{ adapters.os }} ·
+        Adapters disponibles :
+        {% if adapters.windows %}<span class="font-semibold text-green-700">schtasks ✓</span>{% else %}<span class="text-slate-400">schtasks ✗</span>{% endif %} ·
+        {% if adapters.unix %}<span class="font-semibold text-green-700">cron ✓</span>{% else %}<span class="text-slate-400">cron ✗</span>{% endif %} ·
+        <span class="font-semibold text-green-700">{% trans "database ✓" %}</span>
+    </div>
+
+    <!-- Formulaire de config -->
+    <form method="post"
+          action="{% url 'admin:entreprise_demandeverification_ml_planif_save' %}"
+          class="space-y-4">
+        {% csrf_token %}
+
+        <div class="grid md:grid-cols-2 gap-4">
+            <!-- Mode -->
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                    Mode de déclenchement
+                </label>
+                <select name="mode" x-model="mode"
+                        class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none">
+                    {% for code, label in modes %}
+                    <option value="{{ code }}" {% if code == planif.mode %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <p class="text-xs text-slate-500 mt-1" x-show="mode === 'OS_NATIF'">
+                    Utilise schtasks (Windows) ou crontab (Linux/Mac).
+                </p>
+                <p class="text-xs text-slate-500 mt-1" x-show="mode === 'WEB_TRAFIC'">
+                    Déclenché par la 1<sup>re</sup> visite HTTP après l'heure prévue.
+                </p>
+            </div>
+
+            <!-- Fréquence -->
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                    Fréquence
+                </label>
+                <select name="frequence" x-model="frequence"
+                        class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none">
+                    {% for code, label in frequences %}
+                    <option value="{{ code }}" {% if code == planif.frequence %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-4">
+            <!-- Jour de la semaine (si HEBDO) -->
+            <div x-show="frequence === 'HEBDOMADAIRE'">
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                    Jour de la semaine
+                </label>
+                <select name="jour_semaine"
+                        class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none">
+                    {% for v, lbl in jours_semaine %}
+                    <option value="{{ v }}" {% if v == planif.jour_semaine %}selected{% endif %}>
+                        {{ lbl }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Jour du mois (si MENSUEL) -->
+            <div x-show="frequence === 'MENSUEL'">
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                    Jour du mois (1-28)
+                </label>
+                <input type="number" name="jour_mois"
+                       min="1" max="28"
+                       value="{{ planif.jour_mois }}"
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none">
+            </div>
+
+            <!-- Heure -->
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                    Heure d'exécution
+                </label>
+                <input type="time" name="heure"
+                       value="{{ planif.heure|time:'H:i' }}"
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none">
+            </div>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+            <button type="submit" class="ml-btn btn-primary">
+                💾 Enregistrer la planification
+            </button>
+            {% if planif.active %}
+            <button type="submit"
+                    formaction="{% url 'admin:entreprise_demandeverification_ml_planif_delete' %}"
+                    class="ml-btn btn-ghost">
+                🗑 Désactiver
+            </button>
+            {% endif %}
+        </div>
+    </form>
+    </div>
+</details>
+
+<!-- ── Note explicative ───────────────────────────────────────────── -->
+<div class="ml-note mt-8 p-5 rounded-xl"
+     style="background:#fef3c7; border:1px solid #fde68a;">
+    <div class="flex items-start gap-3">
+        <span class="text-xl">💡</span>
+        <div class="text-sm">
+            <p class="ml-note-title font-bold mb-1" style="color:#78350f;">
+                Mode d'apprentissage : batch (par lot)
+            </p>
+            <p class="ml-note-body leading-relaxed" style="color:#92400e;">
+                Les modèles n'apprennent pas en temps réel. Un ré-entraînement
+                hebdomadaire automatique peut être programmé via le Planificateur
+                de tâches Windows :
+            </p>
+            <pre class="mt-2 p-2 rounded text-xs font-mono inline-block"
+                 style="background:rgba(255,255,255,.6); color:#451a03;">
+python manage.py reentrainer_tout</pre>
+        </div>
+    </div>
+</div>
+
+</div>
+{% endblock %}
+

@@ -1,0 +1,1273 @@
+{% load i18n %}
+{% if not apercu %}
+  <div class="form-panel no-print">
+    {# Hidden form pour exposer le token CSRF au JS (CSRF_COOKIE_HTTPONLY=True dans settings → JS ne peut pas lire le cookie). #}
+    <form style="display:none">{% csrf_token %}</form>
+    <input type="hidden" id="current-modele-id" value="{{ modele.id }}">
+
+    <!-- En-tête sticky -->
+    <div class="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
+      <div class="px-5 py-3 flex items-center gap-3">
+        <!-- Bouton retour : pose un flag pour signaler au profil qu'il doit
+             refresh uniquement l'onglet Mes CV (pas tout le DOM), puis revient
+             en arrière dans l'historique navigateur. Le bfcache restaure la
+             page précédente sans full reload (Alpine state préservé). -->
+        <button onclick="cvEditorRetour()"
+                class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition text-xs font-semibold text-gray-600 flex-shrink-0 cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
+          Retour
+        </button>
+        <script>
+          function cvEditorRetour() {
+            try { sessionStorage.setItem('cv_editor_returned', '1'); } catch(e) {}
+            if (window.history.length > 1) {
+              window.history.back();
+            } else {
+              window.location.href = "{% url 'candidat:profil' %}?onglet=mes-cv";
+            }
+          }
+        </script>
+        <div class="w-px h-5 bg-gray-200 flex-shrink-0"></div>
+        <div class="flex items-center gap-2.5 flex-1 min-w-0">
+          <div class="w-3.5 h-3.5 rounded-full shadow-sm flex-shrink-0" style="background:var(--cv-accent,#c96010)"></div>
+          <div class="min-w-0">
+            <p class="text-sm font-bold text-gray-800 leading-tight truncate">{{ modele.nom }}</p>
+            <p class="text-xs text-gray-400">{% trans "Édition en temps réel" %}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <button @click="switcherOpen = true"
+                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition text-xs font-semibold text-gray-600">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"/>
+            </svg>
+            Changer
+          </button>
+
+          <!-- Bouton Sauvegarder avec animation dynamique -->
+          <div class="relative">
+            <button @click="sauvegarder()"
+                    :disabled="saving"
+                    class="save-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all"
+                    :class="saving 
+                      ? 'border-green-400 bg-green-100 text-green-800 shadow-lg save-btn-pulse' 
+                      : 'border-green-200 bg-green-50 hover:bg-green-100 text-green-700'"
+                    :title="savedCvId ? 'Mettre à jour le CV (#' + savedCvId + ')' : 'Sauvegarder ce CV'">
+              
+              <!-- Couche de glow en arrière-plan pendant la sauvegarde -->
+              <div x-show="saving" class="absolute inset-0 rounded-lg opacity-40 animate-pulse-save" style="background:rgba(34,197,94,0.3);"></div>
+              
+              <template x-if="!saving">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M5 13l4 4L19 7"/>
+                </svg>
+              </template>
+              <template x-if="saving">
+                <svg class="w-3.5 h-3.5 animate-spin-dynamic" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+              </template>
+              <span class="relative z-10" x-text="saving ? 'Sauvegarde…' : (savedCvId ? 'Mettre à jour' : 'Sauvegarder')"></span>
+            </button>
+          </div>
+
+          <!-- Toast de retour -->
+          <span x-show="saveMessage" x-transition
+                x-text="saveMessage"
+                class="text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg px-2 py-1 whitespace-nowrap"></span>
+
+          <!-- Menu téléchargement -->
+          <div class="relative">
+
+            <!-- Bouton principal : .stop empêche le clic d'atteindre le @click.outside du dropdown -->
+            <button @click.stop="dlToggle($event)"
+                    class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-white text-xs font-bold shadow-md transition hover:shadow-lg hover:-translate-y-px active:scale-95"
+                    style="background:linear-gradient(135deg,var(--cv-accent,#c96010),var(--cv-accent-dark,#e06b00))">
+              <template x-if="!downloading">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+              </template>
+              <template x-if="downloading">
+                <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+              </template>
+              <span x-text="downloading ? 'Génération...' : 'Télécharger'"></span>
+              <svg class="w-3 h-3 transition-transform duration-200" :class="dlOpen ? 'rotate-180':''"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+
+            <!--
+              Dropdown téléporté vers <body> via x-teleport.
+              Cela le sort du contexte overflow:auto du .form-panel,
+              ce qui rend les boutons effectivement cliquables.
+              Position calculée dynamiquement depuis getBoundingClientRect().
+            -->
+            <template x-teleport="body">
+              <div x-show="dlOpen"
+                   @click.outside="dlOpen = false"
+                   :style="'position:fixed;z-index:9999;' + dlStyle"
+                   class="bg-white rounded-2xl shadow-xl border border-gray-100 py-2"
+                   style="min-width:220px;display:none">
+
+                <p class="px-4 pt-1 pb-2 text-xs font-bold text-gray-400 uppercase tracking-widest">{% trans "Choisir le format" %}</p>
+
+                <!-- PDF -->
+                <button @click="downloadPDF(); dlOpen = false"
+                        :disabled="!!downloading"
+                        class="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-orange-50 active:bg-orange-100 transition disabled:opacity-40 disabled:cursor-not-allowed text-left">
+                  <span class="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0" style="background:#FFF0E0">📄</span>
+                  <div>
+                    <p class="text-xs font-bold text-gray-800">PDF</p>
+                    <p class="text-xs text-gray-400">{% trans "Format universel · A4" %}</p>
+                  </div>
+                  <span class="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full text-green-700 bg-green-100">✓ Recommandé</span>
+                </button>
+
+                <!-- PNG -->
+                <button @click="downloadImage('png'); dlOpen = false"
+                        :disabled="!!downloading"
+                        class="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-orange-50 active:bg-orange-100 transition disabled:opacity-40 disabled:cursor-not-allowed text-left">
+                  <span class="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0" style="background:#F0F7FF">🖼️</span>
+                  <div>
+                    <p class="text-xs font-bold text-gray-800">{% trans "Image PNG" %}</p>
+                    <p class="text-xs text-gray-400">{% trans "Haute qualité · sans perte" %}</p>
+                  </div>
+                </button>
+
+                <!-- JPG -->
+                <button @click="downloadImage('jpg'); dlOpen = false"
+                        :disabled="!!downloading"
+                        class="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-orange-50 active:bg-orange-100 transition disabled:opacity-40 disabled:cursor-not-allowed text-left">
+                  <span class="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0" style="background:#FFF8F0">📸</span>
+                  <div>
+                    <p class="text-xs font-bold text-gray-800">{% trans "Image JPG" %}</p>
+                    <p class="text-xs text-gray-400">{% trans "Compressé · partage rapide" %}</p>
+                  </div>
+                </button>
+
+                <!-- DOCX -->
+                <button @click="alert('Téléchargement Word (.docx) pas disponible pour le moment.'); dlOpen = false"
+                        class="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-orange-50 active:bg-orange-100 transition text-left">
+                  <span class="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0" style="background:#EEF2FF">📝</span>
+                  <div>
+                    <p class="text-xs font-bold text-gray-800">{% trans "Word (.docx)" %}</p>
+                    <p class="text-xs text-gray-400">{% trans "Pas disponible pour le moment" %}</p>
+                  </div>
+                </button>
+
+                <div class="mx-4 my-1.5 border-t border-gray-100"></div>
+
+                <!-- Imprimer -->
+                <button @click="printCV(); dlOpen = false"
+                        class="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-gray-50 active:bg-gray-100 transition text-left">
+                  <span class="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0 bg-gray-100">🖨️</span>
+                  <div>
+                    <p class="text-xs font-bold text-gray-700">{% trans "Imprimer" %}</p>
+                    <p class="text-xs text-gray-400">{% trans "Via le navigateur" %}</p>
+                  </div>
+                </button>
+
+              </div>
+            </template>
+
+          </div>
+          <!-- /Menu téléchargement -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Layout onglets latéraux ══ -->
+    <div class="flex" style="min-height:calc(100vh - 56px)">
+
+      <!-- Sidebar onglets -->
+      <div class="flex-shrink-0 bg-white border-r border-gray-100 sticky top-[56px] self-start overflow-y-auto"
+           style="width:110px;height:calc(100vh - 56px)">
+        <div class="flex flex-col pt-2 pb-6 gap-0.5 px-2">
+
+          <button type="button" @click="s='perso'"
+                  class="flex flex-col items-center gap-1 w-full py-3.5 rounded-xl transition-all"
+                  :class="s==='perso' ? 'bg-orange-50 text-orange-500' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'">
+            <span class="text-2xl leading-none">👤</span>
+            <span class="text-[12px] font-bold leading-tight mt-0.5">{% trans "Informations Personnelles" %}</span>
+          </button>
+
+          <button type="button" @click="s='exp'"
+                  class="flex flex-col items-center gap-1 w-full py-3.5 rounded-xl transition-all"
+                  :class="s==='exp' ? 'bg-orange-50 text-orange-500' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'">
+            <span class="text-2xl leading-none">💼</span>
+            <span class="text-[12px] font-bold leading-tight mt-0.5">{% trans "Expériences Professionnelles." %}</span>
+          </button>
+
+          <button type="button" @click="s='form'"
+                  class="flex flex-col items-center gap-1 w-full py-3.5 rounded-xl transition-all"
+                  :class="s==='form' ? 'bg-orange-50 text-orange-500' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'">
+            <span class="text-2xl leading-none">🎓</span>
+            <span class="text-[12px] font-bold leading-tight mt-0.5">{% trans "Formations & Certifications" %}</span>
+          </button>
+
+          <button type="button" @click="s='comp'"
+                  class="flex flex-col items-center gap-1 w-full py-3.5 rounded-xl transition-all"
+                  :class="s==='comp' ? 'bg-orange-50 text-orange-500' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'">
+            <span class="text-2xl leading-none">⚡</span>
+            <span class="text-[12px] font-bold leading-tight mt-0.5">{% trans "Compétences." %}</span>
+          </button>
+
+          <button type="button" @click="s='lang'"
+                  class="flex flex-col items-center gap-1 w-full py-3.5 rounded-xl transition-all"
+                  :class="s==='lang' ? 'bg-orange-50 text-orange-500' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'">
+            <span class="text-2xl leading-none">🌍</span>
+            <span class="text-[12px] font-bold leading-tight mt-0.5">{% trans "Langues" %}</span>
+          </button>
+
+          <button type="button" @click="s='div'"
+                  class="flex flex-col items-center gap-1 w-full py-3.5 rounded-xl transition-all"
+                  :class="s==='div' ? 'bg-orange-50 text-orange-500' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'">
+            <span class="text-2xl leading-none">✨</span>
+            <span class="text-[12px] font-bold leading-tight mt-0.5">{% trans "Divers" %}</span>
+          </button>
+
+        </div>
+      </div>
+
+      <!-- Zone de contenu -->
+      <div class="flex-1 min-w-0">
+
+        <!-- §1 Informations personnelles -->
+        <div x-show="s==='perso'" x-transition.duration.150ms class="px-4 pb-4 pt-2 space-y-2">
+          <div class="flex items-center gap-2 pb-3 mb-2 border-b border-gray-100 sticky top-[56px] z-10 bg-[#f8f9fb] -mx-5 px-5 pt-4 -mt-4">
+            <span class="text-base">👤</span>
+            <p class="text-base font-bold text-gray-800">{% trans "Informations personnelles" %}</p>
+          </div>
+        <!-- Photo de profil  +  Nom du CV  (sur la même ligne — photo à gauche, nom à droite) -->
+        <div class="flex gap-4 items-start">
+          <!-- Photo -->
+          <div class="flex-shrink-0">
+            <p class="text-xs font-semibold text-gray-500 mb-2">{% trans "Photo de profil" %}</p>
+            <div class="flex items-center gap-3">
+
+              <!-- Cercle : drag-to-pan + scroll-to-zoom -->
+              <div class="w-36 h-36 rounded-full overflow-hidden flex-shrink-0 border-4 relative select-none"
+                   x-ref="photoCircle"
+                   :class="cv.photo ? 'cursor-move' : ''"
+                   :style="cv.photo ? 'border-color:var(--cv-accent,#c96010)' : 'border-color:#e5e7eb;background:#f9fafb'"
+                   @mousedown.prevent="startPhotoDrag($event)"
+                   @mousemove.window="doPhotoDrag($event)"
+                   @mouseup.window="stopPhotoDrag()"
+                   @wheel.prevent="zoomPhoto($event)"
+                   @touchstart.prevent="cv.photo && startPhotoDrag($event.touches[0])"
+                   @touchmove.window.prevent="_photoDragging && doPhotoDrag($event.touches[0])"
+                   @touchend.window="stopPhotoDrag()">
+
+                <!-- Photo (object-fit:cover toujours rempli + zoom via transform) -->
+                <img x-show="cv.photo" :src="cv.photo" alt="{% trans "Photo de profil" %}"
+                     draggable="false"
+                     class="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                     :style="`object-position:${cv.photoX??50}% ${cv.photoY??50}%;transform:scale(${cv.photoZoom??1});transform-origin:${cv.photoX??50}% ${cv.photoY??50}%`">
+
+                <!-- Placeholder sans photo -->
+                <div x-show="!cv.photo"
+                     class="w-full h-full flex items-center justify-center text-5xl text-gray-300">👤</div>
+
+                <!-- Hint au hover -->
+                <div x-show="cv.photo"
+                     class="absolute inset-0 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200 bg-black/25 rounded-full pointer-events-none">
+                  <svg class="w-5 h-5 text-white mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                  </svg>
+                  <span class="text-white text-[10px] font-bold">{% trans "Glisser · Scroll = zoom" %}</span>
+                </div>
+              </div>
+
+              <!-- Contrôles -->
+              <div class="flex flex-col gap-2">
+                <label class="cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-orange-300 hover:bg-orange-50 transition text-xs font-semibold text-orange-600">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                  Choisir une photo
+                  <input type="file" accept="image/*" class="hidden" @change="uploadPhoto($event)">
+                </label>
+
+                <button x-show="cv.photo"
+                        @click="cv.photo = null; cv.photoX = 50; cv.photoY = 50; cv.photoZoom = 1; _syncPhotoPos()"
+                        class="text-xs text-red-400 hover:text-red-600 transition text-left">✕ Supprimer</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Nom du CV (identifiant interne — obligatoire et unique par candidat) -->
+          <div class="ml-auto w-full max-w-xs p-3 rounded-xl border-2 border-dashed"
+               :class="nomCvError ? 'border-red-300 bg-red-50' : 'border-orange-200 bg-orange-50/40'">
+            <label class="flex items-center gap-1 text-sm font-bold text-gray-700 mb-1">
+              <span>🏷️ Nom du CV</span>
+              <span class="text-red-500">*</span>
+            </label>
+            <input type="text" x-model="cv.nomCv" maxlength="200"
+                   @input="nomCvError = ''"
+                   placeholder="{% trans "Ex: CV Marketing, CV Junior, CV Tech…" %}"
+                   class="fi fi-sm w-full"
+                   :class="nomCvError ? 'ring-1 ring-red-400' : ''">
+            <p x-show="nomCvError" x-cloak x-text="nomCvError"
+               class="text-xs text-red-600 mt-1 font-semibold"></p>
+            <p x-show="!nomCvError" class="text-xs text-gray-500 mt-1">
+              Sert à identifier ce CV dans votre espace et à le choisir au moment de postuler. Doit être unique parmi vos CVs.
+            </p>
+          </div>
+        </div>
+        <!-- Prénom / Nom -->
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="block text-sm font-semibold text-gray-500 mb-1">{% trans "Prénom" %}</label><input type="text" x-model="cv.prenom" placeholder="{% trans "Kouamé" %}" class="fi fi-sm"></div>
+          <div><label class="block text-sm font-semibold text-gray-500 mb-1">{% trans "Nom" %}</label><input type="text" x-model="cv.nom" placeholder="KONAN" class="fi fi-sm"></div>
+        </div>
+        <div><label class="block text-sm font-semibold text-gray-500 mb-1">{% trans "Titre professionnel" %}</label><input type="text" x-model="cv.titre" placeholder="{% trans "Ex: Développeur Web Full Stack" %}" class="fi fi-sm"></div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="block text-sm font-semibold text-gray-500 mb-1">{% trans "Email" %}</label><input type="email" x-model="cv.email" placeholder="{% trans "email@exemple.com" %}" class="fi fi-sm"></div>
+          <div><label class="block text-sm font-semibold text-gray-500 mb-1">{% trans "Téléphone" %}</label><input type="tel" x-model="cv.telephone" placeholder="+225 07 00 00 00" class="fi fi-sm"></div>
+        </div>
+        <!-- Pays + Ville (en cascade) + Adresse (saisie libre) -->
+        <div x-data="{ _pid: null }"
+             @cbxpick="if($event.target.closest('[data-cbxcv=pays]')) { _pid=$event.detail.id; const villeEl=$el.querySelector('[data-cbxcv=ville]'); if(villeEl){ const s=Alpine.$data(villeEl); if(s) s.reload('/referentiel/api/villes/?pays_id='+_pid); } const ind=$event.detail.extra?.indicatifTel; if(ind){ const t=(cv.telephone||'').trim(); cv.telephone = !t ? ind+' ' : (/^\+\d+/.test(t) ? ind+' '+t.replace(/^\+\d+\s*/,'') : t); } }">
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="block text-sm font-semibold text-gray-500 mb-1">{% trans "Pays" %}</label>
+              <div data-cbxcv="pays" class="relative"
+                   x-data="cbx({ url: '{% url 'referentiel:api_pays' %}', v: cv.pays||'', k: 'nomPays' })"
+                   @cbxpick="cv.pays=$event.detail.val" x-init="$watch('q', v => cv.pays=v)">
+                <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)"
+                       placeholder="{% trans "Côte d'Ivoire…" %}" class="fi fi-sm w-full pr-7" autocomplete="off">
+                <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                  <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o)" class="w-full px-3 py-2 text-sm text-left transition-colors" :class="i===hi?'bg-orange-50 text-orange-600 font-medium':'text-gray-700 hover:bg-gray-50'" x-text="o.label"></button></template>
+                  <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-500 mb-1">{% trans "Ville" %}</label>
+              <div class="relative" data-cbxcv="ville"
+                   x-data="cbx({ url: '{% url 'referentiel:api_villes' %}', v: cv.ville||'', k: 'nomVille', s: 'region' })"
+                   @cbxpick="cv.ville=$event.detail.val"
+                   x-init="$watch('q', v => cv.ville=v); $nextTick(() => { const p=(cv.pays||'').trim(); if(p) reload('/referentiel/api/villes/?pays_nom='+encodeURIComponent(p), true); })">
+                <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)"
+                       placeholder="{% trans "Abidjan…" %}" class="fi fi-sm w-full pr-7" autocomplete="off">
+                <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                  <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o)" class="w-full px-3 py-2 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-orange-50 text-orange-600 font-medium':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span><span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-2"></span></button></template>
+                  <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-500 mb-1">{% trans "Adresse" %}</label>
+              <input type="text" x-model="cv.adresse" placeholder="{% trans "Cocody, Riviera 3…" %}" class="fi fi-sm w-full" autocomplete="off">
+            </div>
+          </div>
+        </div>
+        <!-- Âge + LinkedIn + Permis sur la même ligne -->
+        <div class="grid gap-2" style="grid-template-columns:70px 1fr 1fr">
+          <div><label class="block text-sm font-semibold text-gray-500 mb-1">{% trans "Âge" %}</label><input type="number" x-model="cv.age" placeholder="28" min="16" max="70" class="fi fi-sm"></div>
+          <div><label class="block text-sm font-semibold text-gray-500 mb-1">{% trans "LinkedIn" %} <span class="text-gray-300 font-normal">(opt.)</span></label><input type="text" x-model="cv.linkedin" placeholder="{% trans "linkedin.com/in/…" %}" class="fi fi-sm"></div>
+          <div><label class="block text-sm font-semibold text-gray-500 mb-1">{% trans "Permis" %} <span class="text-gray-300 font-normal">(opt.)</span></label>
+          <div class="relative" x-data="cbx({ url: '{% url 'referentiel:api_permis' %}', k: 'nomPermis', s: 'description' })" @cbxpick="cv.permis=$event.detail.val" x-init="q=cv.permis||''">
+            <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" @change="cv.permis=q" placeholder="{% trans "B, A, C…" %}" class="fi fi-sm w-full pr-7" autocomplete="off">
+            <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+            <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+              <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o);cv.permis=o.label" class="w-full px-3 py-2 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span><span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-2"></span></button></template>
+              <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+            </div>
+          </div></div>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-500 mb-1">{% trans "Profil / Résumé" %} <span class="text-gray-300 font-normal ml-1" x-text="cv.profil.length + '/300'"></span></label>
+          <textarea x-model="cv.profil" rows="3" maxlength="300" placeholder="Décrivez votre profil en 2-3 phrases…" class="fi fi-sm resize-none leading-relaxed"></textarea>
+        </div>
+        </div>
+
+        <!-- §2 Expériences professionnelles -->
+        <div x-show="s==='exp'" x-transition.duration.150ms class="px-4 pb-4 pt-2 space-y-2">
+          <div class="flex items-center gap-2 pb-3 mb-2 border-b border-gray-100 sticky top-[56px] z-10 bg-[#f8f9fb] -mx-5 px-5 pt-4 -mt-4">
+            <span class="text-base">💼</span>
+            <p class="text-base font-bold text-gray-800">{% trans "Expériences professionnelles" %}</p>
+          </div>
+        <template x-for="(exp, ei) in cv.experiences" :key="exp.id">
+          <div x-show="exp.visible !== false"
+               class="mb-2 bg-white rounded-xl border border-gray-100 shadow-sm">
+            <div class="flex items-center justify-between px-3 py-2 border-b border-gray-50 rounded-t-xl" style="background:#FFF8F2">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-bold" style="color:#c96010" x-text="'Expérience ' + (ei+1)"></span>
+                <span x-show="exp.visible === false" class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded">{% trans "Masqué" %}</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button type="button" @click="toggleVis(exp)"
+                        x-show="!exp._isNew"
+                        :title="{% trans "exp.visible === false ? 'Afficher sur le CV' : 'Masquer du CV'" %}"
+                        class="flex items-center justify-center w-7 h-7 rounded-md border transition"
+                        :class="exp.visible === false ? 'border-gray-200 bg-gray-100 text-gray-400 hover:bg-gray-200' : 'border-orange-200 bg-orange-50 text-orange-600 hover:bg-orange-100'">
+                  <svg x-show="exp.visible !== false" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                  <svg x-show="exp.visible === false" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+                </button>
+                <button type="button" @click="removeExp(ei)" title="{% trans "Supprimer cette expérience" %}"
+                        x-show="exp._isNew"
+                        class="flex items-center justify-center w-7 h-7 rounded-md border border-red-200 bg-red-50 text-red-500 hover:bg-red-100 transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="p-3 space-y-2">
+              <!-- Entreprise + Pays + Ville (même ligne) -->
+              <div data-loc-row class="grid grid-cols-3 gap-2">
+                <div><label class="block text-sm text-gray-400 mb-1">{% trans "Entreprise *" %}</label>
+                <div class="relative" x-data="cbx({ url: '{% url 'referentiel:api_entreprises' %}', k: 'nomEntreprise', s: 'secteur' })" @cbxpick="exp.entreprise=$event.detail.val" x-init="q=exp.entreprise||''">
+                  <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" @change="exp.entreprise=q" placeholder="{% trans "TechCorp…" %}" class="fi fi-sm w-full pr-7" autocomplete="off">
+                  <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                  <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                    <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o);exp.entreprise=o.label" class="w-full px-3 py-2 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span><span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-2"></span></button></template>
+                    <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                  </div>
+                </div></div>
+                <div><label class="block text-sm text-gray-400 mb-1">{% trans "Pays" %}</label>
+                <div class="relative" data-loc="pays" x-data="cbx({ url: '{% url 'referentiel:api_pays' %}', k: 'nomPays' })" @cbxpick="exp.pays=$event.detail.val; syncExpLieu(exp); const villeEl=$event.target.closest('[data-loc-row]')?.querySelector('[data-loc=ville]'); if(villeEl){ const s=Alpine.$data(villeEl); if(s) s.reload('/referentiel/api/villes/?pays_id='+$event.detail.id); }" x-init="q=exp.pays||''">
+                  <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" @change="exp.pays=q; syncExpLieu(exp)" placeholder="{% trans "Côte d'Ivoire…" %}" class="fi fi-sm w-full pr-7" autocomplete="off">
+                  <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                  <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                    <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o);exp.pays=o.label;syncExpLieu(exp)" class="w-full px-3 py-2 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span></button></template>
+                    <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                  </div>
+                </div></div>
+                <div><label class="block text-sm text-gray-400 mb-1">{% trans "Ville" %}</label>
+                <div class="relative" data-loc="ville" x-data="cbx({ url: '{% url 'referentiel:api_villes' %}', k: 'nomVille', s: 'region' })" @cbxpick="exp.ville=$event.detail.val; syncExpLieu(exp)" x-init="q=exp.ville||''; $nextTick(() => { const p=(exp.pays||'').trim(); if(p) reload('/referentiel/api/villes/?pays_nom='+encodeURIComponent(p), true); })">
+                  <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" @change="exp.ville=q; syncExpLieu(exp)" placeholder="{% trans "Abidjan…" %}" class="fi fi-sm w-full pr-7" autocomplete="off">
+                  <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                  <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                    <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o);exp.ville=o.label;syncExpLieu(exp)" class="w-full px-3 py-2 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span><span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-2"></span></button></template>
+                    <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                  </div>
+                </div></div>
+              </div>
+
+              <!-- Période globale à l'entreprise : début (gauche) · fin (milieu) · en cours (droite) -->
+              <div class="grid grid-cols-3 items-end gap-2">
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">{% trans "Date d'entrée" %}</label>
+                  <input type="month" x-model="exp.debut" class="fi fi-sm w-full">
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">{% trans "Date de sortie" %}</label>
+                  <input type="month" x-model="exp.fin" :disabled="exp.enCours" class="fi fi-sm w-full disabled:opacity-40 disabled:cursor-not-allowed">
+                </div>
+                <div class="pb-1">
+                  <label class="flex items-center gap-1.5 cursor-pointer">
+                    <div class="toggle-track shrink-0" :style="exp.enCours ? 'background:#c96010' : 'background:#d1d5db'" @click="exp.enCours = !exp.enCours">
+                      <div class="toggle-thumb" :style="exp.enCours ? 'transform:translateX(16px)' : 'transform:translateX(0)'"></div>
+                    </div>
+                    <span class="text-xs text-gray-600 font-medium leading-tight">{% trans "Emploi actuel (en cours)" %}</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- ── Postes occupés (liste avec dates individuelles) ── -->
+              <div class="pt-1">
+                <label class="block text-xs font-semibold text-gray-500 mb-2">{% trans "Postes occupés" %}</label>
+                <template x-for="(p, pi) in exp.postes" :key="p.id">
+                  <!-- overflow-visible pour ne pas clipper le dropdown d'autocomplétion. -->
+                  <div class="mb-2 rounded-xl border shadow-sm"
+                       style="border-color:#15803d;background:linear-gradient(135deg,#FFFDF9,#FFF8F0)">
+                    <!-- En-tête poste -->
+                    <div class="flex items-center justify-between px-3 py-1.5 border-b rounded-t-xl"
+                         style="border-color:#22c55e;background:#FFF3DC">
+                      <div class="flex items-center gap-1.5">
+                        <span class="w-4 h-4 rounded flex items-center justify-center text-[10px] font-bold text-white"
+                              style="background:#22c55e" x-text="pi+1"></span>
+                        <span class="text-xs font-semibold" style="color:#C96000">{% trans "Poste" %}</span>
+                      </div>
+                      <button class="btn-rm" @click="removePoste(ei, pi)"
+                              x-show="exp.postes.length > 1" title="{% trans "Supprimer ce poste" %}">✕</button>
+                    </div>
+                    <div class="p-2.5">
+                      <!-- Ligne unique : intitulé · début · fin · en cours -->
+                      <div class="flex items-end justify-between gap-2">
+                        <!-- Intitulé du poste -->
+                        <div class="w-48 shrink-0">
+                          <label class="block text-xs text-gray-400 mb-1">{% trans "Intitulé du poste *" %}</label>
+                          <div class="relative" x-data="cbx({ url: '{% url 'referentiel:api_postes' %}', k: 'nomPoste', s: 'domaine' })" @cbxpick="p.titre=$event.detail.val" x-init="q=p.titre||''">
+                            <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" @change="p.titre=q" placeholder="{% trans "Développeur Web…" %}" class="fi fi-sm w-full pr-7" autocomplete="off">
+                            <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                            <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                              <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o);p.titre=o.label" class="w-full px-3 py-2 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span><span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-2"></span></button></template>
+                              <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                            </div>
+                          </div>
+                        </div>
+                        <!-- Groupe dates + en cours (collé à droite) -->
+                        <div class="flex items-end gap-2">
+                        <!-- Date de début -->
+                        <div class="w-38 shrink-0">
+                          <label class="block text-xs text-gray-400 mb-1">{% trans "Début" %}</label>
+                          <input type="month" x-model="p.debut" class="fi fi-sm w-full">
+                        </div>
+                        <!-- Date de fin -->
+                        <div class="w-38 shrink-0">
+                          <label class="block text-xs text-gray-400 mb-1">{% trans "Fin" %}</label>
+                          <input type="month" x-model="p.fin" :disabled="p.enCours" class="fi fi-sm w-full disabled:opacity-40 disabled:cursor-not-allowed">
+                        </div>
+                        <!-- Toggle en cours -->
+                        <div class="shrink-0 pb-1">
+                          <label class="flex flex-col items-center gap-1 cursor-pointer">
+                            <div class="toggle-track" :style="p.enCours ? 'background:#c96010' : 'background:#d1d5db'" @click="p.enCours = !p.enCours">
+                              <div class="toggle-thumb" :style="p.enCours ? 'transform:translateX(16px)' : 'transform:translateX(0)'"></div>
+                            </div>
+                            <span class="text-[10px] text-gray-500 leading-none">{% trans "En cours" %}</span>
+                          </label>
+                        </div>
+                        </div><!-- fin groupe dates -->
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                <!-- Bouton ajouter un poste -->
+                <button class="btn-add mt-1 text-sm" @click="addPoste(ei)"
+                        style="border-color:#c96010;color:#c96010">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                  Ajouter un poste
+                </button>
+              </div>
+
+              <!-- ── Missions chez les clients (détachement / prestation) ── -->
+              <div class="mt-3 pt-3 border-t border-gray-100">
+                <label class="flex items-center gap-2 cursor-pointer mb-1">
+                  <div class="toggle-track"
+                       :style="exp.hasMissionsClient ? 'background:#c96010' : 'background:#d1d5db'"
+                       @click="exp.hasMissionsClient = !exp.hasMissionsClient">
+                    <div class="toggle-thumb"
+                         :style="exp.hasMissionsClient ? 'transform:translateX(16px)' : 'transform:translateX(0)'"></div>
+                  </div>
+                  <span class="text-sm font-semibold text-gray-700">🏢 Missions chez les clients</span>
+                </label>
+                <p class="text-xs text-gray-400 mb-2 leading-relaxed">
+                  Activez si vous avez été détaché(e) ou envoyé(e) en mission chez un ou plusieurs clients, avec un poste et une durée différents.
+                </p>
+
+                <div x-show="exp.hasMissionsClient" x-transition.duration.150ms class="space-y-3">
+                  <template x-for="(mc, mci) in exp.missionsClient" :key="mc.id">
+                    <div class="rounded-xl border border-orange-200 shadow-sm"
+                         style="background:linear-gradient(135deg,#FFFBF5,#FFF8F0)">
+                      <!-- En-tête mission client -->
+                      <div class="flex items-center justify-between px-3 py-2 border-b border-orange-100 rounded-t-xl"
+                           style="background:linear-gradient(90deg,#FFF0DC,#FFF8F0)">
+                        <div class="flex items-center gap-2">
+                          <span class="w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold text-white shadow-sm"
+                                style="background:#c96010" x-text="mci+1"></span>
+                          <span class="text-sm font-bold" style="color:#C96000">{% trans "Mission client" %}</span>
+                        </div>
+                        <button class="btn-rm" @click="removeMissionClient(ei, mci)">✕</button>
+                      </div>
+
+                      <div class="p-3 space-y-2.5">
+                        <!-- Entreprise cliente + Pays + Ville -->
+                        <div data-loc-row class="grid grid-cols-3 gap-2">
+                          <div>
+                            <label class="block text-sm text-gray-400 mb-1">{% trans "Entreprise cliente *" %}</label>
+                            <div class="relative" x-data="cbx({ url: '{% url 'referentiel:api_entreprises' %}', k: 'nomEntreprise', s: 'secteur' })" @cbxpick="mc.client=$event.detail.val" x-init="q=mc.client||''">
+                              <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" @change="mc.client=q" placeholder="{% trans "BNP Paribas CI…" %}" class="fi fi-sm w-full pr-7" autocomplete="off">
+                              <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                              <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:180px;overflow-y:auto;">
+                                <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o);mc.client=o.label" class="w-full px-3 py-2 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span><span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-2"></span></button></template>
+                                <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                              </div>
+                            </div>
+                          </div>
+                          <div>
+                            <label class="block text-sm text-gray-400 mb-1">{% trans "Pays" %}</label>
+                            <div class="relative" data-loc="pays" x-data="cbx({ url: '{% url 'referentiel:api_pays' %}', k: 'nomPays' })" @cbxpick="mc.pays=$event.detail.val; const villeEl=$event.target.closest('[data-loc-row]')?.querySelector('[data-loc=ville]'); if(villeEl){ const s=Alpine.$data(villeEl); if(s) s.reload('/referentiel/api/villes/?pays_id='+$event.detail.id); }" x-init="q=mc.pays||''">
+                              <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" @change="mc.pays=q" placeholder="{% trans "Côte d'Ivoire…" %}" class="fi fi-sm w-full pr-7" autocomplete="off">
+                              <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                              <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:180px;overflow-y:auto;">
+                                <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o);mc.pays=o.label" class="w-full px-3 py-2 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span></button></template>
+                                <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                              </div>
+                            </div>
+                          </div>
+                          <div>
+                            <label class="block text-sm text-gray-400 mb-1">{% trans "Ville" %}</label>
+                            <div class="relative" data-loc="ville" x-data="cbx({ url: '{% url 'referentiel:api_villes' %}', k: 'nomVille', s: 'region' })" @cbxpick="mc.ville=$event.detail.val" x-init="q=mc.ville||''; $nextTick(() => { const p=(mc.pays||'').trim(); if(p) reload('/referentiel/api/villes/?pays_nom='+encodeURIComponent(p), true); })">
+                              <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" @change="mc.ville=q" placeholder="{% trans "Abidjan…" %}" class="fi fi-sm w-full pr-7" autocomplete="off">
+                              <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                              <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:180px;overflow-y:auto;">
+                                <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o);mc.ville=o.label" class="w-full px-3 py-2 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span><span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-2"></span></button></template>
+                                <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <!-- Période + En cours -->
+                        <div class="grid grid-cols-3 items-end gap-2">
+                          <div>
+                            <label class="block text-sm text-gray-400 mb-1">{% trans "Début de mission" %}</label>
+                            <input type="month" x-model="mc.debut" class="fi fi-sm w-full">
+                          </div>
+                          <div>
+                            <label class="block text-sm text-gray-400 mb-1">{% trans "Fin de mission" %}</label>
+                            <input type="month" x-model="mc.fin"
+                                   :disabled="mc.enCours"
+                                   class="fi fi-sm w-full disabled:opacity-40 disabled:cursor-not-allowed">
+                          </div>
+                          <div class="pb-1">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                              <div class="toggle-track"
+                                   :style="mc.enCours ? 'background:#c96010' : 'background:#d1d5db'"
+                                   @click="mc.enCours = !mc.enCours">
+                                <div class="toggle-thumb"
+                                     :style="mc.enCours ? 'transform:translateX(16px)' : 'transform:translateX(0)'"></div>
+                              </div>
+                              <span class="text-sm text-gray-600 font-medium">{% trans "En cours" %}</span>
+                            </label>
+                          </div>
+                        </div>
+                        <!-- Description -->
+                        <div>
+                          <label class="block text-sm text-gray-400 mb-1">{% trans "Contexte / livrables" %} <span class="text-gray-300">(optionnel)</span></label>
+                          <textarea x-model="mc.desc" rows="2"
+                                    placeholder="Ex: Migration du SI, refonte du portail client…"
+                                    class="fi fi-sm resize-none"></textarea>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+
+                  <button class="btn-add w-full" @click="addMissionClient(ei)"
+                          style="border-color:#c96010;color:#c96010">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Ajouter une mission chez un client
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+        {% include "candidat/cv/_hidden_panel.html"      with section="experiences" titre="Expériences masquées sur ce CV" %}
+        {% include "candidat/cv/_suggestions_panel.html" with section="experiences" titre="Expériences à ajouter depuis votre profil" emoji="💼" %}
+        <button class="btn-add text-sm" @click="addExp()">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Ajouter une expérience
+        </button>
+        </div>
+
+        <!-- §3 Formations & Certifications -->
+        <div x-show="s==='form'" x-transition.duration.150ms class="px-4 pb-4 pt-2 space-y-2">
+          <div class="flex items-center gap-2 pb-3 mb-2 border-b border-gray-100 sticky top-[56px] z-10 bg-[#f8f9fb] -mx-5 px-5 pt-4 -mt-4">
+            <span class="text-base">🎓</span>
+            <p class="text-base font-bold text-gray-800">{% trans "Formations &amp; Certifications" %}</p>
+          </div>
+        <template x-for="(f, fi) in cv.formations" :key="f.id">
+          <div x-show="f.visible !== false"
+               class="mb-2 bg-white rounded-xl border border-gray-100 shadow-sm">
+            <!-- En-tête dynamique selon le type -->
+            <div class="flex items-center justify-between px-3 py-2 border-b border-gray-50 rounded-t-xl"
+                 :style="f.typeSortie==='certification'?'background:#F0FFF4':'background:#FFF8F2'">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-bold"
+                      :style="f.typeSortie==='certification'?'color:#2e7d52':'color:#c96010'"
+                      x-text="(f.typeSortie==='certification'?'🏅 Certification ':(f.typeSortie==='attestation'?'📄 Attestation ':'🎓 Formation '))+(fi+1)">
+                </span>
+                <span x-show="f.visible === false" class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded">{% trans "Masqué" %}</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button type="button" @click="toggleVis(f)"
+                        x-show="!f._isNew"
+                        :title="{% trans "f.visible === false ? 'Afficher sur le CV' : 'Masquer du CV'" %}"
+                        class="flex items-center justify-center w-7 h-7 rounded-md border transition"
+                        :class="f.visible === false ? 'border-gray-200 bg-gray-100 text-gray-400 hover:bg-gray-200' : 'border-orange-200 bg-orange-50 text-orange-600 hover:bg-orange-100'">
+                  <svg x-show="f.visible !== false" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                  <svg x-show="f.visible === false" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+                </button>
+                <button type="button" @click="removeForm(fi)" title="{% trans "Supprimer cette formation" %}"
+                        x-show="f._isNew"
+                        class="flex items-center justify-center w-7 h-7 rounded-md border border-red-200 bg-red-50 text-red-500 hover:bg-red-100 transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="p-3 space-y-2">
+
+              <!-- ── Sélecteur de type ── -->
+              <div>
+                <label class="block text-xs font-semibold text-gray-500 mb-1.5">{% trans "Type *" %}</label>
+                <div class="flex flex-wrap gap-1.5">
+                  <button type="button" @click="f.typeSortie='diplome'"
+                          class="text-xs font-semibold px-2.5 py-1 rounded-full border transition-all"
+                          :class="f.typeSortie==='diplome'?'border-orange-400 bg-orange-50 text-orange-600':'border-gray-200 text-gray-500 hover:border-gray-300'">
+                    🎓 Diplôme
+                  </button>
+                  <button type="button" @click="f.typeSortie='certification'"
+                          class="text-xs font-semibold px-2.5 py-1 rounded-full border transition-all"
+                          :class="f.typeSortie==='certification'?'border-green-500 bg-green-50 text-green-700':'border-gray-200 text-gray-500 hover:border-gray-300'">
+                    🏅 Certification
+                  </button>
+                </div>
+              </div>
+
+              <!-- ── Titre + Établissement / Organisme + Domaine ── -->
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="block text-sm text-gray-400 mb-1">
+                    <span x-text="f.typeSortie==='certification'?'Titre du certificat *':(f.typeSortie==='attestation'?'Intitulé de l\'attestation *':'Diplôme / Titre *')"></span>
+                  </label>
+                  <!-- Diplôme / Attestation : autocomplétion via api_diplomes -->
+                  <template x-if="f.typeSortie !== 'certification'">
+                    <div class="relative" x-data="cbx({ url: '{% url 'referentiel:api_diplomes' %}', k: 'nomDiplome', s: 'domaine' })" @cbxpick="f.diplome=$event.detail.val" x-init="q=f.diplome||''">
+                      <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" @change="f.diplome=q"
+                             placeholder="{% trans "Master, Licence, BTS…" %}"
+                             class="fi fi-sm w-full pr-7" autocomplete="off">
+                      <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                      <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                        <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o);f.diplome=o.label" class="w-full px-3 py-2 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span><span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-2"></span></button></template>
+                        <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                      </div>
+                    </div>
+                  </template>
+                  <!-- Certification : autocomplétion via api_certificats -->
+                  <template x-if="f.typeSortie === 'certification'">
+                    <div class="relative" x-data="cbx({ url: '{% url 'referentiel:api_certificats' %}', k: 'nomCertificat', s: 'organisme' })" @cbxpick="f.diplome=$event.detail.val" x-init="q=f.diplome||''">
+                      <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" @change="f.diplome=q"
+                             placeholder="{% trans "AWS Certified, PMP, Google…" %}"
+                             class="fi fi-sm w-full pr-7" autocomplete="off">
+                      <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                      <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                        <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o);f.diplome=o.label" class="w-full px-3 py-2 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span><span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-2"></span></button></template>
+                        <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-400 mb-1">
+                    <span x-text="f.typeSortie==='certification'?'Organisme certificateur *':'Établissement *'"></span>
+                  </label>
+                  <!-- Diplôme / Attestation : autocomplétion via api_institutions -->
+                  <template x-if="f.typeSortie !== 'certification'">
+                    <div class="relative" x-data="cbx({ url: '{% url 'referentiel:api_institutions' %}', k: 'nomInstitution' })" @cbxpick="f.ecole=$event.detail.val" x-init="q=f.ecole||''">
+                      <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" @change="f.ecole=q"
+                             placeholder="{% trans "Université FHB…" %}"
+                             class="fi fi-sm w-full pr-7" autocomplete="off">
+                      <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                      <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                        <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o);f.ecole=o.label" class="w-full px-3 py-2 text-sm text-left" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'" x-text="o.label"></button></template>
+                        <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                      </div>
+                    </div>
+                  </template>
+                  <!-- Certification : autocomplétion via api_entreprises (RaisonSocial) -->
+                  <template x-if="f.typeSortie === 'certification'">
+                    <div class="relative" x-data="cbx({ url: '{% url 'referentiel:api_entreprises' %}', k: 'nomEntreprise', s: 'secteur' })" @cbxpick="f.ecole=$event.detail.val" x-init="q=f.ecole||''">
+                      <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" @change="f.ecole=q"
+                             placeholder="{% trans "Amazon, PMI, Google, Coursera…" %}"
+                             class="fi fi-sm w-full pr-7" autocomplete="off">
+                      <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                      <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                        <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o);f.ecole=o.label" class="w-full px-3 py-2 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span><span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-2"></span></button></template>
+                        <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-400 mb-1">
+                    <template x-if="f.typeSortie === 'diplome'"><span>{% trans "Domaine *" %}</span></template>
+                    <template x-if="f.typeSortie !== 'diplome'"><span>{% trans "Domaine" %} <span class="text-gray-300">(opt.)</span></span></template>
+                  </label>
+                  <div class="relative" x-data="cbx({ url: '{% url 'referentiel:api_domaines' %}', k: 'nomDomaine', s: 'description' })" @cbxpick="f.domaine=$event.detail.val" x-init="q=f.domaine||''">
+                    <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" @change="f.domaine=q"
+                           :placeholder="{% trans "f.typeSortie==='certification'?'Ex: Cloud Computing…':'Ex: Informatique, Finance…'" %}"
+                           :required="f.typeSortie === 'diplome'"
+                           class="fi fi-sm w-full pr-7" autocomplete="off">
+                    <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                    <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                      <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o);f.domaine=o.label" class="w-full px-3 py-2 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span><span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-2"></span></button></template>
+                      <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ── Niveau d'étude (diplôme uniquement) + Pays + Ville (masqués pour certification) ── -->
+              <div data-loc-row
+                   x-show="f.typeSortie !== 'certification'" x-transition.duration.100ms
+                   :class="f.typeSortie === 'diplome' ? 'grid grid-cols-3 gap-2' : 'grid grid-cols-2 gap-2'">
+                <div x-show="f.typeSortie === 'diplome'"><label class="block text-sm text-gray-400 mb-1">{% trans "Niveau d'étude" %}</label>
+                <div class="relative" x-data="cbx({ url: '{% url 'referentiel:api_niveaux_etude' %}', k: 'nomNiveau' })" @cbxpick="f.niveauEtude=$event.detail.val" x-init="q=f.niveauEtude||''">
+                  <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" @change="f.niveauEtude=q" placeholder="{% trans "Bac+3, Bac+5…" %}" class="fi fi-sm w-full pr-7" autocomplete="off">
+                  <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                  <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                    <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o);f.niveauEtude=o.label" class="w-full px-3 py-2 text-sm text-left" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'" x-text="o.label"></button></template>
+                    <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                  </div>
+                </div></div>
+                <div><label class="block text-sm text-gray-400 mb-1">{% trans "Pays" %}</label>
+                <div class="relative" data-loc="pays" x-data="cbx({ url: '{% url 'referentiel:api_pays' %}', k: 'nomPays' })" @cbxpick="f.pays=$event.detail.val; const villeEl=$event.target.closest('[data-loc-row]')?.querySelector('[data-loc=ville]'); if(villeEl){ const s=Alpine.$data(villeEl); if(s) s.reload('/referentiel/api/villes/?pays_id='+$event.detail.id); }" x-init="q=f.pays||''">
+                  <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" @change="f.pays=q" placeholder="{% trans "Côte d'Ivoire…" %}" class="fi fi-sm w-full pr-7" autocomplete="off">
+                  <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                  <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                    <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o);f.pays=o.label" class="w-full px-3 py-2 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span></button></template>
+                    <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                  </div>
+                </div></div>
+                <div><label class="block text-sm text-gray-400 mb-1">{% trans "Ville" %}</label>
+                <div class="relative" data-loc="ville" x-data="cbx({ url: '{% url 'referentiel:api_villes' %}', k: 'nomVille', s: 'region' })" @cbxpick="f.lieu=$event.detail.val" x-init="q=f.lieu||''; $nextTick(() => { const p=(f.pays||'').trim(); if(p) reload('/referentiel/api/villes/?pays_nom='+encodeURIComponent(p), true); })">
+                  <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" @change="f.lieu=q" placeholder="{% trans "Abidjan…" %}" class="fi fi-sm w-full pr-7" autocomplete="off">
+                  <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                  <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                    <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o);f.lieu=o.label" class="w-full px-3 py-2 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span><span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-2"></span></button></template>
+                    <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                  </div>
+                </div></div>
+              </div>
+
+              <!-- ── Dates + En cours sur une seule ligne (masqué pour certification) ── -->
+              <div x-show="f.typeSortie !== 'certification'" x-transition.duration.100ms class="grid grid-cols-3 items-end gap-2">
+                <div><label class="block text-sm text-gray-400 mb-1">{% trans "Date de début" %}</label><input type="month" x-model="f.debut" class="fi fi-sm w-full"></div>
+                <div><label class="block text-sm text-gray-400 mb-1">{% trans "Date de fin" %}</label><input type="month" x-model="f.fin" :disabled="f.enCours" class="fi fi-sm w-full disabled:opacity-40 disabled:cursor-not-allowed"></div>
+                <div class="pb-1">
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <div class="toggle-track" :style="f.enCours ? 'background:#c96010' : 'background:#d1d5db'" @click="f.enCours = !f.enCours">
+                      <div class="toggle-thumb" :style="f.enCours ? 'transform:translateX(16px)' : 'transform:translateX(0)'"></div>
+                    </div>
+                    <span class="text-sm text-gray-600 font-medium">{% trans "En cours" %}</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- ── Champs spécifiques Certification (N° + Date obtention + Date expiration sur une seule ligne) ── -->
+              <div x-show="f.typeSortie === 'certification'" x-transition.duration.100ms class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="block text-sm text-gray-400 mb-1">{% trans "N° de certificat" %} <span class="text-gray-300">(opt.)</span></label>
+                  <input type="text" x-model="f.numero" placeholder="{% trans "Ex: AWS-SAA-C03-123456" %}" class="fi fi-sm w-full">
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-400 mb-1">{% trans "Date d'obtention" %}</label>
+                  <input type="month" x-model="f.fin" class="fi fi-sm w-full">
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-400 mb-1">{% trans "Date d'expiration" %} <span class="text-gray-300">(opt.)</span></label>
+                  <input type="month" x-model="f.expiration" class="fi fi-sm w-full">
+                </div>
+              </div>
+
+              <!-- ── Mention / Description ── -->
+              <div>
+                <label class="block text-sm text-gray-400 mb-1">
+                  <span x-text="f.typeSortie==='certification'?'Remarque / Description':'Mention / Description'"></span>
+                  <span class="text-gray-300"> (optionnel)</span>
+                </label>
+                <input type="text" x-model="f.desc"
+                       :placeholder="f.typeSortie==='certification'?'Ex: Score 89%, Valide 3 ans…':'Ex: Mention Très Bien'"
+                       class="fi fi-sm">
+              </div>
+
+            </div>
+          </div>
+        </template>
+
+        {% include "candidat/cv/_hidden_panel.html"      with section="formations" titre="Formations masquées sur ce CV" %}
+        {% include "candidat/cv/_suggestions_panel.html" with section="formations" titre="Formations à ajouter depuis votre profil" emoji="🎓" %}
+        <!-- Bouton d'ajout -->
+        <div class="pt-1">
+          <button class="btn-add text-sm" @click="addForm()">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Ajouter une formation / certification
+          </button>
+        </div>
+        </div>
+
+        <!-- §4 Compétences -->
+        <div x-show="s==='comp'" x-transition.duration.150ms class="px-4 pb-4 pt-2 space-y-2">
+          <div class="flex items-center gap-2 pb-3 mb-2 border-b border-gray-100 sticky top-[56px] z-10 bg-[#f8f9fb] -mx-5 px-5 pt-4 -mt-4">
+            <span class="text-base">⚡</span>
+            <p class="text-base font-bold text-gray-800">{% trans "Compétences" %}</p>
+          </div>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <template x-for="(c, ci) in cv.competences" :key="c.id">
+            <div x-show="c.visible !== false"
+                 class="flex items-center gap-2 bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
+              <div class="relative flex-1 min-w-0" x-data="cbx({ url: '{% url 'referentiel:api_competences' %}', k: 'nomCompetence', s: 'domaine' })" @cbxpick="c.nom=$event.detail.val" x-init="q=c.nom||''">
+                <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" @change="c.nom=q" placeholder="{% trans "Ex: JavaScript…" %}" class="fi fi-sm w-full pr-7" autocomplete="off">
+                <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                  <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o);c.nom=o.label" class="w-full px-3 py-2 text-sm text-left flex items-center justify-between" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'"><span x-text="o.label"></span><span x-show="o.sub" x-text="o.sub" class="text-xs text-gray-400 ml-2"></span></button></template>
+                  <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                </div>
+              </div>
+              <div class="flex-shrink-0 flex items-center gap-0.5" x-data="{ hover: 0 }" @mouseleave="hover = 0"
+                   :title="{% trans "niveauLibelle(c.niveau, 'competence') || 'Cliquez pour évaluer'" %}">
+                <template x-for="n in [1,2,3,4,5]" :key="n">
+                  <button type="button"
+                          @click.stop="c.niveau = (niveauStars(c.niveau, 'competence') === n ? null : starsToNiveau(n, 'competence'))"
+                          @mouseenter="hover = n"
+                          class="p-0.5 transition-colors"
+                          :class="(hover ? n <= hover : n <= niveauStars(c.niveau, 'competence')) ? 'text-orange-400' : 'text-gray-300 hover:text-orange-200'">
+                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.366 2.446a1 1 0 00-.363 1.118l1.287 3.957c.3.921-.755 1.688-1.539 1.118l-3.366-2.446a1 1 0 00-1.176 0l-3.366 2.446c-.784.57-1.838-.197-1.539-1.118l1.287-3.957a1 1 0 00-.363-1.118L2.07 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69l1.286-3.957z"/></svg>
+                  </button>
+                </template>
+              </div>
+              <button type="button" @click="toggleVis(c)" x-show="!c._isNew" class="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md border transition"
+                      :title="{% trans "c.visible === false ? 'Afficher sur le CV' : 'Masquer du CV'" %}"
+                      :class="c.visible === false ? 'border-gray-200 bg-gray-100 text-gray-400 hover:bg-gray-200' : 'border-orange-200 bg-orange-50 text-orange-600 hover:bg-orange-100'">
+                <svg x-show="c.visible !== false" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                <svg x-show="c.visible === false" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+              </button>
+              <button type="button" @click="removeComp(ci)" title="{% trans "Supprimer cette compétence" %}"
+                      x-show="c._isNew"
+                      class="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md border border-red-200 bg-red-50 text-red-500 hover:bg-red-100 transition">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </div>
+          </template>
+        </div>
+        {% include "candidat/cv/_hidden_panel.html"      with section="competences" titre="Compétences masquées sur ce CV" %}
+        {% include "candidat/cv/_suggestions_panel.html" with section="competences" titre="Compétences à ajouter depuis votre profil" emoji="⚡" %}
+        <button class="btn-add text-sm" @click="addComp()">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Ajouter une compétence
+        </button>
+        </div>
+
+        <!-- §5 Langues -->
+        <div x-show="s==='lang'" x-transition.duration.150ms class="px-4 pb-4 pt-2 space-y-2">
+          <div class="flex items-center gap-2 pb-3 mb-2 border-b border-gray-100 sticky top-[56px] z-10 bg-[#f8f9fb] -mx-5 px-5 pt-4 -mt-4">
+            <span class="text-base">🌍</span>
+            <p class="text-base font-bold text-gray-800">{% trans "Langues" %}</p>
+          </div>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <template x-for="(l, li) in cv.langues" :key="l.id">
+            <div x-show="l.visible !== false"
+                 class="bg-white p-2 rounded-xl border shadow-sm"
+                 :class="langueDoublon(li) ? 'border-red-300 ring-1 ring-red-200' : 'border-gray-100'">
+              <div class="flex items-center gap-2">
+              <div class="relative flex-1 min-w-0" x-data="cbx({ url: '{% url 'referentiel:api_langues' %}', k: 'nomLangue' })" @cbxpick="l.nom=$event.detail.val" x-init="q=l.nom||''">
+                <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" @change="l.nom=q" placeholder="{% trans "Ex: Anglais…" %}" class="fi fi-sm w-full pr-7" autocomplete="off"
+                       :class="langueDoublon(li) ? 'border-red-300 focus:border-red-400' : ''">
+                <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                  <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o);l.nom=o.label" class="w-full px-3 py-2 text-sm text-left" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'" x-text="o.label"></button></template>
+                  <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                </div>
+              </div>
+              <div class="flex-shrink-0 flex items-center gap-0.5" x-data="{ hover: 0 }" @mouseleave="hover = 0"
+                   :title="{% trans "niveauLibelle(l.niveau, 'langue') || 'Cliquez pour évaluer'" %}">
+                <template x-for="n in [1,2,3,4,5]" :key="n">
+                  <button type="button"
+                          @click.stop="l.niveau = (niveauStars(l.niveau, 'langue') === n ? null : starsToNiveau(n, 'langue'))"
+                          @mouseenter="hover = n"
+                          class="p-0.5 transition-colors"
+                          :class="(hover ? n <= hover : n <= niveauStars(l.niveau, 'langue')) ? 'text-orange-400' : 'text-gray-300 hover:text-orange-200'">
+                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.366 2.446a1 1 0 00-.363 1.118l1.287 3.957c.3.921-.755 1.688-1.539 1.118l-3.366-2.446a1 1 0 00-1.176 0l-3.366 2.446c-.784.57-1.838-.197-1.539-1.118l1.287-3.957a1 1 0 00-.363-1.118L2.07 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69l1.286-3.957z"/></svg>
+                  </button>
+                </template>
+              </div>
+              <button type="button" @click="toggleVis(l)" x-show="!l._isNew" class="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md border transition"
+                      :title="{% trans "l.visible === false ? 'Afficher sur le CV' : 'Masquer du CV'" %}"
+                      :class="l.visible === false ? 'border-gray-200 bg-gray-100 text-gray-400 hover:bg-gray-200' : 'border-orange-200 bg-orange-50 text-orange-600 hover:bg-orange-100'">
+                <svg x-show="l.visible !== false" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                <svg x-show="l.visible === false" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+              </button>
+              <button type="button" @click="removeLang(li)" title="{% trans "Supprimer cette langue" %}"
+                      x-show="l._isNew"
+                      class="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md border border-red-200 bg-red-50 text-red-500 hover:bg-red-100 transition">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+              </div>
+              <p x-show="langueDoublon(li)" x-cloak class="text-[10px] text-red-600 mt-1 px-1 leading-tight">
+                Cette langue est déjà dans le CV — modifiez plutôt son niveau.
+              </p>
+            </div>
+          </template>
+        </div>
+        {% include "candidat/cv/_hidden_panel.html"      with section="langues" titre="Langues masquées sur ce CV" %}
+        {% include "candidat/cv/_suggestions_panel.html" with section="langues" titre="Langues à ajouter depuis votre profil" emoji="🌍" %}
+        <button class="btn-add text-sm" @click="addLang()">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Ajouter une langue
+        </button>
+        </div>
+
+        <!-- §6 Divers -->
+        <div x-show="s==='div'" x-transition.duration.150ms class="px-5 pb-6 pt-4 space-y-4">
+          <div class="flex items-center gap-2 pb-3 mb-2 border-b border-gray-100 sticky top-[56px] z-10 bg-[#f8f9fb] -mx-5 px-5 pt-4 -mt-4">
+            <span class="text-base">✨</span>
+            <p class="text-base font-bold text-gray-800">{% trans "Divers" %}</p>
+          </div>
+        <!-- Centres d'intérêt -->
+        <div>
+          <p class="text-sm font-semibold text-gray-600 mb-2">{% trans "Centres d'intérêt" %}</p>
+          <div class="grid grid-cols-2 gap-2 mb-1.5">
+            <template x-for="(ci, cii) in cv.interets" :key="cii">
+              <div x-show="!isInteretMasque(cii)"
+                   class="flex items-center gap-2">
+                <div class="relative flex-1" x-data="cbx({ url: '{% url 'referentiel:api_interets' %}', k: 'nomCentreInteret' })" @cbxpick="cv.interets[cii]=$event.detail.val" x-init="q=cv.interets[cii]||''">
+                  <input type="text" x-model="q" @focus="onfocus()" @blur="onblur()" @input="oninput()" @keydown="onkey($event)" @change="cv.interets[cii]=q" placeholder="{% trans "Ex: Football…" %}" class="fi fi-sm w-full pr-7" autocomplete="off">
+                  <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                  <div x-show="open" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" style="z-index:9999;max-height:200px;overflow-y:auto;">
+                    <template x-for="(o,i) in sh" :key="o.id"><button type="button" @mousedown.prevent="pick(o);cv.interets[cii]=o.label" class="w-full px-3 py-2 text-sm text-left" :class="i===hi?'bg-orange-50 text-orange-600':'text-gray-700 hover:bg-gray-50'" x-text="o.label"></button></template>
+                    <div x-show="!sh.length" class="px-3 py-2.5 text-xs text-gray-400 italic text-center">{% trans "Saisie libre conservée" %}</div>
+                  </div>
+                </div>
+                <button type="button" @click="toggleInteret(cii)" x-show="cii < _interetsInitialCount" class="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md border transition"
+                        :title="{% trans "isInteretMasque(cii) ? 'Afficher sur le CV' : 'Masquer du CV'" %}"
+                        :class="isInteretMasque(cii) ? 'border-gray-200 bg-gray-100 text-gray-400 hover:bg-gray-200' : 'border-orange-200 bg-orange-50 text-orange-600 hover:bg-orange-100'">
+                  <svg x-show="!isInteretMasque(cii)" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                  <svg x-show="isInteretMasque(cii)" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+                </button>
+                <button type="button" @click="removeInteret(cii)" title="{% trans "Supprimer ce centre d'intérêt" %}"
+                        x-show="cii >= _interetsInitialCount"
+                        class="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md border border-red-200 bg-red-50 text-red-500 hover:bg-red-100 transition">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+              </div>
+            </template>
+          </div>
+          {% include "candidat/cv/_hidden_interets_panel.html" %}
+          {% include "candidat/cv/_suggestions_panel.html" with section="interets" titre="Centres d'intérêt à ajouter" emoji="✨" %}
+          <button class="btn-add mt-1" type="button" @click="addInteret()">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Ajouter un centre d'intérêt
+          </button>
+        </div>
+        <!-- Certifications — gérées désormais dans l'onglet Formations -->
+        <div class="rounded-xl border border-green-100 bg-green-50 px-4 py-3 flex items-start gap-3">
+          <span class="text-lg flex-shrink-0">🏅</span>
+          <div>
+            <p class="text-sm font-semibold text-green-800">{% trans "Certifications dans l'onglet Formations" %}</p>
+            <p class="text-xs text-green-700 mt-0.5 leading-relaxed">
+              Ajoutez vos certifications directement depuis l'onglet <strong>🎓 Formations</strong> {% trans "puis sélectionnez le type" %} <em>🏅 Certification</em>.
+            </p>
+          </div>
+        </div>
+        <!-- Projets -->
+        <div>
+          <label class="flex items-center gap-2 cursor-pointer mb-2">
+            <div class="toggle-track" :style="cv.showProjets ? 'background:#c96010' : 'background:#d1d5db'" @click="cv.showProjets = !cv.showProjets">
+              <div class="toggle-thumb" :style="cv.showProjets ? 'transform:translateX(16px)' : 'transform:translateX(0)'"></div>
+            </div>
+            <span class="text-sm font-semibold text-gray-700">🚀 Projets personnels</span>
+          </label>
+          <div x-show="cv.showProjets" x-transition.duration.150ms>
+            <template x-for="(p, pi) in cv.projets" :key="p.id">
+              <div x-show="p.visible !== false"
+                   class="mb-2 bg-white p-2.5 rounded-xl border border-gray-100 shadow-sm space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-bold" style="color:#c96010" x-text="'Projet ' + (pi+1)"></span>
+                    <span x-show="p.visible === false" class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded">{% trans "Masqué" %}</span>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <button type="button" @click="toggleVis(p)" x-show="!p._isNew" class="flex items-center justify-center w-6 h-6 rounded-md border transition"
+                            :title="{% trans "p.visible === false ? 'Afficher sur le CV' : 'Masquer du CV'" %}"
+                            :class="p.visible === false ? 'border-gray-200 bg-gray-100 text-gray-400 hover:bg-gray-200' : 'border-orange-200 bg-orange-50 text-orange-600 hover:bg-orange-100'">
+                      <svg x-show="p.visible !== false" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                      <svg x-show="p.visible === false" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+                    </button>
+                    <button type="button" @click="removeProjet(pi)" title="{% trans "Supprimer ce projet" %}"
+                            x-show="p._isNew"
+                            class="flex items-center justify-center w-6 h-6 rounded-md border border-red-200 bg-red-50 text-red-500 hover:bg-red-100 transition">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="grid gap-2" style="grid-template-columns:1fr 80px">
+                  <input type="text" x-model="p.nom" placeholder="{% trans "Nom du projet" %}" class="fi fi-sm">
+                  <input type="number" x-model="p.annee" placeholder="{% trans "Année" %}" class="fi fi-sm">
+                </div>
+                <textarea x-model="p.desc" rows="2" placeholder="Description" class="fi fi-sm resize-none"></textarea>
+                <input type="text" x-model="p.lien" placeholder="{% trans "Lien (opt.)" %}" class="fi fi-sm">
+              </div>
+            </template>
+            {% include "candidat/cv/_hidden_panel.html"      with section="projets" titre="Projets masqués sur ce CV" %}
+            {% include "candidat/cv/_suggestions_panel.html" with section="projets" titre="Projets à ajouter depuis votre profil" emoji="🚀" %}
+            <button class="btn-add text-sm" type="button" @click="cv.projets.push({id: Date.now(), nom:'', desc:'', lien:'', annee:'', visible: true, _isNew: true})">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Ajouter un projet
+            </button>
+          </div>
+        </div>
+        <!-- Bénévolat -->
+        <div>
+          <label class="flex items-center gap-2 cursor-pointer mb-2">
+            <div class="toggle-track" :style="cv.showBenev ? 'background:#c96010' : 'background:#d1d5db'" @click="cv.showBenev = !cv.showBenev">
+              <div class="toggle-thumb" :style="cv.showBenev ? 'transform:translateX(16px)' : 'transform:translateX(0)'"></div>
+            </div>
+            <span class="text-sm font-semibold text-gray-700">🤝 Bénévolat / Associations</span>
+          </label>
+          <div x-show="cv.showBenev" x-transition.duration.150ms>
+            <template x-for="(b, bi) in cv.benevs" :key="b.id">
+              <div x-show="b.visible !== false"
+                   class="mb-2 bg-white p-2.5 rounded-xl border border-gray-100 shadow-sm space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-bold" style="color:#c96010" x-text="'Bénévolat ' + (bi+1)"></span>
+                    <span x-show="b.visible === false" class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded">{% trans "Masqué" %}</span>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <button type="button" @click="toggleVis(b)" x-show="!b._isNew" class="flex items-center justify-center w-6 h-6 rounded-md border transition"
+                            :title="{% trans "b.visible === false ? 'Afficher sur le CV' : 'Masquer du CV'" %}"
+                            :class="b.visible === false ? 'border-gray-200 bg-gray-100 text-gray-400 hover:bg-gray-200' : 'border-orange-200 bg-orange-50 text-orange-600 hover:bg-orange-100'">
+                      <svg x-show="b.visible !== false" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                      <svg x-show="b.visible === false" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+                    </button>
+                    <button type="button" @click="removeBenev(bi)" title="{% trans "Supprimer ce bénévolat" %}"
+                            x-show="b._isNew"
+                            class="flex items-center justify-center w-6 h-6 rounded-md border border-red-200 bg-red-50 text-red-500 hover:bg-red-100 transition">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <input type="text" x-model="b.orga" placeholder="{% trans "Organisation" %}" class="fi fi-sm">
+                  <input type="text" x-model="b.role" placeholder="{% trans "Rôle" %}" class="fi fi-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <input type="month" x-model="b.debut" class="fi fi-sm">
+                  <input type="month" x-model="b.fin" :disabled="b.enCours" class="fi fi-sm disabled:opacity-40">
+                </div>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <div class="toggle-track" :style="b.enCours ? 'background:#c96010' : 'background:#d1d5db'" @click="b.enCours = !b.enCours">
+                    <div class="toggle-thumb" :style="b.enCours ? 'transform:translateX(16px)' : 'transform:translateX(0)'"></div>
+                  </div>
+                  <span class="text-xs text-gray-600">{% trans "En cours" %}</span>
+                </label>
+              </div>
+            </template>
+            {% include "candidat/cv/_hidden_panel.html"      with section="benevs" titre="Bénévolats masqués sur ce CV" %}
+            {% include "candidat/cv/_suggestions_panel.html" with section="benevs" titre="Bénévolats à ajouter depuis votre profil" emoji="🤝" %}
+            <button class="btn-add text-sm" type="button" @click="cv.benevs.push({id: Date.now(), orga:'', role:'', debut:'', fin:'', enCours:false, visible: true, _isNew: true})">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Ajouter
+            </button>
+          </div>
+        </div>
+        <!-- Références -->
+        <label class="flex items-center gap-2.5 cursor-pointer">
+          <div class="toggle-track" :style="cv.showRef ? 'background:#c96010' : 'background:#d1d5db'" @click="cv.showRef = !cv.showRef">
+            <div class="toggle-thumb" :style="cv.showRef ? 'transform:translateX(16px)' : 'transform:translateX(0)'"></div>
+          </div>
+          <span class="text-sm font-semibold text-gray-700">📋 Références disponibles sur demande</span>
+        </label>
+        </div>
+
+        <div class="p-5 text-center">
+          <p class="text-xs text-gray-400">{% trans "L'aperçu se met à jour automatiquement." %}</p>
+        </div>
+
+      </div><!-- /flex-1 -->
+    </div><!-- /flex layout -->
+
+    <!-- ── Modal sélection de modèle ────────────────────────────────────────── -->
+    <div x-show="switcherOpen"
+         x-cloak
+         x-transition
+         @click="switcherOpen = false"
+         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+         style="background:rgba(0,0,0,.55);padding-right:30vw">
+      <div @click.stop
+           class="bg-white rounded-2xl shadow-2xl w-full flex flex-col"
+           style="max-width:720px;max-height:85vh">
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+          <div>
+            <h3 class="text-base font-bold text-gray-800">{% trans "Choisir un modèle" %}</h3>
+            <p class="text-xs text-gray-400 mt-0.5">{% trans "Vos données sont conservées lors du changement" %}</p>
+          </div>
+          <button @click="switcherOpen = false"
+                  class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition text-sm font-bold">✕</button>
+        </div>
+        <!-- Hint survol -->
+        <div class="px-5 py-2 flex items-center gap-1.5 border-b border-gray-50">
+          <svg class="w-3.5 h-3.5 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+          </svg>
+          <span class="text-xs text-gray-400">{% trans "Survolez un modèle pour voir l'aperçu en direct · Cliquez pour confirmer" %}</span>
+        </div>
+        <!-- Grille des modèles -->
+        <div class="overflow-y-auto p-4">
+          <div class="grid grid-cols-4 gap-3" @mouseleave="onModeleLeave()">
+            {% for m in modeles %}
+            <button type="button"
+                    @mouseenter="onModeleHover({{ m.id }}, {{ m.premium|yesno:'true,false' }})"
+                    @click="changerModele({{ m.id }}, {{ m.premium|yesno:'true,false' }})"
+                    class="relative rounded-xl overflow-hidden border-2 text-left transition"
+                    :class="{{ m.id }} === currentModeleId
+                      ? 'border-orange-400 ring-2 ring-orange-100'
+                      : (hoverModeleId === {{ m.id }}
+                          ? 'border-blue-400 ring-2 ring-blue-100 shadow-lg -translate-y-0.5'
+                          : 'border-gray-200 hover:border-gray-300 hover:shadow-md hover:-translate-y-0.5')">
+              {% if m.apercu %}
+              <img src="{{ m.apercu.url }}" alt="{{ m.nom }}"
+                   class="w-full object-cover object-top"
+                   style="height:72px;display:block">
+              {% else %}
+              <div class="h-10 flex items-center px-2.5 gap-1.5"
+                   style="background:{{ m.couleur }}{% if m.couleur == '#ffffff' %};border-bottom:1px solid #e5e7eb{% endif %}">
+                <div class="w-5 h-5 rounded-full flex-shrink-0"
+                     style="background:rgba(255,255,255,.25);border:1.5px solid rgba(255,255,255,.5)"></div>
+                <div>
+                  <div class="rounded-full" style="width:36px;height:5px;background:rgba(255,255,255,.7);margin-bottom:3px"></div>
+                  <div class="rounded-full" style="width:22px;height:3px;background:rgba(255,255,255,.4)"></div>
+                </div>
+              </div>
+              <div class="flex gap-1 px-1.5 py-1.5" style="background:#f8f9fa">
+                <div class="space-y-1" style="width:35%">
+                  <div class="rounded" style="height:3px;background:#d1d5db"></div>
+                  <div class="rounded" style="height:3px;background:#e5e7eb;width:80%"></div>
+                  <div class="rounded" style="height:3px;background:#e5e7eb;width:60%"></div>
+                </div>
+                <div class="flex-1 space-y-1">
+                  <div class="rounded" style="height:3px;background:#d1d5db"></div>
+                  <div class="rounded" style="height:3px;background:#e5e7eb;width:85%"></div>
+                  <div class="rounded" style="height:3px;background:#e5e7eb;width:70%"></div>
+                </div>
+              </div>
+              {% endif %}
+              <div class="px-2 py-1.5 bg-white border-t border-gray-100">
+                <p class="text-xs font-bold text-gray-800 truncate leading-tight">{{ m.nom }}</p>
+                <p class="truncate text-gray-400" style="font-size:9px">{{ m.categorie }}</p>
+              </div>
+              <!-- Badge modèle actif -->
+              <template x-if="{{ m.id }} === currentModeleId">
+                <div class="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold" style="font-size:10px">✓</div>
+              </template>
+              <!-- Badge aperçu au survol -->
+              <template x-if="hoverModeleId === {{ m.id }}">
+                <div class="absolute top-1.5 right-1.5 flex items-center gap-0.5 bg-blue-500 text-white rounded-full" style="padding:2px 7px;font-size:9px;font-weight:700;line-height:1.4">👁 Aperçu</div>
+              </template>
+              {% if m.premium %}
+              <div class="absolute top-1.5 left-1.5 rounded" style="background:#f59e0b;color:#78350f;font-size:8px;font-weight:700;padding:1px 6px">★ Pro</div>
+              {% endif %}
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Premium -->
+    <div x-show="premiumMsg"
+         x-cloak
+         x-transition
+         class="fixed z-50 flex items-center gap-2 px-5 py-3 rounded-xl shadow-xl text-xs font-bold text-white"
+         style="bottom:24px;left:50%;transform:translateX(-50%);background:#f59e0b">
+      ⭐ Ce modèle est réservé aux membres Premium
+    </div>
+
+  </div><!-- /form-panel -->
+{% endif %}{# /not apercu #}

@@ -1,0 +1,88 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% trans "Lettre de motivation —" %} {{ lettre.prenom }} {{ lettre.nom }}</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:794px; min-height:1123px; background:#fff; }
+body {
+    font-family: 'Arial Black', Arial, sans-serif;
+    font-size: 11.5px;
+    line-height: 1.65;
+    color: #111;
+}
+
+.bt-header { padding: 46px 60px 0; }
+.bt-name {
+    font-size: 40px; font-weight:900; text-transform:uppercase; line-height:.95;
+    letter-spacing:-.5px; color:#111;
+}
+.bt-name span { color:#E63946; }
+.bt-contact {
+    font-family: Arial, sans-serif; font-weight:400; font-size:10px; color:#555;
+    margin-top:14px; display:flex; gap:16px;
+}
+.bt-rule { height:5px; background:#111; margin:24px 60px 0; }
+
+.bt-main { padding: 34px 60px 50px; font-family: Arial, sans-serif; font-weight:400; }
+.bt-date { font-size:10px; color:#555; margin-bottom:24px; text-transform:uppercase; letter-spacing:.5px; }
+
+.bt-recipient { margin-bottom:24px; }
+.bt-rcp-name  { font-weight:800; text-transform:uppercase; }
+.bt-rcp-fn, .bt-rcp-addr, .bt-rcp-city { font-size:10px; color:#555; }
+
+.bt-objet {
+    font-size:15px; font-weight:900; text-transform:uppercase; color:#E63946;
+    margin-bottom:24px; letter-spacing:.3px;
+}
+
+.bt-salut { margin-bottom:14px; font-weight:700; }
+.bt-para  { margin-bottom:13px; text-align:justify; white-space:pre-wrap; word-break:break-word; }
+.bt-formule { margin-top:24px; margin-bottom:46px; }
+.bt-sig   { font-weight:900; text-transform:uppercase; font-size:13px; }
+</style>
+</head>
+<body>
+
+<div class="bt-header">
+    <div class="bt-name">{{ lettre.prenom }}<br><span>{{ lettre.nom }}</span></div>
+    <div class="bt-contact">
+        {% if lettre.email %}<span>{{ lettre.email }}</span>{% endif %}
+        {% if lettre.telephone %}<span>{{ lettre.telephone }}</span>{% endif %}
+        {% if lettre.ville %}<span>{{ lettre.codePostal }} {{ lettre.ville }}</span>{% endif %}
+    </div>
+</div>
+<div class="bt-rule"></div>
+
+<div class="bt-main">
+    <div class="bt-date">{{ lettre.lieu|default:"Abidjan" }} — {{ lettre.date }}</div>
+
+    <div class="bt-recipient">
+        <div class="bt-rcp-name">{{ lettre.titreDestinataire }} {{ lettre.nomDestinataire }}</div>
+        {% if lettre.posteDestinataire %}<div class="bt-rcp-fn">{{ lettre.posteDestinataire }}</div>{% endif %}
+        {% if lettre.entreprise %}<div style="font-weight:700;">{{ lettre.entreprise }}</div>{% endif %}
+        {% if lettre.villeEntreprise %}<div class="bt-rcp-city">{{ lettre.villeEntreprise }}</div>{% endif %}
+    </div>
+
+    {% if lettre.objet %}
+    <div class="bt-objet">{{ lettre.objet }}</div>
+    {% endif %}
+
+    <p class="bt-salut">
+        {% if lettre.titreDestinataire == "M." or lettre.titreDestinataire == "M" %}Monsieur
+        {% elif lettre.titreDestinataire == "Mme" or lettre.titreDestinataire == "Mme." %}Madame
+        {% elif lettre.titreDestinataire == "Dr." %}Docteur
+        {% elif lettre.titreDestinataire == "Pr." %}Professeur
+        {% else %}{{ lettre.titreDestinataire }}{% endif %},
+    </p>
+    {% if lettre.corps %}<p class="bt-para">{{ lettre.corps }}</p>{% endif %}
+
+    <p class="bt-formule">{{ lettre.formuleFull }}</p>
+    <div class="bt-sig">{{ lettre.prenom }} {{ lettre.nom }}</div>
+</div>
+
+</body>
+</html>

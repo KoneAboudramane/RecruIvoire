@@ -1,0 +1,414 @@
+﻿{% extends "entreprise/base.html" %}
+{% load i18n %}
+
+{% block titre %}{% trans "Suggestions de profils" %} — {% trans "Espace Entreprise" %}{% endblock %}
+
+{% block css_extra %}
+<style>
+    /* ── Onglets ─────────────────────────────────────────────────────── */
+    .sugg-tab-active   { color:#009A44; border-color:#009A44; font-weight:700; }
+    .sugg-tab-inactive { color:#6b7280; }
+    .sugg-tab-inactive:hover { color:#374151; }
+
+    html.dark .sugg-tab-active   { color:#4ade80 !important; border-color:#4ade80 !important; }
+    html.dark .sugg-tab-inactive { color:#94a3b8 !important; }
+    html.dark .sugg-tab-inactive:hover { color:#cbd5e1 !important; }
+
+    /* ── Carte non lue ───────────────────────────────────────────────── */
+    .sugg-card-unread {
+        border-color: #c96010;
+    }
+    html.dark .sugg-card-unread {
+        border-color: rgba(201,96,16,.6) !important;
+    }
+    /* ── Badge expéditeur (non lue) ──────────────────────────────────── */
+    .sugg-exp-unread {
+        background-color: #fff7ed;
+    }
+    html.dark .sugg-exp-unread {
+        background-color: rgba(201,96,16,.12) !important;
+    }
+    /* ── Badge expéditeur (lue) ──────────────────────────────────────── */
+    .sugg-exp-read {
+        background-color: #f0fdf4;
+    }
+    html.dark .sugg-exp-read {
+        background-color: rgba(0,154,68,.12) !important;
+    }
+    /* ── Texte expéditeur (non lue) ──────────────────────────────────── */
+    .sugg-exp-text-unread { color:#c2410c; }
+    html.dark .sugg-exp-text-unread { color:#fb923c !important; }
+
+    /* ── Texte expéditeur (lue) ──────────────────────────────────────── */
+    .sugg-exp-text-read { color:#166534; }
+    html.dark .sugg-exp-text-read { color:#4ade80 !important; }
+
+    /* ── Destinataire ────────────────────────────────────────────────── */
+    .sugg-dest { background-color:#f0fdf4; }
+    html.dark .sugg-dest { background-color: rgba(0,154,68,.12) !important; }
+    .sugg-dest-text { color:#166534; }
+    html.dark .sugg-dest-text { color:#4ade80 !important; }
+
+    /* ── Bouton marquer lu ───────────────────────────────────────────── */
+    .sugg-mark-btn { border-color:#e5e7eb; color:#9ca3af; }
+    .sugg-mark-btn:hover { border-color:#c96010; color:#c96010; }
+    html.dark .sugg-mark-btn { border-color:#475569 !important; color:#64748b !important; }
+    html.dark .sugg-mark-btn:hover { border-color:#c96010 !important; color:#c96010 !important; }
+
+    /* ── Statut Lu / Non lu ──────────────────────────────────────────── */
+    .sugg-lu { color:#16a34a; }
+    html.dark .sugg-lu { color:#4ade80 !important; }
+    .sugg-nonlu { color:#9ca3af; }
+    html.dark .sugg-nonlu { color:#64748b !important; }
+
+    /* ── MODE NOIR (OLED) ────────────────────────────────────────────── */
+    html.noir .sugg-tab-active   { color:#4ade80 !important; border-color:#4ade80 !important; }
+    html.noir .sugg-tab-inactive { color:#94a3b8 !important; }
+    html.noir .sugg-tab-inactive:hover { color:#cbd5e1 !important; }
+
+    html.noir .sugg-card-unread {
+        border-color: rgba(201,96,16,.48) !important;
+    }
+    html.noir .sugg-exp-unread {
+        background-color: rgba(201,96,16,.09) !important;
+    }
+    html.noir .sugg-exp-read {
+        background-color: rgba(0,154,68,.09) !important;
+    }
+    html.noir .sugg-exp-text-unread { color:#fb923c !important; }
+    html.noir .sugg-exp-text-read { color:#4ade80 !important; }
+
+    html.noir .sugg-dest { background-color: rgba(0,154,68,.09) !important; }
+    html.noir .sugg-dest-text { color:#4ade80 !important; }
+
+    html.noir .sugg-mark-btn { border-color:#333 !important; color:#64748b !important; }
+    html.noir .sugg-mark-btn:hover { border-color:#c96010 !important; color:#c96010 !important; }
+
+    html.noir .sugg-lu { color:#4ade80 !important; }
+    html.noir .sugg-nonlu { color:#64748b !important; }
+
+    /* ── En-tête suggestions — suppression dégradé ───────────────── */
+    .sugg-header { background:#fff; color:#1f2937; border:1px solid #e5e7eb; }
+    .sugg-header .deco-cercle { display:none; }
+    .sugg-header .sous-titre { color:#4b5563; }
+    .sugg-header .bg-white\/20 { background:rgba(0,154,68,.10) !important; color:#166534 !important; }
+    .sugg-header .hover\:bg-white\/30:hover { background:rgba(0,154,68,.15) !important; }
+    .sugg-header .bg-white\/40 { background:rgba(0,154,68,.22) !important; color:#166534 !important; }
+    .sugg-header .ring-white { --tw-ring-color:#009A44 !important; }
+
+    html.dark .sugg-header { background:#1e293b; color:#f1f5f9; border-color:#334155; }
+    html.dark .sugg-header .deco-cercle { display:block; opacity:.3; }
+    html.dark .sugg-header .sous-titre { color:#94a3b8; }
+    html.dark .sugg-header .bg-white\/20 { background:rgba(255,255,255,.08) !important; color:#e2e8f0 !important; }
+    html.dark .sugg-header .hover\:bg-white\/30:hover { background:rgba(255,255,255,.14) !important; }
+    html.dark .sugg-header .bg-white\/40 { background:rgba(255,255,255,.20) !important; color:#f1f5f9 !important; }
+
+    html.noir .sugg-header { background:linear-gradient(135deg,#000 0%,#080808 60%,#111 100%); color:#f1f5f9; border-color:#222; }
+    html.noir .sugg-header .deco-cercle { display:block; opacity:.15; }
+    html.noir .sugg-header .sous-titre { color:#94a3b8; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<section class="w-full py-8" x-data="{
+    filtre: '{% if non_lues %}non_lues{% else %}recues{% endif %}',
+    toutMarquerLu() {
+        fetch('{% url 'entreprise:notifications_tout_marquer_lues' %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        }).then(() => window.location.reload());
+    }
+}">
+
+    {# Fil d'Ariane #}
+    <nav class="text-sm text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2 flex-wrap">
+        <a href="{% url 'entreprise:accueil' %}" class="hover:underline">{% trans "Accueil" %}</a>
+        <span>›</span>
+        <span class="text-gray-700 dark:text-gray-300 font-semibold">{% trans "Suggestions de profils" %}</span>
+    </nav>
+
+    {# En-tête — les badges sont les filtres #}
+    <div class="sugg-header rounded-3xl px-6 sm:px-10 py-10 mb-8 relative overflow-hidden shadow-sm">
+        <div class="deco-cercle absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full translate-x-1/3 -translate-y-1/3"></div>
+        <div class="deco-cercle absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full -translate-x-1/2 translate-y-1/2"></div>
+        <div class="relative max-w-3xl">
+            <h1 class="text-3xl sm:text-4xl font-extrabold mb-3">👥 {% trans "Suggestions de profils" %}</h1>
+            <p class="sous-titre text-base sm:text-lg mb-4">
+                {% trans "Cliquez sur un badge pour filtrer les suggestions." %}
+            </p>
+            {# ── Ligne basse : filtres + tri + marquer tout lu ── #}
+            <div class="flex flex-wrap items-center justify-between gap-3">
+
+                {# Filtres badges #}
+                <div class="flex gap-3 flex-wrap">
+
+                {# Filtre : Reçues #}
+                <button @click="filtre = 'recues'"
+                        :class="filtre === 'recues'
+                            ? 'ring-2 ring-white bg-white/40 scale-105'
+                            : 'bg-white/20 hover:bg-white/30 opacity-80 hover:opacity-100'"
+                        class="backdrop-blur-sm px-4 py-2 rounded-full font-semibold text-sm transition-all flex items-center gap-1.5 cursor-pointer">
+                    📥 {{ total_recues }} {% trans "reçue" %}{{ total_recues|pluralize }}
+                </button>
+
+                {# Filtre : Envoyées #}
+                <button @click="filtre = 'envoyees'"
+                        :class="filtre === 'envoyees'
+                            ? 'ring-2 ring-white bg-white/40 scale-105'
+                            : 'bg-white/20 hover:bg-white/30 opacity-80 hover:opacity-100'"
+                        class="backdrop-blur-sm px-4 py-2 rounded-full font-semibold text-sm transition-all flex items-center gap-1.5 cursor-pointer">
+                    📤 {{ total_envoyees }} {% trans "envoyée" %}{{ total_envoyees|pluralize }}
+                </button>
+
+                {# Filtre : Non lues (affiché seulement s'il y en a) #}
+                {% if non_lues %}
+                <button @click="filtre = 'non_lues'"
+                        :class="filtre === 'non_lues'
+                            ? 'ring-2 ring-white scale-105'
+                            : 'hover:scale-105 opacity-90 hover:opacity-100'"
+                        class="px-4 py-2 rounded-full font-semibold text-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                        style="background:#c96010;">
+                    🔴 {{ non_lues }} {% trans "non lue" %}{{ non_lues|pluralize }}
+                </button>
+                {% endif %}
+
+                </div>{# /filtres #}
+
+                {# Tri + Marquer tout lu #}
+                <div class="flex items-center gap-2 flex-wrap">
+
+                    {# Sélecteur de tri #}
+                    <form method="get" id="form-tri" class="flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-xl px-3 py-1.5">
+                        <span class="text-white/70 text-xs font-semibold whitespace-nowrap">↕ {% trans "Trier" %}</span>
+                        <select name="tri" onchange="document.getElementById('form-tri').submit()"
+                                class="bg-transparent text-white text-xs font-bold outline-none cursor-pointer">
+                            <option value="recent"   {% if tri == 'recent'   %}selected{% endif %} class="text-gray-900">{% trans "Plus récent" %}</option>
+                            <option value="ancien"   {% if tri == 'ancien'   %}selected{% endif %} class="text-gray-900">{% trans "Plus ancien" %}</option>
+                            <option value="non_lues" {% if tri == 'non_lues' %}selected{% endif %} class="text-gray-900">{% trans "Non lus en premier" %}</option>
+                        </select>
+                    </form>
+
+                    {# Marquer tout comme lu #}
+                    {% if non_lues %}
+                    <button @click="toutMarquerLu()"
+                            class="flex items-center gap-1.5 bg-white/20 hover:bg-white/35 border border-white/30 px-4 py-1.5 rounded-xl text-white text-xs font-bold transition whitespace-nowrap">
+                        ✓✓ {% trans "Tout marquer comme lu" %}
+                    </button>
+                    {% endif %}
+
+                </div>
+
+            </div>{# /ligne basse #}
+        </div>
+    </div>
+
+    {# Contenu filtré #}
+    <div class="space-y-6">
+
+        {# ── Reçues + Non lues ── #}
+        <div x-show="filtre === 'recues' || filtre === 'non_lues'">
+
+            {# Label du filtre actif #}
+            <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
+                <span x-show="filtre === 'recues'">📥 Toutes les suggestions reçues</span>
+                <span x-show="filtre === 'non_lues'" x-cloak>🔴 Suggestions non lues uniquement</span>
+            </p>
+
+            {% if recues %}
+                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {% for s in recues %}
+                    <div x-show="filtre !== 'non_lues' || {% if not s.lue %}true{% else %}false{% endif %}"
+                         class="bg-white dark:bg-gray-800 rounded-2xl border-2 shadow-sm overflow-hidden flex flex-col transition hover:-translate-y-0.5 hover:shadow-md
+                                {% if not s.lue %}sugg-card-unread{% else %}border-gray-100 dark:border-gray-700{% endif %}">
+
+                        {# Bandeau non lue #}
+                        {% if not s.lue %}
+                        <div class="h-1 w-full" style="background:linear-gradient(90deg,#c96010,#f59e0b);"></div>
+                        {% endif %}
+
+                        {# ── Qui a suggéré — tout en haut, bien visible ── #}
+                        <div class="px-5 pt-4 pb-3 flex items-center gap-3 border-b border-gray-100 dark:border-gray-700">
+                            {% if s.expediteur_photo_url %}
+                                <img src="{{ s.expediteur_photo_url }}" alt="{{ s.expediteur_affiche }}"
+                                     class="w-10 h-10 rounded-full object-cover ring-2 shadow-sm shrink-0
+                                            {% if not s.lue %}ring-orange-400{% else %}ring-green-400{% endif %}">
+                            {% else %}
+                                <span class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-sm"
+                                      style="background:{% if not s.lue %}#c96010{% else %}#009A44{% endif %};">
+                                    {% if s.expediteur_initiales %}{{ s.expediteur_initiales }}{% else %}👥{% endif %}
+                                </span>
+                            {% endif %}
+                            <div class="min-w-0 flex-1">
+                                <p class="text-[10px] font-semibold uppercase tracking-wider
+                                          {% if not s.lue %}sugg-exp-text-unread{% else %}sugg-exp-text-read{% endif %}">
+                                    {% trans "Suggéré par" %}
+                                </p>
+                                <p class="text-sm font-extrabold text-gray-900 dark:text-white truncate">
+                                    {{ s.expediteur_affiche|default:"Un collègue" }}
+                                </p>
+                                {% if s.expediteur %}
+                                <p class="text-[10px] text-gray-400 dark:text-gray-500">{{ s.expediteur.get_roleMembre_display }}</p>
+                                {% endif %}
+                            </div>
+                            <span class="text-[10px] text-gray-400 dark:text-gray-500 shrink-0 whitespace-nowrap">{{ s.dateCreation|timesince }}</span>
+                        </div>
+
+                        <div class="p-5 flex-1 flex flex-col gap-3">
+
+                            {# Candidat #}
+                            <div class="flex items-center gap-3">
+                                {% if s.candidat.photoProfil %}
+                                    <img src="{{ s.candidat.photoProfil.url }}" alt=""
+                                         class="w-14 h-14 rounded-full object-cover border-2 border-gray-100 dark:border-gray-600 shadow-sm shrink-0">
+                                {% else %}
+                                    <div class="w-14 h-14 rounded-full flex items-center justify-center text-white font-extrabold text-lg shrink-0"
+                                         style="background:#009A44;">
+                                        {{ s.candidat.prenom|slice:":1"|upper }}{{ s.candidat.nom|slice:":1"|upper }}
+                                    </div>
+                                {% endif %}
+                                <div class="min-w-0">
+                                    <p class="font-bold text-gray-900 dark:text-white truncate">{{ s.candidat.prenom }} {{ s.candidat.nom }}</p>
+                                    {% if s.candidat.titreProfessionnel %}
+                                    <p class="text-sm font-semibold truncate" style="color:#c96010;">{{ s.candidat.titreProfessionnel }}</p>
+                                    {% endif %}
+                                    {% if s.candidat.informationPersonnelle.ville %}
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate">📍 {{ s.candidat.informationPersonnelle.ville }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {# Message #}
+                            {% if s.message %}
+                            <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 italic">{{ s.message }}</p>
+                            {% endif %}
+                        </div>
+
+                        {# Actions #}
+                        <div class="px-5 pb-5 flex gap-2">
+                            <a href="{{ s.lien }}"
+                               class="flex-1 inline-flex items-center justify-center gap-1.5 font-bold px-3 py-2.5 rounded-xl text-sm text-white shadow-sm transition hover:shadow-md hover:scale-[1.02]"
+                               style="background:#009A44;">
+                                🌐 {% trans "Voir le portfolio" %}
+                            </a>
+                            {% if not s.lue %}
+                            <form method="post" action="{% url 'entreprise:notification_marquer_lue' s.id %}">
+                                {% csrf_token %}
+                                <button type="submit" title="{% trans 'Marquer comme lue' %}"
+                                        class="sugg-mark-btn inline-flex items-center justify-center w-10 h-10 rounded-xl border transition">
+                                    ✓
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="bg-white dark:bg-gray-800 rounded-2xl p-16 border border-dashed border-gray-200 dark:border-gray-700 text-center">
+                    <div class="text-6xl mb-4">📭</div>
+                    <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% trans "Aucune suggestion reçue" %}</h3>
+                    <p class="text-gray-500 dark:text-gray-400">{% trans "Vos collègues n'ont pas encore partagé de profils avec vous." %}</p>
+                </div>
+            {% endif %}
+        </div>
+
+        {# Message si filtre non_lues mais toutes déjà lues #}
+        {% if not non_lues %}
+        <div x-show="filtre === 'non_lues'" x-cloak
+             class="bg-white dark:bg-gray-800 rounded-2xl p-16 border border-dashed border-gray-200 dark:border-gray-700 text-center">
+            <div class="text-6xl mb-4">✅</div>
+            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% trans "Tout est lu !" %}</h3>
+            <p class="text-gray-500 dark:text-gray-400">{% trans "Aucune suggestion non lue pour le moment." %}</p>
+        </div>
+        {% endif %}
+
+        {# ── Envoyées ── #}
+        <div x-show="filtre === 'envoyees'" x-cloak>
+
+            <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
+                📤 Suggestions que vous avez envoyées
+            </p>
+            {% if envoyees %}
+                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {% for s in envoyees %}
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col transition hover:-translate-y-0.5 hover:shadow-md">
+
+                        <div class="p-5 flex-1 flex flex-col gap-4">
+
+                            {# Candidat #}
+                            <div class="flex items-center gap-3">
+                                {% if s.candidat.photoProfil %}
+                                    <img src="{{ s.candidat.photoProfil.url }}" alt=""
+                                         class="w-14 h-14 rounded-full object-cover border-2 border-gray-100 dark:border-gray-600 shadow-sm shrink-0">
+                                {% else %}
+                                    <div class="w-14 h-14 rounded-full flex items-center justify-center text-white font-extrabold text-lg shrink-0"
+                                         style="background:#009A44;">
+                                        {{ s.candidat.prenom|slice:":1"|upper }}{{ s.candidat.nom|slice:":1"|upper }}
+                                    </div>
+                                {% endif %}
+                                <div class="min-w-0">
+                                    <p class="font-bold text-gray-900 dark:text-white truncate">{{ s.candidat.prenom }} {{ s.candidat.nom }}</p>
+                                    {% if s.candidat.titreProfessionnel %}
+                                    <p class="text-sm font-semibold truncate" style="color:#c96010;">{{ s.candidat.titreProfessionnel }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {# Destinataire #}
+                            <div class="sugg-dest rounded-xl px-3 py-2.5">
+                                <p class="text-[10px] font-bold uppercase tracking-wider mb-1.5 sugg-dest-text">
+                                    📤 {% trans "Suggéré à" %}
+                                </p>
+                                <div class="flex items-center gap-2">
+                                    {% if s.recruteur and s.recruteur.photoProfil %}
+                                        <img src="{{ s.recruteur.photoProfil.url }}" alt=""
+                                             class="w-8 h-8 rounded-full object-cover border-2 border-white dark:border-gray-700 shadow-sm shrink-0">
+                                    {% else %}
+                                        <span class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-sm"
+                                              style="background:#009A44;">
+                                            {% if s.recruteur %}{{ s.recruteur.nomComplet|slice:":2"|upper }}{% else %}?{% endif %}
+                                        </span>
+                                    {% endif %}
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-sm font-bold truncate sugg-dest-text">
+                                            {{ s.recruteur.nomComplet|default:"–" }}
+                                        </p>
+                                        {% if s.recruteur and s.recruteur.get_roleMembre_display %}
+                                        <p class="text-[10px] text-gray-500 dark:text-gray-400">{{ s.recruteur.get_roleMembre_display }}</p>
+                                        {% endif %}
+                                    </div>
+                                    <span class="shrink-0">
+                                        {% if s.lue %}
+                                            <span class="text-[10px] font-bold sugg-lu">✓ {% trans "Lu" %}</span>
+                                        {% else %}
+                                            <span class="text-[10px] sugg-nonlu">{% trans "Non lu" %}</span>
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <p class="text-xs text-gray-400 dark:text-gray-500">{{ s.dateCreation|timesince }}</p>
+                        </div>
+
+                        <div class="px-5 pb-5">
+                            <a href="{{ s.lien }}"
+                               class="inline-flex items-center justify-center gap-1.5 w-full font-bold px-3 py-2.5 rounded-xl text-sm text-white shadow-sm transition hover:shadow-md hover:scale-[1.02]"
+                               style="background:#009A44;">
+                                🌐 {% trans "Voir le portfolio" %}
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="bg-white dark:bg-gray-800 rounded-2xl p-16 border border-dashed border-gray-200 dark:border-gray-700 text-center">
+                    <div class="text-6xl mb-4">📤</div>
+                    <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% trans "Aucune suggestion envoyée" %}</h3>
+                    <p class="text-gray-500 dark:text-gray-400">{% trans "Vous n'avez pas encore suggéré de profil à un collègue." %}</p>
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+</section>
+{% endblock %}

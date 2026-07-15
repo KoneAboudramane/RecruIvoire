@@ -1,0 +1,1038 @@
+{% load i18n %}
+{% if cv_initial %}{{ cv_initial|json_script:"cv-initial-data" }}{% endif %}
+{% if niveaux_ref %}{{ niveaux_ref|json_script:"cv-niveaux-ref" }}{% endif %}
+<script>
+/* État par défaut (utilisé en mode aperçu non authentifié et comme fallback). */
+const _CV_DEMO = {
+  nomCv: '',
+  photo: null, photoX: 50, photoY: 50, photoZoom: 1, prenom: 'Kouamé', nom: 'KONAN',
+  titre: 'Développeur Web Full Stack',
+  email: 'kouame.konan@email.ci', telephone: '+225 07 12 34 56',
+  ville: 'Abidjan', pays: "Côte d'Ivoire",
+  adresse: "Abidjan, Côte d'Ivoire", age: '27',
+  linkedin: '', portfolio: '', permis: '',
+  profil: "Développeur passionné avec 3 ans d'expérience en conception d'applications web modernes. Rigoureux, créatif et orienté résultats.",
+  experiences: [
+    { id: 1, entreprise: 'Capgemini CI', ville: 'Abidjan', pays: "Côte d'Ivoire", lieu: 'Abidjan',
+      debut: '2022-01', fin: '', enCours: true,
+      postes: [
+        { id: 11, titre: 'Consultant IT Senior',  debut: '2023-03', fin: '',        enCours: true  },
+        { id: 12, titre: 'Analyste Fonctionnel',  debut: '2022-01', fin: '2023-02', enCours: false },
+      ],
+      hasMissionsClient: true,
+      missionsClient: [
+        { id: 101, client: 'BNP Paribas CI', pays: "Côte d'Ivoire", ville: 'Abidjan',
+          debut: '2023-03', fin: '', enCours: true, desc: "Migration du système core banking vers une architecture microservices." },
+        { id: 102, client: 'Orange CI', pays: "Côte d'Ivoire", ville: 'Abidjan',
+          debut: '2022-01', fin: '2023-02', enCours: false, desc: "Refonte du portail self-care clients." },
+      ]
+    },
+    { id: 2, entreprise: 'StartUp Ivoirienne', ville: 'Abidjan', pays: "Côte d'Ivoire", lieu: 'Abidjan',
+      debut: '2020-06', fin: '2021-12', enCours: false,
+      postes: [
+        { id: 21, titre: 'Développeur Junior', debut: '2020-06', fin: '2021-12', enCours: false },
+      ],
+      hasMissionsClient: false, missionsClient: [] },
+  ],
+  formations: [
+    { id: 1, typeSortie: 'diplome', diplome: 'Licence Informatique — Génie Logiciel',
+      domaine: 'Informatique / Génie Logiciel', niveauEtude: 'Bac+3 (Licence)',
+      ecole: 'Université Félix Houphouët-Boigny',
+      lieu: 'Abidjan', debut: '2017-10', fin: '2020-07', enCours: false,
+      desc: 'Mention Assez Bien', numero: '', expiration: '' },
+  ],
+  competences: [
+    { id: 1, nom: 'JavaScript / TypeScript', niveau: 4 },
+    { id: 2, nom: 'React.js / Vue.js',        niveau: 4 },
+    { id: 3, nom: 'Python / Django',           niveau: 3 },
+    { id: 4, nom: 'Bases de données SQL',      niveau: 3 },
+    { id: 5, nom: 'Git / Docker',              niveau: 3 },
+  ],
+  langues: [
+    { id: 1, nom: 'Français', niveau: 'C2' },
+    { id: 2, nom: 'Anglais',  niveau: 'B2' },
+    { id: 3, nom: 'Dioula',   niveau: 'N'  },
+  ],
+  interets: ['Football', 'Musique (Guitare)', 'Voyages', 'Open Source'],
+  showProjets: false, projets: [],
+  showBenev:  false, benevs:   [],
+  showRef: true,
+};
+
+/* État initial du candidat connecté, injecté côté serveur via build_cv_initial().
+   Vide en mode aperçu (utilisateur non authentifié). */
+function _readInitialCv() {
+  const el = document.getElementById('cv-initial-data');
+  if (!el) return null;
+  try { return JSON.parse(el.textContent); } catch (e) { return null; }
+}
+
+/* Référentiel des Niveau (langue + compétence), injecté par les vues
+   creer_cv/modifier_cv/apercu_cv. Format : {langue:[{id,nomNiveau,libelle,
+   nbEtoiles,ordre}], competence:[...]}. */
+function _readNiveauxRef() {
+  const el = document.getElementById('cv-niveaux-ref');
+  if (!el) return { langue: [], competence: [] };
+  try {
+    const r = JSON.parse(el.textContent) || {};
+    return { langue: r.langue || [], competence: r.competence || [] };
+  } catch (e) {
+    return { langue: [], competence: [] };
+  }
+}
+
+function cvBuilder() {
+  const initial = _readInitialCv();
+  const niveauxRef = _readNiveauxRef();
+  /* Identité : on prend les valeurs DB ; collections : DB ou démo si vide.
+     Le merge avec localStorage se fait ensuite dans init(). */
+  const baseCv = initial
+    ? { ..._CV_DEMO, ...initial }
+    : { ..._CV_DEMO };
+  /* Suggestions : items du candidat absents du CV figé (mode modification).
+     Vide en création. On les sort du payload `cv` car elles ne font pas
+     partie du CV — elles sont une vue UI à côté, qu'on ne sauvegarde pas. */
+  const _initialSuggestions = (baseCv && baseCv.suggestions) || {
+    experiences: [], formations: [], competences: [],
+    langues:     [], interets:   [], projets:     [], benevs: [],
+  };
+  delete baseCv.suggestions;
+  return {
+    s: 'perso',
+    switcherOpen:  false,
+    premiumMsg:    false,
+    hoverModeleId: null,   // id du modèle survolé dans le switcher (pour highlight)
+    _hoverCache:   {},     // { id: {html, css} } — fragments déjà chargés
+    _hoverTimer:   null,   // debounce survol
+    _hoverActive:  false,  // true quand un aperçu hover est affiché
+    currentModeleId: 1,
+    cv: baseCv,
+    /* { section: [item, ...] } — items proposés à l'ajout. Ils restent ici
+       tant que le candidat n'a pas cliqué « Ajouter » ou « Ignorer ». */
+    suggestions: _initialSuggestions,
+
+    apercu:      {{ apercu|yesno:'true,false' }},
+    candidatId:  {{ candidat_id|default:"null" }},
+    /* Référentiel Niveau (langue + compétence) injecté côté serveur.
+       Sert au mapping ID ↔ étoiles ↔ libellé dans l'éditeur et au rendu CV. */
+    niveauxRef:  niveauxRef,
+    _interetsInitialCount: 0,
+    dlOpen:      false,
+    dlStyle:     '',
+    downloading: '',
+    saving:      false,
+    /* id du CV en cours d'édition. Pré-rempli côté serveur quand on entre via
+       /cv/<id>/modifier/ ; sinon null pour /cv/<template_id>/creer/. La logique
+       sessionStorage dans init() complète cette valeur. */
+    savedCvId:   {{ cv_id|default:"null" }},
+    saveMessage: '',      // message éphémère affiché après save
+    nomCvError:  '',      // erreur inline pour le champ "Nom du CV" (vide / doublon)
+
+    /* Clé sessionStorage one-shot : utilisée uniquement pour transférer l'état
+       en cours quand l'utilisateur change de modèle de CV (changerModele →
+       navigation → init lit puis efface). Pas de persistance permanente :
+       chaque entrée dans l'éditeur recharge fraîchement les données DB.
+       Indexée sur l'id candidat pour ne pas mélanger les comptes. */
+    _switchKey() {
+      return 'cv_template_switch_' + (this.candidatId || 'guest');
+    },
+
+    /* Clé sessionStorage pour le cv_id en cours d'édition. Indexée par template
+       et par candidat. Permet de matérialiser "tant que je suis dans l'éditeur,
+       sauvegarder = mettre à jour le même CV". Conservée sur F5/reload, effacée
+       sur entrée fraîche dans l'éditeur (cf. init()). */
+    _editKey() {
+      return 'cv_edit_' + (this.candidatId || 'guest') + '_' + this.currentModeleId;
+    },
+
+    // ── Init ─────────────────────────────────────────────────────────────────
+    init() {
+      const idEl = document.getElementById('current-modele-id');
+      if (idEl) this.currentModeleId = parseInt(idEl.value) || 1;
+      if (this.apercu) return;
+
+      /* cv_id de session : persiste sur F5 (reload), effacé sur entrée fraîche
+         dans /creer/. Si on entre via /modifier/<cv_id>/, le serveur a déjà
+         injecté savedCvId — on respecte cette valeur et on la persiste pour
+         que F5 garde le contexte. */
+      try {
+        const navType = (performance.getEntriesByType('navigation')[0] || {}).type;
+        const editKey = this._editKey();
+        if (this.savedCvId) {
+          // Mode modification (server-injected) → on stocke immédiatement
+          sessionStorage.setItem(editKey, String(this.savedCvId));
+        } else if (navType === 'reload' || navType === 'back_forward') {
+          const stored = sessionStorage.getItem(editKey);
+          if (stored) this.savedCvId = parseInt(stored) || null;
+        } else {
+          // 'navigate' (entrée fraîche dans /creer/) → on repart à zéro
+          sessionStorage.removeItem(editKey);
+          this.savedCvId = null;
+        }
+      } catch(e) {}
+
+      /* Transfert one-shot entre modèles : si on arrive depuis changerModele(),
+         on récupère l'état temporaire pour préserver les modifications en cours
+         puis on l'efface immédiatement (pas de fuite vers la prochaine session). */
+      const swKey = this._switchKey();
+      const saved = sessionStorage.getItem(swKey);
+      if (saved) {
+        sessionStorage.removeItem(swKey);
+        try {
+          const p = JSON.parse(saved);
+          this.cv = { ...this.cv, ...p };
+          // Normalise les expériences : migration vers postes[] + dates expérience + missionsClient + ville/pays
+          this.cv.experiences = (this.cv.experiences || []).map(e => {
+            const base = { hasMissionsClient: false, missionsClient: [], debut:'', fin:'', enCours:false, pays:'', ville:'', lieu:'', ...e };
+            // Compat ancienne donnée : un seul champ "lieu" → on le bascule en ville si rien d'autre.
+            if (!base.ville && !base.pays && base.lieu) {
+              const parts = String(base.lieu).split(',').map(s => s.trim()).filter(Boolean);
+              if (parts.length >= 2) { base.ville = parts[0]; base.pays = parts.slice(1).join(', '); }
+              else if (parts.length === 1) { base.ville = parts[0]; }
+            }
+            base.lieu = [base.ville, base.pays].filter(s => s && String(s).trim()).join(', ');
+            if (!base.postes) {
+              const { poste, ...rest } = base;
+              return {
+                ...rest,
+                postes: [{ id: Date.now() + Math.floor(Math.random()*100000),
+                           titre: poste||'', debut: rest.debut||'', fin: rest.fin||'', enCours: !!rest.enCours }]
+              };
+            }
+            return base;
+          });
+          this.cv.experiences.forEach(e => {
+            e.missionsClient = (e.missionsClient || []).map(mc => {
+              const { poste, lieu, ...rest } = mc;
+              if (!rest.pays)  rest.pays  = '';
+              if (!rest.ville) rest.ville = lieu || '';
+              return rest;
+            });
+          });
+          this.cv.formations = (this.cv.formations || []).map(f => ({
+            typeSortie: 'diplome', domaine: '', numero: '', expiration: '', ...f
+          }));
+          if (this.cv.ville === undefined) this.cv.ville = '';
+          if (this.cv.pays  === undefined) this.cv.pays  = '';
+        } catch(e) {}
+      }
+
+      /* Nettoyage défensif : on purge l'ancien cache localStorage pour que les
+         utilisateurs qui ont une cache d'une version précédente repartent sur
+         des données fraîches de la DB. */
+      try {
+        Object.keys(localStorage)
+          .filter(k => k.startsWith('cv_builder_data'))
+          .forEach(k => localStorage.removeItem(k));
+      } catch(e) {}
+
+      /* cv.pays, cv.ville et cv.adresse sont désormais trois champs indépendants
+         saisis directement par le candidat (plus de calcul automatique). */
+
+      /* Normalisation niveaux legacy → id Niveau. Les payloads anciens
+         stockent `c.niveau` en int 1-5 (étoiles) et `l.niveau` en code CEFR.
+         On bascule vers un id de la table `referentiel.Niveau` (le payload
+         définitif). Sans réf chargée (_apercu sans données), on no-op. */
+      const _resolveLegacy = (val, type) => {
+        const list = (this.niveauxRef[type] || []);
+        if (!list.length) return val;
+        if (val == null || val === '') return null;
+        const id = parseInt(val);
+        if (!isNaN(id) && list.some(n => n.id === id)) return id;
+        if (type === 'competence' && !isNaN(id) && id >= 1 && id <= 5) {
+          const m = list.find(n => n.nbEtoiles === id);
+          return m ? m.id : null;
+        }
+        if (type === 'langue' && typeof val === 'string') {
+          const m = list.find(n => n.nomNiveau === val);
+          if (m) return m.id;
+          const stars = ({ A1:1, A2:2, B1:3, B2:4, C1:4, C2:5, N:5 })[val] || 0;
+          if (stars) {
+            const m2 = list.find(n => n.nbEtoiles === stars);
+            return m2 ? m2.id : null;
+          }
+        }
+        return null;
+      };
+      if (Array.isArray(this.cv.competences)) {
+        for (const c of this.cv.competences) {
+          if (c && typeof c === 'object') c.niveau = _resolveLegacy(c.niveau, 'competence');
+        }
+      }
+      if (Array.isArray(this.cv.langues)) {
+        for (const l of this.cv.langues) {
+          if (l && typeof l === 'object') l.niveau = _resolveLegacy(l.niveau, 'langue');
+        }
+      }
+
+      /* Normalisation `visible:true` par défaut : les rubriques persistées avant
+         le passage à la visibilité par toggle n'ont pas le champ → on l'ajoute
+         pour que l'éditeur les considère visibles. Le serveur réinjecte
+         `visible:false` via `_cv_to_dict` à partir de `CVContenu.elementsMasques`. */
+      const _normVis = (arr) => {
+        if (!Array.isArray(arr)) return;
+        for (const it of arr) {
+          if (it && typeof it === 'object' && it.visible === undefined) it.visible = true;
+        }
+      };
+      _normVis(this.cv.experiences);
+      _normVis(this.cv.formations);
+      _normVis(this.cv.competences);
+      _normVis(this.cv.langues);
+      _normVis(this.cv.projets);
+      _normVis(this.cv.benevs);
+      if (!Array.isArray(this.cv.interetsMasques)) this.cv.interetsMasques = [];
+      this._interetsInitialCount = (this.cv.interets || []).length;
+
+      // Applique la position et le zoom de photo persistés (drag-to-pan + zoom)
+      if (this.cv.photoX    == null) this.cv.photoX    = 50;
+      if (this.cv.photoY    == null) this.cv.photoY    = 50;
+      if (this.cv.photoZoom == null) this.cv.photoZoom = 1;
+      this._syncPhotoPos();
+
+      /* Quand le switcher s'ouvre → pré-charge le fragment du modèle courant
+         pour que la restauration soit instantanée au survol.
+         Quand il se ferme sans sélection → restaure l'aperçu original. */
+      this.$watch('switcherOpen', async (val) => {
+        if (val) {
+          this._fetchFragment(this.currentModeleId);
+        } else {
+          if (this._hoverTimer) { clearTimeout(this._hoverTimer); this._hoverTimer = null; }
+          this.hoverModeleId = null;
+          if (this._hoverActive) {
+            this._hoverActive = false;
+            const data = await this._fetchFragment(this.currentModeleId);
+            if (data) this._applyModel(this.currentModeleId, data);
+          }
+        }
+      });
+    },
+
+    // ── Items masqués (présents dans le CV mais cachés de l'aperçu) ──────────
+    /* Distinct des suggestions : ces items sont dans `cv.<section>` mais
+       avec `visible:false` → cachés de l'éditeur principal et de l'aperçu.
+       Le panneau « Items masqués » les liste avec un bouton « Restaurer ».
+       Helpers optimisés : pas d'allocation tableau pour les checks (some),
+       allocation unique pour la liste (consommée par x-for). */
+    hasHidden(section) {
+      const arr = this.cv[section];
+      if (!Array.isArray(arr)) return false;
+      for (let i = 0; i < arr.length; i++) {
+        const it = arr[i];
+        if (it && typeof it === 'object' && it.visible === false) return true;
+      }
+      return false;
+    },
+    hiddenCount(section) {
+      const arr = this.cv[section];
+      if (!Array.isArray(arr)) return 0;
+      let n = 0;
+      for (let i = 0; i < arr.length; i++) {
+        const it = arr[i];
+        if (it && typeof it === 'object' && it.visible === false) n++;
+      }
+      return n;
+    },
+    hiddenItems(section) {
+      const arr = this.cv[section];
+      if (!Array.isArray(arr)) return [];
+      const out = [];
+      for (let i = 0; i < arr.length; i++) {
+        const it = arr[i];
+        if (it && typeof it === 'object' && it.visible === false) out.push({ idx: i, item: it });
+      }
+      return out;
+    },
+    /* Restaure un item masqué (visible:true) → réapparaît dans l'éditeur. */
+    restoreHidden(section, originalIdx) {
+      const arr = this.cv[section];
+      if (!Array.isArray(arr)) return;
+      const it = arr[originalIdx];
+      if (it && typeof it === 'object') it.visible = true;
+    },
+    restoreAllHidden(section) {
+      const arr = this.cv[section];
+      if (!Array.isArray(arr)) return;
+      for (let i = 0; i < arr.length; i++) {
+        const it = arr[i];
+        if (it && typeof it === 'object' && it.visible === false) it.visible = true;
+      }
+    },
+    /* Centres d'intérêt : strings → masqués via indices `cv.interetsMasques`. */
+    hasHiddenInterets() {
+      const m = this.cv.interetsMasques;
+      if (!Array.isArray(m) || m.length === 0) return false;
+      const arr = this.cv.interets;
+      const len = Array.isArray(arr) ? arr.length : 0;
+      for (let i = 0; i < m.length; i++) if (m[i] >= 0 && m[i] < len) return true;
+      return false;
+    },
+    hiddenInterets() {
+      const m = this.cv.interetsMasques;
+      if (!Array.isArray(m)) return [];
+      const arr = this.cv.interets || [];
+      const out = [];
+      for (let i = 0; i < m.length; i++) {
+        const idx = m[i];
+        if (idx >= 0 && idx < arr.length) out.push({ idx, label: arr[idx] });
+      }
+      return out;
+    },
+    restoreInteret(idx) {
+      const arr = this.cv.interetsMasques;
+      if (!Array.isArray(arr)) return;
+      const i = arr.indexOf(idx);
+      if (i >= 0) arr.splice(i, 1);
+    },
+    restoreAllInterets() {
+      this.cv.interetsMasques = [];
+    },
+
+    // ── Suggestions (items du profil candidat absents du CV figé) ────────────
+    /* Indicateur pour afficher / masquer le panneau de suggestions d'une section. */
+    hasSuggestions(section) {
+      const arr = this.suggestions[section];
+      return Array.isArray(arr) && arr.length > 0;
+    },
+    suggestionsCount() {
+      const s = this.suggestions;
+      return ((s.experiences||[]).length + (s.formations||[]).length
+            + (s.competences||[]).length + (s.langues||[]).length
+            + (s.interets||[]).length    + (s.projets||[]).length
+            + (s.benevs||[]).length);
+    },
+    /* Ajoute la suggestion `idx` de `section` dans la rubrique correspondante
+       du CV. Marque l'item `visible:true` (cohérent avec le comportement
+       d'ajout depuis le bouton "+ Ajouter"). Retire la suggestion de la liste. */
+    addSuggestion(section, idx) {
+      const list = this.suggestions[section] || [];
+      if (idx < 0 || idx >= list.length) return;
+      const item = list[idx];
+      if (section === 'interets') {
+        // Les centres d'intérêt sont des strings, pas des objets.
+        this.cv.interets = [...(this.cv.interets || []), String(item)];
+      } else {
+        const enriched = { ...item, visible: true };
+        this.cv[section] = [...(this.cv[section] || []), enriched];
+      }
+      list.splice(idx, 1);
+    },
+    /* Retire la suggestion sans l'ajouter au CV (« je ne veux pas de cet item »). */
+    dismissSuggestion(section, idx) {
+      const list = this.suggestions[section] || [];
+      if (idx < 0 || idx >= list.length) return;
+      list.splice(idx, 1);
+    },
+    /* Ajoute toutes les suggestions de `section` au CV en une fois. */
+    addAllSuggestions(section) {
+      while (this.hasSuggestions(section)) this.addSuggestion(section, 0);
+    },
+    /* Vide la liste des suggestions de `section` (le candidat les rejette toutes). */
+    dismissAllSuggestions(section) {
+      this.suggestions[section] = [];
+    },
+    /* Texte court résumant un item dans le panneau Suggestions. */
+    suggestionLabel(section, item) {
+      if (!item) return '';
+      if (section === 'interets')    return String(item);
+      if (section === 'experiences') return [item.entreprise, (item.postes||[])[0]?.titre].filter(Boolean).join(' — ') || '—';
+      if (section === 'formations')  return [item.diplome, item.ecole].filter(Boolean).join(' — ') || '—';
+      if (section === 'competences') return item.nom || '—';
+      if (section === 'langues')     return [item.nom, item.niveau].filter(Boolean).join(' · ') || '—';
+      if (section === 'projets')     return item.nom || item.titre || '—';
+      if (section === 'benevs')      return [item.role, item.orga].filter(Boolean).join(' — ') || '—';
+      return '—';
+    },
+
+    // ── Toggle dropdown téléchargement ───────────────────────────────────────
+    dlToggle(event) {
+      if (this.dlOpen) { this.dlOpen = false; return; }
+      const r = event.currentTarget.getBoundingClientRect();
+      this.dlStyle = 'top:' + (r.bottom + 6) + 'px;right:' + (window.innerWidth - r.right) + 'px;';
+      this.dlOpen  = true;
+    },
+
+    // ── Aperçu au survol du switcher ─────────────────────────────────────────
+
+    /* Applique CSS + HTML d'un fragment dans le cv-sheet (utilisé par le survol
+       et par changerModele). Ne modifie pas currentModeleId. */
+    _applyModel(id, data) {
+      const head = document.head;
+      const nodes = Array.from(head.childNodes);
+      let inside = false;
+      for (const n of nodes) {
+        if (n.nodeType === Node.COMMENT_NODE && n.nodeValue.trim() === 'CV_MODEL_CSS_BEGIN') { inside = true; continue; }
+        if (n.nodeType === Node.COMMENT_NODE && n.nodeValue.trim() === 'CV_MODEL_CSS_END')   { inside = false; break; }
+        if (inside && n.nodeType === Node.ELEMENT_NODE) head.removeChild(n);
+      }
+      const beginMarker = Array.from(head.childNodes).find(
+        n => n.nodeType === Node.COMMENT_NODE && n.nodeValue.trim() === 'CV_MODEL_CSS_BEGIN'
+      );
+      if (beginMarker && data.css) {
+        const styleEl = document.createElement('style');
+        styleEl.setAttribute('data-cv-model', String(id));
+        styleEl.textContent = data.css;
+        beginMarker.parentNode.insertBefore(styleEl, beginMarker.nextSibling);
+      }
+      const oldSheet = document.getElementById('cv-sheet');
+      if (!oldSheet) return;
+      const tmp = document.createElement('div');
+      tmp.innerHTML = (data.html || '').trim();
+      const newSheet = tmp.firstElementChild;
+      if (!newSheet) return;
+      oldSheet.replaceWith(newSheet);
+      if (window.Alpine?.initTree) window.Alpine.initTree(newSheet);
+    },
+
+    /* Charge un fragment depuis le serveur (avec cache). Retourne null en cas d'erreur. */
+    async _fetchFragment(id) {
+      if (this._hoverCache[id]) return this._hoverCache[id];
+      try {
+        const r = await fetch('/candidat/cv/' + id + '/apercu-fragment/', {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          credentials: 'same-origin',
+        });
+        if (!r.ok) return null;
+        const data = await r.json();
+        if (!data.ok || !data.html) return null;
+        this._hoverCache[id] = data;
+        return data;
+      } catch (e) { return null; }
+    },
+
+    /* Appelé au mouseenter sur une vignette du switcher.
+       Lance un aperçu temporaire après 150 ms (debounce). */
+    onModeleHover(id, isPremium) {
+      if (isPremium || id === this.currentModeleId) return;
+      this.hoverModeleId = id;
+      if (this._hoverTimer) clearTimeout(this._hoverTimer);
+      this._hoverTimer = setTimeout(async () => {
+        if (this.hoverModeleId !== id) return;
+        const data = await this._fetchFragment(id);
+        if (!data || this.hoverModeleId !== id) return;
+        this._hoverActive = true;
+        this._applyModel(id, data);
+      }, 150);
+    },
+
+    /* Appelé au mouseleave sur la grille du switcher.
+       Annule le debounce et restaure le modèle courant. */
+    async onModeleLeave() {
+      this.hoverModeleId = null;
+      if (this._hoverTimer) { clearTimeout(this._hoverTimer); this._hoverTimer = null; }
+      if (!this._hoverActive) return;
+      this._hoverActive = false;
+      const data = await this._fetchFragment(this.currentModeleId);
+      if (data) this._applyModel(this.currentModeleId, data);
+    },
+
+    // ── Changer de modèle (sans reload — uniquement l'aperçu) ────────────────
+    async changerModele(id, isPremium) {
+      if (isPremium) {
+        this.premiumMsg = true;
+        setTimeout(() => { this.premiumMsg = false; }, 3000);
+        return;
+      }
+      if (id === this.currentModeleId) { this.switcherOpen = false; return; }
+
+      // Annule le hover AVANT de fermer (évite que le watcher switcherOpen restaure l'ancien modèle)
+      this._hoverActive = false;
+      this.hoverModeleId = null;
+      if (this._hoverTimer) { clearTimeout(this._hoverTimer); this._hoverTimer = null; }
+
+      this.switcherOpen = false;
+      const fallbackUrl = '/candidat/cv/' + id + '/creer/';
+
+      try {
+        const data = await this._fetchFragment(id);
+        if (!data) throw new Error('Fragment invalide');
+
+        this._applyModel(id, data);
+
+        this.currentModeleId = id;
+        const idEl = document.getElementById('current-modele-id');
+        if (idEl) idEl.value = String(id);
+        try { history.replaceState(null, '', fallbackUrl); } catch (_) {}
+        try { sessionStorage.setItem(this._editKey(), this.savedCvId ? String(this.savedCvId) : ''); } catch (_) {}
+      } catch (e) {
+        console.warn('Switch modèle en SPA a échoué, fallback reload :', e);
+        try { sessionStorage.setItem(this._switchKey(), JSON.stringify(this.cv)); } catch (_) {}
+        window.location.href = fallbackUrl;
+      }
+    },
+
+    // ── Photo ─────────────────────────────────────────────────────────────────
+    uploadPhoto(e) {
+      const f = e.target.files[0];
+      if (!f || !f.type.startsWith('image/')) return;
+      const r = new FileReader();
+      r.onload = ev => {
+        this.cv.photo    = ev.target.result;
+        this.cv.photoX   = 50;
+        this.cv.photoY   = 50;
+        this.cv.photoZoom = 1;
+        this._syncPhotoPos();
+      };
+      r.readAsDataURL(f);
+    },
+
+    // ── Drag-to-pan photo ─────────────────────────────────────────────────────
+    _photoDragging:  false,
+    _photoDragStartX: 0,
+    _photoDragStartY: 0,
+    _photoDragInitX:  50,
+    _photoDragInitY:  50,
+
+    _syncPhotoPos() {
+      const x = this.cv.photoX  ?? 50;
+      const y = this.cv.photoY  ?? 50;
+      const z = this.cv.photoZoom ?? 1;
+      document.documentElement.style.setProperty('--cv-photo-pos',  `${x}% ${y}%`);
+      document.documentElement.style.setProperty('--cv-photo-zoom', String(z));
+    },
+
+    startPhotoDrag(e) {
+      if (!this.cv.photo || !e) return;
+      this._photoDragging   = true;
+      this._photoDragStartX = e.clientX;
+      this._photoDragStartY = e.clientY;
+      this._photoDragInitX  = this.cv.photoX ?? 50;
+      this._photoDragInitY  = this.cv.photoY ?? 50;
+    },
+
+    doPhotoDrag(e) {
+      if (!this._photoDragging || !e) return;
+      const el = this.$refs.photoCircle;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      // dx/dy en % relatif à la taille du cercle
+      const dx = (e.clientX - this._photoDragStartX) / rect.width  * 100;
+      const dy = (e.clientY - this._photoDragStartY) / rect.height * 100;
+      // Sens inversé : tirer à droite → montrer le côté gauche (object-position X baisse)
+      this.cv.photoX = Math.max(0, Math.min(100, this._photoDragInitX - dx));
+      this.cv.photoY = Math.max(0, Math.min(100, this._photoDragInitY - dy));
+      this._syncPhotoPos();
+    },
+
+    stopPhotoDrag() {
+      this._photoDragging = false;
+    },
+
+    // ── Zoom photo (molette) ──────────────────────────────────────────────────
+    zoomPhoto(e) {
+      if (!this.cv.photo) return;
+      const delta = e.deltaY < 0 ? 0.1 : -0.1;
+      const z = Math.round(Math.min(3, Math.max(1, (this.cv.photoZoom ?? 1) + delta)) * 100) / 100;
+      this.cv.photoZoom = z;
+      this._syncPhotoPos();
+    },
+
+    // ── Visibilité des items (au lieu de la suppression) ─────────────────────
+    /* Helper de filtrage utilisé par les templates de rendu CV : ne garde que
+       les items dont `visible` n'est pas explicitement false. Les items sans
+       champ `visible` sont visibles par défaut (rétrocompatibilité). */
+    vis(arr) {
+      return (arr || []).filter(x => x && x.visible !== false);
+    },
+    /* Bascule la visibilité d'un item (expérience, formation, compétence, …).
+       L'item reste dans `cv.*` pour rester éditable côté formulaire ; seul son
+       affichage dans l'aperçu / le PDF est désactivé. */
+    toggleVis(item) {
+      if (!item) return;
+      item.visible = item.visible === false ? true : false;
+    },
+    /* Centres d'intérêt : strings → on stocke les indices masqués dans
+       `cv.interetsMasques` car on ne peut pas attacher de flag aux strings. */
+    isInteretMasque(idx) {
+      return Array.isArray(this.cv.interetsMasques) && this.cv.interetsMasques.includes(idx);
+    },
+    toggleInteret(idx) {
+      if (!Array.isArray(this.cv.interetsMasques)) this.cv.interetsMasques = [];
+      const i = this.cv.interetsMasques.indexOf(idx);
+      if (i >= 0) this.cv.interetsMasques.splice(i, 1);
+      else        this.cv.interetsMasques.push(idx);
+    },
+
+    // ── Expériences ───────────────────────────────────────────────────────────
+    addExp() {
+      const t = Date.now();
+      this.cv.experiences.push({
+        id: t, entreprise:'', pays:'', ville:'', lieu:'',
+        debut:'', fin:'', enCours:false, visible: true, _isNew: true,
+        postes: [{ id: t+1, titre:'', debut:'', fin:'', enCours:false }],
+        hasMissionsClient: false, missionsClient: []
+      });
+    },
+    /* Synchronise exp.lieu = "ville, pays" pour les 19 modèles de CV qui
+       lisent encore exp.lieu directement dans leurs templates de rendu. */
+    syncExpLieu(exp) {
+      exp.lieu = [exp.ville, exp.pays].filter(s => s && String(s).trim()).join(', ');
+    },
+    /* Localisation candidat affichée dans l'aperçu CV : combine adresse,
+       ville et pays en un seul libellé séparé par des virgules. Utilisé par
+       les 19 modèles de CV à la place de cv.adresse seul. */
+    cvLoc() {
+      return [this.cv.adresse, this.cv.ville, this.cv.pays]
+        .filter(s => s && String(s).trim())
+        .join(', ');
+    },
+    addPoste(ei) {
+      this.cv.experiences[ei].postes.push({ id: Date.now(), titre:'', debut:'', fin:'', enCours:false });
+    },
+    removePoste(ei, pi) {
+      if (this.cv.experiences[ei].postes.length > 1)
+        this.cv.experiences[ei].postes.splice(pi, 1);
+    },
+    // Titre adaptatif : entreprise si multi-postes, sinon intitulé du premier poste
+    expTitre(e) {
+      if (!e.postes || !e.postes.length) return '—';
+      return e.postes.length > 1 ? (e.entreprise || '—') : (e.postes[0].titre || '—');
+    },
+    // Période de l'expérience : utilise les dates au niveau de l'entreprise
+    expPeriodeStr(e) {
+      return (e.debut || e.enCours) ? this.formatPeriode(e.debut, e.fin, e.enCours) : '';
+    },
+    expPeriodeShow(e) {
+      return !!(e.debut || e.enCours);
+    },
+    // Période à afficher avec expTitre(e) :
+    // 1 poste → dates du poste | multi-postes → dates de l'entreprise
+    expTitrePeriodeStr(e) {
+      const postes = e.postes || [];
+      if (postes.length <= 1) {
+        const p = postes[0] || {};
+        return (p.debut || p.enCours) ? this.formatPeriode(p.debut, p.fin, p.enCours) : '';
+      }
+      return this.expPeriodeStr(e);
+    },
+    expTitrePeriodeShow(e) {
+      return !!this.expTitrePeriodeStr(e);
+    },
+    // Filtre visible (rendu CV) : item non masqué par toggle ET au moins une entreprise / poste renseigné
+    expVisible(e) {
+      if (!e || e.visible === false) return false;
+      return !!(e.entreprise || (e.postes && e.postes.some(p => p.titre)));
+    },
+    addMission(ei)        { this.cv.experiences[ei].missions.push(''); },
+    removeMission(ei, mi) { this.cv.experiences[ei].missions.splice(mi, 1); },
+    addMissionClient(ei) {
+      this.cv.experiences[ei].missionsClient.push({
+        id: Date.now(), client:'', pays:'', ville:'', debut:'', fin:'', enCours:false, desc:''
+      });
+    },
+    removeMissionClient(ei, mci) { this.cv.experiences[ei].missionsClient.splice(mci, 1); },
+    removeExp(ei)    { this.cv.experiences.splice(ei, 1); },
+    removeForm(fi)   { this.cv.formations.splice(fi, 1); },
+    removeComp(ci)   { this.cv.competences.splice(ci, 1); },
+    removeLang(li)   { this.cv.langues.splice(li, 1); },
+    removeProjet(pi) { this.cv.projets.splice(pi, 1); },
+    removeBenev(bi)  { this.cv.benevs.splice(bi, 1); },
+    removeInteret(cii) {
+      const m = this.cv.interetsMasques;
+      if (Array.isArray(m)) {
+        this.cv.interetsMasques = m.filter(i => i !== cii).map(i => i > cii ? i - 1 : i);
+      }
+      this.cv.interets.splice(cii, 1);
+    },
+
+    // ── Formations & Certifications ───────────────────────────────────────────
+    addForm() {
+      this.cv.formations.push({
+        id: Date.now(), typeSortie: 'diplome', diplome: '', domaine: '',
+        niveauEtude: '', ecole: '', lieu: '', debut: '', fin: '', enCours: false,
+        desc: '', numero: '', expiration: '', visible: true, _isNew: true
+      });
+    },
+
+    // ── Compétences ───────────────────────────────────────────────────────────
+    addComp() {
+      this.cv.competences.push({
+        id: Date.now(), nom:'',
+        niveau: this.starsToNiveau(3, 'competence'),
+        visible: true, _isNew: true,
+      });
+    },
+
+    // ── Langues ───────────────────────────────────────────────────────────────
+    addLang() { this.cv.langues.push({ id: Date.now(), nom:'', niveau: null, visible: true, _isNew: true }); },
+    addInteret() { this.cv.interets.push(''); },
+
+    /* True si la langue à l'index `li` a un nom déjà présent dans une autre
+       entrée visible (case-insensitive, trim). On autorise un doublon avec
+       une entrée masquée (visible:false) — l'utilisateur peut la restaurer
+       ensuite. */
+    langueDoublon(li) {
+      const arr = this.cv.langues || [];
+      const item = arr[li];
+      if (!item || !item.nom) return false;
+      const target = String(item.nom).trim().toLowerCase();
+      if (!target) return false;
+      for (let i = 0; i < arr.length; i++) {
+        if (i === li) continue;
+        const o = arr[i];
+        if (o && o.visible !== false && o.nom && String(o.nom).trim().toLowerCase() === target) {
+          return true;
+        }
+      }
+      return false;
+    },
+
+    // ── Référentiel Niveau : helpers ID ↔ étoiles ↔ libellé ─────────────────
+    /* `val` côté éditeur peut être :
+       - id Niveau (int) : nouveau format
+       - int 1-5 (legacy compétence : ancien valeurEtoiles)
+       - code CEFR str (legacy langue : ancien niveauCode)
+       - null/'' : non renseigné */
+    niveauStars(val, type) {
+      if (val == null || val === '') return 0;
+      const list = this.niveauxRef[type] || [];
+      const id = parseInt(val);
+      if (!isNaN(id)) {
+        const m = list.find(n => n.id === id);
+        if (m) return m.nbEtoiles;
+        if (type === 'competence' && id >= 1 && id <= 5) return id;
+      }
+      if (type === 'langue' && typeof val === 'string') {
+        const m = list.find(n => n.nomNiveau === val);
+        if (m) return m.nbEtoiles;
+        return ({ A1:1, A2:2, B1:3, B2:4, C1:4, C2:5, N:5 })[val] || 0;
+      }
+      return 0;
+    },
+    /* Retourne l'id du Niveau dont nbEtoiles == n (premier dans l'ordre).
+       null si aucun niveau ne match (réf vide). */
+    starsToNiveau(n, type) {
+      const list = this.niveauxRef[type] || [];
+      const m = list.find(niv => niv.nbEtoiles === n);
+      return m ? m.id : null;
+    },
+    /* Code court (ex "B2" pour langue, "Expert" pour compétence). Affiché
+       comme badge dans les modèles CV. */
+    niveauCode(val, type) {
+      if (val == null || val === '') return '';
+      const list = this.niveauxRef[type] || [];
+      const id = parseInt(val);
+      if (!isNaN(id)) {
+        const m = list.find(n => n.id === id);
+        if (m) return m.nomNiveau;
+      }
+      if (type === 'langue' && typeof val === 'string') return val;
+      return '';
+    },
+    /* Libellé pour tooltip / hover. Fallback sur nomNiveau si libelle vide. */
+    niveauLibelle(val, type) {
+      if (val == null || val === '') return '';
+      const list = this.niveauxRef[type] || [];
+      const id = parseInt(val);
+      if (!isNaN(id)) {
+        const m = list.find(n => n.id === id);
+        if (m) return m.libelle || m.nomNiveau;
+      }
+      if (type === 'langue' && typeof val === 'string') {
+        const m = list.find(n => n.nomNiveau === val);
+        if (m) return m.libelle || m.nomNiveau;
+      }
+      return '';
+    },
+
+    // ── Dates ─────────────────────────────────────────────────────────────────
+    formatMonth(s) {
+      if (!s) return '';
+      if (!String(s).includes('-')) return String(s); // année seule (ex: "2023")
+      const [y, m] = String(s).split('-');
+      const mois = ['Jan.','Fév.','Mar.','Avr.','Mai','Juin','Juil.','Août','Sep.','Oct.','Nov.','Déc.'];
+      return (mois[parseInt(m) - 1] || '') + ' ' + y;
+    },
+    formatPeriode(debut, fin, enCours) {
+      const d = this.formatMonth(debut);
+      const f = enCours ? 'Présent' : this.formatMonth(fin);
+      if (!d && !f) return '';
+      if (!d) return f;
+      if (!f && !enCours) return d;
+      return d + ' — ' + f;
+    },
+
+    // ── Dots affichage rendu CV (langue OU compétence, type auto-détecté) ──
+    niveauDots(val) {
+      if (val == null || val === '') return 0;
+      const id = parseInt(val);
+      if (!isNaN(id)) {
+        const lang = (this.niveauxRef.langue || []).find(n => n.id === id);
+        if (lang) return lang.nbEtoiles;
+        const comp = (this.niveauxRef.competence || []).find(n => n.id === id);
+        if (comp) return comp.nbEtoiles;
+        if (id >= 1 && id <= 5) return id; // legacy stars compétence
+      }
+      if (typeof val === 'string') {
+        const m = (this.niveauxRef.langue || []).find(n => n.nomNiveau === val);
+        if (m) return m.nbEtoiles;
+        return ({ A1:1, A2:2, B1:3, B2:4, C1:4, C2:5, N:5 })[val] || 0;
+      }
+      return 0;
+    },
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // TÉLÉCHARGEMENTS — côté serveur (WeasyPrint / PyMuPDF+Pillow / python-docx)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    _nomFichier() {
+      return 'CV-'
+        + (this.cv.prenom || 'Mon').replace(/\s+/g, '-') + '-'
+        + (this.cv.nom    || 'CV' ).replace(/\s+/g, '-');
+    },
+
+    /* Lit le token CSRF depuis le hidden input rendu par {% csrf_token %} dans
+       _form_panel.html. On ne peut pas lire le cookie car CSRF_COOKIE_HTTPONLY=True
+       dans settings.py. Fallback cookie pour le mode aperçu (où le form n'est pas rendu). */
+    _csrfToken() {
+      const el = document.querySelector('input[name=csrfmiddlewaretoken]');
+      if (el && el.value) return el.value;
+      const m = document.cookie.match(/(^|;)\s*csrftoken\s*=\s*([^;]+)/);
+      return m ? m[2] : '';
+    },
+
+    /*
+     * Envoie les données du CV au serveur Django, récupère le fichier généré
+     * (PDF, PNG, JPG ou DOCX) et déclenche le téléchargement.
+     */
+    async _telecharger(fmt) {
+      if (this.downloading) return;
+      this.downloading = fmt;
+
+      const fallback = { pdf: '.pdf', png: '.png', jpg: '.jpg', docx: '.docx' }[fmt] || '';
+      const url = `/candidat/cv/${this.currentModeleId}/telecharger/${fmt}/`;
+
+      try {
+        const resp = await fetch(url, {
+          method:  'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken':  this._csrfToken(),
+          },
+          body: JSON.stringify(this.cv),
+        });
+
+        if (!resp.ok) {
+          const msg = await resp.text();
+          alert('Erreur lors de la génération :\n' + msg);
+          return;
+        }
+
+        // Nom de fichier authoritatif depuis Content-Disposition (le serveur
+        // peut retourner un .zip pour PNG/JPG multi-pages) ; sinon fallback
+        // côté client construit depuis le format demandé.
+        const cd = resp.headers.get('Content-Disposition') || '';
+        const m  = cd.match(/filename="?([^";]+)"?/);
+        const dlName = m ? m[1] : (this._nomFichier() + fallback);
+
+        const blob = await resp.blob();
+        const burl = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = burl;
+        a.download = dlName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(burl), 10000);
+
+      } catch (e) {
+        alert('Erreur réseau : ' + e.message);
+      } finally {
+        this.downloading = '';
+      }
+    },
+
+    downloadPDF()           { this._telecharger('pdf');  },
+    downloadImage(fmt)      { this._telecharger(fmt);    },
+    downloadDOCX()          { this._telecharger('docx'); },
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // SAUVEGARDE — POST JSON → CV (PDF + 1 image par page) en BDD
+    // ═════════════════════════════════════════════════════════════════════════
+    /*
+     * Tant que l'utilisateur reste dans l'éditeur (pages refresh inclus),
+     * la sauvegarde met à jour le même CV. Sortir et revenir crée un nouveau CV.
+     * (cf. logique navType dans init()).
+     */
+    async sauvegarder() {
+      if (this.saving || this.apercu) return;
+
+      /* Validation "Nom du CV" — obligatoire. L'unicité par candidat est
+         portée par la BD (UniqueConstraint conditionnelle) et re-vérifiée
+         côté API ; on remonte ici l'erreur retournée par le serveur. */
+      const nomCvTrim = String(this.cv.nomCv || '').trim();
+      if (!nomCvTrim) {
+        this.nomCvError = 'Veuillez saisir un nom pour ce CV avant de sauvegarder.';
+        this.s = 'perso';
+        this.saveMessage = 'Nom du CV manquant.';
+        setTimeout(() => { this.saveMessage = ''; }, 4000);
+        return;
+      }
+      this.cv.nomCv = nomCvTrim;  // normalise (trim) avant envoi
+      this.nomCvError = '';
+
+      /* Dédoublonnage langues : on ne tolère pas la même langue deux fois
+         (le candidat doit modifier le niveau de l'existante). On dédoublonne
+         sur le nom (case-insensitive, trim) en gardant la première entrée
+         visible et en jetant les suivantes. Insensible aux entrées masquées. */
+      const seen = new Map();
+      const dedup = [];
+      let droppedLangue = 0;
+      for (const l of (this.cv.langues || [])) {
+        if (!l || !l.nom || l.visible === false) { dedup.push(l); continue; }
+        const key = String(l.nom).trim().toLowerCase();
+        if (!key) { dedup.push(l); continue; }
+        if (seen.has(key)) { droppedLangue++; continue; }
+        seen.set(key, true);
+        dedup.push(l);
+      }
+      if (droppedLangue > 0) this.cv.langues = dedup;
+
+      this.saving = true;
+      this.saveMessage = '';
+
+      const url = `/candidat/api/cv/${this.currentModeleId}/sauvegarder/`;
+      const payload = {
+        cv_id:  this.savedCvId,
+        nom_cv: this.cv.nomCv || '',
+        titre:  this.cv.titre || '',
+        cv:     this.cv,
+      };
+
+      try {
+        const resp = await fetch(url, {
+          method:  'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken':  this._csrfToken(),
+          },
+          body: JSON.stringify(payload),
+        });
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok || !data.ok) {
+          /* 400 nom vide / 409 doublon → on cible le champ "Nom du CV" et on
+             bascule en §1 pour que le candidat voie l'erreur. */
+          if ((resp.status === 400 || resp.status === 409) && data.field === 'nom_cv') {
+            this.nomCvError = data.message || 'Nom du CV invalide.';
+            this.s = 'perso';
+          }
+          this.saveMessage = data.message || 'Échec de la sauvegarde.';
+        } else {
+          this.savedCvId = data.cv_id;
+          try { sessionStorage.setItem(this._editKey(), String(data.cv_id)); } catch(e) {}
+          this.saveMessage = data.message || 'CV sauvegardé.';
+        }
+      } catch (e) {
+        this.saveMessage = 'Erreur réseau : ' + e.message;
+      } finally {
+        this.saving = false;
+        setTimeout(() => { this.saveMessage = ''; }, 4000);
+      }
+    },
+
+    // ── Imprimer — window.print() (CSS @media print masque nav/footer) ────────
+    printCV() { window.print(); },
+  };
+}
+</script>
