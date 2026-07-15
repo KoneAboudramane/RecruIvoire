@@ -325,9 +325,10 @@ def _notifier_candidats_matchants(offre, matches, par_id) -> int:
 def lancer_scan_offre_async(offre):
     """Spawn un thread démon pour scanner l'offre sans bloquer la requête HTTP.
 
-    En prod avec Gunicorn/uWSGI : OK, chaque worker peut spawner ses threads.
-    En dev runserver : OK aussi.
-    Pour scaler vraiment (Celery), remplacer cette fonction par un .delay().
+    En prod avec Gunicorn/uWSGI/Passenger : OK, chaque worker peut spawner ses
+    threads. En dev runserver : OK aussi. C'est le même pattern que
+    `recrutement.background.lancer_en_arriere_plan()` — voir ce module pour
+    la version généralisée utilisée ailleurs dans le projet.
     """
     def _run(offre_id):
         # Recharge l'offre dans la nouvelle thread (Django ORM thread-safe via

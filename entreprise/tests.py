@@ -231,7 +231,7 @@ class OffreEmploiWorkflowTest(TestCase):
             'motPasse': 'secret123',
         })
 
-    @patch('entreprise.tasks.calculer_embedding_offre.delay')
+    @patch('recrutement.background.lancer_en_arriere_plan')
     def test_creer_offre(self, mock_embedding):
         """L'entreprise peut creer une offre via le formulaire."""
         self._login_entreprise()
@@ -307,7 +307,7 @@ class PermissionsRecruteurTest(TestCase):
         rec.save()
         return rec
 
-    @patch('entreprise.tasks.calculer_embedding_offre.delay')
+    @patch('recrutement.background.lancer_en_arriere_plan')
     def test_lecteur_ne_peut_pas_creer_offre(self, mock_embedding):
         """Un recruteur LECTEUR ne peut pas creer d'offre (bloque)."""
         lecteur = self._creer_recruteur('lecteur@perms.ci', RoleMembre.LECTEUR)

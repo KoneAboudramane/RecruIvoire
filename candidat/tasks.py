@@ -1,13 +1,12 @@
-"""Tâches Celery pour le candidat.
+"""Tâches de calcul lancées en arrière-plan pour le candidat.
 
 Le worker web (Daphne) ne doit jamais bloquer une réponse HTTP sur un calcul
-sémantique + ML (chargement du modèle, encodage, prédiction) — ce module
-délègue ce calcul à un worker Celery séparé.
+sémantique + ML (chargement du modèle, encodage, prédiction) — ces fonctions
+sont appelées via `recrutement.background.lancer_en_arriere_plan()` (thread
+démon) plutôt qu'en synchrone dans la vue.
 """
-from celery import shared_task
 
 
-@shared_task
 def calculer_recommandations_accueil(candidat_id):
     """Recalcule les offres recommandées d'un candidat pour la page d'accueil.
 
@@ -35,7 +34,6 @@ def calculer_recommandations_accueil(candidat_id):
     cache.delete(f'accueil_reco_computing_{candidat.pk}')
 
 
-@shared_task
 def calculer_matching_offres(candidat_id):
     """Recalcule le score de matching d'un candidat pour TOUTES les offres publiées.
 

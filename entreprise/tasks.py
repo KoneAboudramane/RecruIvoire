@@ -1,12 +1,16 @@
-"""Tâches Celery pour le calcul des embeddings ATS.
+"""Tâches de calcul des embeddings ATS, lancées en arrière-plan.
 
-Le modèle ML est chargé une seule fois dans le worker Celery (singleton).
-Les workers web (Daphne) n'ont jamais besoin de charger le modèle.
+Ces fonctions sont appelées via `recrutement.background.lancer_en_arriere_plan()`
+(thread démon, cf. `candidat/views/profil.py`, `entreprise/views/offres.py`)
+plutôt qu'en synchrone dans la vue, pour ne jamais bloquer une réponse HTTP
+sur le chargement du modèle + l'encodage.
+
+`calculer_tous_embeddings_manquants()` est le rattrapage périodique — voir la
+management command `entreprise calculer_embeddings_manquants`, déclenchée par
+cron (pas de worker persistant possible sous Passenger/O2switch).
 """
-from celery import shared_task
 
 
-@shared_task
 def calculer_embedding_candidat(candidat_id):
     """Calcule et stocke l'embedding d'un candidat."""
     from candidat.models import Candidat
@@ -31,7 +35,6 @@ def calculer_embedding_candidat(candidat_id):
     candidat.save(update_fields=['embedding', 'embedding_updated'])
 
 
-@shared_task
 def calculer_embedding_offre(offre_id):
     """Calcule et stocke l'embedding d'une offre."""
     from .models import OffreEmploi
@@ -56,16 +59,28 @@ def calculer_embedding_offre(offre_id):
     offre.save(update_fields=['embedding', 'embedding_updated'])
 
 
-@shared_task
 def calculer_tous_embeddings_manquants():
-    """Calcule les embeddings pour tous les candidats et offres qui n'en ont pas."""
+    """Calcule les embeddings pour tous les candidats et offres qui n'en ont pas.
+
+    Appelée en synchrone par la management command `calculer_embeddings_manquants`
+    (exécution cron périodique) — pas de mise en file d'attente ici, le cron
+    fournit déjà l'exécution différée.
+
+    Renvoie (nb_candidats, nb_offres) traités.
+    """
     from candidat.models import Candidat
     from .models import OffreEmploi
 
-    candidats = Candidat.objects.filter(embedding__isnull=True).values_list('id', flat=True)
+    candidats = list(
+        Candidat.objects.filter(embedding__isnull=True).values_list('id', flat=True)
+    )
     for cid in candidats:
-        calculer_embedding_candidat.delay(cid)
+        calculer_embedding_candidat(cid)
 
-    offres = OffreEmploi.objects.filter(embedding__isnull=True).values_list('id', flat=True)
+    offres = list(
+        OffreEmploi.objects.filter(embedding__isnull=True).values_list('id', flat=True)
+    )
     for oid in offres:
-        calculer_embedding_offre.delay(oid)
+        calculer_embedding_offre(oid)
+
+    return len(candidats), len(offres)

@@ -32,10 +32,6 @@ PyJWT==2.13.0
 django-ratelimit==4.1.0
 python-dotenv==1.2.2
 
-# ── Tâches asynchrones ───────────────────────────────────────────────────────
-celery==5.6.3
-flower==2.0.1
-
 # ── Stockage objet (MinIO / S3) ──────────────────────────────────────────────
 django-storages[s3]==1.14.4
 boto3==1.38.0

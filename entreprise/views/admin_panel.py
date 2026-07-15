@@ -120,7 +120,6 @@ def admin_tableau_bord(request):
         'q':                 q,
         'pending_count':     pending_count,
         'now':               timezone.now(),
-        'flower_url':        settings.FLOWER_URL,
     })
 
 

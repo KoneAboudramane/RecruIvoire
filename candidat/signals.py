@@ -7,7 +7,8 @@ Déclencheurs en place :
 
 Le travail est exécuté SYNCHRONEMENT dans le signal — acceptable pour quelques
 centaines de candidats (~quelques secondes). Quand le volume grandira, il
-faudra passer ce scan en background (Celery, Django-Q ou un cron qui appelle
+faudra passer ce scan en arrière-plan (`recrutement.background.lancer_en_arriere_plan`,
+même pattern que `entreprise/notifications_service.py`, ou un cron qui appelle
 `python manage.py notifier_matchings --offre <id>`).
 """
 

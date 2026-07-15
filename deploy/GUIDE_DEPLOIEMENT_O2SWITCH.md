@@ -220,8 +220,6 @@ Points d'attention connus (voir le reste du projet pour le détail) :
 - `torch` / `sentence-transformers` / `transformers` : poids important, à
   surveiller avec l'outil **X-Ray App** (cPanel > Mesures) pendant
   l'installation et le premier chargement du modèle.
-- `celery` / `flower` : le paquet s'installera, mais **aucun worker persistant ne
-  peut tourner** sous Passenger — voir section 11 pour l'équivalent cron.
 
 ---
 
@@ -343,17 +341,20 @@ valeurs `REDIS_HOST`/`REDIS_PORT` du `.env` (étape 6) doivent correspondre.
 
 ## 11. Tâches planifiées (remplace Celery)
 
-**Statut à date de rédaction : pas encore implémenté côté code** — cette section
-est le squelette à suivre une fois la bascule Celery → cron décidée (voir le
-reste du projet pour le détail du raisonnement : Celery n'est pas confirmé
-incompatible, un test réel doit trancher avant de coder le remplacement).
+**Fait et vérifié en local (2026-07-15)** : Celery a été entièrement retiré du
+projet (aucun worker persistant possible sous Passenger de toute façon). Deux
+mécanismes le remplacent, voir `CLAUDE.md` section « Tâches asynchrones » :
 
-Si le remplacement est confirmé nécessaire, **cPanel > Outils avancés > Tâches
-Cron** :
+1. **À la demande** (calcul d'embedding à la sauvegarde d'un profil/offre,
+   recommandations accueil) : thread démon via
+   `recrutement/background.py::lancer_en_arriere_plan()` — fonctionne
+   directement sous Passenger, aucune configuration cPanel nécessaire.
+2. **Rattrapage périodique** (couvre les threads interrompus par un
+   redémarrage de l'app, etc.) : **cPanel > Outils avancés > Tâches Cron** :
 
 ```bash
-# Exemple : recalcul des embeddings manquants toutes les 15 min
-*/15 * * * * flock -n /tmp/recrutepro_embeddings.lock /home/<user>/virtualenv/recrutement/3.13/bin/python /home/<user>/recrutement/manage.py calculer_tous_embeddings_manquants
+# Recalcul des embeddings manquants toutes les 15 min
+*/15 * * * * flock -n /tmp/recrutepro_embeddings.lock /home/<user>/virtualenv/recrutement/3.13/bin/python /home/<user>/recrutement/manage.py calculer_embeddings_manquants
 ```
 
 Le `flock` est **indispensable** (recommandation officielle O2switch) : sans lui,
@@ -381,7 +382,7 @@ le compte.
 |---|---|
 | Rendu PDF/PNG (Playwright) | Non testé en réel sur O2switch — WeasyPrint déjà écarté (confirmé cassé) |
 | Matching sémantique / ATS (torch, sentence-transformers) | Non testé en charge réelle (RAM/CPU) |
-| Celery → cron | Décision de principe prise, code de remplacement **pas encore écrit** |
+| Celery → thread démon + cron | **Fait et vérifié en local** le 2026-07-15 : `.delay()` remplacé par `lancer_en_arriere_plan()`, commande `calculer_embeddings_manquants` créée pour le cron. Reste à créer l'entrée cron réelle sur cPanel (§11) |
 | pgvector → JSONField, SSE → polling | **Fait et vérifié** en local (voir historique du projet) |
 | PostgreSQL → MySQL (driver, recherche plein texte, migrations) | **Fait et vérifié en local (WAMP MySQL 8.0.21)** le 2026-07-15 : `migrate` propre, 48/48 tests, recherche FULLTEXT + scoring ATS testés avec données de démo. Reste à vérifier : version MySQL réelle sur O2switch et son `default_storage_engine` (voir §4) |
 

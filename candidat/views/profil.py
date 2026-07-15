@@ -389,8 +389,9 @@ def api_sauvegarder_identite(request):
                 form_identite.save()
         except Exception:
             logger.exception('Erreur lors de la sauvegarde des infos référentielles (pays/ville/nationalite/codePostal)')
+        from recrutement.background import lancer_en_arriere_plan
         from entreprise.tasks import calculer_embedding_candidat
-        calculer_embedding_candidat.delay(obj.id)
+        lancer_en_arriere_plan(calculer_embedding_candidat, obj.id)
         info_obj = obj.informationPersonnelle
         return JsonResponse({
             'ok':        True,
@@ -471,8 +472,9 @@ def api_sauvegarder_portfolio(request):
             if new_params is not None:
                 candidat.paramsPortfolio = new_params
                 candidat.save(update_fields=['paramsPortfolio'])
+            from recrutement.background import lancer_en_arriere_plan
             from entreprise.tasks import calculer_embedding_candidat
-            calculer_embedding_candidat.delay(candidat.id)
+            lancer_en_arriere_plan(calculer_embedding_candidat, candidat.id)
     except ValidationError as exc:
         return JsonResponse({'ok': False, 'message': str(exc)}, status=400)
 

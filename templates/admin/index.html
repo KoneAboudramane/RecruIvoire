@@ -3,7 +3,6 @@
 
 {% block content %}
 {% get_admin_stats as s %}
-{% flower_url as flower_dashboard_url %}
 {% nb_temoignages_en_attente as nb_temoignages %}
 {% nb_temoignages_entreprise_en_attente as nb_temoignages_ent %}
 {% get_chart_data as cd %}
@@ -634,7 +633,6 @@ html.rp-noir .sp-full-link:hover { background: rgba(0,122,53,.22); color: #86efa
     <a href="/admin/candidat/modelelettre/" class="quick-card"><span class="ico">✉️</span><span class="lbl">Modèles lettre</span></a>
     <a href="/admin/candidat/logosite/" class="quick-card"><span class="ico">🖼️</span><span class="lbl">Logo & identité</span></a>
     <a href="{% url 'admin:entreprise_demandeverification_ml_status' %}" class="quick-card"><span class="ico">🤖</span><span class="lbl">Modèles ML</span></a>
-    <a href="{{ flower_dashboard_url }}" target="_blank" rel="noopener" class="quick-card"><span class="ico">🌸</span><span class="lbl">Tâches Celery</span></a>
     <a href="{% url 'admin:newsletter_planification' %}" class="quick-card"><span class="ico">📅</span><span class="lbl">Planification newsletter</span></a>
     <a href="{% url 'admin:candidat_conseilnewsletter_changelist' %}" class="quick-card"><span class="ico">💡</span><span class="lbl">Conseils newsletter</span></a>
     <a href="{% url 'admin:candidat_actualitenewsletter_changelist' %}" class="quick-card"><span class="ico">📰</span><span class="lbl">Actualités newsletter</span></a>

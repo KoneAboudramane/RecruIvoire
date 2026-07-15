@@ -9,13 +9,6 @@ register = template.Library()
 
 
 @register.simple_tag
-def flower_url():
-    """URL du dashboard Flower (monitoring Celery), configurable via .env."""
-    from django.conf import settings
-    return getattr(settings, 'FLOWER_URL', 'http://localhost:5555')
-
-
-@register.simple_tag
 def nb_temoignages_en_attente():
     """Retourne le nombre de témoignages candidats en attente de validation."""
     try:

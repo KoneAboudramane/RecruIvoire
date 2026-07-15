@@ -306,8 +306,9 @@ def offre_creer(request):
             offre.dateExpiration = date_exp
 
         offre.save()
+        from recrutement.background import lancer_en_arriere_plan
         from ..tasks import calculer_embedding_offre
-        calculer_embedding_offre.delay(offre.id)
+        lancer_en_arriere_plan(calculer_embedding_offre, offre.id)
 
         _sync_competences_m2m(offre, competences)
 
@@ -404,8 +405,9 @@ def offre_modifier(request, pk):
         offre.dateExpiration = date_exp or None
 
         offre.save()
+        from recrutement.background import lancer_en_arriere_plan
         from ..tasks import calculer_embedding_offre
-        calculer_embedding_offre.delay(offre.id)
+        lancer_en_arriere_plan(calculer_embedding_offre, offre.id)
 
         _sync_competences_m2m(offre, competences)
         if offre.creePar_id:

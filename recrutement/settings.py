@@ -148,22 +148,11 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-# Redis — hôte/port partagés par Celery (base 0) et le cache (base 1)
+# Redis — cache uniquement (plus de broker Celery, voir recrutement/background.py)
 REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
 REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
 
-# Celery — file de tâches asynchrones (broker Redis)
-CELERY_BROKER_URL = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
-CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-
-# Flower — dashboard de supervision Celery (lien depuis l'admin, voir
-# entreprise/views/admin_panel.py::admin_tableau_bord). Surchargeable en
-# production via .env si Flower n'est pas sur le même hôte/port.
-FLOWER_URL = os.environ.get('FLOWER_URL', 'http://localhost:5555')
-
-# Cache — Redis base 1 (Celery utilise la base 0)
+# Cache — Redis base 1
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',

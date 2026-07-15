@@ -1,15 +1,15 @@
 # RecrutePro — Documentation Projet
 
 ## Description
-Application web de recrutement développée avec Django 6.0.5.
+Application web de recrutement développée avec Django 5.1.15.
 Elle met en relation **candidats** et **entreprises**.
 
 ## Stack technique
-- **Backend** : Django 6.0.5 (ASGI via Daphne 4.2.2)
+- **Backend** : Django 5.1.15 (ASGI via Daphne 4.2.2)
 - **Frontend** : Tailwind CSS (CDN Play) + Alpine.js
-- **Base de données** : PostgreSQL
+- **Base de données** : MySQL
 - **Cache** : Redis (base 1)
-- **Tâches async** : Celery + Redis (base 0)
+- **Tâches async** : thread démon (`recrutement/background.py`) + cron (pas de worker persistant, voir section dédiée)
 - **ML/IA** : scikit-learn, sentence-transformers (paraphrase-multilingual-MiniLM-L12-v2), torch
 - **Rendu CV/Lettres** : Playwright + Chromium headless
 - **Auth OAuth** : django-allauth (Google, GitHub)
@@ -38,7 +38,7 @@ recrutement/
 │   ├── urls.py
 │   ├── wsgi.py
 │   ├── asgi.py
-│   └── celery.py                 ← configuration Celery
+│   └── background.py             ← lancer_en_arriere_plan() (thread démon)
 │
 ├── candidat/                     ← app espace candidat (37 modèles, 66 vues, 92 URLs)
 │   ├── templates/candidat/       ← 125 templates (dont 29 modèles CV, 20 lettre, 10 portfolio)
@@ -67,7 +67,7 @@ recrutement/
 │   ├── matching_ml.py            ← matching ML (sklearn, joblib)
 │   ├── ml_features.py            ← extraction 15 features pour ML
 │   ├── rubriques_sync.py         ← sync JSON ↔ relationnel
-│   ├── tasks.py                  ← tâches Celery (recommandations accueil)
+│   ├── tasks.py                  ← tâches arrière-plan (recommandations accueil)
 │   ├── newsletter.py             ← newsletter (offres, conseils, actus)
 │   ├── notifications_service.py  ← création notifs idempotente + email
 │   ├── allauth_adapter.py        ← adapters OAuth (crée Utilisateur + Candidat)
@@ -102,7 +102,7 @@ recrutement/
 │   ├── signals.py                ← 5 signaux / 8 @receiver (auto-scan ATS + invalidation cache)
 │   ├── ats_ml.py                 ← inférence modèle ATS re-ranking (joblib)
 │   ├── ats_predict.py            ← scoring sémantique (MiniLM multilingue)
-│   ├── tasks.py                  ← tâches Celery (calcul embeddings)
+│   ├── tasks.py                  ← tâches arrière-plan (calcul embeddings)
 │   ├── messagerie.py             ← helpers rendu sécurisé templates message
 │   ├── ml_scheduler.py           ← planification ré-entraînement ML
 │   ├── middleware.py             ← EntrepriseMiddleware + RecruteurMiddleware
@@ -130,7 +130,7 @@ recrutement/
 | URLs | 92 | 90 | 21 | 203 |
 | Templates | 125 | 57 | — | 182 |
 | Signaux | 7 (13 @receiver) | 5 (8 @receiver) | — | 12 (21 @receiver) |
-| Commands | 14 | 6 | 3 | 23 |
+| Commands | 14 | 7 | 3 | 24 |
 | Tests | 25 | 23 | — | 48 |
 | Dépendances | — | — | — | 27 |
 
@@ -204,7 +204,7 @@ cp .env.example .env
 
 Variables requises :
 - `SECRET_KEY` — clé secrète Django
-- `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT` — PostgreSQL
+- `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT` — MySQL
 - `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` — SMTP Gmail
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — OAuth Google
 - `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` — OAuth GitHub
@@ -225,7 +225,7 @@ Variables requises :
 
 ## Cache
 
-Backend Redis (base 1, séparé de Celery). Invalidation automatique via signaux Django (21 @receiver).
+Backend Redis (base 1). Invalidation automatique via signaux Django (21 @receiver).
 
 | Donnée | Durée | Invalidation |
 |--------|-------|-------------|
@@ -238,17 +238,26 @@ Backend Redis (base 1, séparé de Celery). Invalidation automatique via signaux
 
 ---
 
-## Tâches asynchrones (Celery) & monitoring (Flower)
+## Tâches asynchrones (thread démon + cron)
 
-Backend Redis base 0 (`CELERY_BROKER_URL` / `CELERY_RESULT_BACKEND` dans `settings.py`),
-séparé du cache (base 1). Les tâches ne s'exécutent que si un **worker Celery tourne** —
-sans worker actif, elles restent en attente indéfiniment dans la file Redis.
+Le projet n'utilise plus Celery — l'hébergement cible (O2switch mutualisé,
+Passenger/WSGI) ne permet aucun process daemon persistant, un worker Celery
+n'y tournerait donc jamais. Deux mécanismes légers le remplacent :
+
+- **`recrutement/background.py::lancer_en_arriere_plan(func, *args)`** — spawn
+  un thread démon (avec `close_old_connections()` en fin d'exécution) pour les
+  calculs déclenchés à la demande depuis une vue, sans bloquer la réponse HTTP.
+  Fonctionne aussi bien en local (runserver) qu'en prod (Passenger, chaque
+  requête peut spawner ses threads).
+- **Management commands + cron** (cPanel > Tâches Cron, avec `flock` pour
+  éviter les exécutions concourantes) pour les tâches périodiques non liées à
+  une requête HTTP précise.
 
 | Tâche | Fichier | Déclenchée par |
 |-------|---------|----------------|
-| `calculer_embedding_candidat` / `calculer_embedding_offre` | `entreprise/tasks.py` | Sauvegarde profil candidat / offre |
-| `calculer_tous_embeddings_manquants` | `entreprise/tasks.py` | Ponctuel / commande |
-| `calculer_recommandations_accueil` | `candidat/tasks.py` | Vue `candidat:accueil` quand le cache des recommandations est froid (voir ci-dessous) |
+| `calculer_embedding_candidat` / `calculer_embedding_offre` | `entreprise/tasks.py` | `lancer_en_arriere_plan()` à la sauvegarde profil candidat / offre |
+| `calculer_tous_embeddings_manquants` | `entreprise/tasks.py` | Commande `calculer_embeddings_manquants` (rattrapage périodique via cron) |
+| `calculer_recommandations_accueil` / `calculer_matching_offres` | `candidat/tasks.py` | `lancer_en_arriere_plan()` depuis `candidat:accueil` / `candidat:offres` quand le cache est froid (voir ci-dessous) |
 
 **Recommandations de la page d'accueil candidat** : le calcul sémantique + ML est trop
 lent pour tourner dans le cycle requête/réponse HTTP. La vue ne calcule jamais rien
@@ -258,11 +267,11 @@ en arrière-plan si le cache frais est vide (verrou `accueil_reco_computing_{id}
 anti-doublon). Tant que le calcul n'est pas prêt, la page retombe sur le dernier résultat
 personnalisé connu, ou sur une liste générique si le candidat n'a encore jamais été calculé.
 
-**Monitoring (Flower)** : dashboard web temps réel des tâches Celery (en attente, en
-cours, échouées, avec relance manuelle possible) — comble un point mort historique où une
-tâche en échec silencieux n'était visible que dans les logs. Toujours lancer avec
-`--basic_auth` (jamais exposer sans authentification, il permet d'annuler/relancer des
-tâches). Voir commande dans « Commandes utiles ».
+Même pattern déjà en place ailleurs dans le code (non lié aux embeddings) :
+`entreprise/notifications_service.py::lancer_scan_offre_async` (scan ATS à la
+publication d'une offre) et `entreprise/ml_scheduler.py` +
+`entreprise/middleware_ml.py` (ré-entraînement ML périodique, avec adapters
+Windows `schtasks` / Unix `crontab` / déclencheur web en fallback).
 
 ---
 
@@ -322,12 +331,8 @@ python manage.py entrainer_ats
 # Envoyer la newsletter offres
 python manage.py envoyer_newsletter_offres
 
-# Lancer un worker Celery (traite les tâches asynchrones : embeddings ATS,
-# recommandations accueil...)
-celery -A recrutement worker --loglevel=info
-
-# Lancer Flower (dashboard de supervision Celery, http://localhost:5555)
-celery -A recrutement flower --port=5555 --basic_auth=admin:CHANGEZ_MOI
+# Rattrapage périodique des embeddings ATS manquants (à planifier via cron)
+python manage.py calculer_embeddings_manquants
 ```
 
 ---

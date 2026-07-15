@@ -87,8 +87,9 @@ def accueil(request):
             # arrivent pendant le calcul), et on retombe sur le dernier
             # résultat personnalisé connu plutôt que de bloquer la réponse.
             if django_cache.add(lock_key, True, 60):
+                from recrutement.background import lancer_en_arriere_plan
                 from ..tasks import calculer_recommandations_accueil
-                calculer_recommandations_accueil.delay(candidat.pk)
+                lancer_en_arriere_plan(calculer_recommandations_accueil, candidat.pk)
             offres_reco = django_cache.get(stale_key)
 
         if offres_reco is not None:
@@ -435,8 +436,9 @@ def offres(request):
         scored_pairs = django_cache.get(cache_key)
         if scored_pairs is None:
             if django_cache.add(lock_key, True, 60):
+                from recrutement.background import lancer_en_arriere_plan
                 from ..tasks import calculer_matching_offres
-                calculer_matching_offres.delay(candidat.pk)
+                lancer_en_arriere_plan(calculer_matching_offres, candidat.pk)
             scored_pairs = django_cache.get(stale_key)
             matching_en_calcul = True
 
