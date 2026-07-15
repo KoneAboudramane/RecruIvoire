@@ -1,12 +1,12 @@
 # ── Framework ─────────────────────────────────────────────────────────────────
-Django==6.0.5
+Django==5.1.15
 asgiref==3.11.1
 daphne==4.2.2
 sqlparse==0.5.5
 tzdata==2026.2
 
 # ── Base de données ──────────────────────────────────────────────────────────
-psycopg2-binary==2.9.12
+mysqlclient==2.2.8
 redis==4.6.0
 # pgvector : plus utilisé comme VectorField (embeddings ATS en JSONField,
 # cosinus calculé en Python — voir candidat/models.py, entreprise/models.py,

@@ -121,12 +121,22 @@ WSGI_APPLICATION = 'recrutement.wsgi.application'
 # Base de données
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': 'django.db.backends.mysql',
         'NAME': os.environ.get('DB_NAME', 'recrutement_db'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
+        'USER': os.environ.get('DB_USER', 'root'),
         'PASSWORD': os.environ.get('DB_PASSWORD', ''),
         'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+        'PORT': os.environ.get('DB_PORT', '3306'),
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+            # default_storage_engine forcé : certains hébergeurs/configs
+            # locales (ex. WAMP) ont encore MyISAM par défaut, incompatible
+            # avec les index FULLTEXT InnoDB et la limite de clé à 767/1000o.
+            'init_command': (
+                "SET sql_mode='STRICT_TRANS_TABLES', "
+                "default_storage_engine=INNODB"
+            ),
+        },
     }
 }
 

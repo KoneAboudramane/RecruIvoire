@@ -10,6 +10,55 @@ import pgvector.django.vector
 from django.db import migrations
 
 
+def crea_extension_vector(apps, schema_editor):
+    # pgvector est indisponible/non pertinent hors PostgreSQL (voir 0005 qui
+    # revient de toute façon à JSONField) — no-op sous MySQL.
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+    schema_editor.execute('CREATE EXTENSION IF NOT EXISTS vector')
+
+
+def suppr_extension_vector(apps, schema_editor):
+    pass  # extension potentiellement partagée : rollback best-effort, no-op
+
+
+def convertir_embedding_vers_vector(apps, schema_editor):
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+    schema_editor.execute(
+        'ALTER TABLE entreprise_offreemploi ALTER COLUMN embedding TYPE vector(384) USING NULL::vector(384)'
+    )
+
+
+def reverse_convertir_embedding_vers_vector(apps, schema_editor):
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+    schema_editor.execute(
+        'ALTER TABLE entreprise_offreemploi ALTER COLUMN embedding TYPE jsonb USING NULL::jsonb'
+    )
+
+
+def _index_hnsw_offreemploi():
+    return pgvector.django.indexes.HnswIndex(
+        ef_construction=64, fields=['embedding'], m=16,
+        name='idx_offre_embedding_hnsw', opclasses=['vector_cosine_ops'],
+    )
+
+
+def crea_index_hnsw_offreemploi(apps, schema_editor):
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+    OffreEmploi = apps.get_model('entreprise', 'OffreEmploi')
+    schema_editor.add_index(OffreEmploi, _index_hnsw_offreemploi())
+
+
+def suppr_index_hnsw_offreemploi(apps, schema_editor):
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+    OffreEmploi = apps.get_model('entreprise', 'OffreEmploi')
+    schema_editor.remove_index(OffreEmploi, _index_hnsw_offreemploi())
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -18,10 +67,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        pgvector.django.extensions.VectorExtension(),
-        migrations.RunSQL(
-            sql='ALTER TABLE entreprise_offreemploi ALTER COLUMN embedding TYPE vector(384) USING NULL::vector(384);',
-            reverse_sql='ALTER TABLE entreprise_offreemploi ALTER COLUMN embedding TYPE jsonb USING NULL::jsonb;',
+        migrations.RunPython(crea_extension_vector, suppr_extension_vector),
+        migrations.SeparateDatabaseAndState(
             state_operations=[
                 migrations.AlterField(
                     model_name='offreemploi',
@@ -29,9 +76,19 @@ class Migration(migrations.Migration):
                     field=pgvector.django.vector.VectorField(blank=True, dimensions=384, editable=False, null=True, verbose_name='Embedding ATS'),
                 ),
             ],
+            database_operations=[
+                migrations.RunPython(convertir_embedding_vers_vector, reverse_convertir_embedding_vers_vector),
+            ],
         ),
-        migrations.AddIndex(
-            model_name='offreemploi',
-            index=pgvector.django.indexes.HnswIndex(ef_construction=64, fields=['embedding'], m=16, name='idx_offre_embedding_hnsw', opclasses=['vector_cosine_ops']),
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.AddIndex(
+                    model_name='offreemploi',
+                    index=_index_hnsw_offreemploi(),
+                ),
+            ],
+            database_operations=[
+                migrations.RunPython(crea_index_hnsw_offreemploi, suppr_index_hnsw_offreemploi),
+            ],
         ),
     ]

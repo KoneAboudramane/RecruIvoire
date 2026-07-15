@@ -3,6 +3,25 @@
 from django.db import migrations, models
 
 
+def suppr_index_hnsw_candidat(apps, schema_editor):
+    # L'index n'a jamais été créé sous MySQL (voir migration 0009) — no-op.
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+    schema_editor.execute('DROP INDEX idx_candidat_embedding_hnsw')
+
+
+def recrea_index_hnsw_candidat(apps, schema_editor):
+    pass  # rollback best-effort, chemin peu emprunté
+
+
+def convertir_embedding_vers_jsonb(apps, schema_editor):
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+    schema_editor.execute(
+        'ALTER TABLE candidat_candidat ALTER COLUMN embedding TYPE jsonb USING embedding::text::jsonb'
+    )
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,22 +29,27 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveIndex(
-            model_name='candidat',
-            name='idx_candidat_embedding_hnsw',
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.RemoveIndex(
+                    model_name='candidat',
+                    name='idx_candidat_embedding_hnsw',
+                ),
+            ],
+            database_operations=[
+                migrations.RunPython(suppr_index_hnsw_candidat, recrea_index_hnsw_candidat),
+            ],
         ),
-        migrations.RunSQL(
-            sql=(
-                'ALTER TABLE candidat_candidat '
-                'ALTER COLUMN embedding TYPE jsonb USING embedding::text::jsonb;'
-            ),
-            reverse_sql=migrations.RunSQL.noop,
+        migrations.SeparateDatabaseAndState(
             state_operations=[
                 migrations.AlterField(
                     model_name='candidat',
                     name='embedding',
                     field=models.JSONField(blank=True, editable=False, null=True, verbose_name='Embedding ATS'),
                 ),
+            ],
+            database_operations=[
+                migrations.RunPython(convertir_embedding_vers_jsonb, migrations.RunPython.noop),
             ],
         ),
     ]

@@ -6,6 +6,49 @@ import recrutement.storages
 from django.db import migrations, models
 
 
+def _index_fts_entreprise():
+    return django.contrib.postgres.indexes.GinIndex(
+        django.contrib.postgres.search.SearchVector('raisonSocial', 'description', config='french'),
+        name='idx_entreprise_fts',
+    )
+
+
+def _index_fts_offreemploi():
+    return django.contrib.postgres.indexes.GinIndex(
+        django.contrib.postgres.search.SearchVector('titre', 'missions', 'profilRecherche', config='french'),
+        name='idx_offre_fts',
+    )
+
+
+def crea_index_fts_entreprise(apps, schema_editor):
+    # GinIndex/SearchVector sont spécifiques à PostgreSQL — no-op sous MySQL.
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+    Entreprise = apps.get_model('entreprise', 'Entreprise')
+    schema_editor.add_index(Entreprise, _index_fts_entreprise())
+
+
+def suppr_index_fts_entreprise(apps, schema_editor):
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+    Entreprise = apps.get_model('entreprise', 'Entreprise')
+    schema_editor.remove_index(Entreprise, _index_fts_entreprise())
+
+
+def crea_index_fts_offreemploi(apps, schema_editor):
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+    OffreEmploi = apps.get_model('entreprise', 'OffreEmploi')
+    schema_editor.add_index(OffreEmploi, _index_fts_offreemploi())
+
+
+def suppr_index_fts_offreemploi(apps, schema_editor):
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+    OffreEmploi = apps.get_model('entreprise', 'OffreEmploi')
+    schema_editor.remove_index(OffreEmploi, _index_fts_offreemploi())
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -34,12 +77,26 @@ class Migration(migrations.Migration):
             name='photoProfil',
             field=models.ImageField(blank=True, null=True, storage=recrutement.storages.get_public_storage, upload_to='users/photos/', verbose_name='Photo de profil'),
         ),
-        migrations.AddIndex(
-            model_name='entreprise',
-            index=django.contrib.postgres.indexes.GinIndex(django.contrib.postgres.search.SearchVector('raisonSocial', 'description', config='french'), name='idx_entreprise_fts'),
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.AddIndex(
+                    model_name='entreprise',
+                    index=_index_fts_entreprise(),
+                ),
+            ],
+            database_operations=[
+                migrations.RunPython(crea_index_fts_entreprise, suppr_index_fts_entreprise),
+            ],
         ),
-        migrations.AddIndex(
-            model_name='offreemploi',
-            index=django.contrib.postgres.indexes.GinIndex(django.contrib.postgres.search.SearchVector('titre', 'missions', 'profilRecherche', config='french'), name='idx_offre_fts'),
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.AddIndex(
+                    model_name='offreemploi',
+                    index=_index_fts_offreemploi(),
+                ),
+            ],
+            database_operations=[
+                migrations.RunPython(crea_index_fts_offreemploi, suppr_index_fts_offreemploi),
+            ],
         ),
     ]

@@ -18,10 +18,12 @@ logs/*.log
 # Dumps de base de données (contiennent des données personnelles réelles —
 # candidats, emails, téléphones — jamais dans l'historique Git)
 *.sql
+data_export*.json
 
 # ── Environnements virtuels ───────────────────────────────────────────────────
 venv/
 .venv/
+.venv313/
 env/
 .env/
 # Environnement Python local du poste de dev (pas un venv standard : pas de

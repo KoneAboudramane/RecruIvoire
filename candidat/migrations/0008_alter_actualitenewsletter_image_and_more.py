@@ -7,6 +7,31 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+def _index_fts_candidat():
+    return django.contrib.postgres.indexes.GinIndex(
+        django.contrib.postgres.search.SearchVector(
+            'nom', 'prenom', 'titreProfessionnel', 'biographie', config='french',
+        ),
+        name='idx_candidat_fts',
+    )
+
+
+def crea_index_fts_candidat(apps, schema_editor):
+    # GinIndex/SearchVector sont spécifiques à PostgreSQL (extension GIN
+    # inexistante sous MySQL) — no-op sur les autres moteurs.
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+    Candidat = apps.get_model('candidat', 'Candidat')
+    schema_editor.add_index(Candidat, _index_fts_candidat())
+
+
+def suppr_index_fts_candidat(apps, schema_editor):
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+    Candidat = apps.get_model('candidat', 'Candidat')
+    schema_editor.remove_index(Candidat, _index_fts_candidat())
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -51,8 +76,15 @@ class Migration(migrations.Migration):
             name='apercu',
             field=models.ImageField(blank=True, help_text='Capture du rendu (recommandé : 1280×720 px).', null=True, storage=recrutement.storages.get_public_storage, upload_to='portfolios/apercu/', verbose_name="Image d'aperçu"),
         ),
-        migrations.AddIndex(
-            model_name='candidat',
-            index=django.contrib.postgres.indexes.GinIndex(django.contrib.postgres.search.SearchVector('nom', 'prenom', 'titreProfessionnel', 'biographie', config='french'), name='idx_candidat_fts'),
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.AddIndex(
+                    model_name='candidat',
+                    index=_index_fts_candidat(),
+                ),
+            ],
+            database_operations=[
+                migrations.RunPython(crea_index_fts_candidat, suppr_index_fts_candidat),
+            ],
         ),
     ]

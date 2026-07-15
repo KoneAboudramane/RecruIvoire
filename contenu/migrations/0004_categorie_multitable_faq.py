@@ -9,10 +9,13 @@ def migrer_contact_vers_categorie(apps, schema_editor):
             "INSERT INTO contenu_categorie (id, label, ordre, actif) "
             "SELECT id, label, ordre, actif FROM contenu_contactcategorie"
         )
-        cursor.execute(
-            "SELECT setval(pg_get_serial_sequence('contenu_categorie', 'id'), "
-            "COALESCE(MAX(id), 1)) FROM contenu_categorie"
-        )
+        if schema_editor.connection.vendor == 'postgresql':
+            # MySQL resynchronise seul son AUTO_INCREMENT sur MAX(id)+1 après
+            # un insert explicite — cette étape est spécifique à PostgreSQL.
+            cursor.execute(
+                "SELECT setval(pg_get_serial_sequence('contenu_categorie', 'id'), "
+                "COALESCE(MAX(id), 1)) FROM contenu_categorie"
+            )
         cursor.execute(
             "UPDATE contenu_contactcategorie SET categorie_ptr_id = id"
         )
@@ -20,14 +23,103 @@ def migrer_contact_vers_categorie(apps, schema_editor):
 
 def reverse_categorie_vers_contact(apps, schema_editor):
     with schema_editor.connection.cursor() as cursor:
-        cursor.execute(
+        if schema_editor.connection.vendor == 'postgresql':
+            cursor.execute(
+                "UPDATE contenu_contactcategorie cc "
+                "SET label = c.label, ordre = c.ordre, actif = c.actif "
+                "FROM contenu_categorie c WHERE c.id = cc.categorie_ptr_id"
+            )
+        else:
+            cursor.execute(
+                "UPDATE contenu_contactcategorie cc "
+                "JOIN contenu_categorie c ON c.id = cc.categorie_ptr_id "
+                "SET cc.label = c.label, cc.ordre = c.ordre, cc.actif = c.actif"
+            )
+
+
+def restructurer_contactcategorie(apps, schema_editor):
+    """Supprime l'ancien PK (id), rend categorie_ptr PK, supprime les champs
+    migrés vers Categorie. Syntaxe DDL spécifique par moteur."""
+    vendor = schema_editor.connection.vendor
+    if vendor == 'postgresql':
+        schema_editor.execute(
+            "ALTER TABLE contenu_contactcategorie "
+            "ALTER COLUMN categorie_ptr_id SET NOT NULL"
+        )
+        schema_editor.execute(
+            "ALTER TABLE contenu_contactcategorie "
+            "DROP CONSTRAINT contenu_contactcategorie_pkey"
+        )
+        schema_editor.execute(
+            "ALTER TABLE contenu_contactcategorie "
+            "DROP COLUMN id, DROP COLUMN label, DROP COLUMN ordre, DROP COLUMN actif"
+        )
+        schema_editor.execute(
+            "ALTER TABLE contenu_contactcategorie ADD PRIMARY KEY (categorie_ptr_id)"
+        )
+    elif vendor == 'mysql':
+        schema_editor.execute(
+            "ALTER TABLE contenu_contactcategorie "
+            "MODIFY COLUMN categorie_ptr_id BIGINT NOT NULL, "
+            "DROP PRIMARY KEY, "
+            "DROP COLUMN id, DROP COLUMN label, DROP COLUMN ordre, DROP COLUMN actif, "
+            "ADD PRIMARY KEY (categorie_ptr_id)"
+        )
+    else:
+        raise NotImplementedError(f"Backend {vendor} non supporté par cette migration.")
+
+
+def reverse_restructurer_contactcategorie(apps, schema_editor):
+    """Reconstruit les colonnes id/label/ordre/actif sur ContactCategorie
+    (chemin de rollback, peu emprunté — best-effort)."""
+    vendor = schema_editor.connection.vendor
+    if vendor == 'postgresql':
+        schema_editor.execute(
+            "ALTER TABLE contenu_contactcategorie DROP CONSTRAINT contenu_contactcategorie_pkey"
+        )
+        schema_editor.execute(
+            "ALTER TABLE contenu_contactcategorie "
+            "ADD COLUMN id BIGSERIAL, "
+            "ADD COLUMN label VARCHAR(80) NOT NULL DEFAULT '', "
+            "ADD COLUMN ordre SMALLINT NOT NULL DEFAULT 0, "
+            "ADD COLUMN actif BOOLEAN NOT NULL DEFAULT TRUE"
+        )
+        schema_editor.execute(
             "UPDATE contenu_contactcategorie cc "
-            "SET label = c.label, ordre = c.ordre, actif = c.actif "
+            "SET id = c.id, label = c.label, ordre = c.ordre, actif = c.actif "
             "FROM contenu_categorie c WHERE c.id = cc.categorie_ptr_id"
         )
+        schema_editor.execute(
+            "ALTER TABLE contenu_contactcategorie ADD PRIMARY KEY (id)"
+        )
+        schema_editor.execute(
+            "ALTER TABLE contenu_contactcategorie ALTER COLUMN categorie_ptr_id DROP NOT NULL"
+        )
+    elif vendor == 'mysql':
+        schema_editor.execute(
+            "ALTER TABLE contenu_contactcategorie "
+            "DROP PRIMARY KEY, "
+            "ADD COLUMN id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, "
+            "ADD COLUMN label VARCHAR(80) NOT NULL DEFAULT '', "
+            "ADD COLUMN ordre SMALLINT UNSIGNED NOT NULL DEFAULT 0, "
+            "ADD COLUMN actif BOOLEAN NOT NULL DEFAULT TRUE"
+        )
+        schema_editor.execute(
+            "UPDATE contenu_contactcategorie cc "
+            "JOIN contenu_categorie c ON c.id = cc.categorie_ptr_id "
+            "SET cc.id = c.id, cc.label = c.label, cc.ordre = c.ordre, cc.actif = c.actif"
+        )
+        schema_editor.execute(
+            "ALTER TABLE contenu_contactcategorie MODIFY COLUMN categorie_ptr_id BIGINT NULL"
+        )
+    else:
+        raise NotImplementedError(f"Backend {vendor} non supporté par cette migration.")
 
 
 class Migration(migrations.Migration):
+
+    # MySQL n'autorise pas de DDL brut (ALTER TABLE) dans une transaction.
+    atomic = False
 
     dependencies = [
         ('contenu', '0003_add_faq_texte'),
@@ -70,46 +162,12 @@ class Migration(migrations.Migration):
             reverse_categorie_vers_contact,
         ),
 
-        # ── 4. Tout le travail structurel PostgreSQL en une seule transaction ─
+        # ── 4. Travail structurel (DDL par moteur) ────────────────────────────
         #       Supprimer l'ancien PK (id), rendre categorie_ptr PK,
         #       supprimer les champs migrés vers Categorie.
-        migrations.RunSQL(
-            sql="""
-                ALTER TABLE contenu_contactcategorie
-                    ALTER COLUMN categorie_ptr_id SET NOT NULL;
-
-                ALTER TABLE contenu_contactcategorie
-                    DROP CONSTRAINT contenu_contactcategorie_pkey;
-
-                ALTER TABLE contenu_contactcategorie
-                    DROP COLUMN id,
-                    DROP COLUMN label,
-                    DROP COLUMN ordre,
-                    DROP COLUMN actif;
-
-                ALTER TABLE contenu_contactcategorie
-                    ADD PRIMARY KEY (categorie_ptr_id);
-            """,
-            reverse_sql="""
-                ALTER TABLE contenu_contactcategorie
-                    DROP CONSTRAINT contenu_contactcategorie_pkey;
-
-                ALTER TABLE contenu_contactcategorie
-                    ADD COLUMN id BIGSERIAL,
-                    ADD COLUMN label VARCHAR(80) NOT NULL DEFAULT '',
-                    ADD COLUMN ordre SMALLINT NOT NULL DEFAULT 0,
-                    ADD COLUMN actif BOOLEAN NOT NULL DEFAULT TRUE;
-
-                UPDATE contenu_contactcategorie cc
-                SET id = c.id, label = c.label, ordre = c.ordre, actif = c.actif
-                FROM contenu_categorie c WHERE c.id = cc.categorie_ptr_id;
-
-                ALTER TABLE contenu_contactcategorie
-                    ADD PRIMARY KEY (id);
-
-                ALTER TABLE contenu_contactcategorie
-                    ALTER COLUMN categorie_ptr_id DROP NOT NULL;
-            """,
+        migrations.RunPython(
+            restructurer_contactcategorie,
+            reverse_restructurer_contactcategorie,
         ),
 
         # ── 5. Synchroniser l'état Django (sans ré-exécuter de SQL) ──────────
