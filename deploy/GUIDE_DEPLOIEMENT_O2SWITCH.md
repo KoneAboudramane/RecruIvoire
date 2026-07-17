@@ -135,6 +135,34 @@ en une commande depuis le Terminal (étape 8.4).
 > généralement les bases MySQL en `utf8mb4` par défaut sur les hébergements
 > récents, mais à vérifier (`SHOW CREATE DATABASE <base>;`).
 
+> **Confirmé sur O2switch (2026-07-17)** : la base créée via l'assistant MySQL
+> de cPanel était en `utf8`/`utf8mb3`, pas `utf8mb4` — `migrate` plante avec
+> `MySQLdb.OperationalError: (1366, "Incorrect string value: '\xF0\x9F\x8F\xA2
+> E...'")` sur `pages_elementfooter.label` (contient des emoji). `OPTIONS.charset
+> = 'utf8mb4'` dans `settings.py` ne règle que l'encodage de la **connexion**,
+> pas le charset par défaut des tables créées par `migrate`, qui hérite du
+> charset de la base. Corrigé sans avoir à vider la base (les migrations déjà
+> appliquées sont conservées) via la commande dédiée :
+> ```bash
+> python manage.py corriger_charset_utf8mb4
+> python manage.py migrate
+> ```
+> (`recrutement/management/commands/corriger_charset_utf8mb4.py` — force
+> `ALTER DATABASE ... CHARACTER SET utf8mb4` puis convertit chaque table déjà
+> créée ; idempotente, sans effet si la base est déjà en utf8mb4).
+
+> **Warnings `W036`/`W043` au `migrate`** (`MariaDB does not support unique
+> constraints with conditions` / `... indexes on expressions`) : confirmé que
+> le MySQL d'O2switch est en réalité **MariaDB**, contrairement au MySQL 8.0.21
+> utilisé pour les tests locaux (WAMP). MariaDB ne sait pas créer les
+> `UniqueConstraint(condition=...)` (`entreprise/models.py:977,982,986,1420`,
+> `candidat/models.py:1455,2125,2300`) ni les index sur expressions
+> (`candidat.Candidat`, `entreprise.Entreprise`, `entreprise.OffreEmploi`) —
+> non bloquant, `migrate` continue, mais ces contraintes ne sont **pas**
+> appliquées au niveau base sur O2switch (seule la validation Django côté
+> application s'applique). Pas de correctif appliqué pour l'instant — à
+> surveiller si des données incohérentes apparaissent via un accès hors ORM.
+
 > **Piège découvert en testant (2026-07-15)** : `TIME_ZONE = 'Africa/Abidjan'`
 > + `USE_TZ = True` fait planter (`ValueError: Database returned an invalid
 > datetime value`) toute page utilisant `TruncDate`/`TruncMonth`/etc. (ex.
@@ -265,6 +293,7 @@ Points d'attention connus (voir le reste du projet pour le détail) :
 Toujours dans le Terminal, venv activé :
 
 ```bash
+python manage.py corriger_charset_utf8mb4   # avant tout migrate, voir §7
 python manage.py migrate
 python manage.py collectstatic --noinput
 python manage.py createsuperuser
@@ -353,6 +382,7 @@ zéro risque de dialecte SQL, contrairement à un dump natif.
 3. **Import, dans cet ordre précis**, depuis le Terminal cPanel :
 
    ```bash
+   python manage.py corriger_charset_utf8mb4   # avant tout migrate, voir §7
    python manage.py migrate            # schéma MySQL à jour, tables vides
    python manage.py loaddata data_o2switch.json
    ```
