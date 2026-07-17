@@ -280,6 +280,37 @@ def _critere_competences(profil: ProfilCandidat, offre) -> dict:
     }
 
 
+def competences_manquantes(candidat, offre, limite: int = 8) -> list:
+    """Compétences demandées par `offre` absentes du profil de `candidat`.
+
+    Purement informatif (utilisé par l'adaptation IA de CV pour suggérer au
+    candidat des pistes, jamais pour modifier automatiquement son CV — voir
+    `cv_adaptation.py`, garde-fou anti-invention). Réutilise `extraire_profil`,
+    même logique de matching que `_critere_competences` mais conserve la
+    casse d'origine des libellés pour un affichage propre.
+    """
+    profil = extraire_profil(candidat)
+
+    labels = {}  # libellé normalisé (lower) -> libellé d'affichage (casse d'origine)
+    for c in (offre.competencesRequises or []):
+        txt = str(c).strip()
+        if txt:
+            labels.setdefault(txt.lower(), txt)
+    requis_ids = set(offre.typesCompetence.values_list('id', flat=True))
+    if requis_ids:
+        try:
+            from referentiel.models import TypeCompetence
+            for nom in TypeCompetence.objects.filter(id__in=requis_ids).values_list('nomCompetence', flat=True):
+                nom = (nom or '').strip()
+                if nom:
+                    labels.setdefault(nom.lower(), nom)
+        except Exception:
+            pass
+
+    manquantes = sorted(set(labels) - profil.competences_libelle)
+    return [labels[cle] for cle in manquantes][:limite]
+
+
 def _critere_localisation(profil: ProfilCandidat, offre) -> dict:
     """Match localisation : même ville > même région > même pays > ailleurs.
 

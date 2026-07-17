@@ -6,6 +6,10 @@ sont appelées via `recrutement.background.lancer_en_arriere_plan()` (thread
 démon) plutôt qu'en synchrone dans la vue.
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def calculer_recommandations_accueil(candidat_id):
     """Recalcule les offres recommandées d'un candidat pour la page d'accueil.
@@ -59,3 +63,69 @@ def calculer_matching_offres(candidat_id):
     cache.set(f'matching_offres_{candidat.pk}', offres_scorees, 1800)
     cache.set(f'matching_offres_stale_{candidat.pk}', offres_scorees, 60 * 60 * 24 * 7)
     cache.delete(f'matching_offres_computing_{candidat.pk}')
+
+
+def adapter_cv_ia(candidat_id, offre_id, cv_id):
+    """Génère une version du CV `cv_id` adaptée au vocabulaire de l'offre
+    `offre_id` via un LLM (`cv_adaptation.adapter_cv_pour_offre`).
+
+    Écrit le résultat sous plusieurs clés de cache (voir `candidat/views/cv_ai.py`
+    pour le déclenchement et le polling) :
+      - `cv_ia_result_{candidat_id}_{offre_id}_{cv_id}` : dict `cv_initial`
+        prêt à préremplir l'éditeur, TTL 10 min.
+      - `cv_ia_gaps_{candidat_id}_{offre_id}_{cv_id}` : liste des compétences
+        demandées par l'offre absentes du profil — purement informatif, ne
+        modifie jamais le CV (voir `matching.competences_manquantes`).
+      - `cv_ia_status_{candidat_id}_{offre_id}_{cv_id}` : `{'status': 'ready'|'error', 'message': ...}`.
+
+    Contrairement aux autres tâches de ce module, celle-ci gère elle-même
+    ses erreurs (au lieu de laisser `background.py` les avaler en silence) :
+    la vue de polling doit toujours pouvoir lire un statut final, jamais
+    rester bloquée sur "computing" après un échec.
+    """
+    from django.core.cache import cache
+    from .models import Candidat, CV
+    from entreprise.models import OffreEmploi
+    from .cv_adaptation import adapter_cv_pour_offre
+    from .matching import competences_manquantes
+
+    status_key = f'cv_ia_status_{candidat_id}_{offre_id}_{cv_id}'
+    result_key = f'cv_ia_result_{candidat_id}_{offre_id}_{cv_id}'
+    gaps_key   = f'cv_ia_gaps_{candidat_id}_{offre_id}_{cv_id}'
+    lock_key   = f'cv_ia_computing_{candidat_id}_{offre_id}_{cv_id}'
+
+    try:
+        candidat = Candidat.objects.get(pk=candidat_id)
+        cv = (
+            CV.objects.select_related('candidat', 'modele', 'contenu')
+            .get(pk=cv_id, candidat=candidat, archive=False)
+        )
+        offre = (
+            OffreEmploi.objects
+            .select_related('entreprise__secteurActiviteRef')
+            .prefetch_related('typesCompetence')
+            .get(pk=offre_id)
+        )
+
+        adapted = adapter_cv_pour_offre(cv, offre)
+        gaps    = competences_manquantes(candidat, offre)
+
+        cache.set(result_key, adapted, 600)
+        cache.set(gaps_key, gaps, 600)
+        cache.set(status_key, {'status': 'ready', 'message': ''}, 600)
+    except (Candidat.DoesNotExist, CV.DoesNotExist, OffreEmploi.DoesNotExist):
+        cache.set(status_key, {
+            'status': 'error',
+            'message': "Ce CV ou cette offre n'est plus disponible.",
+        }, 600)
+    except Exception:
+        logger.exception(
+            "Adaptation IA du CV a échoué (candidat=%s offre=%s cv=%s)",
+            candidat_id, offre_id, cv_id,
+        )
+        cache.set(status_key, {
+            'status': 'error',
+            'message': "L'adaptation a échoué. Réessayez dans un instant.",
+        }, 600)
+    finally:
+        cache.delete(lock_key)

@@ -55,6 +55,11 @@ urlpatterns = [
     path('api/cv/<int:cv_id>/extraire/',                      cv_views.api_extraire_cv,           name='api_extraire_cv'),
     path('api/cv/sauvegarder-extraction/',                    cv_views.api_sauvegarder_extraction, name='api_sauvegarder_extraction'),
 
+    # CV — adaptation IA à une offre
+    path('offres/<int:offre_id>/adapter-cv/',                 views.lancer_adaptation_cv_ia,      name='lancer_adaptation_cv_ia'),
+    path('offres/<int:offre_id>/adapter-cv/statut/',          views.statut_adaptation_cv_ia,      name='statut_adaptation_cv_ia'),
+    path('offres/<int:offre_id>/adapter-cv/<int:cv_id>/ouvrir/', views.creer_cv_depuis_adaptation, name='creer_cv_depuis_adaptation'),
+
     # Lettre de motivation
     path('modeles-lettre/',                                        lettre_views.modeles_lettre,    name='modeles_lettre'),
     path('lettre/<int:template_id>/apercu/',                       lettre_views.apercu_lettre,     name='apercu_lettre'),

@@ -1,0 +1,128 @@
+{% load i18n %}
+{% if request.candidat and mes_cvs_actifs %}
+<div x-data="adaptationCvIa({
+       triggerUrl: '{% url 'candidat:lancer_adaptation_cv_ia' offre.id %}',
+       statutUrlBase: '{% url 'candidat:statut_adaptation_cv_ia' offre.id %}',
+       cvs: [
+         {% for cv in mes_cvs_actifs %}{ id: '{{ cv.pk }}', nom: '{{ cv.nomCv|default_if_none:''|escapejs }}', titre: '{{ cv.titre|default_if_none:''|escapejs }}' }{% if not forloop.last %},{% endif %}{% endfor %}
+       ],
+     })"
+     class="bg-white rounded-2xl p-6 sm:p-8 border-2 shadow-sm"
+     style="border-color:#c96010;">
+    {% csrf_token %}
+    <h2 class="text-xl font-extrabold text-gray-800 mb-2 flex items-center gap-2">
+        <span class="w-1.5 h-6 rounded-full" style="background:#c96010;"></span>
+        ✨ {% trans "Adapter un CV à cette offre avec l'IA" %}
+    </h2>
+    <p class="text-sm text-gray-600 mb-4">
+        {% trans "Choisissez un CV existant : nous générons une nouvelle version avec un titre et un profil reformulés pour cette offre — à relire et ajuster avant sauvegarde." %}
+    </p>
+
+    {% if matching and matching.score < 40 %}
+    <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
+        ⚠️ {% blocktrans with score=matching.score %}Cette offre est peu compatible avec votre profil ({{ score }}%) — l'IA pourra difficilement l'adapter sans forcer le trait. Vous pouvez générer quand même, à titre indicatif.{% endblocktrans %}
+    </p>
+    {% endif %}
+
+    <div class="flex flex-col sm:flex-row gap-3">
+        <select x-model="cvChoisi" :disabled="enCours"
+                class="flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm disabled:opacity-50">
+            <option value="">{% trans "— Choisir un CV —" %}</option>
+            <template x-for="cv in cvs" :key="cv.id">
+                <option :value="cv.id" x-text="cv.nom || cv.titre || ('CV #' + cv.id)"></option>
+            </template>
+        </select>
+
+        <button type="button" @click="lancer()" :disabled="!cvChoisi || enCours"
+                class="text-white font-bold px-5 py-2.5 rounded-lg text-sm whitespace-nowrap transition hover:opacity-90 disabled:opacity-50"
+                style="background:#c96010;">
+            <span x-show="!enCours">🤖 {% trans "Générer une version adaptée" %}</span>
+            <span x-show="enCours">⏳ {% trans "Génération en cours…" %}</span>
+        </button>
+    </div>
+    <p x-show="erreur" x-cloak x-text="erreur" class="text-xs text-red-600 mt-2"></p>
+
+    {# ── Succès : lien explicite, jamais d'ouverture auto silencieuse (bloqueur de popup) ── #}
+    <div x-show="pret" x-cloak class="mt-4 rounded-xl border-2 border-green-300 bg-green-50 px-4 py-3">
+        <div class="flex items-center justify-between gap-3">
+            <p class="text-sm text-green-800 font-semibold">✅ {% trans "Votre CV adapté est prêt !" %}</p>
+            <a :href="redirectUrl" target="_blank"
+               class="text-white font-bold px-4 py-2 rounded-lg text-sm whitespace-nowrap transition hover:opacity-90"
+               style="background:#2e7d52;">
+                {% trans "Ouvrir dans l'éditeur →" %}
+            </a>
+        </div>
+        {# Compétences demandées par l'offre absentes du profil — informatif uniquement, #}
+        {# jamais ajouté automatiquement au CV (voir garde-fou anti-invention). #}
+        <p x-show="competencesManquantes.length" x-cloak class="text-xs text-green-900/80 mt-2 pt-2 border-t border-green-200">
+            💡 {% trans "Compétences demandées par l'offre non présentes dans votre profil :" %}
+            <span x-text="competencesManquantes.join(', ')" class="font-semibold"></span>
+        </p>
+    </div>
+</div>
+
+<script>
+function adaptationCvIa({ triggerUrl, statutUrlBase, cvs }) {
+    return {
+        cvs, cvChoisi: '', enCours: false, erreur: '', pret: false, redirectUrl: '', competencesManquantes: [], _poll: null,
+
+        lancer() {
+            this.enCours = true;
+            this.erreur  = '';
+            this.pret    = false;
+            const csrftoken = document.querySelector('input[name=csrfmiddlewaretoken]')?.value;
+            fetch(triggerUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                body: JSON.stringify({ cv_id: this.cvChoisi }),
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.ok) {
+                        this.enCours = false;
+                        this.erreur  = data.message || "{% trans 'Erreur.' %}";
+                        return;
+                    }
+                    this._demarrerPolling();
+                })
+                .catch(() => {
+                    this.enCours = false;
+                    this.erreur  = "{% trans 'Erreur réseau.' %}";
+                });
+        },
+
+        _demarrerPolling() {
+            let tentatives = 0;
+            this._poll = setInterval(() => {
+                tentatives++;
+                if (tentatives > 30) {
+                    clearInterval(this._poll);
+                    this.enCours = false;
+                    this.erreur  = "{% trans 'Délai dépassé, réessayez.' %}";
+                    return;
+                }
+                fetch(`${statutUrlBase}?cv_id=${this.cvChoisi}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.status === 'ready') {
+                            clearInterval(this._poll);
+                            this.enCours = false;
+                            this.redirectUrl = data.redirect_url;
+                            this.competencesManquantes = data.competences_manquantes || [];
+                            this.pret = true;
+                            // Tentative d'ouverture auto — best-effort, peut etre
+                            // bloquee par le navigateur (pas un clic direct). Le
+                            // lien affiche ci-dessus reste le chemin garanti.
+                            window.open(data.redirect_url, '_blank');
+                        } else if (data.status === 'error') {
+                            clearInterval(this._poll);
+                            this.enCours = false;
+                            this.erreur  = data.message;
+                        }
+                    });
+            }, 2000);
+        },
+    };
+}
+</script>
+{% endif %}

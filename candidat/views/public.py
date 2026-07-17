@@ -591,6 +591,7 @@ def offre_detail(request, offre_id):
     candidature_existante = None
     candidature_form      = None
     est_favori            = False
+    mes_cvs_actifs         = []
     candidat = getattr(request, 'candidat', None)
     if candidat:
         from ..models import OffreFavori
@@ -604,6 +605,7 @@ def offre_detail(request, offre_id):
         if not candidature_existante:
             candidature_form = CandidatureForm(candidat=candidat, offre=offre)
         est_favori = OffreFavori.objects.filter(candidat=candidat, offre=offre).exists()
+        mes_cvs_actifs = list(candidat.cvs.filter(archive=False).order_by('-dateModification'))
 
     # ── JSON-LD JobPosting (Google rich results) ────────────────────────────
     _contrat_map = {
@@ -652,6 +654,7 @@ def offre_detail(request, offre_id):
         'candidature_existante':  candidature_existante,
         'candidature_form':       candidature_form,
         'est_favori':             est_favori,
+        'mes_cvs_actifs':         mes_cvs_actifs,
         'json_ld':                json_ld,
     })
 
