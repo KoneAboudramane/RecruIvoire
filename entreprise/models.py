@@ -3,8 +3,6 @@ import uuid
 from datetime import timedelta
 
 from django.conf import settings
-from django.contrib.postgres.indexes import GinIndex
-from django.contrib.postgres.search import SearchVector
 from django.db import models
 from django.contrib.auth.hashers import make_password, check_password as django_check_password
 from django.utils import timezone
@@ -251,12 +249,6 @@ class Entreprise(models.Model):
         verbose_name        = 'Entreprise'
         verbose_name_plural = 'Entreprises'
         ordering            = ['-dateCreationCompte']
-        indexes = [
-            GinIndex(
-                SearchVector('raisonSocial', 'description', config='french'),
-                name='idx_entreprise_fts',
-            ),
-        ]
 
     def __str__(self):
         return self.raisonSocial
@@ -698,12 +690,6 @@ class OffreEmploi(models.Model):
         verbose_name        = "Offre d'emploi"
         verbose_name_plural = "Offres d'emploi"
         ordering            = ['-dateCreation']
-        indexes = [
-            GinIndex(
-                SearchVector('titre', 'missions', 'profilRecherche', config='french'),
-                name='idx_offre_fts',
-            ),
-        ]
 
     def __str__(self):
         return f"{self.titre} — {self.entreprise}"

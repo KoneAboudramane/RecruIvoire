@@ -2,8 +2,6 @@ import random
 import uuid
 
 from django.conf import settings
-from django.contrib.postgres.indexes import GinIndex
-from django.contrib.postgres.search import SearchVector
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -230,12 +228,6 @@ class Candidat(Utilisateur):
         verbose_name        = 'Candidat'
         verbose_name_plural = 'Candidats'
         ordering            = ['-date_joined']
-        indexes = [
-            GinIndex(
-                SearchVector('nom', 'prenom', 'titreProfessionnel', 'biographie', config='french'),
-                name='idx_candidat_fts',
-            ),
-        ]
 
     def __str__(self):
         return f"{self.prenom} {self.nom} ({self.email or 'sans email'})"
