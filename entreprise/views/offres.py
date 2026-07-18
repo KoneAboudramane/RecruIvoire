@@ -28,6 +28,7 @@ from ._helpers import (
     _REV_CONTRAT_LIBELLE_TO_CODE,
     _REV_MODE_LIBELLE_TO_CODE,
     _REV_EXPERIENCE_LIBELLE_TO_CODE,
+    resoudre_contrat_et_mode_travail,
 )
 
 logger = logging.getLogger(__name__)
@@ -453,8 +454,16 @@ def offre_modifier(request, pk):
             offre=offre, recruteur__roleMembre=RoleMembre.MANAGER
         ).values_list('recruteur_id', flat=True)
     )
+    # Offres creees avant l'ajout des FK referentiels (contrat/modeTravailRef) :
+    # ces champs sont None mais le legacy CharField (typeContrat/modeTravail)
+    # est renseigne. Sans ce fallback, le picker Alpine du formulaire
+    # d'edition demarre vide alors que l'offre a bien un contrat/mode connu.
+    contrat_edition, mode_travail_edition = resoudre_contrat_et_mode_travail(offre)
+
     return render(request, 'entreprise/offres/modifier.html', {
         'offre':                offre,
+        'contrat_edition':      contrat_edition,
+        'mode_travail_edition': mode_travail_edition,
         'managers_assignes_ids': managers_assignes_ids,
         **_offre_context(request),
     })

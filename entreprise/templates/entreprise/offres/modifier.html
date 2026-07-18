@@ -526,11 +526,13 @@ function modifierWizard() {
         err: {},
         form: {
             titre:             '{{ offre.titre|escapejs }}',
-            // Pré-sélection des FK depuis l'offre existante
-            contratId:         '{% if offre.contrat_id %}{{ offre.contrat_id }}{% endif %}',
-            contratLabel:      '{{ offre.contrat.libelle|default:""|escapejs }}',
-            modeTravailId:     '{% if offre.modeTravailRef_id %}{{ offre.modeTravailRef_id }}{% endif %}',
-            modeTravailLabel:  '{{ offre.modeTravailRef.libelle|default:""|escapejs }}',
+            // Pré-sélection des FK depuis l'offre existante — `contrat_edition`/
+            // `mode_travail_edition` retombent sur le champ legacy si le FK est
+            // vide (offres créées avant l'ajout des FK référentiels).
+            contratId:         '{% if contrat_edition %}{{ contrat_edition.id }}{% endif %}',
+            contratLabel:      '{{ contrat_edition.libelle|default:""|escapejs }}',
+            modeTravailId:     '{% if mode_travail_edition %}{{ mode_travail_edition.id }}{% endif %}',
+            modeTravailLabel:  '{{ mode_travail_edition.libelle|default:""|escapejs }}',
             experienceId:      '{% if offre.anneesExperience_id %}{{ offre.anneesExperience_id }}{% endif %}',
             deviseId:          '{% if offre.deviseRef_id %}{{ offre.deviseRef_id }}{% endif %}',
             ville:             '{{ offre.ville|escapejs }}',

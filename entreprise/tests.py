@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
-from referentiel.models import Utilisateur, TypeCompte, Contrat
+from referentiel.models import Utilisateur, TypeCompte, Contrat, ModeTravail as ModeTravailRef
 from candidat.models import Candidat
 from .models import Entreprise, Recruteur, OffreEmploi, StatutOffre, RoleMembre
 
@@ -275,6 +275,73 @@ class OffreEmploiWorkflowTest(TestCase):
             reverse('entreprise:offre_detail', args=[offre.pk]),
         )
         self.assertEqual(resp.status_code, 200)
+
+
+class ContratModeTravailFallbackTest(TestCase):
+    """Repli sur le champ legacy quand le FK referentiel contrat/modeTravailRef
+    est vide (offres creees avant l'ajout de ces FK) — voir
+    entreprise.views._helpers.resoudre_contrat_et_mode_travail et la commande
+    backfill_contrat_mode_travail."""
+
+    def setUp(self):
+        self.client = Client()
+        self.entreprise = Entreprise.objects.create(
+            raisonSocial='Fallback Contrat Corp', emailProfessionnel='fallback@entreprise.ci',
+        )
+        self.entreprise.set_password('secret123')
+        self.entreprise.save()
+        Contrat.objects.get_or_create(libelle='CDI')
+        ModeTravailRef.objects.get_or_create(libelle='Présentiel')
+
+        # Offre "legacy" : uniquement typeContrat/modeTravail renseignes, FK vides.
+        self.offre = OffreEmploi.objects.create(
+            entreprise=self.entreprise, titre='Poste Legacy',
+            typeContrat='CDI', modeTravail='PRESENTIEL',
+        )
+
+    def test_resoudre_contrat_et_mode_travail_fallback_sur_legacy(self):
+        from entreprise.views._helpers import resoudre_contrat_et_mode_travail
+        contrat, mode = resoudre_contrat_et_mode_travail(self.offre)
+        self.assertEqual(contrat.libelle, 'CDI')
+        self.assertEqual(mode.libelle, 'Présentiel')
+
+    def test_formulaire_edition_preselectionne_le_fallback(self):
+        self.client.post(reverse('entreprise:connexion'), {
+            'email': 'fallback@entreprise.ci', 'motPasse': 'secret123',
+        })
+        resp = self.client.get(reverse('entreprise:offre_modifier', args=[self.offre.pk]))
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode()
+        self.assertIn("contratLabel:", content)
+        self.assertRegex(content, r"contratLabel:\s*'CDI'")
+        self.assertRegex(content, r"modeTravailLabel:\s*'Présentiel'")
+
+    def test_backfill_command_met_a_jour_les_fk(self):
+        from django.core.management import call_command
+        self.assertIsNone(self.offre.contrat_id)
+        self.assertIsNone(self.offre.modeTravailRef_id)
+
+        call_command('backfill_contrat_mode_travail')
+
+        self.offre.refresh_from_db()
+        self.assertEqual(self.offre.contrat.libelle, 'CDI')
+        self.assertEqual(self.offre.modeTravailRef.libelle, 'Présentiel')
+
+    def test_backfill_command_dry_run_ne_modifie_rien(self):
+        from django.core.management import call_command
+        call_command('backfill_contrat_mode_travail', '--dry-run')
+        self.offre.refresh_from_db()
+        self.assertIsNone(self.offre.contrat_id)
+        self.assertIsNone(self.offre.modeTravailRef_id)
+
+    def test_backfill_command_idempotent(self):
+        from django.core.management import call_command
+        call_command('backfill_contrat_mode_travail')
+        self.offre.refresh_from_db()
+        contrat_id_apres_1er_run = self.offre.contrat_id
+        call_command('backfill_contrat_mode_travail')
+        self.offre.refresh_from_db()
+        self.assertEqual(self.offre.contrat_id, contrat_id_apres_1er_run)
 
 
 class PermissionsRecruteurTest(TestCase):

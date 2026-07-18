@@ -35,6 +35,38 @@ _REV_EXPERIENCE_LIBELLE_TO_CODE = {
     'Expert (10+ ans)':     ExperienceRequise.EXPERT,
 }
 
+# ── Mapping inverse (TextChoices legacy -> libelle referentiel) ───────────────
+# Utilise pour retro-resoudre le FK referentiel d'une offre qui n'a que le
+# champ legacy renseigne (offres creees avant l'ajout des FK) — voir
+# `offres.py::offre_modifier` (prefill du formulaire d'edition) et la
+# commande `backfill_contrat_mode_travail`.
+_CONTRAT_CODE_TO_LIBELLE = {code: libelle for libelle, code in _REV_CONTRAT_LIBELLE_TO_CODE.items()}
+_MODE_CODE_TO_LIBELLE    = {code: libelle for libelle, code in _REV_MODE_LIBELLE_TO_CODE.items()}
+
+
+def resoudre_contrat_et_mode_travail(offre):
+    """Renvoie `(contrat_ref, mode_travail_ref)` pour `offre` — le FK existant
+    s'il est renseigne, sinon resolu depuis le champ legacy (`typeContrat` /
+    `modeTravail`) via le referentiel. Ne modifie jamais `offre` en base :
+    lecture seule, a appeler explicitement pour persister (voir la commande
+    `backfill_contrat_mode_travail`).
+    """
+    from referentiel.models import Contrat, ModeTravail as ModeTravailRef
+
+    contrat = offre.contrat
+    if contrat is None and offre.typeContrat:
+        libelle = _CONTRAT_CODE_TO_LIBELLE.get(offre.typeContrat)
+        if libelle:
+            contrat = Contrat.objects.filter(libelle=libelle).first()
+
+    mode_travail = offre.modeTravailRef
+    if mode_travail is None and offre.modeTravail:
+        libelle = _MODE_CODE_TO_LIBELLE.get(offre.modeTravail)
+        if libelle:
+            mode_travail = ModeTravailRef.objects.filter(libelle=libelle).first()
+
+    return contrat, mode_travail
+
 
 # ── Validation des fichiers uploades ─────────────────────────────────────────
 
