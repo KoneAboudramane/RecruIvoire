@@ -5,6 +5,13 @@ Paramètres : section (str clé suggestions/cv), titre (str), emoji (str)
 Visible uniquement si suggestions[section] non vide.
 Boutons globaux : Tout ajouter / Tout ignorer.
 Boutons par item : Ajouter / Ignorer.
+
+Deux origines possibles par item (`it.source`) :
+  - absent/'profil' : élément déjà dans le profil candidat mais pas sur ce CV
+    (suggestion classique, `cv.py::_compute_suggestions`).
+  - 'offre'         : compétence demandée par l'offre mais absente du profil
+    (adaptation IA, `cv_adaptation.py`) — badge violet distinct, le candidat
+    ne doit pas croire que c'est déjà acquis.
 {% endcomment %}
 <div x-show="hasSuggestions('{{ section }}')"
      x-transition.duration.150ms
@@ -29,17 +36,28 @@ Boutons par item : Ajouter / Ignorer.
       </button>
     </div>
   </div>
-  <p class="text-[11px] text-amber-700/80 mb-2 leading-snug">
+  <p class="text-[11px] text-violet-700/90 mb-2 leading-snug"
+     x-show="suggestions['{{ section }}'].some(i => i.source === 'offre')" x-cloak>
+    🤖 Suggestion d'agent AI — n'ajoutez que celles que vous possédez réellement.
+  </p>
+  <p class="text-[11px] text-amber-700/80 mb-2 leading-snug"
+     x-show="!suggestions['{{ section }}'].some(i => i.source === 'offre')">
     Ces éléments existent dans votre profil mais ne sont pas dans ce CV. Ajoutez-les si pertinent.
   </p>
   <div class="space-y-1.5">
     <template x-for="(it, idx) in suggestions['{{ section }}']" :key="'{{ section }}-' + idx + '-' + (it.id || idx)">
-      <div class="flex items-center gap-2 bg-white rounded-lg border border-amber-200 px-2 py-1.5">
+      <div class="flex items-center gap-2 bg-white rounded-lg border px-2 py-1.5"
+           :class="it.source === 'offre' ? 'border-violet-200' : 'border-amber-200'">
+        <span class="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-100 text-violet-700"
+              x-show="it.source === 'offre'" x-cloak>
+          🎯 Offre
+        </span>
         <span class="flex-1 text-xs text-gray-700 truncate"
               x-text="suggestionLabel('{{ section }}', it)"></span>
         <button type="button" @click="addSuggestion('{{ section }}', idx)"
                 title="{% trans "Ajouter au CV" %}"
-                class="flex-shrink-0 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-600 text-white hover:bg-amber-700 transition">
+                class="flex-shrink-0 px-2 py-0.5 rounded-md text-[11px] font-semibold text-white transition"
+                :class="it.source === 'offre' ? 'bg-violet-600 hover:bg-violet-700' : 'bg-amber-600 hover:bg-amber-700'">
           + Ajouter
         </button>
         <button type="button" @click="dismissSuggestion('{{ section }}', idx)"

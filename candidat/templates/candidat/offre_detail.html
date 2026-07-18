@@ -369,7 +369,12 @@
             </div>
             {% endif %}
 
-            {% include "candidat/partials/_adaptation_cv_ia.html" %}
+            {% if afficher_bloc_adaptation_ia %}
+            <div class="grid gap-6 {% if a_un_cv and lettre_requise %}md:grid-cols-2{% endif %}">
+                {% include "candidat/partials/_adaptation_cv_ia.html" %}
+                {% include "candidat/partials/_adaptation_lettre_ia.html" %}
+            </div>
+            {% endif %}
 
             {% comment %} ─── Section Postuler ───────────────────────────── {% endcomment %}
             <div id="postuler">
@@ -439,7 +444,11 @@
 
                 {% else %}
                     {# Formulaire de candidature #}
-                    <div x-data="{ ouvert: {% if ouvrir_formulaire %}true{% else %}false{% endif %}, apercu: false }"
+                    <div x-data="{
+                           ouvert: {% if ouvrir_formulaire %}true{% else %}false{% endif %},
+                           apercu: false,
+                           lettreOuverte: {% if offre.criteresATS.lettreMotivationnObligatoire or offre.criteresATS.lettreMotivationObligatoire or candidature_form.lettreSauvegardee.value %}true{% else %}false{% endif %},
+                         }"
                          class="rounded-2xl overflow-hidden border-2 shadow-md"
                          style="border-color:#2e7d52;">
                         {# Bandeau d'ouverture #}
@@ -616,7 +625,17 @@
                             </div>
 
                             {# ── Lettre de motivation : réutilisation OU upload ──── #}
-                            <div>
+                            {# Si non exigée par l'offre, masquée derrière un lien explicite — visible #}
+                            {# uniquement si le candidat choisit lui-même d'en joindre une, pour ne pas #}
+                            {# laisser croire qu'elle est requise. #}
+                            {% if not offre.criteresATS.lettreMotivationnObligatoire and not offre.criteresATS.lettreMotivationObligatoire %}
+                            <button type="button" @click="lettreOuverte = true" x-show="!lettreOuverte"
+                                    class="text-sm font-semibold hover:underline flex items-center gap-1.5"
+                                    style="color:#c96010;">
+                                ➕ {% trans "Ajouter une lettre de motivation (optionnel)" %}
+                            </button>
+                            {% endif %}
+                            <div x-show="lettreOuverte" {% if not offre.criteresATS.lettreMotivationnObligatoire and not offre.criteresATS.lettreMotivationObligatoire %}x-cloak{% endif %}>
                                 <label class="block text-sm font-bold text-gray-700 mb-2">
                                     ✉️ {% trans "Lettre de motivation" %}
                                     {% if offre.criteresATS.lettreMotivationnObligatoire or offre.criteresATS.lettreMotivationObligatoire %}

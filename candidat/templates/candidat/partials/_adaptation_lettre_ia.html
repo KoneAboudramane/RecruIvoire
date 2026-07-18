@@ -1,18 +1,18 @@
 {% load i18n %}
-{% if request.candidat and a_un_cv %}
-<div x-data="adaptationCvIa({
+{% if request.candidat and lettre_requise %}
+<div x-data="adaptationLettreIa({
        verifierUrl: '{% url 'candidat:verifier_avant_adaptation_cv_ia' offre.id %}',
-       triggerUrl: '{% url 'candidat:lancer_adaptation_cv_ia' offre.id %}',
-       statutUrlBase: '{% url 'candidat:statut_adaptation_cv_ia' offre.id %}',
+       triggerUrl: '{% url 'candidat:lancer_adaptation_lettre_ia' offre.id %}',
+       statutUrlBase: '{% url 'candidat:statut_adaptation_lettre_ia' offre.id %}',
      })"
      class="bg-white rounded-2xl p-6 sm:p-8 border border-gray-100 shadow-sm">
     {% csrf_token %}
     <h2 class="text-xl font-extrabold text-gray-800 mb-2 flex items-center gap-2">
         <span class="w-1.5 h-6 rounded-full bg-gray-300"></span>
-        ✨ {% trans "Adapter mon CV à cette offre avec l'IA" %}
+        ✨ {% trans "Adapter ma lettre de motivation à cette offre avec l'IA" %}
     </h2>
     <p class="text-sm text-gray-600 mb-4">
-        {% trans "Nous générons, à partir de tout votre profil, une nouvelle version de CV avec un titre et un profil reformulés pour cette offre — à relire et ajuster avant sauvegarde." %}
+        {% trans "Cette offre demande une lettre de motivation. Nous rédigeons un corps de lettre à partir de votre profil et des expériences les plus pertinentes pour ce poste — à relire et ajuster avant sauvegarde." %}
     </p>
 
     {% if matching and matching.score < 50 %}
@@ -24,7 +24,7 @@
     {# ── Étape 1 : bouton initial (masqué dès la vérification lancée) ── #}
     <button type="button" @click="verifier()" x-show="etape === 'initial'" :disabled="enCours"
             class="text-white font-bold px-5 py-2.5 rounded-lg text-sm whitespace-nowrap transition bg-gray-800 hover:bg-gray-900 disabled:opacity-50">
-        <span x-show="!enCours">🤖 {% trans "Générer une version adaptée" %}</span>
+        <span x-show="!enCours">🤖 {% trans "Générer une lettre adaptée" %}</span>
         <span x-show="enCours">⏳ {% trans "Vérification…" %}</span>
     </button>
 
@@ -36,7 +36,7 @@
         </p>
         <p class="text-sm text-amber-900 font-bold mb-3" x-text="competencesManquantes.join(', ')"></p>
         <p class="text-xs text-amber-800 mb-3">
-            {% trans "Vous pouvez continuer : le CV généré ne mentionnera jamais ces compétences si elles ne figurent pas déjà dans votre profil." %}
+            {% trans "Vous pouvez continuer : la lettre générée ne mentionnera jamais ces compétences si elles ne figurent pas déjà dans votre profil." %}
         </p>
         <div class="flex gap-3">
             <button type="button" @click="lancer()" :disabled="enCours"
@@ -55,7 +55,7 @@
 
     {# ── Succès : lien explicite (clic requis), navigue dans le même onglet ── #}
     <div x-show="etape === 'pret'" x-cloak class="mt-4 rounded-xl border-2 border-green-300 bg-green-50 px-4 py-3 flex items-center justify-between gap-3">
-        <p class="text-sm text-green-800 font-semibold">✅ {% trans "Votre CV adapté est prêt !" %}</p>
+        <p class="text-sm text-green-800 font-semibold">✅ {% trans "Votre lettre adaptée est prête !" %}</p>
         <a :href="redirectUrl"
            class="text-white font-bold px-4 py-2 rounded-lg text-sm whitespace-nowrap transition bg-gray-800 hover:bg-gray-900">
             {% trans "Ouvrir dans l'éditeur →" %}
@@ -64,7 +64,7 @@
 </div>
 
 <script>
-function adaptationCvIa({ verifierUrl, triggerUrl, statutUrlBase }) {
+function adaptationLettreIa({ verifierUrl, triggerUrl, statutUrlBase }) {
     return {
         etape: 'initial', enCours: false, erreur: '', redirectUrl: '', competencesManquantes: [], _poll: null,
 

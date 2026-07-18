@@ -11,3 +11,4 @@ from .candidatures import *    # noqa: F401,F403
 from .notifications import *   # noqa: F401,F403
 from .messagerie import *      # noqa: F401,F403
 from .cv_ai import *           # noqa: F401,F403
+from .lettre_ai import *       # noqa: F401,F403

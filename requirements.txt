@@ -52,7 +52,7 @@ transformers==5.9.0
 numpy==2.4.6
 
 # ── IA générative (adaptation de CV) ─────────────────────────────────────────
-google-genai==2.12.1
+mistralai==2.7.0
 
 # ── Traduction automatique ───────────────────────────────────────────────────
 deep-translator==1.11.4

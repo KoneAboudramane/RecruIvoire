@@ -1,11 +1,13 @@
-"""Point de contact unique avec un LLM externe (Google Gemini).
+"""Point de contact unique avec un LLM externe (Mistral AI).
 
 Isolé dans ce seul module : changer de fournisseur LLM plus tard ne
 demande de réécrire que ce fichier, rien côté appelants (`cv_adaptation.py`).
 
-Choix Gemini Flash : tier gratuit généreux (~1500 requêtes/jour sur Flash),
-largement suffisant pour ce projet — le vrai plafond pratique est le quota
-logiciel `QUOTA_QUOTIDIEN_CV_IA` (candidat/views/cv_ai.py), pas Gemini.
+Bascule décidée le 2026-07-17 (venait de Google Gemini) : le tier gratuit
+Gemini s'est avéré trop restrictif en usage réel multi-utilisateurs (quota
+partagé par toute l'app, 20 req/jour sur `gemini-3.5-flash` — voir
+`GEMINI_API_KEY` dans `.env`, conservée en secours manuel). Mistral AI
+("La Plateforme", console.mistral.ai) a son propre tier gratuit "Experiment".
 
 Le projet n'a aucune autre intégration LLM — tout le reste (matching,
 scoring ATS) tourne sur du ML local (sklearn, sentence-transformers).
@@ -17,11 +19,9 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-# Alias pointant vers le dernier modele Flash-Lite GA — quota gratuit propre
-# (separe de gemini-flash-latest, teste le 2026-07-17 : gemini-flash-latest
-# n'a que 20 requetes/jour gratuites sur ce compte, largement insuffisant ;
-# Flash-Lite convient de toute facon mieux a cette tache courte et bornee).
-MODELE_ADAPTATION_CV = 'gemini-flash-lite-latest'
+# Réécriture bornée en français (titre + résumé de CV) : la fidélité aux
+# faits compte plus que la créativité, pas besoin du modèle "large".
+MODELE_ADAPTATION_CV = 'mistral-small-latest'
 
 
 class LLMUnavailableError(Exception):
@@ -30,47 +30,47 @@ class LLMUnavailableError(Exception):
 
 
 def generer_json(system: str, user_content: str, schema: dict, *, max_tokens: int = 1500) -> dict:
-    """Appelle Gemini avec une sortie contrainte par JSON Schema et renvoie le dict résultant.
+    """Appelle Mistral avec une sortie contrainte par JSON Schema et renvoie le dict résultant.
 
     Lève `LLMUnavailableError` pour toute erreur (clé API absente, panne réseau/API,
     réponse refusée/tronquée, JSON invalide) — l'appelant n'a qu'un seul type
     d'erreur à gérer.
     """
-    if not settings.GEMINI_API_KEY:
-        raise LLMUnavailableError("GEMINI_API_KEY n'est pas configurée.")
+    if not settings.MISTRAL_API_KEY:
+        raise LLMUnavailableError("MISTRAL_API_KEY n'est pas configurée.")
 
-    from google import genai
-    from google.genai import errors as genai_errors
-    from google.genai import types
+    from mistralai.client import Mistral
+    from mistralai.client import errors as mistral_errors
+    from mistralai.client.models.jsonschema import JSONSchema
+    from mistralai.client.models.responseformat import ResponseFormat
 
     try:
-        client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        response = client.models.generate_content(
+        client = Mistral(api_key=settings.MISTRAL_API_KEY)
+        response = client.chat.complete(
             model=MODELE_ADAPTATION_CV,
-            contents=user_content,
-            config=types.GenerateContentConfig(
-                system_instruction=system,
-                max_output_tokens=max_tokens,
-                response_mime_type='application/json',
-                response_json_schema=schema,
-                # Reformulation courte et bornee : pas besoin de "reflexion" —
-                # sans ca, les tokens de thinking grignotent max_output_tokens
-                # et tronquent la reponse (FinishReason.MAX_TOKENS).
-                thinking_config=types.ThinkingConfig(thinking_budget=0),
+            max_tokens=max_tokens,
+            messages=[
+                {'role': 'system', 'content': system},
+                {'role': 'user', 'content': user_content},
+            ],
+            response_format=ResponseFormat(
+                type='json_schema',
+                json_schema=JSONSchema(name='cv_adaptation', schema=schema, strict=True),
             ),
         )
-    except genai_errors.APIError as e:
-        raise LLMUnavailableError(f"Erreur API Gemini : {e}") from e
+    except mistral_errors.SDKError as e:
+        raise LLMUnavailableError(f"Erreur API Mistral : {e}") from e
 
-    candidats = response.candidates or []
-    if not candidats or candidats[0].finish_reason != types.FinishReason.STOP:
-        motif = candidats[0].finish_reason if candidats else 'aucune réponse'
+    choix = response.choices or []
+    if not choix or choix[0].finish_reason != 'stop':
+        motif = choix[0].finish_reason if choix else 'aucune réponse'
         raise LLMUnavailableError(f"Réponse LLM incomplète (finish_reason={motif!r}).")
 
-    if not response.text:
+    contenu = choix[0].message.content if choix[0].message else None
+    if not contenu:
         raise LLMUnavailableError("Réponse LLM sans contenu texte exploitable.")
 
     try:
-        return json.loads(response.text)
+        return json.loads(contenu)
     except (json.JSONDecodeError, ValueError) as e:
         raise LLMUnavailableError(f"Réponse LLM non-JSON : {e}") from e

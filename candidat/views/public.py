@@ -591,7 +591,8 @@ def offre_detail(request, offre_id):
     candidature_existante = None
     candidature_form      = None
     est_favori            = False
-    mes_cvs_actifs         = []
+    a_un_cv                = False
+    ouvrir_formulaire      = False
     candidat = getattr(request, 'candidat', None)
     if candidat:
         from ..models import OffreFavori
@@ -603,9 +604,37 @@ def offre_detail(request, offre_id):
             .first()
         )
         if not candidature_existante:
-            candidature_form = CandidatureForm(candidat=candidat, offre=offre)
+            initial = {}
+            # Arrivee depuis "Postuler avec ce CV" / "Postuler avec cette lettre"
+            # (boutons CV/lettre adaptes par IA, cv/_form_panel.html et
+            # lettreMo/creer_lettre.html) : preselectionne le CV et/ou la
+            # lettre et ouvre directement le formulaire de candidature.
+            if request.GET.get('postuler') == '1':
+                if request.GET.get('cv', '').isdigit():
+                    cv_preselectionne = candidat.cvs.filter(
+                        pk=request.GET['cv'], archive=False,
+                    ).first()
+                    if cv_preselectionne:
+                        initial['cvSauvegarde'] = cv_preselectionne
+                        ouvrir_formulaire = True
+                if request.GET.get('lettre', '').isdigit():
+                    lettre_preselectionnee = candidat.lettres.filter(
+                        pk=request.GET['lettre'], archive=False,
+                    ).first()
+                    if lettre_preselectionnee:
+                        initial['lettreSauvegardee'] = lettre_preselectionnee
+                        ouvrir_formulaire = True
+            candidature_form = CandidatureForm(candidat=candidat, offre=offre, initial=initial)
         est_favori = OffreFavori.objects.filter(candidat=candidat, offre=offre).exists()
-        mes_cvs_actifs = list(candidat.cvs.filter(archive=False).order_by('-dateModification'))
+        a_un_cv = candidat.cvs.filter(archive=False).exists()
+
+    # Lettre de motivation exigee par l'offre (orthographe d'origine, cf. forms.py) —
+    # sert a n'afficher la carte "Adapter ma lettre avec l'IA" que si pertinent.
+    ats = offre.criteresATS or {}
+    lettre_requise = bool(ats.get('lettreMotivationnObligatoire') or ats.get('lettreMotivationObligatoire'))
+    # Calcule ici (plutot que dans le template) pour eviter tout piege de
+    # precedence "and"/"or" cote Django template.
+    afficher_bloc_adaptation_ia = bool(candidat) and (a_un_cv or lettre_requise)
 
     # ── JSON-LD JobPosting (Google rich results) ────────────────────────────
     _contrat_map = {
@@ -654,7 +683,10 @@ def offre_detail(request, offre_id):
         'candidature_existante':  candidature_existante,
         'candidature_form':       candidature_form,
         'est_favori':             est_favori,
-        'mes_cvs_actifs':         mes_cvs_actifs,
+        'a_un_cv':                a_un_cv,
+        'lettre_requise':         lettre_requise,
+        'afficher_bloc_adaptation_ia': afficher_bloc_adaptation_ia,
+        'ouvrir_formulaire':      ouvrir_formulaire,
         'json_ld':                json_ld,
     })
 

@@ -268,6 +268,9 @@ GITHUB_CLIENT_SECRET = os.environ.get('GITHUB_CLIENT_SECRET', '')
 # ── Google Gemini (adaptation IA de CV) ──────────────────────────────────────
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 
+# ── Mistral AI (secours manuel si quota Gemini épuisé, non branché dans le code actif) ──
+MISTRAL_API_KEY = os.environ.get('MISTRAL_API_KEY', '')
+
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'APP': {

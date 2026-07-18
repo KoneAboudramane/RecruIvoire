@@ -56,9 +56,10 @@ urlpatterns = [
     path('api/cv/sauvegarder-extraction/',                    cv_views.api_sauvegarder_extraction, name='api_sauvegarder_extraction'),
 
     # CV — adaptation IA à une offre
+    path('offres/<int:offre_id>/adapter-cv/verifier/',        views.verifier_avant_adaptation_cv_ia, name='verifier_avant_adaptation_cv_ia'),
     path('offres/<int:offre_id>/adapter-cv/',                 views.lancer_adaptation_cv_ia,      name='lancer_adaptation_cv_ia'),
     path('offres/<int:offre_id>/adapter-cv/statut/',          views.statut_adaptation_cv_ia,      name='statut_adaptation_cv_ia'),
-    path('offres/<int:offre_id>/adapter-cv/<int:cv_id>/ouvrir/', views.creer_cv_depuis_adaptation, name='creer_cv_depuis_adaptation'),
+    path('offres/<int:offre_id>/adapter-cv/ouvrir/',          views.creer_cv_depuis_adaptation,   name='creer_cv_depuis_adaptation'),
 
     # Lettre de motivation
     path('modeles-lettre/',                                        lettre_views.modeles_lettre,    name='modeles_lettre'),
@@ -71,6 +72,11 @@ urlpatterns = [
     path('api/lettre/<int:lettre_id>/regenerer/',                  lettre_views.regenerer_lettre_artefacts, name='api_regenerer_lettre'),
     path('api/lettre/<int:lettre_id>/images/',                     lettre_views.api_images_lettre,         name='api_images_lettre'),
     path('lettre/<int:lettre_id>/modifier/',                       lettre_views.modifier_lettre,           name='modifier_lettre'),
+
+    # Lettre — adaptation IA à une offre (verification reutilise verifier_avant_adaptation_cv_ia)
+    path('offres/<int:offre_id>/adapter-lettre/',              views.lancer_adaptation_lettre_ia,   name='lancer_adaptation_lettre_ia'),
+    path('offres/<int:offre_id>/adapter-lettre/statut/',       views.statut_adaptation_lettre_ia,   name='statut_adaptation_lettre_ia'),
+    path('offres/<int:offre_id>/adapter-lettre/ouvrir/',       views.creer_lettre_depuis_adaptation, name='creer_lettre_depuis_adaptation'),
 
     # Portfolio
     path('mon-portfolio/',                                         views.mon_portfolio,                          name='mon_portfolio'),

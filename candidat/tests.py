@@ -6,7 +6,7 @@ from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from referentiel.models import Utilisateur, TypeCompte, Statut
 from entreprise.models import Entreprise, OffreEmploi, StatutOffre
-from .models import Candidat, Candidature, CV, CVContenu, Competence, ModeleCV
+from .models import Candidat, Candidature, CV, CVContenu, Competence, ModeleCV, ModeleLettre
 
 
 class UtilisateurModelTest(TestCase):
@@ -436,26 +436,39 @@ class CvAdaptationIAViewTest(TestCase):
     def tearDown(self):
         cache.clear()
 
+    def test_verification_renvoie_competences_manquantes(self):
+        self.client.force_login(self.candidat)
+        resp = self.client.get(reverse('candidat:verifier_avant_adaptation_cv_ia', args=[self.offre.pk]))
+        self.assertEqual(resp.status_code, 200)
+        data = json.loads(resp.content)
+        self.assertTrue(data['ok'])
+        self.assertIn('competences_manquantes', data)
+
+    def test_verification_offre_inexistante_404(self):
+        self.client.force_login(self.candidat)
+        resp = self.client.get(reverse('candidat:verifier_avant_adaptation_cv_ia', args=[999999]))
+        self.assertEqual(resp.status_code, 404)
+
     @patch('recrutement.background.lancer_en_arriere_plan')
     def test_declenchement_lance_tache_fond(self, mock_bg):
         self.client.force_login(self.candidat)
         resp = self.client.post(
             reverse('candidat:lancer_adaptation_cv_ia', args=[self.offre.pk]),
-            data=json.dumps({'cv_id': self.cv_source.pk}), content_type='application/json',
+            data='{}', content_type='application/json',
         )
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(json.loads(resp.content)['ok'])
         mock_bg.assert_called_once()
         args = mock_bg.call_args[0]
         self.assertEqual(args[0].__name__, 'adapter_cv_ia')
-        self.assertEqual(args[1:], (self.candidat.pk, self.offre.pk, self.cv_source.pk))
+        self.assertEqual(args[1:], (self.candidat.pk, self.offre.pk))
 
     @patch('recrutement.background.lancer_en_arriere_plan')
-    def test_declenchement_cv_inexistant_404(self, mock_bg):
+    def test_declenchement_offre_inexistante_404(self, mock_bg):
         self.client.force_login(self.candidat)
         resp = self.client.post(
-            reverse('candidat:lancer_adaptation_cv_ia', args=[self.offre.pk]),
-            data=json.dumps({'cv_id': 999999}), content_type='application/json',
+            reverse('candidat:lancer_adaptation_cv_ia', args=[999999]),
+            data='{}', content_type='application/json',
         )
         self.assertEqual(resp.status_code, 404)
         mock_bg.assert_not_called()
@@ -463,7 +476,7 @@ class CvAdaptationIAViewTest(TestCase):
     def test_declenchement_sans_connexion_redirige(self):
         resp = self.client.post(
             reverse('candidat:lancer_adaptation_cv_ia', args=[self.offre.pk]),
-            data=json.dumps({'cv_id': self.cv_source.pk}), content_type='application/json',
+            data='{}', content_type='application/json',
         )
         self.assertEqual(resp.status_code, 302)
         self.assertIn('connexion', resp.url)
@@ -472,62 +485,51 @@ class CvAdaptationIAViewTest(TestCase):
     def test_quota_quotidien_bloque_apres_limite(self, mock_bg):
         from candidat.views.cv_ai import QUOTA_QUOTIDIEN_CV_IA
         self.client.force_login(self.candidat)
-        lock_key = f'cv_ia_computing_{self.candidat.pk}_{self.offre.pk}_{self.cv_source.pk}'
+        lock_key = f'cv_ia_computing_{self.candidat.pk}_{self.offre.pk}'
         for _ in range(QUOTA_QUOTIDIEN_CV_IA):
             resp = self.client.post(
                 reverse('candidat:lancer_adaptation_cv_ia', args=[self.offre.pk]),
-                data=json.dumps({'cv_id': self.cv_source.pk}), content_type='application/json',
+                data='{}', content_type='application/json',
             )
             self.assertEqual(resp.status_code, 200)
             # Simule la fin de la tache fond (mockee = ne le fait jamais elle-meme).
             cache.delete(lock_key)
         resp = self.client.post(
             reverse('candidat:lancer_adaptation_cv_ia', args=[self.offre.pk]),
-            data=json.dumps({'cv_id': self.cv_source.pk}), content_type='application/json',
+            data='{}', content_type='application/json',
         )
         self.assertEqual(resp.status_code, 429)
 
     def test_statut_computing_par_defaut(self):
         self.client.force_login(self.candidat)
-        resp = self.client.get(
-            reverse('candidat:statut_adaptation_cv_ia', args=[self.offre.pk]),
-            {'cv_id': self.cv_source.pk},
-        )
+        resp = self.client.get(reverse('candidat:statut_adaptation_cv_ia', args=[self.offre.pk]))
         self.assertEqual(json.loads(resp.content)['status'], 'computing')
 
     def test_statut_ready_renvoie_redirect_url(self):
         self.client.force_login(self.candidat)
-        status_key = f'cv_ia_status_{self.candidat.pk}_{self.offre.pk}_{self.cv_source.pk}'
+        status_key = f'cv_ia_status_{self.candidat.pk}_{self.offre.pk}'
         cache.set(status_key, {'status': 'ready', 'message': ''}, 600)
-        resp = self.client.get(
-            reverse('candidat:statut_adaptation_cv_ia', args=[self.offre.pk]),
-            {'cv_id': self.cv_source.pk},
-        )
+        resp = self.client.get(reverse('candidat:statut_adaptation_cv_ia', args=[self.offre.pk]))
         data = json.loads(resp.content)
         self.assertEqual(data['status'], 'ready')
         self.assertIn(str(self.offre.pk), data['redirect_url'])
-        self.assertIn(str(self.cv_source.pk), data['redirect_url'])
 
     def test_ouverture_editeur_avec_cache(self):
-        from candidat.cv import _cv_to_dict
+        from candidat.cv_initial import build_cv_initial
         self.client.force_login(self.candidat)
-        adapted = _cv_to_dict(self.cv_source)
+        adapted = build_cv_initial(self.candidat)
         adapted['titre']  = 'Titre adapte'
         adapted['profil'] = 'Profil adapte'
-        adapted['nomCv']  = 'Mon CV Backend — adapte'
-        result_key = f'cv_ia_result_{self.candidat.pk}_{self.offre.pk}_{self.cv_source.pk}'
+        adapted['nomCv']  = 'CV — Developpeuse Django'
+        result_key = f'cv_ia_result_{self.candidat.pk}_{self.offre.pk}'
         cache.set(result_key, adapted, 600)
 
-        resp = self.client.get(
-            reverse('candidat:creer_cv_depuis_adaptation', args=[self.offre.pk, self.cv_source.pk]),
-        )
+        resp = self.client.get(reverse('candidat:creer_cv_depuis_adaptation', args=[self.offre.pk]))
         self.assertEqual(resp.status_code, 200)
 
     def test_ouverture_editeur_cache_expire_redirige(self):
         self.client.force_login(self.candidat)
-        resp = self.client.get(
-            reverse('candidat:creer_cv_depuis_adaptation', args=[self.offre.pk, 999999]),
-        )
+        resp = self.client.get(reverse('candidat:creer_cv_depuis_adaptation', args=[999999]))
         self.assertEqual(resp.status_code, 302)
 
     def test_offre_detail_contient_carte_adaptation_ia(self):
@@ -547,9 +549,9 @@ class CvAdaptationIAViewTest(TestCase):
             'titre':  'Developpeuse Backend Django — orientee offre',
             'profil': 'Profil reformule pour coller au vocabulaire de l\'offre.',
         }):
-            adapted = adapter_cv_pour_offre(self.cv_source, self.offre)
+            adapted = adapter_cv_pour_offre(self.candidat, self.offre)
 
-        self.assertNotEqual(adapted['nomCv'], self.cv_source.nomCv)
+        self.assertEqual(adapted['nomCv'], 'CV — Developpeuse Django')
         self.assertEqual(adapted['titre'], 'Developpeuse Backend Django — orientee offre')
 
         self.client.force_login(self.candidat)
@@ -569,3 +571,231 @@ class CvAdaptationIAViewTest(TestCase):
         self.cv_source.refresh_from_db()
         self.assertEqual(self.cv_source.titre, 'Developpeuse Python')
         self.assertEqual(self.cv_source.nomCv, 'Mon CV Backend')
+
+    def test_suggestions_competences_manquantes_de_loffre(self):
+        """Les competences demandees par l'offre et absentes du profil sont
+        proposees comme suggestions (jamais ajoutees directement au CV)."""
+        from candidat.cv_adaptation import adapter_cv_pour_offre
+        from candidat.models import Competence
+
+        # Competence reelle sur le profil (pas juste dans le snapshot JSON d'un
+        # CV) — c'est `Candidat.competences` (table relationnelle) que lit
+        # `matching.competences_manquantes`, pas le snapshot d'un CV donne.
+        Competence.objects.create(candidat=self.candidat, nomLibre='Python')
+
+        offre_ciblee = OffreEmploi.objects.create(
+            entreprise=self.entreprise, titre='Poste avec competences',
+            typeContrat='CDI', statutOffre=StatutOffre.PUBLIEE,
+            competencesRequises=['Python', 'Negociation', 'CRM'],
+        )
+        with patch('candidat.cv_adaptation.generer_json', return_value={
+            'titre': 'Titre', 'profil': 'Profil',
+        }):
+            adapted = adapter_cv_pour_offre(self.candidat, offre_ciblee)
+
+        suggestions_noms = {s['nom'] for s in adapted['suggestions']['competences']}
+        self.assertIn('Negociation', suggestions_noms)
+        self.assertIn('CRM', suggestions_noms)
+        self.assertNotIn('Python', suggestions_noms)  # deja dans le profil (Competence creee ci-dessus)
+        # Jamais ajoutees directement a la liste des competences du CV.
+        competences_cv = {c.get('nom') for c in adapted['competences']}
+        self.assertNotIn('Negociation', competences_cv)
+
+    def test_acceptation_suggestion_competence_sauvegarde_via_flux_existant(self):
+        """Simule le clic « + Ajouter » cote editeur (item suggestion pousse
+        dans cv.competences) — verifie que l'id synthetique de la suggestion
+        n'empeche pas la sauvegarde via le flux sauvegarder_cv existant."""
+        self.client.force_login(self.candidat)
+        cv_avec_suggestion_acceptee = {
+            'titre': 'X', 'profil': 'Y',
+            'competences': [{'id': 'offre-0', 'nom': 'Negociation', 'niveau': None, 'visiblePortfolio': True}],
+            'experiences': [], 'formations': [], 'langues': [], 'interets': [], 'projets': [], 'benevs': [],
+        }
+        resp = self.client.post(
+            reverse('candidat:api_sauvegarder_cv', args=[self.modele.pk]),
+            data=json.dumps({
+                'cv_id': None, 'titre': 'X', 'nom_cv': 'CV avec suggestion', 'cv': cv_avec_suggestion_acceptee,
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 200, resp.content)
+        self.assertTrue(
+            self.candidat.competences.filter(nomLibre='Negociation').exists()
+            or self.candidat.competences.filter(typeCompetence__nomCompetence='Negociation').exists()
+        )
+
+
+class LettreAdaptationGuardrailTest(TestCase):
+    """Garde-fous de validation de la reponse LLM (candidat.lettre_adaptation) — aucun appel reseau."""
+
+    def test_reponse_sans_corps_leve_erreur(self):
+        from candidat.ai_provider import LLMUnavailableError
+        from candidat.lettre_adaptation import _valider
+        with self.assertRaises(LLMUnavailableError):
+            _valider({'autre_champ': 'x'})
+
+    def test_troncature_longueur(self):
+        from candidat.lettre_adaptation import CORPS_MAX_LEN, _valider
+        corps = _valider({'corps': 'A' * 5000})
+        self.assertEqual(len(corps), CORPS_MAX_LEN)
+
+
+class LettreAdaptationIAViewTest(TestCase):
+    """Vues de l'adaptation IA de lettre (declenchement, statut, ouverture editeur)."""
+
+    def setUp(self):
+        self.client = Client()
+        cache.clear()
+
+        self.candidat = Candidat(
+            email='lettreia@example.com', type_compte=TypeCompte.CANDIDAT,
+            nom='Dupont', prenom='Marie', emailVerifie=True,
+            titreProfessionnel='Developpeuse Python',
+        )
+        self.candidat.set_password('test123')
+        self.candidat.save()
+
+        self.entreprise = Entreprise.objects.create(
+            raisonSocial='Lettre IA Corp', emailProfessionnel='lettreia@entreprise.ci',
+        )
+        self.entreprise.set_password('test')
+        self.entreprise.save()
+
+        self.offre = OffreEmploi.objects.create(
+            entreprise=self.entreprise, titre='Developpeuse Django',
+            typeContrat='CDI', statutOffre=StatutOffre.PUBLIEE,
+            criteresATS={'lettreMotivationnObligatoire': True},
+        )
+
+        self.modele = ModeleLettre.objects.create(nom='Classique Test', slug='classique-test')
+
+    def tearDown(self):
+        cache.clear()
+
+    @patch('recrutement.background.lancer_en_arriere_plan')
+    def test_declenchement_lance_tache_fond(self, mock_bg):
+        self.client.force_login(self.candidat)
+        resp = self.client.post(
+            reverse('candidat:lancer_adaptation_lettre_ia', args=[self.offre.pk]),
+            data='{}', content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(json.loads(resp.content)['ok'])
+        mock_bg.assert_called_once()
+        args = mock_bg.call_args[0]
+        self.assertEqual(args[0].__name__, 'adapter_lettre_ia')
+        self.assertEqual(args[1:], (self.candidat.pk, self.offre.pk))
+
+    @patch('recrutement.background.lancer_en_arriere_plan')
+    def test_declenchement_offre_inexistante_404(self, mock_bg):
+        self.client.force_login(self.candidat)
+        resp = self.client.post(
+            reverse('candidat:lancer_adaptation_lettre_ia', args=[999999]),
+            data='{}', content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 404)
+        mock_bg.assert_not_called()
+
+    def test_declenchement_sans_connexion_redirige(self):
+        resp = self.client.post(
+            reverse('candidat:lancer_adaptation_lettre_ia', args=[self.offre.pk]),
+            data='{}', content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('connexion', resp.url)
+
+    @patch('recrutement.background.lancer_en_arriere_plan')
+    def test_quota_quotidien_bloque_apres_limite(self, mock_bg):
+        from candidat.views.lettre_ai import QUOTA_QUOTIDIEN_LETTRE_IA
+        self.client.force_login(self.candidat)
+        lock_key = f'lettre_ia_computing_{self.candidat.pk}_{self.offre.pk}'
+        for _ in range(QUOTA_QUOTIDIEN_LETTRE_IA):
+            resp = self.client.post(
+                reverse('candidat:lancer_adaptation_lettre_ia', args=[self.offre.pk]),
+                data='{}', content_type='application/json',
+            )
+            self.assertEqual(resp.status_code, 200)
+            cache.delete(lock_key)
+        resp = self.client.post(
+            reverse('candidat:lancer_adaptation_lettre_ia', args=[self.offre.pk]),
+            data='{}', content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 429)
+
+    def test_statut_computing_par_defaut(self):
+        self.client.force_login(self.candidat)
+        resp = self.client.get(reverse('candidat:statut_adaptation_lettre_ia', args=[self.offre.pk]))
+        self.assertEqual(json.loads(resp.content)['status'], 'computing')
+
+    def test_statut_ready_renvoie_redirect_url(self):
+        self.client.force_login(self.candidat)
+        status_key = f'lettre_ia_status_{self.candidat.pk}_{self.offre.pk}'
+        cache.set(status_key, {'status': 'ready', 'message': ''}, 600)
+        resp = self.client.get(reverse('candidat:statut_adaptation_lettre_ia', args=[self.offre.pk]))
+        data = json.loads(resp.content)
+        self.assertEqual(data['status'], 'ready')
+        self.assertIn(str(self.offre.pk), data['redirect_url'])
+
+    def test_ouverture_editeur_avec_cache(self):
+        self.client.force_login(self.candidat)
+        adapted = {
+            'lettreId': None, 'nomLettre': 'Lettre — Developpeuse Django',
+            'titreDestinataire': '', 'nomDestinataire': '', 'posteDestinataire': '', 'posteDestId': None,
+            'entreprise': 'Lettre IA Corp', 'entrepriseId': None,
+            'paysNom': '', 'paysId': None, 'villeEntreprise': '', 'villeEntrepriseId': None,
+            'lieu': '', 'dateLettre': '', 'objet': 'Candidature au poste de Developpeuse Django',
+            'corps': 'Corps genere par test.',
+            'formuleConge': "Veuillez agréer, [titre] [nom], l'expression de mes salutations distinguées.",
+        }
+        result_key = f'lettre_ia_result_{self.candidat.pk}_{self.offre.pk}'
+        cache.set(result_key, adapted, 600)
+
+        resp = self.client.get(reverse('candidat:creer_lettre_depuis_adaptation', args=[self.offre.pk]))
+        self.assertEqual(resp.status_code, 200)
+
+    def test_ouverture_editeur_cache_expire_redirige(self):
+        self.client.force_login(self.candidat)
+        resp = self.client.get(reverse('candidat:creer_lettre_depuis_adaptation', args=[999999]))
+        self.assertEqual(resp.status_code, 302)
+
+    def test_offre_detail_contient_carte_adaptation_lettre_si_requise(self):
+        self.client.force_login(self.candidat)
+        resp = self.client.get(reverse('candidat:offre_detail', args=[self.offre.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'adaptationLettreIa')
+
+    def test_offre_detail_masque_carte_si_lettre_non_requise(self):
+        offre_sans_lettre = OffreEmploi.objects.create(
+            entreprise=self.entreprise, titre='Poste Sans Lettre',
+            typeContrat='CDI', statutOffre=StatutOffre.PUBLIEE,
+        )
+        self.client.force_login(self.candidat)
+        resp = self.client.get(reverse('candidat:offre_detail', args=[offre_sans_lettre.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, 'adaptationLettreIa')
+
+    def test_bout_en_bout_dict_adapte_sauvegarde_via_flux_existant(self):
+        """Le dict produit par `adapter_lettre_pour_offre` passe par
+        `sauvegarder_lettre` SANS AUCUNE modification de cet endpoint —
+        preuve que la reutilisation du flux d'edition existant fonctionne."""
+        from candidat.lettre_adaptation import adapter_lettre_pour_offre
+
+        with patch('candidat.lettre_adaptation.generer_json', return_value={
+            'corps': 'Corps de lettre genere par le test, suffisamment long pour etre plausible.',
+        }):
+            adapted = adapter_lettre_pour_offre(self.candidat, self.offre)
+
+        self.assertIsNone(adapted['lettreId'])
+        self.assertEqual(adapted['entreprise'], 'Lettre IA Corp')
+        self.assertEqual(adapted['objet'], 'Candidature au poste de Developpeuse Django')
+
+        self.client.force_login(self.candidat)
+        resp = self.client.post(
+            reverse('candidat:api_sauvegarder_lettre', args=[self.modele.pk]),
+            data=json.dumps(adapted),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 200, resp.content)
+        self.assertEqual(self.candidat.lettres.count(), 1)
+        nouvelle = self.candidat.lettres.get()
+        self.assertEqual(nouvelle.contenu.corps, adapted['corps'])

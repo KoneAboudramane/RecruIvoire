@@ -127,6 +127,11 @@ function cvBuilder() {
     savedCvId:   {{ cv_id|default:"null" }},
     saveMessage: '',      // message éphémère affiché après save
     nomCvError:  '',      // erreur inline pour le champ "Nom du CV" (vide / doublon)
+    /* Offre d'origine si ce CV a été ouvert depuis l'adaptation IA
+       (`creer_cv_depuis_adaptation`) — sert à proposer "Postuler avec ce CV"
+       juste après la sauvegarde. Null dans tous les autres cas (création
+       normale, modification, aperçu). */
+    offreIdAdaptation: {{ offre_id_adaptation|default:"null" }},
 
     /* Clé sessionStorage one-shot : utilisée uniquement pour transférer l'état
        en cours quand l'utilisateur change de modèle de CV (changerModele →

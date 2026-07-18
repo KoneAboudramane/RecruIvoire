@@ -1,8 +1,12 @@
-"""Classement local (sans IA) du contenu d'un CV par pertinence vis-à-vis
-d'une offre — réutilise les embeddings sentence-transformers déjà en place
-pour le matching sémantique (`matching_semantic.py`), aucun nouveau pipeline
-ML. Sert de contexte de lecture seule pour la réécriture IA (`cv_adaptation.py`)
-et de bonus gratuit (réordonnancement des compétences).
+"""Sélection/classement local (sans IA) du contenu le plus pertinent du
+profil complet d'un candidat vis-à-vis d'une offre — réutilise les
+embeddings sentence-transformers déjà en place pour le matching sémantique
+(`matching_semantic.py`), aucun nouveau pipeline ML.
+
+Sert à assembler un CV taillé pour une offre à partir de TOUT le profil du
+candidat (`Candidat.rubriques`, via `cv_initial.build_cv_initial`) plutôt que
+du seul contenu d'un CV existant — voir `cv_adaptation.py`. Pure sélection
+d'éléments réels déjà saisis par le candidat : ne modifie ni n'invente rien.
 """
 from __future__ import annotations
 
@@ -18,36 +22,50 @@ def _texte_experience(exp: dict) -> str:
     return ' '.join(p for p in (postes, exp.get('entreprise') or '') if p).strip()
 
 
-def classer_experiences_par_pertinence(experiences: list, offre, top_n: int = 3) -> list:
-    """Renvoie les `top_n` expériences (dicts, format éditeur CV) les plus
-    proches sémantiquement de `offre`, dans l'ordre de pertinence décroissante.
+def _texte_projet(projet: dict) -> str:
+    return ' '.join(p for p in (projet.get('nom') or '', projet.get('desc') or '') if p).strip()
 
-    Repli sur les `top_n` premières expériences dans l'ordre source si le
-    moteur sémantique est indisponible ou si aucun texte n'est exploitable
-    (même philosophie de dégradation gracieuse que `matching_semantic.py`).
+
+def _classer_par_pertinence(items: list, texte_fn, offre, top_n: int) -> list:
+    """Renvoie les `top_n` items les plus proches sémantiquement de `offre`,
+    dans l'ordre de pertinence décroissante.
+
+    Repli sur les `top_n` premiers items dans l'ordre source si le moteur
+    sémantique est indisponible ou si aucun texte n'est exploitable (même
+    philosophie de dégradation gracieuse que `matching_semantic.py`).
     """
-    if not experiences:
+    if not items:
         return []
     if not matching_semantic.est_disponible():
-        return experiences[:top_n]
+        return items[:top_n]
 
-    textes = [_texte_experience(e) for e in experiences]
+    textes = [texte_fn(i) for i in items]
     if not any(textes):
-        return experiences[:top_n]
+        return items[:top_n]
 
     embedding_offre = matching_semantic.embedding_offre(offre)
     if embedding_offre is None:
-        return experiences[:top_n]
+        return items[:top_n]
 
     # Textes vides encodés quand même (batch unique) — score neutre bas, pas
-    # d'erreur, elles finissent simplement en fin de classement.
+    # d'erreur, ils finissent simplement en fin de classement.
     vecteurs = matching_semantic.embed([t or ' ' for t in textes])
     if vecteurs is None:
-        return experiences[:top_n]
+        return items[:top_n]
 
-    scores = [float(v @ embedding_offre) for v in vecteurs]
-    classees = [exp for _, exp in sorted(zip(scores, experiences), key=lambda t: t[0], reverse=True)]
-    return classees[:top_n]
+    scores  = [float(v @ embedding_offre) for v in vecteurs]
+    classes = [item for _, item in sorted(zip(scores, items), key=lambda t: t[0], reverse=True)]
+    return classes[:top_n]
+
+
+def classer_experiences_par_pertinence(experiences: list, offre, top_n: int = 4) -> list:
+    """Les `top_n` expériences (format éditeur CV) les plus pertinentes pour `offre`."""
+    return _classer_par_pertinence(experiences, _texte_experience, offre, top_n)
+
+
+def classer_projets_par_pertinence(projets: list, offre, top_n: int = 3) -> list:
+    """Les `top_n` projets (format éditeur CV) les plus pertinents pour `offre`."""
+    return _classer_par_pertinence(projets, _texte_projet, offre, top_n)
 
 
 def reordonner_competences(competences: list, offre) -> list:
