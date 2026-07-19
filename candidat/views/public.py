@@ -53,6 +53,21 @@ def accueil(request):
 
     stats_visiteurs   = enregistrer_visite(request)
 
+    # Expire automatiquement les offres dont la date est dépassée (même
+    # logique lazy que côté entreprise, voir entreprise/views/offres.py et
+    # candidat/views/public.py::offres()) — sinon une offre publiée reste
+    # visible ici tant qu'aucun recruteur n'a rouvert sa liste d'offres.
+    a_expirer = list(
+        OffreEmploi.objects
+        .filter(statutOffre=StatutOffre.PUBLIEE, dateExpiration__lt=timezone.now().date())
+        .prefetch_related('recruteurs_createurs')
+    )
+    if a_expirer:
+        OffreEmploi.objects.filter(pk__in=[o.pk for o in a_expirer]).update(statutOffre=StatutOffre.EXPIREE)
+        for offre in a_expirer:
+            offre.statutOffre = StatutOffre.EXPIREE
+            offre._notifier_expiration()
+
     offres_publiees_qs = OffreEmploi.objects.filter(statutOffre=StatutOffre.PUBLIEE)
 
     def _offres_vedette_generiques():
@@ -71,6 +86,21 @@ def accueil(request):
     from ..matching import couleur_score, libelle_score, matching_actif as _matching_actif
     candidat = getattr(request, 'candidat', None)
     offres_vedette_avec_score = []
+
+    ids_offres_traitees = set()
+    if candidat:
+        # Une offre déjà acceptée ou refusée n'a plus rien à faire dans les
+        # recommandations, expirée ou pas (voir aussi offres()).
+        ids_offres_traitees = set(Candidature.objects.filter(
+            candidat=candidat, statut__code__in=['ACCEPTEE', 'REFUSEE'],
+        ).values_list('offre_id', flat=True))
+
+    # Ensemble d'IDs réellement publiés MAINTENANT (source de vérité DB) —
+    # purge les caches (jusqu'à 7 j en repli stale) qui peuvent contenir une
+    # offre entre-temps fermée/pourvue par l'entreprise, voir offres().
+    ids_offres_valides = set(
+        offres_publiees_qs.exclude(pk__in=ids_offres_traitees).values_list('pk', flat=True)
+    )
 
     if candidat:
         # Offres personnalisées : le calcul sémantique + ML est trop lent pour
@@ -93,6 +123,10 @@ def accueil(request):
             offres_reco = django_cache.get(stale_key)
 
         if offres_reco is not None:
+            offres_reco = [
+                (offre, score) for offre, score in offres_reco
+                if offre.pk in ids_offres_valides
+            ]
             offres_vedette = [offre for offre, _ in offres_reco]
             if _matching_actif(request):
                 offres_vedette_avec_score = [
@@ -107,10 +141,17 @@ def accueil(request):
         else:
             # Tout premier calcul pour ce candidat (jamais encore fait) :
             # générique en attendant, comme pour un visiteur anonyme.
-            offres_vedette = _offres_vedette_generiques()
+            offres_vedette = [
+                o for o in _offres_vedette_generiques()
+                if o.pk in ids_offres_valides
+            ]
     else:
-        # Visiteur anonyme : 6 dernières offres publiées (cache global)
-        offres_vedette = _offres_vedette_generiques()
+        # Visiteur anonyme : 6 dernières offres publiées (cache global 5 min,
+        # purgé lui aussi des offres entre-temps fermées/pourvues).
+        offres_vedette = [
+            o for o in _offres_vedette_generiques()
+            if o.pk in ids_offres_valides
+        ]
 
     # ── Top secteurs (par nombre d'offres publiées) ──────────────────────────
     top_secteurs = django_cache.get('accueil_top_secteurs')
@@ -371,6 +412,23 @@ def offres(request):
     from entreprise.models import OffreEmploi, StatutOffre
     from ..matching import couleur_score, libelle_score
 
+    # Expire automatiquement les offres dont la date est dépassée (même
+    # logique lazy que côté entreprise, voir entreprise/views/offres.py) —
+    # sinon une offre publiée reste visible ici tant qu'aucun recruteur n'a
+    # rouvert sa liste d'offres pour déclencher la transition.
+    a_expirer = list(
+        OffreEmploi.objects
+        .filter(statutOffre=StatutOffre.PUBLIEE, dateExpiration__lt=timezone.now().date())
+        .prefetch_related('recruteurs_createurs')
+    )
+    if a_expirer:
+        OffreEmploi.objects.filter(pk__in=[o.pk for o in a_expirer]).update(statutOffre=StatutOffre.EXPIREE)
+        for offre in a_expirer:
+            offre.statutOffre = StatutOffre.EXPIREE
+            offre._notifier_expiration()
+
+    candidat = getattr(request, 'candidat', None)
+
     offres_publiees = (
         OffreEmploi.objects
         .filter(statutOffre=StatutOffre.PUBLIEE)
@@ -381,6 +439,23 @@ def offres(request):
         .prefetch_related('typesCompetence', 'langues')
         .order_by('-datePublication', '-dateCreation')
     )
+
+    ids_offres_traitees = set()
+    if candidat:
+        # Une fois la candidature acceptée ou refusée, l'offre n'a plus rien
+        # à faire dans la liste à parcourir/postuler (y compris en mode
+        # matching, voir plus bas où scored_pairs est filtré pareil).
+        ids_offres_traitees = set(Candidature.objects.filter(
+            candidat=candidat, statut__code__in=['ACCEPTEE', 'REFUSEE'],
+        ).values_list('offre_id', flat=True))
+        offres_publiees = offres_publiees.exclude(pk__in=ids_offres_traitees)
+
+    # Ensemble d'IDs réellement affichables MAINTENANT (source de vérité DB) —
+    # sert à purger les résultats scorés issus du cache (jusqu'à 30 min, voire
+    # 7 j en repli stale) qui peuvent contenir une offre entre-temps fermée/
+    # pourvue par l'entreprise : sinon elle reste listée ici alors que sa page
+    # détail refuse déjà la candidature.
+    ids_offres_valides = set(offres_publiees.values_list('pk', flat=True))
 
     villes = sorted({o.ville for o in offres_publiees if o.ville})
     pays   = sorted({o.pays  for o in offres_publiees if o.pays})
@@ -414,7 +489,6 @@ def offres(request):
 
     from ..matching import matching_actif as _matching_actif, peut_utiliser_matching, est_opt_in
     from django.core.paginator import Paginator
-    candidat = getattr(request, 'candidat', None)
     matching_eligible = peut_utiliser_matching(candidat)
     matching_actif    = _matching_actif(request)
     total_offres      = offres_publiees.count()
@@ -443,6 +517,10 @@ def offres(request):
             matching_en_calcul = True
 
         if scored_pairs is not None:
+            scored_pairs = [
+                (offre, score) for offre, score in scored_pairs
+                if offre.pk in ids_offres_valides
+            ]
             all_scored = [
                 {
                     'offre':   offre,
@@ -533,6 +611,21 @@ def offre_detail(request, offre_id):
     from entreprise.models import OffreEmploi, StatutOffre
     from ..matching import Matcher, couleur_score, libelle_score
 
+    # Expire automatiquement les offres dont la date est dépassée (même
+    # logique lazy qu'ailleurs côté candidat, voir offres()/accueil() dans ce
+    # module) — couvre à la fois l'offre demandée (bannière "expirée" à jour)
+    # et les offres similaires/suggestions listées plus bas.
+    a_expirer = list(
+        OffreEmploi.objects
+        .filter(statutOffre=StatutOffre.PUBLIEE, dateExpiration__lt=timezone.now().date())
+        .prefetch_related('recruteurs_createurs')
+    )
+    if a_expirer:
+        OffreEmploi.objects.filter(pk__in=[o.pk for o in a_expirer]).update(statutOffre=StatutOffre.EXPIREE)
+        for o in a_expirer:
+            o.statutOffre = StatutOffre.EXPIREE
+            o._notifier_expiration()
+
     offre = get_object_or_404(
         OffreEmploi.objects
             .select_related('entreprise', 'contrat', 'modeTravailRef',
@@ -549,17 +642,27 @@ def offre_detail(request, offre_id):
         from django.db.models import F
         OffreEmploi.objects.filter(pk=offre.pk).update(nbVues=F('nbVues') + 1)
 
+    candidat_courant = getattr(request, 'candidat', None)
+    ids_offres_traitees = set()
+    if candidat_courant:
+        # Une offre déjà acceptée ou refusée ne doit plus être re-suggérée
+        # au candidat, expirée ou pas (voir aussi offres()/accueil()).
+        ids_offres_traitees = set(Candidature.objects.filter(
+            candidat=candidat_courant, statut__code__in=['ACCEPTEE', 'REFUSEE'],
+        ).values_list('offre_id', flat=True))
+
     offres_similaires = (
         OffreEmploi.objects
             .filter(statutOffre=StatutOffre.PUBLIEE, entreprise=offre.entreprise)
             .exclude(pk=offre.pk)
+            .exclude(pk__in=ids_offres_traitees)
             .select_related('entreprise')
             .order_by('-datePublication')[:3]
     )
 
     from django.db.models import Q, Case, When, IntegerField, Value
     ids_meme_ent = [offre.pk] + list(offres_similaires.values_list('pk', flat=True))
-    q_similaire = Q(statutOffre=StatutOffre.PUBLIEE) & ~Q(pk__in=ids_meme_ent)
+    q_similaire = Q(statutOffre=StatutOffre.PUBLIEE) & ~Q(pk__in=ids_meme_ent) & ~Q(pk__in=ids_offres_traitees)
     q_criteres = Q()
     if offre.typeContrat:
         q_criteres |= Q(typeContrat=offre.typeContrat)
